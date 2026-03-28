@@ -805,14 +805,7 @@ body {
 </div>
 
 <div class="screen active" id="screen-home">
-  <div class="topbar">
-    <div class="topbar-left">
-      <button class="btn-back" onclick="goBackToHub()">← 回首頁</button>
-      <div class="topbar-title">✏️ <span>國字練習</span></div>
-    </div>
-    <div class="topbar-center" id="topbar-greeting"></div>
-    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
-  </div>
+  <div id="topbar-home"></div>
   <div class="home-hero">
     <div class="home-school">臺東縣太平國小</div>
     <div class="home-title">國字<span>學習</span>系統</div>
@@ -866,14 +859,7 @@ body {
 
 <!-- ══ 畫面二：生字選單 ══ -->
 <div class="screen right" id="screen-menu">
-  <div class="topbar">
-    <div class="topbar-left">
-      <button class="btn-back" onclick="goTo('home')">← 返回</button>
-      <div class="topbar-title">今天的<span>生字</span></div>
-    </div>
-    <div class="topbar-center" id="topbar-greeting-menu"></div>
-    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
-  </div>
+  <div id="topbar-menu"></div>
   <!-- 進度概覽列 -->
   <div class="menu-progress-bar" id="menu-progress-bar">
     <div class="menu-progress-title">📊 今日學習進度</div>
@@ -896,14 +882,7 @@ body {
 
 <!-- ══ 測驗畫面 ══ -->
 <div class="screen right" id="screen-exam">
-  <div class="topbar">
-    <div class="topbar-left">
-      <button class="btn-back" onclick="abortExam()">✕ 結束測驗</button>
-      <div class="topbar-title" id="exam-topbar-title">今日測驗</div>
-    </div>
-    <div class="topbar-center"></div>
-    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
-  </div>
+  <div id="topbar-exam"></div>
 
   <!-- 題目進度列 -->
   <div class="exam-progress-bar-wrap">
@@ -984,14 +963,7 @@ body {
 
 <!-- ══ 畫面二點五：模式選擇 ══ -->
 <div class="screen right" id="screen-mode">
-  <div class="topbar">
-    <div class="topbar-left">
-      <button class="btn-back" onclick="goTo('menu')">← 返回</button>
-      <div class="topbar-title" id="mode-select-title">選擇模式</div>
-    </div>
-    <div class="topbar-center"></div>
-    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
-  </div>
+  <div id="topbar-mode"></div>
   <div class="mode-select-body">
     <div class="mode-select-char" id="mode-select-char"></div>
     <div class="mode-select-hint">請選擇要做什麼</div>
@@ -1012,14 +984,7 @@ body {
 
 <!-- ══ 畫面三：學習頁 ══ -->
 <div class="screen right" id="screen-learn">
-  <div class="topbar">
-    <div class="topbar-left">
-      <button class="btn-back" onclick="goTo('menu')">← 返回</button>
-      <div class="topbar-title" id="learn-title">學習</div>
-    </div>
-    <div class="topbar-center"></div>
-    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
-  </div>
+  <div id="topbar-learn"></div>
 
   <div class="mode-banner">
     <div class="mode-icon" id="mode-icon">✏️</div>
@@ -2608,49 +2573,38 @@ function pulseExamBtn() {
 }
 
 // ═══════════════════════════════════════
-//  Topbar 問候語
+//  Topbar 初始化（使用 shared.js renderTopbar）
 // ═══════════════════════════════════════
-function getTimeGreeting() {
-  var h = new Date().getHours();
-  if (h < 6)  return '深夜了';
-  if (h < 12) return '早上好';
-  if (h < 14) return '中午好';
-  if (h < 18) return '下午好';
-  if (h < 21) return '傍晚好';
-  return '晚上好';
-}
-
-function getTimeStr() {
-  var now = new Date();
-  var h = String(now.getHours()).padStart(2,'0');
-  var m = String(now.getMinutes()).padStart(2,'0');
-  return h + ':' + m;
-}
-
-function updateTopbarGreeting() {
-  if (!currentStudent) return;
-  var name   = currentStudent.nickname || currentStudent.name;
-  var avatar = currentStudent.avatar || '🐣';
-  var text   = getTimeStr() + '　' + getTimeGreeting() + '！<em>' + name + '</em>　' + avatar;
-  // 更新所有 topbar-greeting 元素
-  document.querySelectorAll('[id^="topbar-greeting"]').forEach(function(el) {
-    el.innerHTML = text;
+function initTopbars() {
+  renderTopbar('topbar-home', {
+    back:  { label: '← 回首頁', onclick: 'goBackToHub()' },
+    title: '✏️ <span>國字練習</span>'
   });
-  // 同時更新沒有 id 的 .topbar-center（空的那些）
-  document.querySelectorAll('.topbar-center:not([id])').forEach(function(el) {
-    el.innerHTML = text;
+  renderTopbar('topbar-menu', {
+    back:  { label: '← 返回', onclick: "goTo('home')" },
+    title: '今天的<span>生字</span>'
+  });
+  renderTopbar('topbar-exam', {
+    back:    { label: '✕ 結束測驗', onclick: 'abortExam()' },
+    title:   '今日測驗',
+    titleId: 'exam-topbar-title'
+  });
+  renderTopbar('topbar-mode', {
+    back:    { label: '← 返回', onclick: "goTo('menu')" },
+    title:   '選擇模式',
+    titleId: 'mode-select-title'
+  });
+  renderTopbar('topbar-learn', {
+    back:    { label: '← 返回', onclick: "goTo('menu')" },
+    title:   '學習',
+    titleId: 'learn-title'
   });
 }
 
-// 補上缺失的 updateHomeAvatar（更新 topbar 問候）
 function updateHomeAvatar() {
-  updateTopbarGreeting();
+  if (currentStudent) setTopbarStudent(currentStudent);
 }
 
-// 每分鐘更新時間
-setInterval(function() {
-  if (currentStudent) updateTopbarGreeting();
-}, 60000);
 function goBackToHub() {
   window.location.href = 'index.html';
 }
@@ -2663,9 +2617,10 @@ function waitHW(cb) {
   else setTimeout(function(){ waitHW(cb); },100);
 }
 window.addEventListener('load', function(){
-  initFirebase();          // shared.js
-  applyTheme(currentTheme); // shared.js：跨頁主題同步
-  applySound();            // shared.js
+  initFirebase();
+  applyTheme(currentTheme);
+  applySound();
+  initTopbars();          // 渲染所有 topbar
   waitHW(function(){});
   initSoundWrapper();
 

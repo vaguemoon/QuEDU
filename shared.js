@@ -129,7 +129,98 @@ function showToast(msg) {
 }
 
 /* ════════════════════════════════════════
-   頁面切換（單頁應用模式）
+   Topbar 統一渲染
+   ════════════════════════════════════════
+   用法（在頁面 JS 裡呼叫）：
+
+   renderTopbar('topbar-home', {
+     back:     { label: '← 回首頁', onclick: 'goBackToHub()' },
+     title:    '✏️ <span>國字練習</span>',
+     greeting: true,   // 顯示時間問候 + 學生暱稱頭像（預設 true）
+     extra:    '<div class="star-count">⭐ <span id="nav-star-num">0</span></div>'
+               // 設定按鈕左側可插入額外元素（選填）
+   });
+
+   HTML 裡只需要放空的容器：
+   <div id="topbar-home"></div>
+   ════════════════════════════════════════ */
+
+var _topbarTimer = null;
+
+/**
+ * 產生時間問候字串（HTML）
+ * 需要 window.__topbarStudent 已被設定
+ */
+function getTopbarGreetingHTML() {
+  if (!window.__topbarStudent) return '';
+  var now  = new Date();
+  var h    = now.getHours();
+  var hStr = String(h).padStart(2,'0');
+  var mStr = String(now.getMinutes()).padStart(2,'0');
+  var greet = h < 6  ? '深夜了'
+            : h < 12 ? '早上好'
+            : h < 14 ? '中午好'
+            : h < 18 ? '下午好'
+            : h < 21 ? '傍晚好'
+            :           '晚上好';
+  var name   = window.__topbarStudent.nickname || window.__topbarStudent.name || '';
+  var avatar = window.__topbarStudent.avatar || '🐣';
+  return hStr + ':' + mStr + '\u3000' + greet + '！<em>' + name + '</em>\u3000' + avatar;
+}
+
+/** 更新所有頁面上已渲染的問候欄 */
+function refreshTopbarGreeting() {
+  document.querySelectorAll('.topbar-center[data-greeting]').forEach(function(el) {
+    el.innerHTML = getTopbarGreetingHTML();
+  });
+}
+
+/**
+ * 渲染 topbar 到指定容器
+ * @param {string|Element} target  容器 id 字串 或 DOM 元素
+ * @param {object}         opts    設定選項
+ *   opts.back    {label, onclick}  左側返回按鈕（必填）
+ *   opts.title   {string}          頁面標題 HTML（必填）
+ *   opts.titleId {string}          如需動態更新標題，傳入 id
+ *   opts.greeting {boolean}        顯示中間問候欄（預設 true）
+ *   opts.extra   {string}          設定按鈕左側插入的額外 HTML
+ *   opts.settingsOnclick {string}  設定按鈕的 onclick（預設 'goToProfile()'）
+ */
+function renderTopbar(target, opts) {
+  var el = typeof target === 'string' ? document.getElementById(target) : target;
+  if (!el) return;
+  opts = opts || {};
+  var showGreeting = opts.greeting !== false;
+  var settingsOnclick = opts.settingsOnclick || 'goToProfile()';
+  var titleId = opts.titleId ? ' id="' + opts.titleId + '"' : '';
+
+  el.className = 'topbar';
+  el.innerHTML =
+    '<div class="topbar-left">' +
+      '<button class="btn-back" onclick="' + opts.back.onclick + '">' + opts.back.label + '</button>' +
+      '<div class="topbar-title"' + titleId + '>' + opts.title + '</div>' +
+    '</div>' +
+    '<div class="topbar-center"' + (showGreeting ? ' data-greeting="1"' : '') + '>' +
+      (showGreeting ? getTopbarGreetingHTML() : '') +
+    '</div>' +
+    (opts.extra ? opts.extra : '') +
+    '<button class="btn-settings" onclick="' + settingsOnclick + '">⚙️ 設定</button>';
+
+  // 啟動每分鐘自動更新（只啟動一次）
+  if (showGreeting && !_topbarTimer) {
+    _topbarTimer = setInterval(refreshTopbarGreeting, 60000);
+  }
+}
+
+/**
+ * 設定問候語所需的學生資料（登入後呼叫一次）
+ * @param {object} student  { name, nickname, avatar }
+ */
+function setTopbarStudent(student) {
+  window.__topbarStudent = student;
+  refreshTopbarGreeting();
+}
+
    ════════════════════════════════════════
    用於 index.html、chinese.html 等有多個 .screen 的頁面
    ════════════════════════════════════════ */

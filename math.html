@@ -413,17 +413,7 @@
 <body>
 
 <!-- NAV -->
-<nav id="main-nav" class="topbar" style="display:none">
-  <div class="topbar-left">
-    <button class="btn-back" onclick="window.location.href='index.html'">← 回首頁</button>
-    <div class="topbar-title">✖️ <span>乘法練習</span></div>
-  </div>
-  <div class="topbar-center" id="math-topbar-greeting"></div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <div class="star-count" id="nav-stars">⭐ <span id="nav-star-num">0</span></div>
-    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
-  </div>
-</nav>
+<div id="topbar-math" style="display:none"></div>
 
 
 <!-- PAGE: STAGE SELECT -->
@@ -591,40 +581,20 @@ function setMode(m) {
 
 // ===== NAV =====
 function updateNav() {
-  document.getElementById('nav-star-num').textContent = totalStars;
+  var el = document.getElementById('nav-star-num');
+  if (el) el.textContent = totalStars;
 }
 
-// ===== TOPBAR 問候語 =====
-var mathStudent = null; // 儲存學生資料供問候使用
-
-function getTimeGreeting() {
-  var h = new Date().getHours();
-  if (h < 6)  return '深夜了';
-  if (h < 12) return '早上好';
-  if (h < 14) return '中午好';
-  if (h < 18) return '下午好';
-  if (h < 21) return '傍晚好';
-  return '晚上好';
+// ===== TOPBAR 初始化（使用 shared.js renderTopbar）=====
+function initMathTopbar() {
+  renderTopbar('topbar-math', {
+    back:  { label: '← 回首頁', onclick: "window.location.href='index.html'" },
+    title: '✖️ <span>乘法練習</span>',
+    extra: '<div class="star-count">⭐ <span id="nav-star-num">0</span></div>'
+  });
+  document.getElementById('topbar-math').style.display = '';
 }
 
-function getTimeStr() {
-  var now = new Date();
-  var h = String(now.getHours()).padStart(2,'0');
-  var m = String(now.getMinutes()).padStart(2,'0');
-  return h + ':' + m;
-}
-
-function updateMathGreeting() {
-  var el = document.getElementById('math-topbar-greeting');
-  if (!el || !mathStudent) return;
-  var name   = mathStudent.nickname || mathStudent.name;
-  var avatar = mathStudent.avatar || '🐣';
-  el.innerHTML = getTimeStr() + '　' + getTimeGreeting() + '！<em>' + name + '</em>　' + avatar;
-}
-
-setInterval(function() {
-  if (mathStudent) updateMathGreeting();
-}, 60000);
 // ===== STAGES =====
 function renderStages() {
   const grid = document.getElementById('stages-grid');
@@ -901,12 +871,12 @@ function goToProfile() {
     var saved = sessionStorage.getItem('hub_student');
     if (!saved) { window.location.href = 'index.html'; return; }
     var hubStudent = JSON.parse(saved);
-    mathStudent  = hubStudent;
     playerName   = hubStudent.nickname || hubStudent.name;
     hubStudentId = hubStudent.id;
     load();
+    initMathTopbar();          // 渲染 topbar（shared.js renderTopbar）
+    setTopbarStudent(hubStudent); // 設定問候語學生資料
     updateNav();
-    updateMathGreeting();
     goToStages();
   } catch(e) {
     window.location.href = 'index.html';
