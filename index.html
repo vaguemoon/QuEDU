@@ -200,14 +200,15 @@ body { height:100vh; overflow:hidden; }
 </head>
 <body>
 <script>
-// 同步執行：若有 Hub sessionStorage（從子頁面返回），立即隱藏登入畫面避免閃爍
+// 同步執行：若有登入 session，先藏住整個畫面，等 JS goTo 完成後再顯示
 (function() {
   try {
     var saved = sessionStorage.getItem('hub_student');
     if (saved) {
-      JSON.parse(saved);
+      JSON.parse(saved); // 驗證 JSON 合法
       var style = document.createElement('style');
-      style.textContent = '#screen-login { opacity:0 !important; pointer-events:none !important; }';
+      style.id = 'anti-flash';
+      style.textContent = '.app { opacity:0 !important; }';
       document.head.appendChild(style);
     }
   } catch(e) {}
@@ -700,35 +701,39 @@ function doLogout() {
 }
 
 // ── 啟動 ──
-window.addEventListener('load',function(){
+window.addEventListener('load', function() {
   initFirebase();
   applyTheme(currentTheme);
   applySound();
-  // 從子頁面返回時自動恢復登入，不需重新輸入
+
+  function revealApp() {
+    var af = document.getElementById('anti-flash');
+    if (af) {
+      // 加上淡入 transition 再移除，讓畫面平順出現
+      document.querySelector('.app').style.transition = 'opacity .2s';
+      af.remove();
+    }
+  }
+
   try {
-    var saved=sessionStorage.getItem('hub_student');
-    if (saved){
-      currentStudent=JSON.parse(saved);
-      // 移除早期注入的隱藏 style，切換到正確畫面
-      var hideStyle = document.querySelector('style[data-hide-login]');
-      if (!hideStyle) {
-        // 找到 head 中沒有 id 的 style（就是我們注入的那個）
-        var styles = document.head.querySelectorAll('style');
-        styles.forEach(function(s){
-          if (s.textContent.indexOf('screen-login') !== -1 && s.textContent.indexOf('opacity') !== -1) {
-            s.remove();
-          }
-        });
-      }
+    var saved = sessionStorage.getItem('hub_student');
+    if (saved) {
+      currentStudent = JSON.parse(saved);
       updateHubUI();
       loadActivity();
       if (window.location.search.indexOf('screen=profile') !== -1) {
-        loadProfileData(function(){ goTo('screen-profile'); });
+        loadProfileData(function() {
+          goTo('screen-profile');
+          requestAnimationFrame(revealApp);
+        });
       } else {
         goTo('screen-hub');
+        requestAnimationFrame(revealApp);
       }
     }
-  } catch(e){}
+  } catch(e) {
+    revealApp(); // 出錯時也要確保畫面可見
+  }
 });
 </script>
 </body>

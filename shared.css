@@ -168,8 +168,8 @@ body {
 .btn-primary:hover  { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(45,111,168,.40); }
 .btn-primary:active { transform: scale(.97); }
 
-/* ── Toast 通知 ── */
-.toast {
+/* ── Toast 通知（用 id 避免與頁面專屬 CSS 的 class 衝突） ── */
+#toast {
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -187,7 +187,7 @@ body {
   white-space: nowrap;
   max-width: 90vw;
 }
-.toast.show {
+#toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
