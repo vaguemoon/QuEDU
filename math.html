@@ -58,18 +58,33 @@
     position:sticky; top:0; z-index:100; gap:10px;
     transition: background .3s;
   }
-  .topbar-left { display:flex; align-items:center; gap:10px; }
-  .topbar-title { font-size:.95rem; font-weight:900; color:var(--blue-dk); }
+  .topbar-left { display:flex; align-items:center; gap:10px; min-width:0; }
+  .topbar-title { font-size:.95rem; font-weight:900; color:var(--blue-dk); white-space:nowrap; }
   .topbar-title span { color:var(--orange); }
+  .topbar-center {
+    flex:1; text-align:center;
+    font-size:.78rem; font-weight:700; color:var(--muted);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    padding:0 6px;
+  }
+  .topbar-center em { font-style:normal; color:var(--text); font-weight:900; }
   .btn-back {
     background:var(--blue-lt); border:none; border-radius:14px;
     padding:10px 20px; font-size:1rem; font-weight:900;
     color:var(--blue-dk); cursor:pointer; transition:all .15s;
     font-family:'Nunito','Noto Sans TC',sans-serif;
-    box-shadow:0 2px 8px rgba(74,144,217,.18);
+    box-shadow:0 2px 8px rgba(74,144,217,.18); white-space:nowrap;
   }
   .btn-back:active { transform:scale(.95); }
   .topbar-right { display:flex; align-items:center; gap:10px; }
+  .btn-settings {
+    background:var(--blue-lt); border:none; border-radius:14px;
+    padding:8px 14px; font-size:.82rem; font-weight:900;
+    color:var(--blue-dk); cursor:pointer; transition:all .15s;
+    font-family:'Nunito','Noto Sans TC',sans-serif; white-space:nowrap;
+    box-shadow:0 2px 8px rgba(74,144,217,.18);
+  }
+  .btn-settings:active { transform:scale(.95); }
   .star-count {
     background: var(--yellow);
     color: #7a5200;
@@ -403,8 +418,10 @@
     <button class="btn-back" onclick="window.location.href='index.html'">← 回首頁</button>
     <div class="topbar-title">✖️ <span>乘法練習</span></div>
   </div>
-  <div class="topbar-right">
+  <div class="topbar-center" id="math-topbar-greeting"></div>
+  <div style="display:flex;align-items:center;gap:8px">
     <div class="star-count" id="nav-stars">⭐ <span id="nav-star-num">0</span></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
   </div>
 </nav>
 
@@ -576,6 +593,38 @@ function setMode(m) {
 function updateNav() {
   document.getElementById('nav-star-num').textContent = totalStars;
 }
+
+// ===== TOPBAR 問候語 =====
+var mathStudent = null; // 儲存學生資料供問候使用
+
+function getTimeGreeting() {
+  var h = new Date().getHours();
+  if (h < 6)  return '深夜了';
+  if (h < 12) return '早上好';
+  if (h < 14) return '中午好';
+  if (h < 18) return '下午好';
+  if (h < 21) return '傍晚好';
+  return '晚上好';
+}
+
+function getTimeStr() {
+  var now = new Date();
+  var h = String(now.getHours()).padStart(2,'0');
+  var m = String(now.getMinutes()).padStart(2,'0');
+  return h + ':' + m;
+}
+
+function updateMathGreeting() {
+  var el = document.getElementById('math-topbar-greeting');
+  if (!el || !mathStudent) return;
+  var name   = mathStudent.nickname || mathStudent.name;
+  var avatar = mathStudent.avatar || '🐣';
+  el.innerHTML = getTimeStr() + '　' + getTimeGreeting() + '！<em>' + name + '</em>　' + avatar;
+}
+
+setInterval(function() {
+  if (mathStudent) updateMathGreeting();
+}, 60000);
 // ===== STAGES =====
 function renderStages() {
   const grid = document.getElementById('stages-grid');
@@ -839,18 +888,25 @@ function launchConfetti() {
   setTimeout(() => { container.innerHTML = ''; }, 4000);
 }
 
+function goToProfile() {
+  sessionStorage.setItem('return_to', 'math.html');
+  window.location.href = 'index.html?screen=profile';
+}
+
 // ===== INIT =====
 (function() {
-  initFirebase();          // shared.js：初始化 Firebase + db
-  applyTheme(currentTheme); // shared.js：套用跨頁同步的主題
+  initFirebase();
+  applyTheme(currentTheme);
   try {
     var saved = sessionStorage.getItem('hub_student');
     if (!saved) { window.location.href = 'index.html'; return; }
     var hubStudent = JSON.parse(saved);
+    mathStudent  = hubStudent;
     playerName   = hubStudent.nickname || hubStudent.name;
     hubStudentId = hubStudent.id;
     load();
     updateNav();
+    updateMathGreeting();
     goToStages();
   } catch(e) {
     window.location.href = 'index.html';

@@ -65,18 +65,33 @@ body {
   box-shadow:0 2px 12px rgba(0,0,0,.06);
   position:sticky; top:0; z-index:50; gap:10px;
 }
-.topbar-left { display:flex; align-items:center; gap:10px; }
-.topbar-title { font-size:.95rem; font-weight:900; color:var(--blue-dk); }
+.topbar-left { display:flex; align-items:center; gap:10px; min-width:0; }
+.topbar-title { font-size:.95rem; font-weight:900; color:var(--blue-dk); white-space:nowrap; }
 .topbar-title span { color:var(--orange); }
+.topbar-center {
+  flex:1; text-align:center;
+  font-size:.78rem; font-weight:700; color:var(--muted);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  padding:0 6px;
+}
+.topbar-center em { font-style:normal; color:var(--text); font-weight:900; }
 .btn-back {
   background:var(--blue-lt); border:none; border-radius:14px;
   padding:10px 20px; font-size:1rem; font-weight:900;
   color:var(--blue-dk); cursor:pointer; transition:all .15s;
   font-family:'Nunito',sans-serif;
   box-shadow:0 2px 8px rgba(74,144,217,.18);
+  white-space:nowrap;
 }
 .btn-back:active { transform:scale(.95); }
-/* star-badge removed */
+.btn-settings {
+  background:var(--blue-lt); border:none; border-radius:14px;
+  padding:8px 14px; font-size:.82rem; font-weight:900;
+  color:var(--blue-dk); cursor:pointer; transition:all .15s;
+  font-family:'Nunito',sans-serif; white-space:nowrap;
+  box-shadow:0 2px 8px rgba(74,144,217,.18);
+}
+.btn-settings:active { transform:scale(.95); }
 
 #screen-home {
   background:linear-gradient(160deg,#dbeeff 0%,#eef5fc 60%);
@@ -795,11 +810,8 @@ body {
       <button class="btn-back" onclick="goBackToHub()">← 回首頁</button>
       <div class="topbar-title">✏️ <span>國字練習</span></div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button class="btn-profile-entry" id="btn-profile-entry" onclick="goToProfile()">
-        <span id="home-avatar-display">🐣</span>
-      </button>
-    </div>
+    <div class="topbar-center" id="topbar-greeting"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
   </div>
   <div class="home-hero">
     <div class="home-school">臺東縣太平國小</div>
@@ -859,6 +871,8 @@ body {
       <button class="btn-back" onclick="goTo('home')">← 返回</button>
       <div class="topbar-title">今天的<span>生字</span></div>
     </div>
+    <div class="topbar-center" id="topbar-greeting-menu"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
   </div>
   <!-- 進度概覽列 -->
   <div class="menu-progress-bar" id="menu-progress-bar">
@@ -887,6 +901,8 @@ body {
       <button class="btn-back" onclick="abortExam()">✕ 結束測驗</button>
       <div class="topbar-title" id="exam-topbar-title">今日測驗</div>
     </div>
+    <div class="topbar-center"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
   </div>
 
   <!-- 題目進度列 -->
@@ -973,6 +989,8 @@ body {
       <button class="btn-back" onclick="goTo('menu')">← 返回</button>
       <div class="topbar-title" id="mode-select-title">選擇模式</div>
     </div>
+    <div class="topbar-center"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
   </div>
   <div class="mode-select-body">
     <div class="mode-select-char" id="mode-select-char"></div>
@@ -999,6 +1017,8 @@ body {
       <button class="btn-back" onclick="goTo('menu')">← 返回</button>
       <div class="topbar-title" id="learn-title">學習</div>
     </div>
+    <div class="topbar-center"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
   </div>
 
   <div class="mode-banner">
@@ -2588,8 +2608,49 @@ function pulseExamBtn() {
 }
 
 // ═══════════════════════════════════════
-//  回到 Hub 首頁
+//  Topbar 問候語
 // ═══════════════════════════════════════
+function getTimeGreeting() {
+  var h = new Date().getHours();
+  if (h < 6)  return '深夜了';
+  if (h < 12) return '早上好';
+  if (h < 14) return '中午好';
+  if (h < 18) return '下午好';
+  if (h < 21) return '傍晚好';
+  return '晚上好';
+}
+
+function getTimeStr() {
+  var now = new Date();
+  var h = String(now.getHours()).padStart(2,'0');
+  var m = String(now.getMinutes()).padStart(2,'0');
+  return h + ':' + m;
+}
+
+function updateTopbarGreeting() {
+  if (!currentStudent) return;
+  var name   = currentStudent.nickname || currentStudent.name;
+  var avatar = currentStudent.avatar || '🐣';
+  var text   = getTimeStr() + '　' + getTimeGreeting() + '！<em>' + name + '</em>　' + avatar;
+  // 更新所有 topbar-greeting 元素
+  document.querySelectorAll('[id^="topbar-greeting"]').forEach(function(el) {
+    el.innerHTML = text;
+  });
+  // 同時更新沒有 id 的 .topbar-center（空的那些）
+  document.querySelectorAll('.topbar-center:not([id])').forEach(function(el) {
+    el.innerHTML = text;
+  });
+}
+
+// 補上缺失的 updateHomeAvatar（更新 topbar 問候）
+function updateHomeAvatar() {
+  updateTopbarGreeting();
+}
+
+// 每分鐘更新時間
+setInterval(function() {
+  if (currentStudent) updateTopbarGreeting();
+}, 60000);
 function goBackToHub() {
   window.location.href = 'index.html';
 }
