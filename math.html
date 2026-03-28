@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>乘法小英雄 🌟</title>
+<title>乘法練習</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- Firebase SDK（與 Hub 共用同一 project，用於儲存乘法進度） -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -50,40 +50,34 @@
     transition: background .3s, color .3s;
   }
 
-  /* ===== NAV ===== */
-  nav {
-    position: sticky; top: 0; z-index: 100;
-    background: var(--white);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 28px;
-    box-shadow: 0 2px 12px rgba(44,100,160,.10);
+  /* ===== TOPBAR（與 chinese.html 統一） ===== */
+  .topbar {
+    background:var(--white); padding:11px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 2px 12px rgba(0,0,0,.06);
+    position:sticky; top:0; z-index:100; gap:10px;
     transition: background .3s;
   }
-  .nav-title {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900; font-size: 1.35rem;
-    color: var(--blue-dk);
-    display: flex; align-items: center; gap: 8px;
+  .topbar-left { display:flex; align-items:center; gap:10px; }
+  .topbar-title { font-size:.95rem; font-weight:900; color:var(--blue-dk); }
+  .topbar-title span { color:var(--orange); }
+  .btn-back {
+    background:var(--blue-lt); border:none; border-radius:14px;
+    padding:10px 20px; font-size:1rem; font-weight:900;
+    color:var(--blue-dk); cursor:pointer; transition:all .15s;
+    font-family:'Nunito','Noto Sans TC',sans-serif;
+    box-shadow:0 2px 8px rgba(74,144,217,.18);
   }
-  .nav-title span { font-size: 1.4rem; }
-  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .btn-back:active { transform:scale(.95); }
+  .topbar-right { display:flex; align-items:center; gap:10px; }
   .star-count {
     background: var(--yellow);
     color: #7a5200;
     font-family: 'Nunito', sans-serif;
-    font-weight: 800; font-size: .95rem;
-    padding: 5px 14px; border-radius: 20px;
-    display: flex; align-items: center; gap: 5px;
+    font-weight: 800; font-size: .88rem;
+    padding: 5px 12px; border-radius: 20px;
+    display: flex; align-items: center; gap: 4px;
   }
-  .btn-icon {
-    background: #e8f4fd; border: none; cursor: pointer;
-    width: 38px; height: 38px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.1rem; transition: transform .15s;
-    color: var(--blue-dk);
-  }
-  body.dark .btn-icon { background: #243e57; }
-  .btn-icon:hover { transform: scale(.95); }
 
   /* ===== PAGES ===== */
   .page { display: none; }
@@ -404,13 +398,13 @@
 <body>
 
 <!-- NAV -->
-<nav id="main-nav" style="display:none">
-  <div class="nav-title"><span>🌟</span> 乘法小英雄</div>
-  <div class="nav-right">
+<nav id="main-nav" class="topbar" style="display:none">
+  <div class="topbar-left">
+    <button class="btn-back" onclick="window.location.href='index.html'">← 回首頁</button>
+    <div class="topbar-title">✖️ <span>乘法練習</span></div>
+  </div>
+  <div class="topbar-right">
     <div class="star-count" id="nav-stars">⭐ <span id="nav-star-num">0</span></div>
-    <button class="btn-icon" id="btn-profile" title="個人資料" onclick="goToProfile()">👤</button>
-    <button class="btn-icon" id="btn-dark" title="深色模式">🌙</button>
-    <button class="btn-icon" id="btn-hub" title="回首頁" onclick="window.location.href='index.html'">🏠</button>
   </div>
 </nav>
 
@@ -582,17 +576,6 @@ function setMode(m) {
 function updateNav() {
   document.getElementById('nav-star-num').textContent = totalStars;
 }
-document.getElementById('btn-dark').onclick = function() {
-  document.body.classList.toggle('dark');
-  document.getElementById('btn-dark').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
-};
-
-// 個人資料：存 return_to 後跳至 index.html?screen=profile
-function goToProfile() {
-  sessionStorage.setItem('return_to', 'math.html');
-  window.location.href = 'index.html?screen=profile';
-}
-
 // ===== STAGES =====
 function renderStages() {
   const grid = document.getElementById('stages-grid');
@@ -768,7 +751,7 @@ function onCorrect() {
   if (consecutiveCorrect === 3) {
     setTimeout(() => showAchievement('🔥', '連對3題！', `${playerName}，你真的很厲害！繼續保持！`), 400);
   } else if (consecutiveCorrect === 5) {
-    setTimeout(() => showAchievement('⚡', '連對5題！', '超強的！你就是乘法小英雄！'), 400);
+    setTimeout(() => showAchievement('⚡', '連對5題！', '超強的！你就是乘法達人！'), 400);
   } else {
     setTimeout(nextQ, 1200);
   }
@@ -802,7 +785,7 @@ function nextQ() {
 function showResult() {
   const pct = sessionScore / questions.length;
   let trophy, title, msg, earned;
-  if (pct >= .9) { trophy = '🏆'; title = '完美！太厲害了！'; msg = '你已經是乘法小英雄啦！'; earned = 3; }
+  if (pct >= .9) { trophy = '🏆'; title = '完美！太厲害了！'; msg = '你已經是乘法達人啦！'; earned = 3; }
   else if (pct >= .6) { trophy = '🥈'; title = '做得很好！'; msg = '再練習幾次就能拿滿分！'; earned = 2; }
   else { trophy = '💪'; title = '繼續加油！'; msg = '不怕錯，練習就會進步！'; earned = 1; }
 
