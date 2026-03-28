@@ -186,8 +186,10 @@ function getTopbarGreetingHTML() {
 
 /** 更新所有頁面上已渲染的問候欄 */
 function refreshTopbarGreeting() {
-  document.querySelectorAll('.topbar-center[data-greeting]').forEach(function(el) {
-    el.innerHTML = getTopbarGreetingHTML();
+  requestAnimationFrame(function() {
+    document.querySelectorAll('.topbar-center[data-greeting]').forEach(function(el) {
+      el.innerHTML = getTopbarGreetingHTML();
+    });
   });
 }
 

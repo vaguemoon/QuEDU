@@ -116,17 +116,14 @@ body {
 /* ══════════════════════════
    畫面二：生字選單
 ══════════════════════════ */
-#screen-menu { background:var(--bg); display:flex; flex-direction:column; }
+#screen-menu { background:var(--bg); }
 .menu-body {
   padding:16px;
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(130px,1fr));
+  grid-auto-rows: min-content;
   gap:14px;
-  align-items:start;
-  align-content:start;
-  flex:1;
-  overflow-y:auto;
-  padding-bottom:90px;
+  contain: layout;
 }
 .char-card {
   background:var(--white); border-radius:var(--radius);
@@ -137,7 +134,7 @@ body {
   transition:transform .18s, box-shadow .18s;
   border:3px solid transparent; position:relative; overflow:hidden;
   user-select:none;
-  height:fit-content;
+  align-self:start;
 }
 .char-card:active { transform:scale(.93); }
 .char-card:hover  { transform:translateY(-4px); box-shadow:var(--shadow-lg); }
@@ -165,7 +162,6 @@ body {
 #screen-learn {
   background:var(--bg);
   display:flex; flex-direction:column;
-  height:100%;
 }
 
 
@@ -506,7 +502,7 @@ body {
 
 /* ══ 生字選單底部測驗按鈕 ══ */
 .menu-exam-bar {
-  flex-shrink:0;
+  position:sticky; bottom:0;
   padding:10px 16px 20px;
   background:linear-gradient(to top,rgba(238,245,252,1) 60%,rgba(238,245,252,0));
 }
@@ -688,7 +684,14 @@ body {
 </div>
 
 <div class="screen active" id="screen-home">
-  <div id="topbar-home"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-back" onclick="goBackToHub()">← 回首頁</button>
+      <div class="topbar-title">✏️ <span>國字練習</span></div>
+    </div>
+    <div class="topbar-center" data-greeting="1"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
+  </div>
   <div class="home-hero">
     <div class="home-school">臺東縣太平國小</div>
     <div class="home-title">國字<span>學習</span>系統</div>
@@ -742,7 +745,14 @@ body {
 
 <!-- ══ 畫面二：生字選單 ══ -->
 <div class="screen right" id="screen-menu">
-  <div id="topbar-menu"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-back" onclick="goTo('home')">← 返回</button>
+      <div class="topbar-title">今天的<span>生字</span></div>
+    </div>
+    <div class="topbar-center" data-greeting="1"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
+  </div>
   <!-- 進度概覽列 -->
   <div class="menu-progress-bar" id="menu-progress-bar">
     <div class="menu-progress-title">📊 今日學習進度</div>
@@ -765,7 +775,14 @@ body {
 
 <!-- ══ 測驗畫面 ══ -->
 <div class="screen right" id="screen-exam">
-  <div id="topbar-exam"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-back" onclick="abortExam()">✕ 結束測驗</button>
+      <div class="topbar-title" id="exam-topbar-title">今日測驗</div>
+    </div>
+    <div class="topbar-center"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
+  </div>
 
   <!-- 題目進度列 -->
   <div class="exam-progress-bar-wrap">
@@ -846,7 +863,14 @@ body {
 
 <!-- ══ 畫面二點五：模式選擇 ══ -->
 <div class="screen right" id="screen-mode">
-  <div id="topbar-mode"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-back" onclick="goTo('menu')">← 返回</button>
+      <div class="topbar-title" id="mode-select-title">選擇模式</div>
+    </div>
+    <div class="topbar-center"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
+  </div>
   <div class="mode-select-body">
     <div class="mode-select-char" id="mode-select-char"></div>
     <div class="mode-select-hint">請選擇要做什麼</div>
@@ -867,7 +891,14 @@ body {
 
 <!-- ══ 畫面三：學習頁 ══ -->
 <div class="screen right" id="screen-learn">
-  <div id="topbar-learn"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="btn-back" onclick="goTo('menu')">← 返回</button>
+      <div class="topbar-title" id="learn-title">學習</div>
+    </div>
+    <div class="topbar-center"></div>
+    <button class="btn-settings" onclick="goToProfile()">⚙️ 設定</button>
+  </div>
 
   <div class="mode-banner">
     <div class="mode-icon" id="mode-icon">✏️</div>
@@ -1130,20 +1161,61 @@ var charStrokes    = {};
 //  畫面切換（chinese.html 專用，有音效）
 // ═══════════════════════════════════════
 var SCREENS = ['home','menu','exam','mode','learn'];
+var _goToLocked = false;
 
 function goTo(name) {
   if (name === 'profile') { goToProfile(); return; }
+  if (_goToLocked) return;
   var from = currentScreen, to = name;
   if (from === to) return;
-  var fromEl = document.getElementById('screen-'+from);
-  var toEl   = document.getElementById('screen-'+to);
-  var fwd    = SCREENS.indexOf(to) > SCREENS.indexOf(from);
+
+  var fromEl = document.getElementById('screen-' + from);
+  var toEl   = document.getElementById('screen-' + to);
+  if (!fromEl || !toEl) return;
+
+  var fwd = SCREENS.indexOf(to) > SCREENS.indexOf(from);
   sfxSwipe();
-  toEl.className = 'screen '+(fwd?'right':'left');
-  void toEl.offsetWidth;
-  fromEl.className = 'screen '+(fwd?'left':'right');
-  toEl.className   = 'screen active';
-  currentScreen = to;
+  _goToLocked = true;
+
+  // 1. toEl 先放到最終方向的反側（不觸發 reflow，用 style 直接設）
+  toEl.style.transition = 'none';
+  toEl.style.transform  = fwd ? 'translateX(100%)' : 'translateX(-100%)';
+  toEl.style.opacity    = '0.3';
+  toEl.style.pointerEvents = 'none';
+  toEl.classList.remove('active', 'left', 'right');
+
+  // 2. 用兩個 rAF 確保瀏覽器已完成 paint，再啟動 transition
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var dur = '380ms';
+      var ease = 'cubic-bezier(.77,0,.175,1)';
+
+      // fromEl 滑出
+      fromEl.style.transition = 'transform ' + dur + ' ' + ease + ', opacity ' + dur + ' ease';
+      fromEl.style.transform  = fwd ? 'translateX(-100%)' : 'translateX(100%)';
+      fromEl.style.opacity    = '0.3';
+      fromEl.style.pointerEvents = 'none';
+
+      // toEl 滑入
+      toEl.style.transition = 'transform ' + dur + ' ' + ease + ', opacity ' + dur + ' ease';
+      toEl.style.transform  = 'translateX(0)';
+      toEl.style.opacity    = '1';
+      toEl.style.pointerEvents = 'all';
+
+      currentScreen = to;
+
+      // transition 結束後清掉 inline style，還原 class 控制
+      setTimeout(function() {
+        fromEl.style.transition = 'none';
+        toEl.style.transition   = 'none';
+        fromEl.className = 'screen ' + (fwd ? 'left' : 'right');
+        toEl.className   = 'screen active';
+        fromEl.style.cssText = '';
+        toEl.style.cssText   = '';
+        _goToLocked = false;
+      }, 400);
+    });
+  });
 }
 
 // goToProfile() 由 shared.js 提供
@@ -1324,7 +1396,7 @@ function renderMenu() {
     var lbl = {new:'尚未學習',practiced:'通過練習',mastered:'通過測驗'}[st];
     var cls = {new:'status-new',practiced:'status-practiced',mastered:'status-mastered'}[st];
     var card= st==='mastered'?'char-card mastered':st==='practiced'?'char-card practiced':'char-card';
-    return '<div class="'+card+'" id="card-'+i+'" onclick="onCardClick(event,'+i+')">'
+    return '<div class="'+card+'" id="card-'+i+'" style="align-self:start;height:auto;min-height:0;max-height:none" onclick="onCardClick(event,'+i+')">'
       +'<div class="char-card-check">✓</div>'
       +'<div class="char-card-glyph">'+c+'</div>'
       +'<div class="char-card-status '+cls+'">'+lbl+'</div>'
@@ -2415,7 +2487,6 @@ window.addEventListener('load', function(){
   initFirebase();
   applyTheme(currentTheme);
   applySound();
-  initTopbars();          // 渲染所有 topbar
   waitHW(function(){});
   initSoundWrapper();
 
