@@ -49,6 +49,22 @@ var THEMES = [
   { id:'pink',   name:'粉紅',   bg:'#fff0f8', blue:'#d63384', blueDk:'#a0255e', blueLt:'#fce4ec' },
 ];
 
+/**
+ * 同步套用主題 CSS 變數（需在 <head> 最早執行，防止主題閃爍）
+ * 新頁面在 <head> 最後一行加入：
+ *   <script>if(window.__applyThemeSync)window.__applyThemeSync();</script>
+ * 但因為 shared.js 是在 </body> 前載入，這裡改用內聯方式暴露給 head 用。
+ * 實際防閃爍邏輯維護在各頁面 head 的 inline script，
+ * 主題資料以 THEMES 陣列為唯一來源，inline script 只引用鍵值。
+ *
+ * ─── 新增頁面時，head 的同步主題 script 只需複製下面這 5 行 ───
+ * (function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+ *   purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+ *   teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+ *   try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+ *   ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+ */
+
 var currentTheme = localStorage.getItem('theme') || 'blue';
 
 /**
@@ -221,6 +237,49 @@ function setTopbarStudent(student) {
   refreshTopbarGreeting();
 }
 
+/* ════════════════════════════════════════
+   個人設定跳轉（所有子頁面統一用這個）
+   用法：goToProfile()
+   設定完後會自動返回原頁面
+   ════════════════════════════════════════ */
+function goToProfile() {
+  sessionStorage.setItem('return_to', window.location.pathname.split('/').pop());
+  window.location.href = 'index.html?screen=profile';
+}
+
+/* ════════════════════════════════════════
+   子頁面標準啟動流程
+   ════════════════════════════════════════
+   每個子頁面在 INIT 呼叫一次，自動處理：
+   1. Firebase 初始化 + 主題套用
+   2. 驗證 sessionStorage 登入狀態
+   3. 等 db 就緒後執行 callback
+
+   用法：
+   initSubPage(function(student) {
+     // student: { id, name, nickname, avatar, pin }
+     playerName = student.nickname || student.name;
+     renderTopbar('topbar-main', { ... });
+     renderStages();
+   });
+   ════════════════════════════════════════ */
+function initSubPage(callback) {
+  initFirebase();
+  applyTheme(currentTheme);
+  var saved;
+  try { saved = sessionStorage.getItem('hub_student'); } catch(e) {}
+  if (!saved) { window.location.href = 'index.html'; return; }
+  var student;
+  try { student = JSON.parse(saved); } catch(e) { window.location.href = 'index.html'; return; }
+  setTopbarStudent(student);
+  (function waitDb() {
+    if (!db) { setTimeout(waitDb, 150); return; }
+    try { callback(student); } catch(e) { console.error('initSubPage error:', e); }
+  })();
+}
+
+/* ════════════════════════════════════════
+   頁面切換（單頁應用模式）
    ════════════════════════════════════════
    用於 index.html、chinese.html 等有多個 .screen 的頁面
    ════════════════════════════════════════ */

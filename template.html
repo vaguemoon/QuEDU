@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>【頁面名稱】</title>
+
+<!-- Firebase SDK（版本號與其他頁面保持一致） -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<link rel="stylesheet" href="shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+
+<style>
+/*
+ * 這裡只放這個頁面「專屬」的樣式
+ * 不要重複定義 :root 變數或字型（shared.css 已處理）
+ */
+body { min-height: 100vh; }
+
+/* 範例：頁面主要內容區 */
+.main-wrap {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+}
+</style>
+</head>
+<body>
+
+<!-- ════ Topbar（空容器，由 JS renderTopbar() 填入） ════ -->
+<div id="topbar-main"></div>
+
+<!-- ════ 頁面主要內容（在這裡加你的 HTML） ════ -->
+<div class="main-wrap">
+  <p style="color:var(--muted);text-align:center;padding:60px 0">載入中…</p>
+</div>
+
+<!-- Toast 通知（固定，不要動） -->
+<div id="toast"></div>
+
+<!-- ════ 共用邏輯 ════ -->
+<script src="shared.js"></script>
+
+<script>
+/*
+ * ════════════════════════════════════════
+ *  頁面專屬 JS
+ *
+ *  開發新頁面的步驟：
+ *  1. 複製這個 template.html，改檔名（例如 reading.html）
+ *  2. 修改 <title> 和 topbar 的 title
+ *  3. 在 initSubPage callback 裡寫這個頁面自己的初始化
+ *  4. 在 index.html 的 goToSubject() 加一行跳轉
+ *  5. 在 index.html 的 subjects-grid 加一張科目卡
+ * ════════════════════════════════════════
+ */
+
+// ── 頁面狀態（在這裡宣告這個頁面需要的變數） ──
+// var myVariable = ...;
+
+// ── 初始化（固定寫法，不要改） ──
+window.addEventListener('load', function() {
+
+  // 渲染 topbar（修改 back / title 即可）
+  renderTopbar('topbar-main', {
+    back:  { label: '← 回首頁', onclick: "window.location.href='index.html'" },
+    title: '【頁面標題】'
+    // titleId: 'my-topbar-title'  ← 如果標題需要動態更新，加這行
+  });
+
+  // 啟動子頁面（自動處理登入驗證、Firebase、主題、問候語）
+  initSubPage(function(student) {
+    /*
+     * student 物件包含：
+     *   student.id        Firebase 文件 ID（name_pin）
+     *   student.name      真實姓名
+     *   student.nickname  暱稱（可能為空字串）
+     *   student.avatar    頭像 emoji
+     *   student.pin       PIN 碼
+     *
+     * 到這裡時 db 一定已就緒，可以直接讀寫 Firebase
+     */
+
+    // ── 在這裡寫你的初始化邏輯 ──
+    // var name = student.nickname || student.name;
+    // renderMyContent();
+    // loadFromFirebase(student.id);
+  });
+
+});
+
+// ── 儲存進度到 Firebase（範例） ──
+function saveProgress(studentId, data) {
+  if (!db || !studentId) return;
+  db.collection('students').doc(studentId)
+    .collection('progress').doc('【科目代號】')
+    .set(data, { merge: true })
+    .catch(function(e) { console.warn('saveProgress error:', e); });
+}
+
+// ── 在這裡加這個頁面的其他函式 ──
+</script>
+</body>
+</html>

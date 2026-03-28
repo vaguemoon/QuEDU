@@ -8,26 +8,11 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <link rel="stylesheet" href="shared.css">
 <script>
-// 同步套用主題（在任何 DOM 渲染前執行，防止 CSS 變數閃爍）
-(function() {
-  var THEMES = {
-    blue:   { bg:'#eef5fc', blue:'#4a90d9', dk:'#2d6fa8', lt:'#e8f4fd' },
-    green:  { bg:'#edfbf4', blue:'#27ae60', dk:'#1e8449', lt:'#d5f5e3' },
-    purple: { bg:'#f3f0fc', blue:'#8e44ad', dk:'#6c3483', lt:'#e8daef' },
-    orange: { bg:'#fff8f0', blue:'#e67e22', dk:'#ca6f1e', lt:'#fdebd0' },
-    teal:   { bg:'#f0fafa', blue:'#16a085', dk:'#0e6655', lt:'#d1f2eb' },
-    pink:   { bg:'#fff0f8', blue:'#d63384', dk:'#a0255e', lt:'#fce4ec' }
-  };
-  try {
-    var id = localStorage.getItem('theme') || 'blue';
-    var t  = THEMES[id] || THEMES.blue;
-    var r  = document.documentElement.style;
-    r.setProperty('--bg',      t.bg);
-    r.setProperty('--blue',    t.blue);
-    r.setProperty('--blue-dk', t.dk);
-    r.setProperty('--blue-lt', t.lt);
-  } catch(e) {}
-})();
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
 </script>
 <style>
 body { height:100vh; overflow:hidden; }
@@ -302,22 +287,8 @@ if (window.__hasSession) document.getElementById('anti-flash').style.display = '
       <div class="hub-school">臺東縣太平國小資源班</div>
     </div>
 
-    <!-- [修正#4] 移除「即將推出」卡片，只保留已完成的兩個科目 -->
     <div class="hub-section-label">📚 學習區</div>
-    <div class="subjects-grid">
-      <div class="subject-card theme-blue" onclick="goToSubject('chinese')">
-        <span class="subject-icon">🈶</span>
-        <div class="subject-name">國字練習</div>
-        <div class="subject-desc">筆順練習<br>默寫測驗</div>
-        <div class="subject-badge green">可以練習</div>
-      </div>
-      <div class="subject-card theme-orange" onclick="goToSubject('math')">
-        <span class="subject-icon">✖️</span>
-        <div class="subject-name">乘法練習</div>
-        <div class="subject-desc">選擇題・填空題<br>關卡解鎖</div>
-        <div class="subject-badge orange">可以練習</div>
-      </div>
-    </div>
+    <div id="subjects-grid" class="subjects-grid"></div>
 
     <div class="hub-section-label">📊 近期記錄</div>
     <div class="activity-card">
@@ -355,11 +326,6 @@ if (window.__hasSession) document.getElementById('anti-flash').style.display = '
         <div class="achievement-icon">✏️</div>
         <div class="achievement-num" id="ach-practiced">0</div>
         <div class="achievement-lbl">通過練習<br>的字</div>
-      </div>
-      <div class="achievement-item">
-        <div class="achievement-icon">⭐</div>
-        <div class="achievement-num" id="ach-math-stars">0</div>
-        <div class="achievement-lbl">乘法<br>星星數</div>
       </div>
       <div class="achievement-item">
         <div class="achievement-icon">🔥</div>
@@ -560,6 +526,7 @@ function updateHubUI() {
   document.getElementById('badge-name').textContent=n;
   document.getElementById('badge-avatar').textContent=av;
   document.getElementById('student-badge').classList.add('show');
+  renderSubjects(); // 科目卡由 SUBJECTS 陣列驅動
 }
 
 // [修正#3] 徽章點擊 → 個人資料（在 index.html 內切換，不跳頁）
@@ -617,8 +584,8 @@ function loadProfileData(cb) {
 
   if (!db) { if(cb) cb(); return; }
 
-  var mastered = 0, practiced = 0, mathStars = 0, streak = 0;
-  var pending = 2;
+  var mastered = 0, practiced = 0, streak = 0;
+  var pending = 1;
   function done() {
     if (--pending > 0) return;
     var lv = getLevelInfo(mastered);
@@ -629,7 +596,6 @@ function loadProfileData(cb) {
     if (el('profile-level-bar'))   el('profile-level-bar').style.width = lv.pct + '%';
     if (el('ach-mastered'))    el('ach-mastered').textContent    = mastered;
     if (el('ach-practiced'))   el('ach-practiced').textContent   = practiced;
-    if (el('ach-math-stars'))  el('ach-math-stars').textContent  = mathStars;
     if (el('ach-streak'))      el('ach-streak').textContent      = streak;
     if (cb) cb();
   }
@@ -642,12 +608,6 @@ function loadProfileData(cb) {
         practiced = Object.values(cs).filter(function(v){ return v==='practiced'; }).length;
         streak    = doc.data().streak || 0;
       }
-      done();
-    }).catch(done);
-
-  db.collection('students').doc(currentStudent.id).collection('progress').doc('math').get()
-    .then(function(doc){
-      if (doc.exists) mathStars = doc.data().totalStars || 0;
       done();
     }).catch(done);
 }
@@ -681,49 +641,115 @@ function saveProfile() {
     .catch(function(e){ showToast('❌ 儲存失敗：'+e.message); });
 }
 
-// ── 近期活動 ──
+// ══════════════════════════════════════════
+//  SUBJECTS — 唯一需要修改的地方
+//  新增子項目：在這個陣列加一筆，科目卡和近期記錄自動出現
+// ══════════════════════════════════════════
+var SUBJECTS = [
+  {
+    id:         'chinese',          // 對應的 HTML 檔名（不含 .html）
+    file:       'chinese.html',     // 跳轉目標
+    icon:       '🈶',
+    name:       '國字練習',
+    desc:       '筆順練習・默寫測驗',
+    theme:      'theme-blue',       // subject-card 的 CSS class
+    badge:      '可以練習',
+    badgeClass: 'green',
+    // 從 Firebase 讀取近期記錄的函式（回傳 Promise<{sub, score} | null>）
+    activity: function(studentId) {
+      return db.collection('students').doc(studentId)
+        .collection('progress').doc('hanzi').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var cs = doc.data().charStatus || {};
+          var m  = Object.values(cs).filter(function(v){ return v==='mastered'; }).length;
+          var p  = Object.values(cs).filter(function(v){ return v==='practiced'; }).length;
+          if (m + p === 0) return null;
+          return { sub: '通過測驗 '+m+' 字，通過練習 '+p+' 字', score: (m+p)+' 字' };
+        });
+    }
+  }
+  /*
+   * ── 新增子項目範例 ──
+   * {
+   *   id:         'math',
+   *   file:       'math.html',
+   *   icon:       '✖️',
+   *   name:       '乘法練習',
+   *   desc:       '選擇題・填空題',
+   *   theme:      'theme-orange',
+   *   badge:      '可以練習',
+   *   badgeClass: 'orange',
+   *   activity: function(studentId) {
+   *     return db.collection('students').doc(studentId)
+   *       .collection('progress').doc('math').get()
+   *       .then(function(doc) {
+   *         if (!doc.exists) return null;
+   *         var d = doc.data();
+   *         if (!d.totalAnswered) return null;
+   *         var pct = Math.round(d.totalCorrect / d.totalAnswered * 100);
+   *         return { sub: '作答 '+d.totalAnswered+' 題，正確率 '+pct+'%', score: '⭐ '+(d.totalStars||0) };
+   *       });
+   *   }
+   * },
+   */
+];
+
+// ── 科目卡渲染（由 SUBJECTS 驅動） ──
+function renderSubjects() {
+  var grid = document.getElementById('subjects-grid');
+  if (!grid) return;
+  var cols = SUBJECTS.length === 1 ? '1fr' : '1fr 1fr';
+  var maxW = SUBJECTS.length === 1 ? '280px' : 'none';
+  grid.style.gridTemplateColumns = cols;
+  grid.style.maxWidth = maxW;
+  grid.style.margin   = SUBJECTS.length === 1 ? '0 auto 26px' : '0 0 26px';
+  grid.innerHTML = SUBJECTS.map(function(s) {
+    return '<div class="subject-card '+s.theme+'" onclick="goToSubject(\''+s.id+'\')">'+
+      '<span class="subject-icon">'+s.icon+'</span>'+
+      '<div class="subject-name">'+s.name+'</div>'+
+      '<div class="subject-desc">'+s.desc+'</div>'+
+      '<div class="subject-badge '+s.badgeClass+'">'+s.badge+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── 跳轉（由 SUBJECTS 驅動） ──
+function goToSubject(id) {
+  if (!currentStudent) return;
+  var s = SUBJECTS.find(function(x){ return x.id === id; });
+  if (!s) return;
+  saveSession(currentStudent);
+  window.location.href = s.file;
+}
+
+// ── 近期記錄（由 SUBJECTS 驅動） ──
 function loadActivity() {
-  if (!db||!currentStudent) return;
-  var list=document.getElementById('activity-list');
-  list.innerHTML='<div class="activity-empty">載入中…</div>';
-  var activities=[], pending=2;
-  function done(){ if(--pending===0) renderActivity(activities); }
-
-  db.collection('students').doc(currentStudent.id).collection('progress').doc('hanzi').get()
-    .then(function(doc){
-      if(doc.exists){ var cs=doc.data().charStatus||{};
-        var m=Object.values(cs).filter(function(v){return v==='mastered';}).length;
-        var p=Object.values(cs).filter(function(v){return v==='practiced';}).length;
-        if(m+p>0) activities.push({icon:'🈶',title:'國字練習',sub:'通過測驗 '+m+' 字，通過練習 '+p+' 字',score:m+p+' 字'});
-      } done();
-    }).catch(done);
-
-  db.collection('students').doc(currentStudent.id).collection('progress').doc('math').get()
-    .then(function(doc){
-      if(doc.exists){ var d=doc.data();
-        if(d.totalAnswered>0){ var pct=Math.round(d.totalCorrect/d.totalAnswered*100);
-          activities.push({icon:'✖️',title:'乘法練習',sub:'作答 '+d.totalAnswered+' 題，正確率 '+pct+'%',score:'⭐ '+(d.totalStars||0)});
-        }
-      } done();
-    }).catch(done);
+  if (!db || !currentStudent) return;
+  var list = document.getElementById('activity-list');
+  list.innerHTML = '<div class="activity-empty">載入中…</div>';
+  var promises = SUBJECTS.map(function(s) {
+    return s.activity(currentStudent.id).then(function(result) {
+      if (!result) return null;
+      return { icon: s.icon, title: s.name, sub: result.sub, score: result.score };
+    }).catch(function(){ return null; });
+  });
+  Promise.all(promises).then(function(results) {
+    renderActivity(results.filter(Boolean));
+  });
 }
 function renderActivity(activities) {
-  var list=document.getElementById('activity-list');
-  if (!activities.length){ list.innerHTML='<div class="activity-empty">還沒有學習記錄，快去練習吧！🚀</div>'; return; }
-  list.innerHTML=activities.map(function(a){
+  var list = document.getElementById('activity-list');
+  if (!activities.length) {
+    list.innerHTML = '<div class="activity-empty">還沒有學習記錄，快去練習吧！🚀</div>';
+    return;
+  }
+  list.innerHTML = activities.map(function(a) {
     return '<div class="activity-row"><div class="activity-icon">'+a.icon+'</div>'
       +'<div class="activity-info"><div class="activity-title">'+a.title+'</div>'
       +'<div class="activity-sub">'+a.sub+'</div></div>'
       +'<div class="activity-score">'+a.score+'</div></div>';
   }).join('');
-}
-
-// [修正#5] 前往科目：子頁面從 sessionStorage 讀取，不重新登入
-function goToSubject(subject) {
-  if (!currentStudent) return;
-  saveSession(currentStudent);
-  if (subject==='chinese') window.location.href='chinese.html';
-  else if (subject==='math') window.location.href='math.html';
 }
 
 // ── 登出 ──

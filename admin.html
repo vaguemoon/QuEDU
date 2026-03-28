@@ -382,14 +382,6 @@ body {
 @keyframes spin { to { transform:rotate(360deg); } }
 .loading-wrap { padding:40px; text-align:center; color:var(--muted); font-weight:700; }
 
-/* Toast */
-.toast {
-  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px);
-  background:var(--text); color:white; border-radius:10px;
-  padding:11px 22px; font-size:.9rem; font-weight:700;
-  opacity:0; transition:all .3s ease; z-index:999; white-space:nowrap;
-}
-.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
@@ -607,51 +599,20 @@ body {
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="toast"></div>
 
 <script>
 'use strict';
 
-// ══ Firebase 設定 ══
-var firebaseConfig = {
-  apiKey: "AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0",
-  authDomain: "tainping-hanzi-app.firebaseapp.com",
-  projectId: "tainping-hanzi-app",
-  storageBucket: "tainping-hanzi-app.firebasestorage.app",
-  messagingSenderId: "158917910126",
-  appId: "1:158917910126:web:e52a1d0456d1fd4fe6907f"
-};
-
-var db = null;
-
-var fbInitTries = 0;
-function initFirebase() {
-  fbInitTries++;
-  // 超過 20 次（3秒）還沒好，顯示錯誤
-  if (fbInitTries > 20) {
-    showFirebaseError('Firebase SDK 載入失敗，請檢查網路連線後重新整理頁面。');
-    return;
-  }
-  if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined') {
-    setTimeout(initFirebase, 150); return;
-  }
-  try {
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-    onFirebaseReady();
-  } catch(e) {
-    console.warn('Firebase init error:', e);
-    showFirebaseError('Firebase 初始化錯誤：' + e.message);
-  }
-}
+// Firebase config、db、initFirebase 由 shared.js 提供
+// admin 啟動時用自己的 onFirebaseReady 接管後續流程
 
 function onFirebaseReady() {
-  console.log('Firebase ready, loading data...');
   loadCourseOverview();
 }
 
 function showFirebaseError(msg) {
-  var wrap = document.getElementById('student-list-wrap');
+  var wrap = document.getElementById('course-overview-wrap') || document.getElementById('student-list-wrap');
   if (wrap) {
     wrap.innerHTML = '<div style="padding:20px;background:#fff5f5;border-radius:10px;color:#dc2626;font-weight:700;font-size:.9rem;line-height:1.8">'
       + '❌ 資料庫連線失敗<br>'
@@ -661,13 +622,25 @@ function showFirebaseError(msg) {
   }
 }
 
-window.addEventListener('load', initFirebase);
+window.addEventListener('load', function() {
+  // 驗證 adminAuth（未授權直接回首頁）
+  if (sessionStorage.getItem('adminAuth') !== '381418') {
+    window.location.href = 'index.html';
+    return;
+  }
+  // 用 shared.js 的 initFirebase，db 就緒後呼叫 onFirebaseReady
+  initFirebase();
+  (function waitDb() {
+    if (!db) { setTimeout(waitDb, 150); return; }
+    onFirebaseReady();
+  })();
+});
 
-// ══ 登入 ══
-
-
+// ══ 登出 ══
 function doLogout() {
+  sessionStorage.removeItem('adminAuth');
   window.location.href = 'index.html';
+}
 }
 
 // ══ 分頁切換 ══
@@ -1602,13 +1575,8 @@ function showStrokeModal(char) {
   document.body.appendChild(overlay);
 }
 
-// ══ Toast ══
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 2800);
-}
+// showToast 由 shared.js 提供
 </script>
+<script src="shared.js"></script>
 </body>
 </html>

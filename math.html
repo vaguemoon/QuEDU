@@ -10,25 +10,11 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <link rel="stylesheet" href="shared.css">
 <script>
-(function() {
-  var THEMES = {
-    blue:   { bg:'#eef5fc', blue:'#4a90d9', dk:'#2d6fa8', lt:'#e8f4fd' },
-    green:  { bg:'#edfbf4', blue:'#27ae60', dk:'#1e8449', lt:'#d5f5e3' },
-    purple: { bg:'#f3f0fc', blue:'#8e44ad', dk:'#6c3483', lt:'#e8daef' },
-    orange: { bg:'#fff8f0', blue:'#e67e22', dk:'#ca6f1e', lt:'#fdebd0' },
-    teal:   { bg:'#f0fafa', blue:'#16a085', dk:'#0e6655', lt:'#d1f2eb' },
-    pink:   { bg:'#fff0f8', blue:'#d63384', dk:'#a0255e', lt:'#fce4ec' }
-  };
-  try {
-    var id = localStorage.getItem('theme') || 'blue';
-    var t  = THEMES[id] || THEMES.blue;
-    var r  = document.documentElement.style;
-    r.setProperty('--bg',      t.bg);
-    r.setProperty('--blue',    t.blue);
-    r.setProperty('--blue-dk', t.dk);
-    r.setProperty('--blue-lt', t.lt);
-  } catch(e) {}
-})();
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
 </script>
 <style>
   /* math.html 專屬：dark mode 覆寫 */
