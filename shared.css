@@ -246,6 +246,7 @@ body {
   cursor: pointer; transition: transform .18s, box-shadow .18s;
   border: 3px solid transparent; position: relative; overflow: hidden;
   user-select: none;
+  align-self: start;
 }
 .item-card:active { transform: scale(.93); }
 .item-card:hover  { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
