@@ -116,7 +116,7 @@ body {
 /* ══════════════════════════
    畫面二：生字選單
 ══════════════════════════ */
-#screen-menu { background:var(--bg); }
+#screen-menu { background:var(--bg); display:flex; flex-direction:column; }
 .menu-body {
   padding:16px;
   display:grid;
@@ -124,6 +124,9 @@ body {
   gap:14px;
   align-items:start;
   align-content:start;
+  flex:1;
+  overflow-y:auto;
+  padding-bottom:90px;
 }
 .char-card {
   background:var(--white); border-radius:var(--radius);
@@ -503,7 +506,7 @@ body {
 
 /* ══ 生字選單底部測驗按鈕 ══ */
 .menu-exam-bar {
-  position:sticky; bottom:0;
+  flex-shrink:0;
   padding:10px 16px 20px;
   background:linear-gradient(to top,rgba(238,245,252,1) 60%,rgba(238,245,252,0));
 }
