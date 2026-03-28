@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>乘法小英雄 🌟</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Firebase SDK（與 Hub 共用同一 project，用於儲存乘法進度） -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
   :root {
     --blue: #4a90d9;
@@ -440,7 +443,8 @@
   <div class="nav-right">
     <div class="star-count" id="nav-stars">⭐ <span id="nav-star-num">0</span></div>
     <button class="btn-icon" id="btn-dark" title="深色模式">🌙</button>
-    <button class="btn-icon" id="btn-home" title="回首頁">🏠</button>
+    <!-- [修正#6] 回到 Hub 首頁 -->
+    <button class="btn-icon" id="btn-hub" title="回首頁" onclick="window.location.href='index.html'">🏠</button>
   </div>
 </nav>
 
@@ -450,9 +454,8 @@
     <span class="cover-emoji">🦸</span>
     <div class="cover-title">成為<em>乘法</em><br>小英雄！</div>
     <div class="cover-sub">練習乘法，收集星星，解鎖關卡 🚀</div>
-    <div class="cover-name-row">
-      <input type="text" id="player-name" placeholder="輸入你的名字" maxlength="8">
-    </div>
+    <!-- 姓名由 Hub 登入帶入，不需再輸入 -->
+    <div id="cover-name-display" style="font-family:'Nunito',sans-serif;font-weight:900;font-size:1.1rem;color:var(--blue-dark);margin-bottom:4px"></div>
     <button class="btn-primary" id="btn-start">開始冒險 ✨</button>
   </div>
 </div>
@@ -536,6 +539,42 @@
 <div class="confetti-container" id="confetti"></div>
 
 <script>
+// ===== FIREBASE（儲存乘法進度至 Firestore）=====
+var firebaseConfig = {
+  apiKey: "AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0",
+  authDomain: "tainping-hanzi-app.firebaseapp.com",
+  projectId: "tainping-hanzi-app",
+  storageBucket: "tainping-hanzi-app.firebasestorage.app",
+  messagingSenderId: "158917910126",
+  appId: "1:158917910126:web:e52a1d0456d1fd4fe6907f"
+};
+var mathDb = null;
+var hubStudentId = null; // 從 sessionStorage 取得
+
+(function initMathFirebase() {
+  if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined') {
+    setTimeout(initMathFirebase, 150); return;
+  }
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    mathDb = firebase.firestore();
+  } catch(e) { mathDb = null; setTimeout(initMathFirebase, 300); }
+})();
+
+function saveToFirebase() {
+  if (!mathDb || !hubStudentId) return;
+  mathDb.collection('students').doc(hubStudentId)
+    .collection('progress').doc('math')
+    .set({
+      totalStars:    totalStars,
+      totalAnswered: totalAnswered,
+      totalCorrect:  totalCorrect,
+      stageProgress: stageProgress,
+      updatedAt:     firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true })
+    .catch(function(e){ console.warn('math save error', e); });
+}
+
 // ===== STATE =====
 let playerName = '';
 let totalStars = 0;
@@ -565,6 +604,7 @@ function save() {
   localStorage.setItem('mh_correct', totalCorrect);
   localStorage.setItem('mh_progress', JSON.stringify(stageProgress));
   localStorage.setItem('mh_name', playerName);
+  saveToFirebase(); // 同步至 Firestore（供 Hub 近期記錄讀取）
 }
 function load() {
   totalStars = parseInt(localStorage.getItem('mh_stars') || '0');
@@ -878,10 +918,25 @@ function launchConfetti() {
 }
 
 // ===== INIT =====
-if (playerName) {
-  updateNav();
-  goToStages();
-}
+// [修正#5] 從 Hub sessionStorage 讀取登入資料，不顯示封面輸入姓名
+(function() {
+  try {
+    var saved = sessionStorage.getItem('hub_student');
+    if (!saved) {
+      // 沒有登入資料 → 回首頁
+      window.location.href = 'index.html';
+      return;
+    }
+    var hubStudent = JSON.parse(saved);
+    playerName = hubStudent.nickname || hubStudent.name;
+    hubStudentId = hubStudent.id; // 存起來給 Firebase 用
+    load();        // 讀取本地進度
+    updateNav();
+    goToStages();  // 直接進關卡選擇，跳過封面
+  } catch(e) {
+    window.location.href = 'index.html';
+  }
+})();
 </script>
 </body>
 </html>

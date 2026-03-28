@@ -1199,7 +1199,9 @@ body {
 <div class="screen right" id="screen-home">
   <div class="topbar">
     <div class="topbar-left">
-      <div class="topbar-title">✏️ 太平國小<span>國字學習</span></div>
+      <!-- [修正#6] 回到 Hub 首頁按鈕 -->
+      <button class="btn-back" onclick="goBackToHub()">← 回首頁</button>
+      <div class="topbar-title">✏️ <span>國字練習</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <button class="btn-profile-entry" id="btn-profile-entry" onclick="goTo('profile')">
@@ -3495,6 +3497,14 @@ function showToast(html) {
 }
 
 // ═══════════════════════════════════════
+//  [修正#6] 回到 Hub 首頁
+// ═══════════════════════════════════════
+function goBackToHub() {
+  // sessionStorage 已保有登入資料，回到 index.html 會自動恢復登入狀態
+  window.location.href = 'index.html';
+}
+
+// ═══════════════════════════════════════
 //  啟動
 // ═══════════════════════════════════════
 function waitHW(cb) {
@@ -3502,11 +3512,46 @@ function waitHW(cb) {
   else setTimeout(function(){ waitHW(cb); },100);
 }
 window.addEventListener('load', function(){
-  initFirebase();        // Firebase 初始化（會自動輪詢直到就緒）
-  waitHW(function(){});  // HanziWriter 初始化
-  applyTheme(currentTheme); // 套用上次的主題
-  applySound();             // 套用音效開關狀態
-  initSoundWrapper();       // 包裝音效函數
+  initFirebase();
+  waitHW(function(){});
+  applyTheme(currentTheme);
+  applySound();
+  initSoundWrapper();
+
+  // ── [修正#5] 從 Hub sessionStorage 讀取登入資料，不需重新登入 ──
+  try {
+    var saved = sessionStorage.getItem('hub_student');
+    if (saved) {
+      var hubStudent = JSON.parse(saved);
+      // 若從 Hub 帶 ?screen=profile 過來，先進個人資料頁
+      var wantProfile = window.location.search.indexOf('screen=profile') !== -1;
+      // 等 Firebase 就緒後自動登入
+      (function autoLogin() {
+        if (!db) { setTimeout(autoLogin, 200); return; }
+        var id = hubStudent.name + '_' + hubStudent.pin;
+        db.collection('students').doc(id).get().then(function(doc) {
+          if (!doc.exists) { window.location.href = 'index.html'; return; }
+          var studentDocData = doc.data();
+          db.collection('students').doc(id)
+            .collection('progress').doc('hanzi')
+            .get().then(function(progressDoc) {
+              var progressData = progressDoc.exists ? progressDoc.data() : { charStatus:{} };
+              progressData.nickname = studentDocData.nickname || '';
+              progressData.avatar   = studentDocData.avatar   || '';
+              onLoginSuccess({ name:hubStudent.name, pin:hubStudent.pin, id:id }, progressData);
+              // 若指定進入個人資料頁
+              if (wantProfile) {
+                setTimeout(function(){
+                  updateProfileScreen();
+                  goTo('profile');
+                }, 300);
+              }
+            });
+        }).catch(function() { window.location.href = 'index.html'; });
+      })();
+    }
+    // 沒有 sessionStorage → 顯示登入畫面（正常流程）
+  } catch(e) { /* 忽略，顯示正常登入畫面 */ }
 });
 
 // 也在 DOMContentLoaded 時嘗試初始化（雙保險）

@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>太平國小學習平台</title>
-<!-- Firebase SDK -->
+<title>臺東縣太平國小資源班學習系統</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
@@ -23,19 +22,15 @@
   --text:     #1e2d3d;
   --muted:    #7a99b5;
   --white:    #ffffff;
+  --border:   #d4e8f8;
   --radius:   22px;
   --shadow:   0 6px 28px rgba(44,100,160,.13);
   --shadow-lg:0 12px 48px rgba(44,100,160,.2);
 }
 
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
-body {
-  font-family:'Nunito','Noto Sans TC',sans-serif;
-  background:var(--bg); color:var(--text);
-  height:100vh; overflow:hidden;
-}
+body { font-family:'Nunito','Noto Sans TC',sans-serif; background:var(--bg); color:var(--text); height:100vh; overflow:hidden; }
 
-/* ══ 畫面切換 ══ */
 .app { position:relative; width:100vw; height:100vh; overflow:hidden; }
 .screen {
   position:absolute; inset:0; overflow-y:auto;
@@ -46,421 +41,332 @@ body {
 .screen.right  { transform:translateX(100%);  opacity:.3; pointer-events:none; }
 .screen.left   { transform:translateX(-100%); opacity:.3; pointer-events:none; }
 
-/* ══ 登入畫面 ══ */
+/* ── 登入畫面 ── */
 #screen-login {
   background:linear-gradient(160deg,#1a3a5c 0%,#2d6fa8 60%,#4a90d9 100%);
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   min-height:100vh; padding:24px;
 }
-.login-logo { text-align:center; margin-bottom:28px; color:white; }
-.login-logo-icon { font-size:3.8rem; margin-bottom:10px; display:block; }
-.login-school { font-size:.88rem; letter-spacing:3px; opacity:.8; margin-bottom:4px; }
-.login-title  { font-size:1.75rem; font-weight:900; line-height:1.25; }
+.login-logo { text-align:center; margin-bottom:22px; color:white; }
+.login-logo-icon { font-size:3.2rem; margin-bottom:8px; display:block; }
+.login-school { font-size:.8rem; letter-spacing:3px; opacity:.75; margin-bottom:4px; }
+.login-title  { font-size:1.55rem; font-weight:900; line-height:1.3; }
 .login-title em { color:var(--yellow); font-style:normal; }
+
+/* 身份 Tab  [修正#2] */
+.role-tabs {
+  display:flex; width:100%; max-width:380px;
+  background:rgba(255,255,255,.15); border-radius:13px;
+  padding:4px; gap:4px; margin-bottom:14px;
+}
+.role-tab {
+  flex:1; padding:10px 6px; border:none; border-radius:10px;
+  font-family:'Nunito',sans-serif; font-size:.88rem; font-weight:800;
+  cursor:pointer; transition:all .2s; color:rgba(255,255,255,.65);
+  background:transparent;
+}
+.role-tab.active { background:white; color:var(--blue-dk); }
 
 .login-card {
   background:white; border-radius:var(--radius);
-  padding:28px 24px; box-shadow:0 16px 48px rgba(0,0,0,.25);
+  padding:22px 20px; box-shadow:0 16px 48px rgba(0,0,0,.25);
   width:100%; max-width:380px;
 }
-.login-card-title {
-  font-size:1rem; font-weight:900; color:var(--blue-dk);
-  text-align:center; margin-bottom:20px;
-}
-.login-field { margin-bottom:16px; }
-.login-label { font-size:.82rem; font-weight:800; color:var(--muted); margin-bottom:6px; display:block; }
+.login-card-title { font-size:.96rem; font-weight:900; color:var(--blue-dk); text-align:center; margin-bottom:16px; }
+.login-field { margin-bottom:13px; }
+.login-label { font-size:.79rem; font-weight:800; color:var(--muted); margin-bottom:5px; display:block; }
 .login-input {
-  width:100%; border:2.5px solid #d4e8f8; border-radius:12px;
-  padding:13px 16px; font-size:1.1rem;
+  width:100%; border:2.5px solid var(--border); border-radius:12px;
+  padding:11px 14px; font-size:1.02rem;
   font-family:'Noto Sans TC',sans-serif; outline:none;
   transition:border-color .2s; color:var(--text);
 }
 .login-input:focus { border-color:var(--blue); }
 
-/* PIN 碼 */
-.pin-display { display:flex; gap:8px; justify-content:center; margin-bottom:16px; }
-.pin-dot {
-  width:18px; height:18px; border-radius:50%;
-  border:3px solid #c8d8ec; background:transparent; transition:all .15s;
-}
+.pin-display { display:flex; gap:8px; justify-content:center; margin-bottom:13px; }
+.pin-dot { width:16px; height:16px; border-radius:50%; border:3px solid #c8d8ec; background:transparent; transition:all .15s; }
 .pin-dot.filled { background:var(--blue); border-color:var(--blue); }
-.pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+.pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:13px; }
 .pin-btn {
-  padding:16px; border:2.5px solid #d4e8f8; border-radius:14px;
-  background:white; font-size:1.4rem; font-weight:900;
-  color:var(--text); cursor:pointer; transition:all .15s;
-  font-family:'Nunito',sans-serif;
+  padding:14px; border:2.5px solid var(--border); border-radius:12px;
+  background:white; font-size:1.3rem; font-weight:900;
+  color:var(--text); cursor:pointer; transition:all .15s; font-family:'Nunito',sans-serif;
 }
 .pin-btn:active { background:var(--blue-lt); transform:scale(.95); }
-.pin-btn-del { background:#fff0f0; color:var(--red); border-color:#ffb3b3; font-size:1.1rem; }
-.pin-btn-ok  { background:var(--green); color:white; border-color:var(--green); font-size:1rem; }
+.pin-btn-del { background:#fff0f0; color:var(--red); border-color:#ffb3b3; font-size:1rem; }
+.pin-btn-ok  { background:var(--green); color:white; border-color:var(--green); font-size:.92rem; }
 
 .btn-login {
-  width:100%; padding:14px; border:none; border-radius:14px;
+  width:100%; padding:13px; border:none; border-radius:12px;
   background:linear-gradient(135deg,var(--blue),var(--blue-dk));
-  color:white; font-size:1.05rem; font-weight:900; cursor:pointer;
-  font-family:'Nunito',sans-serif;
-  box-shadow:0 4px 14px rgba(45,111,168,.35); margin-top:4px;
-  transition:all .15s;
+  color:white; font-size:.98rem; font-weight:900; cursor:pointer;
+  font-family:'Nunito',sans-serif; box-shadow:0 4px 14px rgba(45,111,168,.35);
+  transition:all .15s; margin-top:2px;
 }
 .btn-login:active { transform:scale(.97); }
 .btn-login:disabled { background:#b0c8e8; cursor:not-allowed; box-shadow:none; }
-
 .login-error {
-  background:#fff0f0; color:var(--red); border-radius:10px;
-  padding:10px 14px; font-size:.88rem; font-weight:700;
-  text-align:center; margin-top:10px; display:none;
+  background:#fff0f0; color:var(--red); border-radius:9px;
+  padding:8px 12px; font-size:.82rem; font-weight:700;
+  text-align:center; margin-top:9px; display:none;
 }
 .login-error.show { display:block; }
-
-.login-switch { text-align:center; margin-top:14px; font-size:.85rem; font-weight:600; color:var(--muted); }
+.login-switch { text-align:center; margin-top:11px; font-size:.8rem; font-weight:600; color:var(--muted); }
 .login-switch a { color:var(--blue); font-weight:800; cursor:pointer; text-decoration:none; }
 
-/* ══ Hub 畫面 ══ */
-#screen-hub {
-  background:linear-gradient(160deg,#dbeeff 0%,#eef5fc 100%);
-  display:flex; flex-direction:column; min-height:100vh;
-}
+/* 教師登入 */
+.teacher-field { margin-bottom:12px; }
 
-/* Hub 頂部 */
+/* ── Hub 畫面 ── */
+#screen-hub { background:linear-gradient(160deg,#dbeeff 0%,#eef5fc 100%); display:flex; flex-direction:column; min-height:100vh; }
 .hub-topbar {
-  background:white; padding:13px 20px;
+  background:white; padding:11px 16px;
   display:flex; align-items:center; justify-content:space-between;
-  box-shadow:0 2px 12px rgba(0,0,0,.06);
-  position:sticky; top:0; z-index:50;
+  box-shadow:0 2px 12px rgba(0,0,0,.06); position:sticky; top:0; z-index:50;
 }
-.hub-topbar-brand {
-  display:flex; align-items:center; gap:10px;
-  font-family:'Nunito',sans-serif; font-weight:900;
-  font-size:1rem; color:var(--blue-dk);
-}
-.hub-topbar-brand span { font-size:1.3rem; }
-.hub-topbar-right { display:flex; align-items:center; gap:10px; }
+.hub-brand { display:flex; align-items:center; gap:8px; font-weight:900; font-size:.92rem; color:var(--blue-dk); }
+.hub-brand span { font-size:1.2rem; }
+.hub-right { display:flex; align-items:center; gap:8px; }
 
+/* [修正#3] 學生徽章 → 個人資料，不是登出 */
 .student-badge {
-  display:none; align-items:center; gap:7px;
-  background:var(--blue-lt); border-radius:20px;
-  padding:6px 14px; font-size:.85rem; font-weight:800;
-  color:var(--blue-dk); cursor:pointer;
-  border:none; font-family:'Nunito',sans-serif;
+  display:none; align-items:center; gap:6px;
+  background:var(--blue-lt); border-radius:20px; padding:5px 12px;
+  font-size:.8rem; font-weight:800; color:var(--blue-dk);
+  cursor:pointer; border:none; font-family:'Nunito',sans-serif; transition:all .15s;
 }
+.student-badge:active { transform:scale(.95); }
 .student-badge.show { display:flex; }
+.badge-hint { font-size:.68rem; opacity:.65; }
 
 .btn-logout-hub {
-  background:#fff0f0; color:var(--red);
-  border:none; border-radius:12px; padding:8px 14px;
-  font-size:.82rem; font-weight:800; cursor:pointer;
-  font-family:'Nunito',sans-serif; transition:all .15s;
-  display:none;
+  background:#fff0f0; color:var(--red); border:none; border-radius:10px;
+  padding:6px 12px; font-size:.78rem; font-weight:800; cursor:pointer;
+  font-family:'Nunito',sans-serif; transition:all .15s; display:none;
 }
 .btn-logout-hub.show { display:block; }
 .btn-logout-hub:active { transform:scale(.95); }
 
-/* Hub 主體 */
-.hub-body { padding:28px 20px 60px; max-width:600px; margin:0 auto; width:100%; }
+.hub-body { padding:22px 16px 60px; max-width:580px; margin:0 auto; width:100%; }
 
-.hub-hero { text-align:center; margin-bottom:32px; }
-.hub-avatar { font-size:3rem; display:block; margin-bottom:10px; }
-.hub-welcome {
-  font-size:1.6rem; font-weight:900; color:var(--blue-dk);
-  margin-bottom:4px; line-height:1.3;
-}
+.hub-hero { text-align:center; margin-bottom:26px; }
+.hub-avatar { font-size:2.6rem; display:block; margin-bottom:7px; }
+.hub-welcome { font-size:1.45rem; font-weight:900; color:var(--blue-dk); margin-bottom:4px; line-height:1.3; }
 .hub-welcome em { color:var(--orange); font-style:normal; }
-.hub-school { font-size:.85rem; font-weight:700; color:var(--muted); letter-spacing:2px; }
+.hub-school { font-size:.78rem; font-weight:700; color:var(--muted); letter-spacing:2px; }
 
-/* 科目區塊標題 */
 .hub-section-label {
-  font-size:.8rem; font-weight:900; color:var(--muted);
-  letter-spacing:2px; margin-bottom:14px;
+  font-size:.76rem; font-weight:900; color:var(--muted); letter-spacing:2px; margin-bottom:12px;
   display:flex; align-items:center; gap:8px;
 }
-.hub-section-label::after {
-  content:''; flex:1; height:1.5px; background:#d0e6f7; border-radius:2px;
-}
+.hub-section-label::after { content:''; flex:1; height:1.5px; background:#d0e6f7; border-radius:2px; }
 
-/* 科目卡片 */
-.subjects-grid {
-  display:grid; grid-template-columns:1fr 1fr; gap:16px;
-  margin-bottom:32px;
-}
+/* [修正#4] 只顯示已完成的兩個科目，移除「即將推出」卡片 */
+.subjects-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; margin-bottom:26px; }
 .subject-card {
-  background:white; border-radius:var(--radius);
-  padding:24px 18px 20px;
-  box-shadow:var(--shadow);
-  display:flex; flex-direction:column; align-items:center; gap:10px;
+  background:white; border-radius:var(--radius); padding:20px 14px 16px;
+  box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; gap:8px;
   cursor:pointer; border:3px solid transparent;
-  transition:transform .18s, box-shadow .18s, border-color .18s;
-  position:relative; text-decoration:none; color:inherit;
-  user-select:none;
+  transition:transform .18s, box-shadow .18s; user-select:none;
 }
-.subject-card:hover  { transform:translateY(-5px); box-shadow:var(--shadow-lg); }
+.subject-card:hover  { transform:translateY(-4px); box-shadow:var(--shadow-lg); }
 .subject-card:active { transform:scale(.95); }
-.subject-card.locked { opacity:.55; cursor:not-allowed; }
-.subject-card.locked:hover { transform:none; box-shadow:var(--shadow); }
-
-/* 顏色主題 */
-.subject-card.theme-blue  { border-color:#b3d7f5; }
-.subject-card.theme-green { border-color:#a8e6c0; }
-.subject-card.theme-orange{ border-color:#ffc9a0; }
-.subject-card.theme-purple{ border-color:#c9b8f0; }
-
-.subject-icon  { font-size:3rem; line-height:1; }
-.subject-name  { font-family:'Nunito',sans-serif; font-weight:900; font-size:1.1rem; color:var(--text); }
-.subject-desc  { font-size:.78rem; color:var(--muted); font-weight:600; text-align:center; line-height:1.5; }
-.subject-badge {
-  font-size:.72rem; font-weight:800; padding:3px 10px; border-radius:20px;
-  background:var(--blue-lt); color:var(--blue-dk);
-}
+.subject-card.theme-blue   { border-color:#b3d7f5; }
+.subject-card.theme-orange { border-color:#ffc9a0; }
+.subject-icon { font-size:2.6rem; line-height:1; }
+.subject-name { font-family:'Nunito',sans-serif; font-weight:900; font-size:1.02rem; color:var(--text); }
+.subject-desc { font-size:.74rem; color:var(--muted); font-weight:600; text-align:center; line-height:1.5; }
+.subject-badge { font-size:.68rem; font-weight:800; padding:3px 9px; border-radius:18px; }
 .subject-badge.green  { background:#e8f8ee; color:var(--green-dk); }
 .subject-badge.orange { background:#fff3e8; color:#c05a10; }
-.subject-badge.coming { background:#f3f4f6; color:#9ca3af; }
 
-.lock-tag {
-  position:absolute; top:10px; right:10px;
-  background:#e5e7eb; color:#6b7280;
-  font-size:.7rem; font-weight:800;
-  padding:2px 8px; border-radius:10px;
-}
-
-/* 近期活動 */
-.activity-card {
-  background:white; border-radius:var(--radius);
-  padding:20px 20px; box-shadow:var(--shadow);
-  margin-bottom:20px;
-}
-.activity-row {
-  display:flex; align-items:center; gap:12px;
-  padding:10px 0; border-bottom:1px solid #eef3f8;
-}
+/* 近期記錄 */
+.activity-card { background:white; border-radius:var(--radius); padding:16px 16px; box-shadow:var(--shadow); margin-bottom:16px; }
+.activity-row { display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #eef3f8; }
 .activity-row:last-child { border-bottom:none; padding-bottom:0; }
-.activity-icon { font-size:1.5rem; width:36px; text-align:center; flex-shrink:0; }
+.activity-icon { font-size:1.35rem; width:32px; text-align:center; flex-shrink:0; }
 .activity-info { flex:1; }
-.activity-title { font-size:.9rem; font-weight:800; color:var(--text); }
-.activity-sub   { font-size:.76rem; color:var(--muted); font-weight:600; margin-top:2px; }
-.activity-score {
-  font-family:'Nunito',sans-serif; font-weight:900;
-  font-size:.95rem; color:var(--blue-dk);
-  background:var(--blue-lt); padding:4px 12px; border-radius:14px;
-}
-.activity-empty {
-  text-align:center; padding:20px;
-  color:var(--muted); font-size:.88rem; font-weight:600;
-}
+.activity-title { font-size:.86rem; font-weight:800; color:var(--text); }
+.activity-sub   { font-size:.72rem; color:var(--muted); font-weight:600; margin-top:2px; }
+.activity-score { font-family:'Nunito',sans-serif; font-weight:900; font-size:.88rem; color:var(--blue-dk); background:var(--blue-lt); padding:3px 10px; border-radius:12px; }
+.activity-empty { text-align:center; padding:18px; color:var(--muted); font-size:.84rem; font-weight:600; }
 
-/* ══ Toast ══ */
+/* Toast */
 #toast {
-  position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px);
-  background:#1e2d3d; color:white; padding:12px 24px;
-  border-radius:30px; font-size:.9rem; font-weight:700;
-  opacity:0; transition:all .3s; z-index:999; white-space:nowrap;
-  pointer-events:none;
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:#1e2d3d; color:white; padding:10px 20px; border-radius:26px;
+  font-size:.86rem; font-weight:700; opacity:0; transition:all .3s;
+  z-index:999; white-space:nowrap; pointer-events:none;
 }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-/* 登入中 spinner */
 .spinner {
-  display:inline-block; width:16px; height:16px;
-  border:2.5px solid rgba(255,255,255,.4);
-  border-top-color:white; border-radius:50%;
-  animation:spin .7s linear infinite; margin-right:6px;
-  vertical-align:middle;
+  display:inline-block; width:14px; height:14px;
+  border:2.5px solid rgba(255,255,255,.4); border-top-color:white;
+  border-radius:50%; animation:spin .7s linear infinite; margin-right:6px; vertical-align:middle;
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 
-/* ══ 確認登出彈窗 ══ */
+/* 彈窗 */
 .overlay {
-  position:fixed; inset:0; background:rgba(18,32,46,.5);
-  backdrop-filter:blur(4px); z-index:200;
-  display:flex; align-items:center; justify-content:center;
+  position:fixed; inset:0; background:rgba(18,32,46,.5); backdrop-filter:blur(4px);
+  z-index:200; display:flex; align-items:center; justify-content:center;
   opacity:0; pointer-events:none; transition:opacity .25s;
 }
 .overlay.show { opacity:1; pointer-events:all; }
-.overlay-box {
-  background:white; border-radius:var(--radius);
-  padding:32px 28px; max-width:320px; width:90%;
-  text-align:center; box-shadow:var(--shadow-lg);
-  animation:popIn .3s both;
-}
-.overlay-icon  { font-size:2.5rem; margin-bottom:10px; }
-.overlay-title { font-size:1.1rem; font-weight:900; color:var(--text); margin-bottom:6px; }
-.overlay-sub   { font-size:.88rem; color:var(--muted); font-weight:600; margin-bottom:22px; }
-.overlay-btns  { display:flex; gap:10px; }
-.overlay-btns button {
-  flex:1; padding:12px; border:none; border-radius:12px;
-  font-family:'Nunito',sans-serif; font-weight:800; font-size:.95rem;
-  cursor:pointer; transition:all .15s;
-}
-.btn-cancel { background:#f1f5f9; color:var(--muted); }
-.btn-confirm{ background:linear-gradient(135deg,var(--red),#c0392b); color:white; }
+.overlay-box { background:white; border-radius:var(--radius); padding:28px 24px; max-width:300px; width:90%; text-align:center; box-shadow:var(--shadow-lg); animation:popIn .3s both; }
+.overlay-icon  { font-size:2.2rem; margin-bottom:9px; }
+.overlay-title { font-size:1.02rem; font-weight:900; color:var(--text); margin-bottom:5px; }
+.overlay-sub   { font-size:.82rem; color:var(--muted); font-weight:600; margin-bottom:18px; }
+.overlay-btns  { display:flex; gap:9px; }
+.overlay-btns button { flex:1; padding:11px; border:none; border-radius:11px; font-family:'Nunito',sans-serif; font-weight:800; font-size:.9rem; cursor:pointer; transition:all .15s; }
+.btn-cancel  { background:#f1f5f9; color:var(--muted); }
+.btn-confirm { background:linear-gradient(135deg,var(--red),#c0392b); color:white; }
 .btn-cancel:active,.btn-confirm:active { transform:scale(.96); }
 
-@keyframes popIn {
-  0%   { opacity:0; transform:scale(.88) translateY(10px); }
-  100% { opacity:1; transform:scale(1)   translateY(0);    }
-}
+@keyframes popIn { 0%{opacity:0;transform:scale(.88) translateY(10px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
 
-/* ══ 響應式 ══ */
-@media (max-width:400px) {
-  .subjects-grid { grid-template-columns:1fr 1fr; gap:12px; }
-  .subject-card  { padding:18px 12px 16px; }
-  .subject-icon  { font-size:2.4rem; }
-  .hub-welcome   { font-size:1.35rem; }
+@media(max-width:400px){
+  .subjects-grid{gap:10px}
+  .subject-card{padding:15px 10px 13px}
+  .subject-icon{font-size:2.2rem}
+  .hub-welcome{font-size:1.25rem}
 }
 </style>
 </head>
 <body>
-
 <div class="app">
 
-  <!-- ══ 登入畫面 ══ -->
-  <div id="screen-login" class="screen active">
-    <div class="login-logo">
-      <span class="login-logo-icon">🏫</span>
-      <div class="login-school">太 平 國 小</div>
-      <div class="login-title">特教<em>學習平台</em></div>
+<!-- ════ 登入畫面 ════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-logo">
+    <span class="login-logo-icon">🏫</span>
+    <div class="login-school">臺 東 縣 太 平 國 小</div>
+    <!-- [修正#1] 改為「資源班學習系統」，移除特教字眼 -->
+    <div class="login-title">資源班<em>學習系統</em></div>
+  </div>
+
+  <!-- [修正#2] 教師／學生切換 Tab -->
+  <div class="role-tabs">
+    <button class="role-tab active" id="tab-student" onclick="switchRole('student')">👤 學生登入</button>
+    <button class="role-tab"        id="tab-teacher" onclick="switchRole('teacher')">🏫 教師登入</button>
+  </div>
+
+  <!-- 學生登入卡 -->
+  <div class="login-card" id="card-student">
+    <div class="login-card-title">👤 學生登入</div>
+    <div class="login-field">
+      <label class="login-label">姓名</label>
+      <input class="login-input" type="text" id="login-name" placeholder="輸入你的名字" autocomplete="off" oninput="onLoginNameInput()">
     </div>
-
-    <div class="login-card">
-      <div class="login-card-title">👋 請輸入姓名與 PIN 碼</div>
-
-      <div class="login-field">
-        <label class="login-label">姓名</label>
-        <input class="login-input" type="text" id="login-name"
-               placeholder="輸入你的名字" autocomplete="off"
-               oninput="onLoginNameInput()">
+    <div class="login-field">
+      <label class="login-label">PIN 碼（4位數）</label>
+      <div class="pin-display">
+        <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
       </div>
-
-      <div class="login-field">
-        <label class="login-label">PIN 碼（4位數）</label>
-        <div class="pin-display">
-          <div class="pin-dot" id="pd0"></div>
-          <div class="pin-dot" id="pd1"></div>
-          <div class="pin-dot" id="pd2"></div>
-          <div class="pin-dot" id="pd3"></div>
-        </div>
-        <div class="pin-pad">
-          <button class="pin-btn" onclick="pinInput('1')">1</button>
-          <button class="pin-btn" onclick="pinInput('2')">2</button>
-          <button class="pin-btn" onclick="pinInput('3')">3</button>
-          <button class="pin-btn" onclick="pinInput('4')">4</button>
-          <button class="pin-btn" onclick="pinInput('5')">5</button>
-          <button class="pin-btn" onclick="pinInput('6')">6</button>
-          <button class="pin-btn" onclick="pinInput('7')">7</button>
-          <button class="pin-btn" onclick="pinInput('8')">8</button>
-          <button class="pin-btn" onclick="pinInput('9')">9</button>
-          <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
-          <button class="pin-btn" onclick="pinInput('0')">0</button>
-          <button class="pin-btn pin-btn-ok" onclick="doLogin()">✓</button>
-        </div>
+      <div class="pin-pad">
+        <button class="pin-btn" onclick="pinInput('1')">1</button>
+        <button class="pin-btn" onclick="pinInput('2')">2</button>
+        <button class="pin-btn" onclick="pinInput('3')">3</button>
+        <button class="pin-btn" onclick="pinInput('4')">4</button>
+        <button class="pin-btn" onclick="pinInput('5')">5</button>
+        <button class="pin-btn" onclick="pinInput('6')">6</button>
+        <button class="pin-btn" onclick="pinInput('7')">7</button>
+        <button class="pin-btn" onclick="pinInput('8')">8</button>
+        <button class="pin-btn" onclick="pinInput('9')">9</button>
+        <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
+        <button class="pin-btn" onclick="pinInput('0')">0</button>
+        <button class="pin-btn pin-btn-ok" onclick="doStudentLogin()">✓</button>
       </div>
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doStudentLogin()" disabled>登入</button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-switch">還沒有帳號？<a onclick="showToast('請聯絡老師為您建立帳號 🙏')">請聯絡老師</a></div>
+  </div>
 
-      <button class="btn-login" id="btn-login" onclick="doLogin()" disabled>登入</button>
-      <div class="login-error" id="login-error"></div>
+  <!-- [修正#2] 教師登入卡（獨立、明顯） -->
+  <div class="login-card" id="card-teacher" style="display:none">
+    <div class="login-card-title">🏫 教師登入</div>
+    <div class="teacher-field login-field">
+      <label class="login-label">帳號</label>
+      <input class="login-input" type="text" id="teacher-account" placeholder="教師帳號" autocomplete="off" onkeydown="if(event.key==='Enter')doTeacherLogin()">
+    </div>
+    <div class="teacher-field login-field" style="margin-bottom:0">
+      <label class="login-label">密碼</label>
+      <input class="login-input" type="password" id="teacher-pwd" placeholder="教師密碼" onkeydown="if(event.key==='Enter')doTeacherLogin()">
+    </div>
+    <button class="btn-login" style="margin-top:14px" onclick="doTeacherLogin()">進入管理後台 →</button>
+    <div class="login-error" id="teacher-error"></div>
+  </div>
+</div>
 
-      <div class="login-switch">
-        還沒有帳號？<a onclick="goToRegister()">點這裡註冊</a>
-      </div>
+<!-- ════ Hub 主畫面 ════ -->
+<div id="screen-hub" class="screen right">
+  <div class="hub-topbar">
+    <!-- [修正#1] 改名 -->
+    <div class="hub-brand"><span>🏫</span> 太平國小資源班</div>
+    <div class="hub-right">
+      <!-- [修正#3] 點徽章 → 個人資料，登出改為獨立按鈕 -->
+      <button class="student-badge" id="student-badge" onclick="goToProfile()">
+        <span id="badge-avatar">🐣</span>
+        <span id="badge-name">學生</span>
+        <span class="badge-hint">▸ 個人資料</span>
+      </button>
+      <button class="btn-logout-hub" id="btn-logout" onclick="showLogoutConfirm()">登出</button>
     </div>
   </div>
 
-  <!-- ══ Hub 主畫面 ══ -->
-  <div id="screen-hub" class="screen right">
+  <div class="hub-body">
+    <div class="hub-hero">
+      <span class="hub-avatar" id="hub-avatar">🐣</span>
+      <div class="hub-welcome">嗨，<em id="hub-name">同學</em>！<br>今天要練習什麼？</div>
+      <!-- [修正#1] -->
+      <div class="hub-school">臺東縣太平國小資源班</div>
+    </div>
 
-    <!-- 頂部列 -->
-    <div class="hub-topbar">
-      <div class="hub-topbar-brand"><span>🏫</span> 太平國小學習平台</div>
-      <div class="hub-topbar-right">
-        <button class="student-badge" id="student-badge" onclick="showLogoutConfirm()">
-          <span id="badge-avatar">🐣</span>
-          <span id="badge-name">學生</span>
-        </button>
-        <button class="btn-logout-hub" id="btn-logout" onclick="showLogoutConfirm()">登出</button>
+    <!-- [修正#4] 移除「即將推出」卡片，只保留已完成的兩個科目 -->
+    <div class="hub-section-label">📚 學習區</div>
+    <div class="subjects-grid">
+      <div class="subject-card theme-blue" onclick="goToSubject('chinese')">
+        <span class="subject-icon">🈶</span>
+        <div class="subject-name">國字練習</div>
+        <div class="subject-desc">筆順練習<br>默寫測驗</div>
+        <div class="subject-badge green">可以練習</div>
+      </div>
+      <div class="subject-card theme-orange" onclick="goToSubject('math')">
+        <span class="subject-icon">✖️</span>
+        <div class="subject-name">乘法練習</div>
+        <div class="subject-desc">選擇題・填空題<br>關卡解鎖</div>
+        <div class="subject-badge orange">可以練習</div>
       </div>
     </div>
 
-    <!-- 主體 -->
-    <div class="hub-body">
-
-      <!-- 歡迎區 -->
-      <div class="hub-hero">
-        <span class="hub-avatar" id="hub-avatar">🐣</span>
-        <div class="hub-welcome">嗨，<em id="hub-name">同學</em>！<br>今天要練習什麼？</div>
-        <div class="hub-school">太平國小特教班</div>
-      </div>
-
-      <!-- 科目選擇 -->
-      <div class="hub-section-label">📚 學習區</div>
-      <div class="subjects-grid">
-
-        <!-- 國字練習 -->
-        <a class="subject-card theme-blue" id="card-chinese" onclick="goToSubject('chinese')">
-          <span class="subject-icon">🈶</span>
-          <div class="subject-name">國字練習</div>
-          <div class="subject-desc">筆順練習<br>默寫測驗</div>
-          <div class="subject-badge green">進行中</div>
-        </a>
-
-        <!-- 乘法練習 -->
-        <a class="subject-card theme-orange" id="card-math" onclick="goToSubject('math')">
-          <span class="subject-icon">✖️</span>
-          <div class="subject-name">乘法練習</div>
-          <div class="subject-desc">選擇題・填空題<br>關卡解鎖</div>
-          <div class="subject-badge orange">進行中</div>
-        </a>
-
-        <!-- 比大小（即將推出） -->
-        <div class="subject-card locked" id="card-compare">
-          <div class="lock-tag">🔒 即將推出</div>
-          <span class="subject-icon">⚖️</span>
-          <div class="subject-name">比大小</div>
-          <div class="subject-desc">數字大小比較<br>不等式練習</div>
-          <div class="subject-badge coming">開發中</div>
-        </div>
-
-        <!-- 認識部首（即將推出） -->
-        <div class="subject-card locked" id="card-radical">
-          <div class="lock-tag">🔒 即將推出</div>
-          <span class="subject-icon">🔤</span>
-          <div class="subject-name">認識部首</div>
-          <div class="subject-desc">部首部件辨認<br>造字練習</div>
-          <div class="subject-badge coming">開發中</div>
-        </div>
-
-      </div>
-
-      <!-- 近期學習記錄 -->
-      <div class="hub-section-label">📊 近期記錄</div>
-      <div class="activity-card">
-        <div id="activity-list">
-          <div class="activity-empty">登入後查看學習記錄 📖</div>
-        </div>
-      </div>
-
+    <div class="hub-section-label">📊 近期記錄</div>
+    <div class="activity-card">
+      <div id="activity-list"><div class="activity-empty">載入中…</div></div>
     </div>
   </div>
+</div>
 
 </div><!-- /.app -->
-
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- 登出確認彈窗 -->
+<!-- 登出確認 -->
 <div class="overlay" id="logout-overlay">
   <div class="overlay-box">
     <div class="overlay-icon">👋</div>
     <div class="overlay-title">要登出嗎？</div>
     <div class="overlay-sub">下次再來繼續學習！</div>
     <div class="overlay-btns">
-      <button class="btn-cancel" onclick="hideLogoutConfirm()">取消</button>
+      <button class="btn-cancel"  onclick="hideLogoutConfirm()">取消</button>
       <button class="btn-confirm" onclick="doLogout()">登出</button>
     </div>
   </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════
-//  Firebase 初始化（與 chinese.html 共用同一 project）
-// ═══════════════════════════════════════
+// ── Firebase ──
 var firebaseConfig = {
   apiKey: "AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0",
   authDomain: "tainping-hanzi-app.firebaseapp.com",
@@ -470,295 +376,194 @@ var firebaseConfig = {
   appId: "1:158917910126:web:e52a1d0456d1fd4fe6907f"
 };
 var db = null;
-
 function initFirebase() {
-  if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined') {
-    setTimeout(initFirebase, 150); return;
-  }
+  if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined') { setTimeout(initFirebase,150); return; }
   try {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
-  } catch(e) {
-    db = null; setTimeout(initFirebase, 300);
-  }
+  } catch(e) { db=null; setTimeout(initFirebase,300); }
 }
 
-// ═══════════════════════════════════════
-//  狀態
-// ═══════════════════════════════════════
+// ── 狀態 ──
 var currentStudent = null;
 var loginPin = '';
+var TEACHER_PASSWORD = 'taip2024'; // ← 教師密碼，可自行修改
 
-// ─ sessionStorage：讓各科目頁面取得登入身份 ─
-function saveSession(student) {
-  sessionStorage.setItem('hub_student', JSON.stringify(student));
-}
-function clearSession() {
-  sessionStorage.removeItem('hub_student');
-}
+// [修正#5] sessionStorage 讓子頁面讀取，不需重新登入
+function saveSession(s) { sessionStorage.setItem('hub_student', JSON.stringify(s)); }
+function clearSession()  { sessionStorage.removeItem('hub_student'); }
 
-// ═══════════════════════════════════════
-//  畫面切換
-// ═══════════════════════════════════════
-var SCREENS = ['screen-login', 'screen-hub'];
+// ── 畫面切換 ──
+var SCREENS = ['screen-login','screen-hub'];
 function goTo(id) {
   var order = SCREENS.indexOf(id);
-  SCREENS.forEach(function(sid, i) {
-    var el = document.getElementById(sid);
-    if (!el) return;
-    if (sid === id)     { el.className = 'screen active'; }
-    else if (i < order) { el.className = 'screen left';   }
-    else                { el.className = 'screen right';  }
+  SCREENS.forEach(function(sid,i){
+    var el = document.getElementById(sid); if (!el) return;
+    if (sid===id)     el.className='screen active';
+    else if (i<order) el.className='screen left';
+    else              el.className='screen right';
   });
 }
 
-// ═══════════════════════════════════════
-//  PIN 輸入
-// ═══════════════════════════════════════
+// [修正#2] 身份 Tab
+function switchRole(role) {
+  var isS = role==='student';
+  document.getElementById('tab-student').classList.toggle('active', isS);
+  document.getElementById('tab-teacher').classList.toggle('active',!isS);
+  document.getElementById('card-student').style.display = isS?'':'none';
+  document.getElementById('card-teacher').style.display = isS?'none':'';
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('teacher-error').classList.remove('show');
+}
+
+// ── PIN 輸入 ──
 function pinInput(d) {
-  if (loginPin.length >= 4) return;
-  loginPin += d;
-  updatePinDisplay(loginPin);
-  if (loginPin.length === 4) {
-    var name = document.getElementById('login-name').value.trim();
-    if (name) doLogin();
-  }
+  if (loginPin.length>=4) return;
+  loginPin+=d; updatePinDisplay(loginPin);
+  if (loginPin.length===4 && document.getElementById('login-name').value.trim()) doStudentLogin();
 }
-function pinDelete() {
-  loginPin = loginPin.slice(0, -1);
-  updatePinDisplay(loginPin);
-  updateLoginBtn();
-}
+function pinDelete() { loginPin=loginPin.slice(0,-1); updatePinDisplay(loginPin); updateLoginBtn(); }
 function onLoginNameInput() { updateLoginBtn(); }
 function updatePinDisplay(pin) {
-  for (var i = 0; i < 4; i++) {
-    var dot = document.getElementById('pd' + i);
-    if (dot) dot.classList.toggle('filled', i < pin.length);
-  }
+  for(var i=0;i<4;i++){ var d=document.getElementById('pd'+i); if(d) d.classList.toggle('filled',i<pin.length); }
   updateLoginBtn();
 }
 function updateLoginBtn() {
-  var name = document.getElementById('login-name').value.trim();
-  var btn  = document.getElementById('btn-login');
-  if (btn) btn.disabled = !(name && loginPin.length === 4);
+  var btn=document.getElementById('btn-login');
+  if(btn) btn.disabled=!(document.getElementById('login-name').value.trim() && loginPin.length===4);
 }
 
-// ═══════════════════════════════════════
-//  登入
-// ═══════════════════════════════════════
-function doLogin() {
-  var name = document.getElementById('login-name').value.trim();
-  if (!name || loginPin.length < 4) return;
-  var errEl = document.getElementById('login-error');
+// ── 學生登入 ──
+function doStudentLogin() {
+  var name=document.getElementById('login-name').value.trim();
+  if (!name||loginPin.length<4) return;
+  var errEl=document.getElementById('login-error');
   errEl.classList.remove('show');
-
-  var btn = document.getElementById('btn-login');
-  btn.innerHTML = '<span class="spinner"></span>登入中…';
-  btn.disabled = true;
-
-  if (!db) {
-    setTimeout(doLogin, 800); return;
-  }
-
-  var id = name + '_' + loginPin;
-  db.collection('students').doc(id).get().then(function(doc) {
+  var btn=document.getElementById('btn-login');
+  btn.innerHTML='<span class="spinner"></span>登入中…'; btn.disabled=true;
+  if (!db) { setTimeout(doStudentLogin,800); return; }
+  var id=name+'_'+loginPin;
+  db.collection('students').doc(id).get().then(function(doc){
     if (!doc.exists) {
-      btn.textContent = '登入';
-      btn.disabled = false;
-      loginPin = '';
-      updatePinDisplay(loginPin);
-      errEl.textContent = '找不到這個帳號，請確認姓名和 PIN 碼。';
-      errEl.classList.add('show');
-      return;
+      btn.textContent='登入'; btn.disabled=false;
+      loginPin=''; updatePinDisplay('');
+      errEl.textContent='找不到這個帳號，請確認姓名和 PIN 碼。'; errEl.classList.add('show'); return;
     }
-    var data = doc.data();
-    currentStudent = {
-      id:       id,
-      name:     name,
-      pin:      loginPin,
-      nickname: data.nickname || '',
-      avatar:   data.avatar   || '🐣'
-    };
-    saveSession(currentStudent);
-    onLoginSuccess();
-  }).catch(function() {
-    btn.textContent = '登入';
-    btn.disabled = false;
-    errEl.textContent = '連線失敗，請檢查網路後再試。';
-    errEl.classList.add('show');
+    var data=doc.data();
+    currentStudent={ id:id, name:name, pin:loginPin, nickname:data.nickname||'', avatar:data.avatar||'🐣', role:'student' };
+    saveSession(currentStudent); // [修正#5]
+    updateHubUI(); loadActivity(); goTo('screen-hub');
+    btn.textContent='登入';
+    showToast('👋 歡迎 '+(currentStudent.nickname||currentStudent.name)+'！');
+  }).catch(function(){
+    btn.textContent='登入'; btn.disabled=false;
+    errEl.textContent='連線失敗，請檢查網路後再試。'; errEl.classList.add('show');
   });
 }
 
-function onLoginSuccess() {
-  updateHubUI();
-  loadActivity();
-  goTo('screen-hub');
-  document.getElementById('btn-login').textContent = '登入';
-  showToast('👋 歡迎 ' + (currentStudent.nickname || currentStudent.name) + '！');
-}
-
-// ═══════════════════════════════════════
-//  Hub UI 更新
-// ═══════════════════════════════════════
-function updateHubUI() {
-  var displayName = currentStudent.nickname || currentStudent.name;
-  var av = currentStudent.avatar || '🐣';
-
-  document.getElementById('hub-name').textContent   = displayName;
-  document.getElementById('hub-avatar').textContent = av;
-  document.getElementById('badge-name').textContent = displayName;
-  document.getElementById('badge-avatar').textContent = av;
-
-  var badge = document.getElementById('student-badge');
-  var logoutBtn = document.getElementById('btn-logout');
-  badge.classList.add('show');
-  logoutBtn.classList.add('show');
-}
-
-// ═══════════════════════════════════════
-//  載入近期活動（從 Firebase 各科目記錄）
-// ═══════════════════════════════════════
-function loadActivity() {
-  if (!db || !currentStudent) return;
-  var list = document.getElementById('activity-list');
-  list.innerHTML = '<div class="activity-empty">載入中…</div>';
-
-  var activities = [];
-  var pending = 2; // 兩個科目
-
-  // 國字進度
-  db.collection('students').doc(currentStudent.id)
-    .collection('progress').doc('hanzi')
-    .get().then(function(doc) {
-      if (doc.exists) {
-        var d = doc.data();
-        var charStatus = d.charStatus || {};
-        var mastered  = Object.values(charStatus).filter(function(v){ return v === 'mastered'; }).length;
-        var practiced = Object.values(charStatus).filter(function(v){ return v === 'practiced'; }).length;
-        if (mastered + practiced > 0) {
-          activities.push({
-            icon: '🈶',
-            title: '國字練習',
-            sub: '通過測驗 ' + mastered + ' 字，通過練習 ' + practiced + ' 字',
-            score: mastered + practiced + ' 字'
-          });
-        }
-      }
-      pending--;
-      if (pending === 0) renderActivity(activities);
-    }).catch(function() { pending--; if (pending === 0) renderActivity(activities); });
-
-  // 乘法進度
-  db.collection('students').doc(currentStudent.id)
-    .collection('progress').doc('math')
-    .get().then(function(doc) {
-      if (doc.exists) {
-        var d = doc.data();
-        if (d.totalAnswered > 0) {
-          var pct = Math.round(d.totalCorrect / d.totalAnswered * 100);
-          activities.push({
-            icon: '✖️',
-            title: '乘法練習',
-            sub: '作答 ' + d.totalAnswered + ' 題，正確率 ' + pct + '%',
-            score: '⭐ ' + (d.totalStars || 0)
-          });
-        }
-      }
-      pending--;
-      if (pending === 0) renderActivity(activities);
-    }).catch(function() { pending--; if (pending === 0) renderActivity(activities); });
-}
-
-function renderActivity(activities) {
-  var list = document.getElementById('activity-list');
-  if (!activities.length) {
-    list.innerHTML = '<div class="activity-empty">還沒有學習記錄，快去練習吧！🚀</div>';
-    return;
+// [修正#2] 教師登入
+function doTeacherLogin() {
+  var account=(document.getElementById('teacher-account').value||'').trim();
+  var pwd=(document.getElementById('teacher-pwd').value||'').trim();
+  var errEl=document.getElementById('teacher-error');
+  errEl.classList.remove('show');
+  if (!account || pwd!==TEACHER_PASSWORD) {
+    errEl.textContent='帳號或密碼錯誤，請再試一次。'; errEl.classList.add('show'); return;
   }
-  list.innerHTML = activities.map(function(a) {
-    return '<div class="activity-row">'
-      + '<div class="activity-icon">' + a.icon + '</div>'
-      + '<div class="activity-info">'
-      +   '<div class="activity-title">' + a.title + '</div>'
-      +   '<div class="activity-sub">' + a.sub + '</div>'
-      + '</div>'
-      + '<div class="activity-score">' + a.score + '</div>'
-      + '</div>';
+  window.location.href='admin.html';
+}
+
+// ── Hub UI ──
+function updateHubUI() {
+  var n=currentStudent.nickname||currentStudent.name, av=currentStudent.avatar||'🐣';
+  document.getElementById('hub-name').textContent=n;
+  document.getElementById('hub-avatar').textContent=av;
+  document.getElementById('badge-name').textContent=n;
+  document.getElementById('badge-avatar').textContent=av;
+  document.getElementById('student-badge').classList.add('show');
+  document.getElementById('btn-logout').classList.add('show');
+}
+
+// [修正#3] 徽章點擊 → 個人資料
+function goToProfile() {
+  saveSession(currentStudent);
+  window.location.href='chinese.html?screen=profile';
+}
+
+// ── 近期活動 ──
+function loadActivity() {
+  if (!db||!currentStudent) return;
+  var list=document.getElementById('activity-list');
+  list.innerHTML='<div class="activity-empty">載入中…</div>';
+  var activities=[], pending=2;
+  function done(){ if(--pending===0) renderActivity(activities); }
+
+  db.collection('students').doc(currentStudent.id).collection('progress').doc('hanzi').get()
+    .then(function(doc){
+      if(doc.exists){ var cs=doc.data().charStatus||{};
+        var m=Object.values(cs).filter(function(v){return v==='mastered';}).length;
+        var p=Object.values(cs).filter(function(v){return v==='practiced';}).length;
+        if(m+p>0) activities.push({icon:'🈶',title:'國字練習',sub:'通過測驗 '+m+' 字，通過練習 '+p+' 字',score:m+p+' 字'});
+      } done();
+    }).catch(done);
+
+  db.collection('students').doc(currentStudent.id).collection('progress').doc('math').get()
+    .then(function(doc){
+      if(doc.exists){ var d=doc.data();
+        if(d.totalAnswered>0){ var pct=Math.round(d.totalCorrect/d.totalAnswered*100);
+          activities.push({icon:'✖️',title:'乘法練習',sub:'作答 '+d.totalAnswered+' 題，正確率 '+pct+'%',score:'⭐ '+(d.totalStars||0)});
+        }
+      } done();
+    }).catch(done);
+}
+function renderActivity(activities) {
+  var list=document.getElementById('activity-list');
+  if (!activities.length){ list.innerHTML='<div class="activity-empty">還沒有學習記錄，快去練習吧！🚀</div>'; return; }
+  list.innerHTML=activities.map(function(a){
+    return '<div class="activity-row"><div class="activity-icon">'+a.icon+'</div>'
+      +'<div class="activity-info"><div class="activity-title">'+a.title+'</div>'
+      +'<div class="activity-sub">'+a.sub+'</div></div>'
+      +'<div class="activity-score">'+a.score+'</div></div>';
   }).join('');
 }
 
-// ═══════════════════════════════════════
-//  前往科目
-// ═══════════════════════════════════════
+// [修正#5] 前往科目：子頁面從 sessionStorage 讀取，不重新登入
 function goToSubject(subject) {
   if (!currentStudent) return;
-  // 將學生資料存進 sessionStorage，讓子頁面讀取
   saveSession(currentStudent);
-
-  if (subject === 'chinese') {
-    window.location.href = 'chinese.html';
-  } else if (subject === 'math') {
-    window.location.href = 'math.html';
-  }
+  if (subject==='chinese') window.location.href='chinese.html';
+  else if (subject==='math') window.location.href='math.html';
 }
 
-// ═══════════════════════════════════════
-//  登出
-// ═══════════════════════════════════════
-function showLogoutConfirm() {
-  document.getElementById('logout-overlay').classList.add('show');
-}
-function hideLogoutConfirm() {
-  document.getElementById('logout-overlay').classList.remove('show');
-}
+// ── 登出 ──
+function showLogoutConfirm() { document.getElementById('logout-overlay').classList.add('show'); }
+function hideLogoutConfirm() { document.getElementById('logout-overlay').classList.remove('show'); }
 function doLogout() {
-  currentStudent = null;
-  clearSession();
-  loginPin = '';
-  updatePinDisplay('');
-  document.getElementById('login-name').value = '';
+  currentStudent=null; clearSession(); loginPin=''; updatePinDisplay('');
+  document.getElementById('login-name').value='';
   document.getElementById('login-error').classList.remove('show');
-  document.getElementById('btn-login').disabled = true;
-  document.getElementById('btn-login').textContent = '登入';
+  var btn=document.getElementById('btn-login'); btn.disabled=true; btn.textContent='登入';
   document.getElementById('student-badge').classList.remove('show');
   document.getElementById('btn-logout').classList.remove('show');
-  document.getElementById('activity-list').innerHTML =
-    '<div class="activity-empty">登入後查看學習記錄 📖</div>';
-  hideLogoutConfirm();
-  goTo('screen-login');
+  document.getElementById('activity-list').innerHTML='<div class="activity-empty">登入後查看學習記錄 📖</div>';
+  hideLogoutConfirm(); switchRole('student'); goTo('screen-login');
   showToast('已登出，掰掰！👋');
 }
 
-// 暫時：跳轉至登入（尚未實作註冊）
-function goToRegister() {
-  showToast('請聯絡老師為你建立帳號 🙏');
-}
-
-// ═══════════════════════════════════════
-//  Toast
-// ═══════════════════════════════════════
+// ── Toast ──
 function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 2800);
+  var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); },2800);
 }
 
-// ═══════════════════════════════════════
-//  啟動
-// ═══════════════════════════════════════
-window.addEventListener('load', function() {
+// ── 啟動 ──
+window.addEventListener('load',function(){
   initFirebase();
-
-  // 若已有 sessionStorage 登入資料（從科目頁返回）
+  // [修正#5] 從子頁面返回時自動恢復登入，不需重新輸入
   try {
-    var saved = sessionStorage.getItem('hub_student');
-    if (saved) {
-      currentStudent = JSON.parse(saved);
-      updateHubUI();
-      loadActivity();
-      goTo('screen-hub');
-    }
-  } catch(e) {}
+    var saved=sessionStorage.getItem('hub_student');
+    if (saved){ currentStudent=JSON.parse(saved); updateHubUI(); loadActivity(); goTo('screen-hub'); }
+  } catch(e){}
 });
 </script>
 </body>
