@@ -1622,17 +1622,15 @@ function onLoginSuccess(student, data) {
   // 從 Firebase 載入教師設定的生字
   loadLessonFromFirebase(function(lessonChars) {
     if (lessonChars && lessonChars.length) {
-      // 自動套用教師設定的生字
       var input = document.getElementById('char-input');
       if (input) input.value = lessonChars.join('');
       showToast('👋 歡迎 ' + student.name + '！今日生字已載入。');
     } else {
       showToast('👋 歡迎回來，' + student.name + '！');
     }
-    goTo('home');
-    // 登入後預載課程版本
+    // 只有在非 Hub 自動登入（currentScreen 不是 home）時才做切換動畫
+    if (currentScreen !== 'home') goTo('home');
     setTimeout(loadCurriculumVersions, 800);
-    // 更新首頁頭像顯示
     setTimeout(updateHomeAvatar, 200);
   });
 }
@@ -3269,9 +3267,17 @@ window.addEventListener('load', function(){
               progressData.nickname = studentDocData.nickname || '';
               progressData.avatar   = studentDocData.avatar   || '';
               onLoginSuccess({ name:hubStudent.name, pin:hubStudent.pin, id:id }, progressData);
-              // 隱藏 loading 遮罩
+              // 隱藏 loading 遮罩、強制顯示 screen-home
+              // （不透過 goTo，因為 currentScreen 起始值是 'home'，
+              //   onLoginSuccess 內的 goTo('home') 不需切換，直接確保畫面正確）
               var overlay = document.getElementById('loading-overlay');
               if (overlay) overlay.style.display = 'none';
+              // 確保 screen-home 是 active，screen-login 隱藏
+              var loginEl = document.getElementById('screen-login');
+              var homeEl  = document.getElementById('screen-home');
+              if (loginEl) loginEl.className = 'screen left';
+              if (homeEl)  homeEl.className  = 'screen active';
+              currentScreen = 'home';
             });
         }).catch(function() {
           var overlay = document.getElementById('loading-overlay');

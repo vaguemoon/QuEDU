@@ -139,14 +139,6 @@ body { font-family:'Nunito','Noto Sans TC',sans-serif; background:var(--bg); col
 .student-badge.show { display:flex; }
 .badge-hint { font-size:.68rem; opacity:.65; }
 
-.btn-logout-hub {
-  background:#fff0f0; color:var(--red); border:none; border-radius:10px;
-  padding:6px 12px; font-size:.78rem; font-weight:800; cursor:pointer;
-  font-family:'Nunito',sans-serif; transition:all .15s; display:none;
-}
-.btn-logout-hub.show { display:block; }
-.btn-logout-hub:active { transform:scale(.95); }
-
 .hub-body { padding:22px 16px 60px; max-width:580px; margin:0 auto; width:100%; }
 
 .hub-hero { text-align:center; margin-bottom:26px; }
@@ -384,13 +376,11 @@ body { font-family:'Nunito','Noto Sans TC',sans-serif; background:var(--bg); col
     <!-- [修正#1] 改名 -->
     <div class="hub-brand"><span>🏫</span> 太平國小資源班</div>
     <div class="hub-right">
-      <!-- [修正#3] 點徽章 → 個人資料，登出改為獨立按鈕 -->
       <button class="student-badge" id="student-badge" onclick="goToProfile()">
         <span id="badge-avatar">🐣</span>
         <span id="badge-name">學生</span>
         <span class="badge-hint">▸ 個人資料</span>
       </button>
-      <button class="btn-logout-hub" id="btn-logout" onclick="showLogoutConfirm()">登出</button>
     </div>
   </div>
 
@@ -651,7 +641,6 @@ function updateHubUI() {
   document.getElementById('badge-name').textContent=n;
   document.getElementById('badge-avatar').textContent=av;
   document.getElementById('student-badge').classList.add('show');
-  document.getElementById('btn-logout').classList.add('show');
 }
 
 // [修正#3] 徽章點擊 → 個人資料（在 index.html 內切換，不跳頁）
@@ -878,7 +867,6 @@ function doLogout() {
   document.getElementById('login-error').classList.remove('show');
   var btn=document.getElementById('btn-login'); btn.disabled=true; btn.textContent='登入';
   document.getElementById('student-badge').classList.remove('show');
-  document.getElementById('btn-logout').classList.remove('show');
   document.getElementById('activity-list').innerHTML='<div class="activity-empty">登入後查看學習記錄 📖</div>';
   hideLogoutConfirm(); switchRole('student'); goTo('screen-login');
   showToast('已登出，掰掰！👋');

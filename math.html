@@ -82,47 +82,7 @@
   .page { display: none; }
   .page.active { display: block; }
 
-  /* ===== COVER ===== */
-  #page-cover {
-    min-height: 100vh;
-    background: var(--grad-cover);
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px;
-  }
-  .cover-card {
-    background: white;
-    border-radius: var(--radius-card);
-    padding: 48px 40px;
-    max-width: 440px; width: 100%;
-    text-align: center;
-    box-shadow: var(--shadow-strong);
-    animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both;
-  }
-  .cover-emoji { font-size: 4rem; margin-bottom: 16px; display: block; }
-  .cover-title {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 900; font-size: 2rem;
-    color: #1a3a5c; line-height: 1.2; margin-bottom: 10px;
-  }
-  .cover-title em { color: #ffd54f; font-style: normal; }
-  .cover-sub {
-    color: #5a7a99; font-size: 1rem; margin-bottom: 32px;
-    font-family: 'Noto Sans TC', sans-serif;
-  }
-  .cover-name-row {
-    display: flex; gap: 10px; margin-bottom: 28px;
-  }
-  .cover-name-row input {
-    flex: 1;
-    padding: 13px 18px;
-    border: 2.5px solid #d0e6f7;
-    border-radius: var(--radius-btn);
-    font-family: 'Nunito', sans-serif;
-    font-size: 1rem; font-weight: 700;
-    color: #1a3a5c; outline: none;
-    transition: border-color .2s;
-  }
-  .cover-name-row input:focus { border-color: var(--blue); }
+  /* ===== BUTTONS (共用) ===== */
   .btn-primary {
     font-family: 'Nunito', sans-serif;
     font-weight: 800; font-size: 1.05rem;
@@ -430,7 +390,6 @@
     .quiz-card { padding: 24px 18px; }
     .question-text { font-size: 2.2rem; }
     .choice-btn { font-size: 1.2rem; padding: 16px 8px; }
-    .cover-card { padding: 32px 22px; }
     .main-wrap { padding: 20px 14px 60px; }
   }
 </style>
