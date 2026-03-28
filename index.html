@@ -226,6 +226,85 @@ body { font-family:'Nunito','Noto Sans TC',sans-serif; background:var(--bg); col
 
 @keyframes popIn { 0%{opacity:0;transform:scale(.88) translateY(10px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
 
+/* ── 個人資料畫面 ── */
+#screen-profile { background:var(--bg); }
+.profile-topbar {
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px; background:white;
+  border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:10;
+}
+.profile-body { padding:20px 18px; max-width:480px; margin:0 auto; }
+.avatar-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:8px; }
+.avatar-btn {
+  font-size:2rem; border:3px solid transparent;
+  border-radius:14px; background:white; cursor:pointer;
+  padding:8px; transition:all .18s; line-height:1; aspect-ratio:1;
+}
+.avatar-btn.selected {
+  border-color:var(--blue); background:var(--blue-lt);
+  transform:scale(1.1); box-shadow:0 0 0 3px rgba(74,144,217,.15);
+}
+.level-card {
+  background:linear-gradient(135deg,var(--blue),var(--blue-dk));
+  border-radius:16px; padding:20px; color:white;
+  display:flex; align-items:center; gap:16px;
+  margin-bottom:16px; box-shadow:0 6px 20px rgba(44,111,168,.3);
+}
+.level-icon { font-size:3rem; line-height:1; }
+.level-info { flex:1; }
+.level-title { font-size:1.2rem; font-weight:900; margin-bottom:2px; }
+.level-sub   { font-size:.8rem; opacity:.85; font-weight:600; }
+.level-progress { height:10px; background:rgba(255,255,255,.25); border-radius:20px; overflow:hidden; margin-top:10px; }
+.level-progress-fill { height:100%; background:white; border-radius:20px; transition:width .6s; }
+.achievement-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.achievement-item {
+  background:white; border-radius:14px; padding:14px;
+  border:1.5px solid var(--border);
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  box-shadow:var(--shadow);
+}
+.achievement-icon { font-size:1.8rem; }
+.achievement-num  { font-size:1.6rem; font-weight:900; color:var(--blue-dk); line-height:1; }
+.achievement-lbl  { font-size:.72rem; font-weight:700; color:var(--muted); text-align:center; }
+.profile-card {
+  background:white; border-radius:14px; padding:18px;
+  border:1.5px solid var(--border); box-shadow:var(--shadow); margin-bottom:16px;
+}
+.profile-card-title { font-size:.82rem; font-weight:800; color:var(--muted); margin-bottom:12px; letter-spacing:.5px; }
+.profile-input {
+  width:100%; border:2px solid var(--border); border-radius:10px;
+  padding:11px 14px; font-size:1rem; font-family:inherit;
+  outline:none; transition:border-color .2s; color:var(--text); background:var(--bg);
+}
+.profile-input:focus { border-color:var(--blue); background:white; }
+.btn-profile-save {
+  width:100%; padding:13px; border:none; border-radius:12px;
+  background:linear-gradient(135deg,var(--blue),var(--blue-dk));
+  color:white; font-size:1rem; font-weight:800;
+  cursor:pointer; font-family:'Nunito',sans-serif; transition:all .15s;
+  box-shadow:0 4px 12px rgba(44,111,168,.3); margin-top:4px;
+}
+.btn-profile-save:active { transform:scale(.97); }
+.btn-back-profile {
+  background:var(--blue-lt); border:none; border-radius:14px;
+  padding:9px 18px; font-size:.95rem; font-weight:900;
+  color:var(--blue-dk); cursor:pointer; transition:all .15s;
+  font-family:'Nunito',sans-serif;
+}
+.btn-back-profile:active { transform:scale(.95); }
+.logout-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px; background:white; border-top:1px solid var(--border);
+  margin-top:8px;
+}
+.btn-logout-profile {
+  background:#fff0f0; color:var(--red); border:none; border-radius:11px;
+  padding:10px 20px; font-size:.9rem; font-weight:800; cursor:pointer;
+  font-family:'Nunito',sans-serif; transition:all .15s;
+}
+.btn-logout-profile:active { transform:scale(.95); }
+
 @media(max-width:400px){
   .subjects-grid{gap:10px}
   .subject-card{padding:15px 10px 13px}
@@ -347,7 +426,94 @@ body { font-family:'Nunito','Noto Sans TC',sans-serif; background:var(--bg); col
   </div>
 </div>
 
-</div><!-- /.app -->
+<!-- ════ 個人資料畫面 ════ -->
+<div id="screen-profile" class="screen right">
+  <div class="profile-topbar">
+    <button class="btn-back-profile" id="btn-back-profile" onclick="goBackFromProfile()">← 返回</button>
+    <div style="font-size:1rem;font-weight:900;color:var(--blue-dk)">我的資料</div>
+  </div>
+  <div class="profile-body">
+
+    <div class="level-card">
+      <div class="level-icon" id="profile-level-icon">⭐</div>
+      <div class="level-info">
+        <div class="level-title" id="profile-level-title">一級</div>
+        <div class="level-sub"  id="profile-level-sub">通過測驗 0 個字</div>
+        <div class="level-progress">
+          <div class="level-progress-fill" id="profile-level-bar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="achievement-grid">
+      <div class="achievement-item">
+        <div class="achievement-icon">🏆</div>
+        <div class="achievement-num" id="ach-mastered">0</div>
+        <div class="achievement-lbl">通過測驗<br>的字</div>
+      </div>
+      <div class="achievement-item">
+        <div class="achievement-icon">✏️</div>
+        <div class="achievement-num" id="ach-practiced">0</div>
+        <div class="achievement-lbl">通過練習<br>的字</div>
+      </div>
+      <div class="achievement-item">
+        <div class="achievement-icon">⭐</div>
+        <div class="achievement-num" id="ach-math-stars">0</div>
+        <div class="achievement-lbl">乘法<br>星星數</div>
+      </div>
+      <div class="achievement-item">
+        <div class="achievement-icon">🔥</div>
+        <div class="achievement-num" id="ach-streak">0</div>
+        <div class="achievement-lbl">連續學習<br>天數</div>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-card-title">👤 基本資料</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">真實姓名（不可修改）</label>
+        <div style="padding:11px 14px;border-radius:10px;background:#f1f5f9;font-size:1rem;font-weight:700;color:#64748b" id="profile-real-name">—</div>
+      </div>
+      <div style="margin-bottom:0">
+        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">我的暱稱</label>
+        <input class="profile-input" id="profile-nickname" type="text" maxlength="10" placeholder="幫自己取個名字吧！">
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-card-title">🎨 選擇頭像</div>
+      <div class="avatar-grid" id="avatar-grid"></div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-card-title">🔊 音效設定</div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:.92rem;font-weight:800;color:var(--text)">練習音效</div>
+          <div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-top:2px">關閉後練習時不會有聲音</div>
+        </div>
+        <button id="sound-toggle-btn" onclick="toggleSound()"
+          style="width:56px;height:30px;border-radius:20px;border:none;cursor:pointer;position:relative;transition:background .25s;font-size:0">
+          <div id="sound-toggle-knob"
+            style="position:absolute;top:3px;width:24px;height:24px;border-radius:50%;background:white;transition:left .25s;box-shadow:0 2px 4px rgba(0,0,0,.2)"></div>
+        </button>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-card-title">🎨 主題色系</div>
+      <div id="theme-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
+    </div>
+
+    <button class="btn-profile-save" onclick="saveProfile()">💾 儲存資料</button>
+
+    <div class="logout-row">
+      <span style="font-size:.85rem;color:var(--muted);font-weight:600">登入中：<strong id="logout-name" style="color:var(--text)">—</strong></span>
+      <button class="btn-logout-profile" onclick="showLogoutConfirm()">登出</button>
+    </div>
+    <div style="height:32px"></div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <!-- 登出確認 -->
@@ -390,10 +556,10 @@ var TEACHER_PASSWORD = '381418';
 
 // [修正#5] sessionStorage 讓子頁面讀取，不需重新登入
 function saveSession(s) { sessionStorage.setItem('hub_student', JSON.stringify(s)); }
-function clearSession()  { sessionStorage.removeItem('hub_student'); }
+function clearSession()  { sessionStorage.removeItem('hub_student'); sessionStorage.removeItem('return_to'); }
 
 // ── 畫面切換 ──
-var SCREENS = ['screen-login','screen-hub'];
+var SCREENS = ['screen-login','screen-hub','screen-profile'];
 function goTo(id) {
   var order = SCREENS.indexOf(id);
   SCREENS.forEach(function(sid,i){
@@ -488,10 +654,174 @@ function updateHubUI() {
   document.getElementById('btn-logout').classList.add('show');
 }
 
-// [修正#3] 徽章點擊 → 個人資料
+// [修正#3] 徽章點擊 → 個人資料（在 index.html 內切換，不跳頁）
 function goToProfile() {
   saveSession(currentStudent);
-  window.location.href='chinese.html?screen=profile';
+  // 從 Hub 進來，return_to 清空（返回時回 screen-hub）
+  sessionStorage.removeItem('return_to');
+  loadProfileData(function(){ goTo('screen-profile'); });
+}
+
+// 從子頁面跳回個人資料後，返回按鈕的處理
+function goBackFromProfile() {
+  var returnTo = sessionStorage.getItem('return_to');
+  sessionStorage.removeItem('return_to');
+  if (returnTo) {
+    window.location.href = returnTo;
+  } else {
+    goTo('screen-hub');
+  }
+}
+
+// ── 個人資料資料載入 ──
+var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','🐯',
+               '🐨','🐮','🐷','🐰','🐹','🦋','🌸','⭐','🌈','🎯'];
+
+var LEVELS = [
+  { min:0,   max:99,  icon:'⭐',    title:'一級' },
+  { min:100, max:199, icon:'⭐⭐',   title:'二級' },
+  { min:200, max:299, icon:'⭐⭐⭐',  title:'三級' },
+  { min:300, max:399, icon:'🌟',    title:'四級' },
+  { min:400, max:499, icon:'🌟🌟',   title:'五級' },
+  { min:500, max:599, icon:'🌟🌟🌟', title:'六級' },
+  { min:600, max:699, icon:'🏅',    title:'七級' },
+  { min:700, max:799, icon:'🎖️',   title:'八級' },
+  { min:800, max:899, icon:'🏆',    title:'九級' },
+  { min:900, max:Infinity, icon:'👑', title:'十級' }
+];
+
+function getLevelInfo(n) {
+  var lv = LEVELS.find(function(l){ return n >= l.min && n <= l.max; }) || LEVELS[LEVELS.length-1];
+  var pct = lv.max === Infinity ? 100 : Math.round((n - lv.min) / (lv.max - lv.min + 1) * 100);
+  return { icon:lv.icon, title:lv.title, pct:pct, nextCount: lv.max === Infinity ? null : lv.max + 1 - n };
+}
+
+function loadProfileData(cb) {
+  if (!currentStudent) return;
+  var el = function(id){ return document.getElementById(id); };
+  // 基本資料
+  if (el('profile-real-name')) el('profile-real-name').textContent = currentStudent.name;
+  if (el('profile-nickname'))  el('profile-nickname').value = currentStudent.nickname || '';
+  if (el('logout-name'))       el('logout-name').textContent = currentStudent.nickname || currentStudent.name;
+  renderAvatarGrid(currentStudent.avatar || '🐣');
+  applySound();
+  renderThemeGrid();
+
+  if (!db) { if(cb) cb(); return; }
+
+  var mastered = 0, practiced = 0, mathStars = 0, streak = 0;
+  var pending = 2;
+  function done() {
+    if (--pending > 0) return;
+    var lv = getLevelInfo(mastered);
+    if (el('profile-level-icon'))  el('profile-level-icon').textContent  = lv.icon;
+    if (el('profile-level-title')) el('profile-level-title').textContent = lv.title;
+    if (el('profile-level-sub'))   el('profile-level-sub').textContent   =
+      '通過測驗 ' + mastered + ' 個字' + (lv.nextCount ? '（再 ' + lv.nextCount + ' 字升級）' : ' 🎉 最高等級！');
+    if (el('profile-level-bar'))   el('profile-level-bar').style.width = lv.pct + '%';
+    if (el('ach-mastered'))    el('ach-mastered').textContent    = mastered;
+    if (el('ach-practiced'))   el('ach-practiced').textContent   = practiced;
+    if (el('ach-math-stars'))  el('ach-math-stars').textContent  = mathStars;
+    if (el('ach-streak'))      el('ach-streak').textContent      = streak;
+    if (cb) cb();
+  }
+
+  db.collection('students').doc(currentStudent.id).collection('progress').doc('hanzi').get()
+    .then(function(doc){
+      if (doc.exists) {
+        var cs = doc.data().charStatus || {};
+        mastered  = Object.values(cs).filter(function(v){ return v==='mastered'; }).length;
+        practiced = Object.values(cs).filter(function(v){ return v==='practiced'; }).length;
+        streak    = doc.data().streak || 0;
+      }
+      done();
+    }).catch(done);
+
+  db.collection('students').doc(currentStudent.id).collection('progress').doc('math').get()
+    .then(function(doc){
+      if (doc.exists) mathStars = doc.data().totalStars || 0;
+      done();
+    }).catch(done);
+}
+
+function renderAvatarGrid(selectedAvatar) {
+  var grid = document.getElementById('avatar-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  AVATARS.forEach(function(av) {
+    var btn = document.createElement('button');
+    btn.className = 'avatar-btn' + (av === selectedAvatar ? ' selected' : '');
+    btn.textContent = av;
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.avatar-btn').forEach(function(b){ b.classList.remove('selected'); });
+      btn.classList.add('selected');
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function saveProfile() {
+  if (!currentStudent || !db) return;
+  var nickname = (document.getElementById('profile-nickname').value || '').trim();
+  var selected = document.querySelector('.avatar-btn.selected');
+  var avatar   = selected ? selected.textContent : (currentStudent.avatar || '🐣');
+  currentStudent.nickname = nickname;
+  currentStudent.avatar   = avatar;
+  saveSession(currentStudent);
+  db.collection('students').doc(currentStudent.id).update({ nickname:nickname, avatar:avatar })
+    .then(function(){ showToast('✅ 資料已儲存！'); updateHubUI(); })
+    .catch(function(e){ showToast('❌ 儲存失敗：'+e.message); });
+}
+
+// ── 音效 ──
+var soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+function applySound() {
+  var btn  = document.getElementById('sound-toggle-btn');
+  var knob = document.getElementById('sound-toggle-knob');
+  if (!btn || !knob) return;
+  btn.style.background = soundEnabled ? 'var(--green)' : '#cbd5e1';
+  knob.style.left      = soundEnabled ? '29px' : '3px';
+}
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('soundEnabled', soundEnabled);
+  applySound();
+}
+
+// ── 主題 ──
+var THEMES = [
+  { id:'blue',   name:'藍天',   bg:'#eef5fc', blue:'#4a90d9', blueDk:'#2d6fa8', blueLt:'#e8f4fd' },
+  { id:'green',  name:'森林',   bg:'#edfbf4', blue:'#27ae60', blueDk:'#1e8449', blueLt:'#d5f5e3' },
+  { id:'purple', name:'薰衣草', bg:'#f3f0fc', blue:'#8e44ad', blueDk:'#6c3483', blueLt:'#e8daef' },
+  { id:'orange', name:'夕陽',   bg:'#fff8f0', blue:'#e67e22', blueDk:'#ca6f1e', blueLt:'#fdebd0' },
+  { id:'teal',   name:'青空',   bg:'#f0fafa', blue:'#16a085', blueDk:'#0e6655', blueLt:'#d1f2eb' },
+  { id:'pink',   name:'粉紅',   bg:'#fff0f8', blue:'#d63384', blueDk:'#a0255e', blueLt:'#fce4ec' },
+];
+var currentTheme = localStorage.getItem('theme') || 'blue';
+function applyTheme(themeId) {
+  var t = THEMES.find(function(th){ return th.id===themeId; }) || THEMES[0];
+  var r = document.documentElement.style;
+  r.setProperty('--bg',      t.bg);
+  r.setProperty('--blue',    t.blue);
+  r.setProperty('--blue-dk', t.blueDk);
+  r.setProperty('--blue-lt', t.blueLt);
+  currentTheme = themeId;
+  localStorage.setItem('theme', themeId);
+  renderThemeGrid();
+}
+function renderThemeGrid() {
+  var grid = document.getElementById('theme-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  THEMES.forEach(function(t) {
+    var btn = document.createElement('button');
+    btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:12px;border:2.5px solid '
+      +(t.id===currentTheme?'var(--blue)':'var(--border)')+';background:'+(t.id===currentTheme?'var(--blue-lt)':'white')+';cursor:pointer;font-family:inherit;transition:all .15s;';
+    btn.innerHTML = '<span style="font-size:1.4rem;display:inline-block;width:28px;height:28px;border-radius:50%;background:'+t.blue+'"></span>'
+      +'<span style="font-size:.7rem;font-weight:800;color:var(--text)">'+t.name+'</span>';
+    btn.addEventListener('click', function(){ applyTheme(t.id); });
+    grid.appendChild(btn);
+  });
 }
 
 // ── 近期活動 ──
@@ -563,10 +893,22 @@ function showToast(msg) {
 // ── 啟動 ──
 window.addEventListener('load',function(){
   initFirebase();
-  // [修正#5] 從子頁面返回時自動恢復登入，不需重新輸入
+  applyTheme(currentTheme);
+  applySound();
+  // 從子頁面返回時自動恢復登入，不需重新輸入
   try {
     var saved=sessionStorage.getItem('hub_student');
-    if (saved){ currentStudent=JSON.parse(saved); updateHubUI(); loadActivity(); goTo('screen-hub'); }
+    if (saved){
+      currentStudent=JSON.parse(saved);
+      updateHubUI();
+      loadActivity();
+      // 若帶著 ?screen=profile 進來（從子頁面點個人資料）
+      if (window.location.search.indexOf('screen=profile') !== -1) {
+        loadProfileData(function(){ goTo('screen-profile'); });
+      } else {
+        goTo('screen-hub');
+      }
+    }
   } catch(e){}
 });
 </script>

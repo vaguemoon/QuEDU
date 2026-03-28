@@ -1105,114 +1105,18 @@ body {
   </div>
 </div>
 
-<!-- ══ 畫面一：首頁 ══ -->
-<!-- ══ 個人資料頁面 ══ -->
-<div class="screen right" id="screen-profile">
-  <div class="profile-topbar">
-    <button class="btn-back" onclick="goTo('home')">← 返回</button>
-    <div style="font-size:1rem;font-weight:900;color:var(--blue-dk)">我的資料</div>
-  </div>
-  <div class="profile-body">
-
-    <!-- 等級卡 -->
-    <div class="level-card" id="profile-level-card">
-      <div class="level-icon" id="profile-level-icon">🌱</div>
-      <div class="level-info">
-        <div class="level-title" id="profile-level-title">識字新手</div>
-        <div class="level-sub"  id="profile-level-sub">通過測驗 0 個字</div>
-        <div class="level-progress">
-          <div class="level-progress-fill" id="profile-level-bar" style="width:0%"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 成就 -->
-    <div class="achievement-grid">
-      <div class="achievement-item">
-        <div class="achievement-icon">🏆</div>
-        <div class="achievement-num" id="ach-mastered">0</div>
-        <div class="achievement-lbl">通過測驗<br>的字</div>
-      </div>
-      <div class="achievement-item">
-        <div class="achievement-icon">✏️</div>
-        <div class="achievement-num" id="ach-practiced">0</div>
-        <div class="achievement-lbl">通過練習<br>的字</div>
-      </div>
-      <div class="achievement-item">
-        <div class="achievement-icon">📚</div>
-        <div class="achievement-num" id="ach-lessons">0</div>
-        <div class="achievement-lbl">完成的<br>課程數</div>
-      </div>
-      <div class="achievement-item">
-        <div class="achievement-icon">🔥</div>
-        <div class="achievement-num" id="ach-streak">0</div>
-        <div class="achievement-lbl">連續學習<br>天數</div>
-      </div>
-    </div>
-
-    <!-- 個人資料 -->
-    <div class="profile-card">
-      <div class="profile-card-title">👤 基本資料</div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">真實姓名（不可修改）</label>
-        <div style="padding:11px 14px;border-radius:10px;background:#f1f5f9;font-size:1rem;font-weight:700;color:var(--gray)" id="profile-real-name">—</div>
-      </div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">我的暱稱</label>
-        <input class="profile-input" id="profile-nickname" type="text" maxlength="10" placeholder="幫自己取個名字吧！">
-      </div>
-    </div>
-
-    <!-- 頭像選擇 -->
-    <div class="profile-card">
-      <div class="profile-card-title">🎨 選擇頭像</div>
-      <div class="avatar-grid" id="avatar-grid"></div>
-    </div>
-
-    <!-- 音效開關 -->
-    <div class="profile-card">
-      <div class="profile-card-title">🔊 音效設定</div>
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:.92rem;font-weight:800;color:var(--text)">練習音效</div>
-          <div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-top:2px">關閉後練習時不會有聲音</div>
-        </div>
-        <button id="sound-toggle-btn" onclick="toggleSound()"
-          style="width:56px;height:30px;border-radius:20px;border:none;cursor:pointer;
-                 position:relative;transition:background .25s;font-size:0">
-          <div id="sound-toggle-knob"
-            style="position:absolute;top:3px;width:24px;height:24px;border-radius:50%;
-                   background:white;transition:left .25s;box-shadow:0 2px 4px rgba(0,0,0,.2)">
-          </div>
-        </button>
-      </div>
-    </div>
-
-    <!-- 主題色系 -->
-    <div class="profile-card">
-      <div class="profile-card-title">🎨 主題色系</div>
-      <div id="theme-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px"></div>
-    </div>
-
-    <button class="btn-profile-save" onclick="saveProfile()">💾 儲存資料</button>
-    <div style="height:32px"></div>
-  </div>
-</div>
 
 <div class="screen right" id="screen-home">
   <div class="topbar">
     <div class="topbar-left">
-      <!-- [修正#6] 回到 Hub 首頁按鈕 -->
       <button class="btn-back" onclick="goBackToHub()">← 回首頁</button>
       <div class="topbar-title">✏️ <span>國字練習</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <button class="btn-profile-entry" id="btn-profile-entry" onclick="goTo('profile')">
+      <button class="btn-profile-entry" id="btn-profile-entry" onclick="goToProfile()">
         <span id="home-avatar-display">🐣</span>
       </button>
-      <div class="student-badge" id="student-badge" onclick="confirmLogout()">
-        <span style="font-size:.85rem;font-weight:800">登出</span>
-      </div>
+      <button class="btn-back" style="font-size:.82rem;padding:8px 14px" onclick="confirmLogout()">登出</button>
     </div>
   </div>
   <div class="home-hero">
@@ -1748,116 +1652,9 @@ function loadLessonFromFirebase(callback) {
 }
 
 // ── 登出 ──
-// ══ 個人資料 ══
-var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','🐯',
-               '🐨','🐮','🐷','🐰','🐹','🦋','🌸','⭐','🌈','🎯'];
 
-var LEVELS = [
-  { min:0,   max:99,  icon:'⭐',   title:'一級' },
-  { min:100, max:199, icon:'⭐⭐',  title:'二級' },
-  { min:200, max:299, icon:'⭐⭐⭐', title:'三級' },
-  { min:300, max:399, icon:'🌟',   title:'四級' },
-  { min:400, max:499, icon:'🌟🌟',  title:'五級' },
-  { min:500, max:599, icon:'🌟🌟🌟', title:'六級' },
-  { min:600, max:699, icon:'🏅',   title:'七級' },
-  { min:700, max:799, icon:'🎖️',  title:'八級' },
-  { min:800, max:899, icon:'🏆',   title:'九級' },
-  { min:900, max:Infinity, icon:'👑', title:'十級' }
-];
-
-function getLevelInfo(masteredCount) {
-  var lv = LEVELS.find(function(l){ return masteredCount >= l.min && masteredCount <= l.max; })
-         || LEVELS[LEVELS.length-1];
-  var pct = lv.max === Infinity ? 100
-    : Math.round((masteredCount - lv.min) / (lv.max - lv.min + 1) * 100);
-  var nextCount = lv.max === Infinity ? null : lv.max + 1 - masteredCount;
-  return { icon:lv.icon, title:lv.title, pct:pct, nextCount:nextCount };
-}
-
-function renderAvatarGrid(selectedAvatar) {
-  var grid = document.getElementById('avatar-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  AVATARS.forEach(function(av) {
-    var btn = document.createElement('button');
-    btn.className = 'avatar-btn' + (av === selectedAvatar ? ' selected' : '');
-    btn.textContent = av;
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.avatar-btn').forEach(function(b){ b.classList.remove('selected'); });
-      btn.classList.add('selected');
-    });
-    grid.appendChild(btn);
-  });
-}
-
-function updateProfileScreen() {
-  if (!currentStudent) return;
-
-  // 基本資料
-  var nameEl = document.getElementById('profile-real-name');
-  if (nameEl) nameEl.textContent = currentStudent.name;
-  var nickEl = document.getElementById('profile-nickname');
-  if (nickEl) nickEl.value = currentStudent.nickname || '';
-
-  // 頭像
-  renderAvatarGrid(currentStudent.avatar || '🐣');
-
-  // 成就統計
-  var mastered  = Object.values(charStatus).filter(function(v){ return v==='mastered'; }).length;
-  var practiced = Object.values(charStatus).filter(function(v){ return v==='practiced'; }).length;
-  var el = function(id){ return document.getElementById(id); };
-  if (el('ach-mastered'))  el('ach-mastered').textContent  = mastered;
-  if (el('ach-practiced')) el('ach-practiced').textContent = practiced;
-
-  // 連續天數（從 Firebase streak 讀取）
-  if (el('ach-streak')) el('ach-streak').textContent = currentStudent.streak || 0;
-
-  // 完成課程數（charStatus 中 mastered 的字對應的課）
-  if (el('ach-lessons')) el('ach-lessons').textContent = currentStudent.lessonsCompleted || 0;
-
-  // 等級
-  var lv = getLevelInfo(mastered);
-  if (el('profile-level-icon'))  el('profile-level-icon').textContent  = lv.icon;
-  if (el('profile-level-title')) el('profile-level-title').textContent = lv.title;
-  if (el('profile-level-sub'))   el('profile-level-sub').textContent   =
-    '通過測驗 ' + mastered + ' 個字' +
-    (lv.nextCount ? '　（再 ' + lv.nextCount + ' 字升級）' : '　🎉 最高等級！');
-  if (el('profile-level-bar'))   el('profile-level-bar').style.width   = lv.pct + '%';
-
-  // 更新首頁頂部顯示
-  updateHomeAvatar();
-
-  // 渲染音效開關和主題選擇
-  applySound();
-  renderThemeGrid();
-}
-
-function updateHomeAvatar() {
-  var av = currentStudent && currentStudent.avatar ? currentStudent.avatar : '🐣';
-  var nn = currentStudent && currentStudent.nickname ? currentStudent.nickname : (currentStudent ? currentStudent.name : '個人資料');
-  var avEl = document.getElementById('home-avatar-display');
-  var nnEl = document.getElementById('home-nickname-display');
-  if (avEl) avEl.textContent = av;
-  if (nnEl) nnEl.textContent = nn;
-}
-
-// ══ 音效開關 ══
+// 音效開關（chinese.html 仍需要音效，但設定由 index.html 管理）
 var soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
-
-function applySound() {
-  var btn  = document.getElementById('sound-toggle-btn');
-  var knob = document.getElementById('sound-toggle-knob');
-  if (!btn || !knob) return;
-  btn.style.background  = soundEnabled ? 'var(--green)' : '#cbd5e1';
-  knob.style.left       = soundEnabled ? '29px' : '3px';
-}
-
-function toggleSound() {
-  soundEnabled = !soundEnabled;
-  localStorage.setItem('soundEnabled', soundEnabled);
-  applySound();
-  if (soundEnabled) sfxCorrect();
-}
 
 // 覆寫所有音效函數，讓音效開關生效
 var _origSfxTap       = null;
@@ -1868,7 +1665,6 @@ var _origSfxCelebrate = null;
 var _origSfxSwipe     = null;
 
 function initSoundWrapper() {
-  // 等音效函數定義後再包裝
   setTimeout(function() {
     if (typeof sfxTap === 'function' && !_origSfxTap) {
       _origSfxTap       = sfxTap;
@@ -1877,7 +1673,6 @@ function initSoundWrapper() {
       _origSfxPass      = sfxPass;
       _origSfxCelebrate = sfxCelebrate;
       _origSfxSwipe     = sfxSwipe;
-
       sfxTap       = function(){ if(soundEnabled) _origSfxTap(); };
       sfxCorrect   = function(){ if(soundEnabled) _origSfxCorrect(); };
       sfxWrong     = function(){ if(soundEnabled) _origSfxWrong(); };
@@ -1888,84 +1683,44 @@ function initSoundWrapper() {
   }, 1000);
 }
 
-// ══ 主題色系 ══
-var THEMES = [
-  { id:'blue',   name:'藍天',   bg:'#eef5fc', blue:'#4a90d9', blueDk:'#2d6fa8', blueLt:'#e8f4fd', icon:'🔵' },
-  { id:'green',  name:'森林',   bg:'#edfbf4', blue:'#27ae60', blueDk:'#1e8449', blueLt:'#d5f5e3', icon:'🟢' },
-  { id:'purple', name:'薰衣草', bg:'#f3f0fc', blue:'#8e44ad', blueDk:'#6c3483', blueLt:'#e8daef', icon:'🟣' },
-  { id:'orange', name:'夕陽',   bg:'#fff8f0', blue:'#e67e22', blueDk:'#ca6f1e', blueLt:'#fdebd0', icon:'🟠' },
-  { id:'red',    name:'玫瑰',   bg:'#fff0f0', blue:'#c0392b', blueDk:'#a93226', blueLt:'#fadbd8', icon:'🔴' },
-  { id:'teal',   name:'青空',   bg:'#f0fafa', blue:'#16a085', blueDk:'#0e6655', blueLt:'#d1f2eb', icon:'🩵' },
-  { id:'pink',   name:'粉紅',   bg:'#fff0f8', blue:'#d63384', blueDk:'#a0255e', blueLt:'#fce4ec', icon:'🩷' },
-];
-
-var currentTheme = localStorage.getItem('theme') === 'dark' ? 'blue' : (localStorage.getItem('theme') || 'blue');
-
+// 主題套用（chinese.html 需要套用 index.html 儲存的主題）
+var currentTheme = localStorage.getItem('theme') || 'blue';
+var THEMES_MAP = {
+  blue:   { bg:'#eef5fc', blue:'#4a90d9', blueDk:'#2d6fa8', blueLt:'#e8f4fd' },
+  green:  { bg:'#edfbf4', blue:'#27ae60', blueDk:'#1e8449', blueLt:'#d5f5e3' },
+  purple: { bg:'#f3f0fc', blue:'#8e44ad', blueDk:'#6c3483', blueLt:'#e8daef' },
+  orange: { bg:'#fff8f0', blue:'#e67e22', blueDk:'#ca6f1e', blueLt:'#fdebd0' },
+  teal:   { bg:'#f0fafa', blue:'#16a085', blueDk:'#0e6655', blueLt:'#d1f2eb' },
+  pink:   { bg:'#fff0f8', blue:'#d63384', blueDk:'#a0255e', blueLt:'#fce4ec' },
+};
 function applyTheme(themeId) {
-  var t = THEMES.find(function(th){ return th.id === themeId; }) || THEMES[0];
+  var t = THEMES_MAP[themeId] || THEMES_MAP.blue;
   var r = document.documentElement.style;
   r.setProperty('--bg',      t.bg);
   r.setProperty('--blue',    t.blue);
   r.setProperty('--blue-dk', t.blueDk);
   r.setProperty('--blue-lt', t.blueLt);
-  // 深色模式文字調整
-  // 所有淺色主題使用相同邊框
-  r.setProperty('--border', '#d4e8f8');
-  r.setProperty('--shadow', '0 6px 28px rgba(44,100,160,.13)');
-  currentTheme = themeId;
-  localStorage.setItem('theme', themeId);
-  renderThemeGrid();
+  r.setProperty('--border',  '#d4e8f8');
+  r.setProperty('--shadow',  '0 6px 28px rgba(44,100,160,.13)');
 }
 
-function renderThemeGrid() {
-  var grid = document.getElementById('theme-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  THEMES.forEach(function(t) {
-    var btn = document.createElement('button');
-    btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;'
-      +'padding:10px 4px;border-radius:12px;border:2.5px solid '
-      +(t.id === currentTheme ? 'var(--blue)' : 'var(--border)')+';'
-      +'background:'+(t.id === currentTheme ? 'var(--blue-lt)' : 'white')
-      +';cursor:pointer;font-family:inherit;transition:all .15s;';
-    btn.innerHTML = '<span style="font-size:1.5rem">'+t.icon+'</span>'
-      +'<span style="font-size:.7rem;font-weight:800;color:var(--text)">'+t.name+'</span>';
-    btn.addEventListener('click', function(){ applyTheme(t.id); });
-    grid.appendChild(btn);
-  });
-}
-
-function saveProfile() {
-  if (!currentStudent || !db) return;
-  var nickname = (document.getElementById('profile-nickname').value || '').trim();
-  var selected = document.querySelector('.avatar-btn.selected');
-  var avatar   = selected ? selected.textContent : (currentStudent.avatar || '🐣');
-
-  currentStudent.nickname = nickname;
-  currentStudent.avatar   = avatar;
-
-  db.collection('students').doc(currentStudent.id).update({
-    nickname: nickname,
-    avatar:   avatar
-  }).then(function() {
-    showToast('✅ 資料已儲存！');
-    updateHomeAvatar();
-  }).catch(function(e){ showToast('❌ 儲存失敗：'+e.message); });
+// 更新頂部頭像（從 sessionStorage 讀取）
+function updateHomeAvatar() {
+  try {
+    var s = JSON.parse(sessionStorage.getItem('hub_student') || '{}');
+    var av = s.avatar || '🐣';
+    var avEl = document.getElementById('home-avatar-display');
+    if (avEl) avEl.textContent = av;
+  } catch(e) {}
 }
 
 function confirmLogout() {
   sfxTap();
-  if (confirm('確定要登出嗎？')) {
-    doLogout();
-  }
+  if (confirm('確定要登出嗎？')) { doLogout(); }
 }
 function doLogout() {
-  currentStudent = null;
-  charStatus     = {};
-  loginPin       = '';
-  regPin         = '';
-  // 清除 Hub 的 sessionStorage，回到 index.html 重新登入
   sessionStorage.removeItem('hub_student');
+  sessionStorage.removeItem('return_to');
   window.location.href = 'index.html';
 }
 
@@ -2201,27 +1956,25 @@ function speakChar(char) {
 var chars      = [];
 var charStatus = {};
 var currentIdx = 0;
-var currentScreen = 'login';
+var currentScreen = 'home';
 var currentMode   = 'practice';
-var examWriter    = null;  // 測驗模式 HanziWriter
-var dictScore     = -1;  // 本次默寫分數（-1 = 尚未提交）
-
-var refWriter  = null;
-var quizWriter = null;
-
+var examWriter    = null;
+var dictScore     = -1;
+var refWriter     = null;
+var quizWriter    = null;
 var dCanvas, dCtx, dDrawing = false;
 var dSize = 340;
-var dCurrentStroke = [];   // 當前筆畫的座標點
-var dAllStrokes    = [];   // 本次默寫的所有筆畫
-var charStrokes    = {};   // {字: [[stroke1],[stroke2],...]} 所有字的筆畫路徑
+var dCurrentStroke = [];
+var dAllStrokes    = [];
+var charStrokes    = {};
 
 // ═══════════════════════════════════════
 //  畫面切換
 // ═══════════════════════════════════════
-var SCREENS = ['login','profile','home','menu','exam','mode','learn'];
+var SCREENS = ['home','menu','exam','mode','learn'];
 
 function goTo(name) {
-  if (name === 'profile') updateProfileScreen();
+  if (name === 'profile') { goToProfile(); return; }
   var from = currentScreen, to = name;
   if (from === to) return;
   var fromEl = document.getElementById('screen-'+from);
@@ -2233,6 +1986,12 @@ function goTo(name) {
   fromEl.className = 'screen '+(fwd?'left':'right');
   toEl.className   = 'screen active';
   currentScreen = to;
+}
+
+// 個人資料：存 return_to 後跳至 index.html?screen=profile
+function goToProfile() {
+  sessionStorage.setItem('return_to', 'chinese.html');
+  window.location.href = 'index.html?screen=profile';
 }
 
 // ═══════════════════════════════════════
@@ -3496,8 +3255,6 @@ window.addEventListener('load', function(){
     var saved = sessionStorage.getItem('hub_student');
     if (saved) {
       var hubStudent = JSON.parse(saved);
-      // 若從 Hub 帶 ?screen=profile 過來，先進個人資料頁
-      var wantProfile = window.location.search.indexOf('screen=profile') !== -1;
       // 等 Firebase 就緒後自動登入
       (function autoLogin() {
         if (!db) { setTimeout(autoLogin, 200); return; }
@@ -3515,13 +3272,6 @@ window.addEventListener('load', function(){
               // 隱藏 loading 遮罩
               var overlay = document.getElementById('loading-overlay');
               if (overlay) overlay.style.display = 'none';
-              // 若指定進入個人資料頁
-              if (wantProfile) {
-                setTimeout(function(){
-                  updateProfileScreen();
-                  goTo('profile');
-                }, 300);
-              }
             });
         }).catch(function() {
           var overlay = document.getElementById('loading-overlay');

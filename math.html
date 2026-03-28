@@ -442,8 +442,8 @@
   <div class="nav-title"><span>🌟</span> 乘法小英雄</div>
   <div class="nav-right">
     <div class="star-count" id="nav-stars">⭐ <span id="nav-star-num">0</span></div>
+    <button class="btn-icon" id="btn-profile" title="個人資料" onclick="goToProfile()">👤</button>
     <button class="btn-icon" id="btn-dark" title="深色模式">🌙</button>
-    <!-- [修正#6] 回到 Hub 首頁 -->
     <button class="btn-icon" id="btn-hub" title="回首頁" onclick="window.location.href='index.html'">🏠</button>
   </div>
 </nav>
@@ -639,7 +639,12 @@ document.getElementById('btn-dark').onclick = function() {
   document.body.classList.toggle('dark');
   document.getElementById('btn-dark').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
 };
-// btn-hub 的 onclick 已直接寫在 HTML 上（window.location.href='index.html'），不需再綁定
+
+// 個人資料：存 return_to 後跳至 index.html?screen=profile
+function goToProfile() {
+  sessionStorage.setItem('return_to', 'math.html');
+  window.location.href = 'index.html?screen=profile';
+}
 
 // ===== STAGES =====
 function renderStages() {
