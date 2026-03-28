@@ -303,3 +303,82 @@ function goTo(toId) {
   });
   currentScreen = toId;
 }
+
+/* ════════════════════════════════════════
+   Web Audio 音效引擎
+   所有子項目統一使用，不需要各自定義
+   ════════════════════════════════════════ */
+var _AC = null;
+function _getAC() {
+  if (!_AC) _AC = new (window.AudioContext || window.webkitAudioContext)();
+  return _AC;
+}
+
+// iOS 需要在 touch / click 事件中解鎖 AudioContext
+(function() {
+  function unlock() { _getAC(); }
+  document.addEventListener('touchstart', unlock, { once: true });
+  document.addEventListener('click',      unlock, { once: true });
+})();
+
+/**
+ * 播放單音
+ * @param {number} freq     頻率 Hz
+ * @param {string} type     波形 sine / triangle / square
+ * @param {number} duration 持續秒數
+ * @param {number} vol      音量 0~1
+ * @param {number} delay    延遲秒數
+ */
+function playTone(freq, type, duration, vol, delay) {
+  if (!soundEnabled) return;
+  try {
+    var ac   = _getAC();
+    var osc  = ac.createOscillator();
+    var gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, ac.currentTime + (delay||0));
+    gain.gain.setValueAtTime(vol||0.18, ac.currentTime + (delay||0));
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (delay||0) + duration);
+    osc.start(ac.currentTime + (delay||0));
+    osc.stop(ac.currentTime  + (delay||0) + duration);
+  } catch(e) {}
+}
+
+// ── 標準音效集 ──
+function sfxTap()           { playTone(660, 'triangle', 0.08, 0.12); }
+function sfxSwipe()         { playTone(220, 'sine',     0.12, 0.10); }
+function sfxCorrect()       { playTone(523,'sine',0.12,0.14,0); playTone(659,'sine',0.12,0.14,0.12); }
+function sfxWrong()         { playTone(180, 'square',   0.10, 0.10); }
+function sfxPass()          { [523,659,784].forEach(function(f,i){ playTone(f,'sine',0.3,0.15,i*0.05); }); }
+function sfxCelebrate()     { [523,659,784,880,1047].forEach(function(f,i){ playTone(f,'sine',0.18,0.18,i*0.1); }); }
+function sfxGrandCelebrate() {
+  [523,659,784,1047,1319].forEach(function(f,i){ playTone(f,'sine',0.2,0.22,i*0.07); });
+  [523,659,784].forEach(function(f,i){ playTone(f,'triangle',0.3,0.25,0.5+i*0.02); });
+  playTone(1047,'sine',0.4,0.28,0.9); playTone(1319,'sine',0.4,0.25,1.0); playTone(1568,'sine',0.5,0.22,1.1);
+  [80,100,120].forEach(function(f,i){ playTone(f,'square',0.08,0.15,0.5+i*0.1); });
+}
+
+/**
+ * 讓元素閃爍綠色（正確）或紅色（錯誤）
+ * HTML 元素需要能套用 flash-green / flash-red（shared.css 已定義）
+ * @param {string} id    目標元素的 DOM id
+ * @param {string} color 'green' | 'red'
+ */
+function flashBox(id, color) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('flash-green', 'flash-red');
+  void el.offsetWidth; // 重新觸發動畫
+  el.classList.add(color === 'red' ? 'flash-red' : 'flash-green');
+}
+
+/**
+ * 初始化音效包裝（讓 soundEnabled 設定影響所有 sfx 函式）
+ * 在 window.load 裡呼叫一次即可，不需要額外設定
+ */
+function initSoundWrapper() {
+  // playTone 已內建 soundEnabled 判斷，這個函式保留作為初始化掛勾
+  // 未來如需加入音量控制或其他初始化邏輯，在這裡加入
+  applySound();
+}

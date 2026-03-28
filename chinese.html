@@ -151,14 +151,7 @@ body {
 }
 .char-card.mastered .char-card-check { display:flex; }
 
-/* 點擊音效漣漪 */
-.char-card-ripple {
-  position:absolute; border-radius:50%;
-  background:rgba(74,144,217,.25);
-  animation:ripple .5s ease-out forwards;
-  pointer-events:none;
-}
-@keyframes ripple { 0%{transform:scale(0);opacity:1} 100%{transform:scale(4);opacity:0} }
+
 
 /* ══════════════════════════
    畫面三：學習頁
@@ -169,15 +162,7 @@ body {
   height:100%;
 }
 
-.mode-banner {
-  background:var(--white); padding:9px 16px;
-  display:flex; align-items:center; gap:10px;
-  box-shadow:0 2px 8px rgba(0,0,0,.05);
-  flex-shrink:0;
-}
-.mode-icon  { font-size:1.5rem; }
-.mode-info-title { font-size:.95rem; font-weight:900; }
-.mode-info-sub   { font-size:.72rem; color:var(--muted); font-weight:600; }
+
 
 /* 捲動區：padding-bottom 留給底部按鈕 */
 .learn-body {
@@ -296,32 +281,11 @@ body {
 .fb-wrong   { background:#fff0f0; color:var(--red); border-color:#ffb3b3; }
 .fb-praise  { background:#fff8e1; color:#8a6200; border-color:var(--yellow); }
 .fb-big     { font-size:1.15rem; animation:popIn .4s cubic-bezier(.34,1.56,.64,1); }
-@keyframes popIn { 0%{transform:scale(.88);opacity:.5} 100%{transform:scale(1);opacity:1} }
 
-.btn-ctrl {
-  display:flex; align-items:center; justify-content:center; gap:7px;
-  padding:11px 14px; border-radius:12px; border:none;
-  font-family:'Nunito','Noto Sans TC',sans-serif;
-  font-size:.9rem; font-weight:800; cursor:pointer; transition:all .15s;
-}
-.btn-ctrl:active { transform:scale(.96); }
-.btn-clear { background:#fff3e0; color:var(--orange); }
-.btn-next  { background:var(--blue); color:white; }
-.btn-next:disabled { background:#b0c8e8; cursor:not-allowed; opacity:.7; }
 
-/* 閃光 */
-@keyframes flashGreen {
-  0%  { border-color:var(--green); box-shadow:0 0 0 0 rgba(82,201,122,.7); }
-  60% { box-shadow:0 0 0 18px rgba(82,201,122,0); }
-  100%{ border-color:#c8d8ec; box-shadow:none; }
-}
-@keyframes flashRed {
-  0%  { border-color:var(--red); box-shadow:0 0 0 0 rgba(232,68,68,.7); }
-  60% { box-shadow:0 0 0 18px rgba(232,68,68,0); }
-  100%{ border-color:#c8d8ec; box-shadow:none; }
-}
-.flash-green { animation:flashGreen .55s ease forwards; }
-.flash-red   { animation:flashRed   .55s ease forwards; }
+
+
+
 
 /* 練習控制列 */
 .practice-ctrl {
@@ -365,13 +329,7 @@ body {
 /* 默寫控制列 */
 .dict-ctrl { display:flex; gap:10px; }
 
-/* 結果面板 */
-.result-panel {
-  display:none; flex-direction:column; align-items:center; gap:16px;
-  background:var(--white); border-radius:var(--radius);
-  padding:20px; box-shadow:var(--shadow); width:100%; max-width:600px;
-}
-.result-panel.show { display:flex; animation:popIn .4s cubic-bezier(.34,1.56,.64,1); }
+
 
 /* 默寫對照：左右並排 */
 /* 對照格：固定 140px，左右排列不換行 */
@@ -447,45 +405,7 @@ body {
 }
 .result-retry-btn:active { transform:scale(.96); }
 
-/* ══ 底部大按鈕（練習模式：全寬；默寫模式：右下角浮動） ══ */
 
-/* 練習模式：全寬底部列 */
-.bottom-bar {
-  position:fixed; bottom:0; left:0; right:0; z-index:60;
-  padding:10px 16px 16px;
-  background:linear-gradient(to top,rgba(238,245,252,1) 60%,rgba(238,245,252,0));
-  display:flex; flex-direction:column; gap:8px;
-}
-.btn-big {
-  width:100%; padding:16px;
-  border:none; border-radius:16px;
-  font-family:'Nunito','Noto Sans TC',sans-serif;
-  font-size:1.15rem; font-weight:900; cursor:pointer; transition:all .15s;
-  display:flex; align-items:center; justify-content:center; gap:10px;
-  box-shadow:0 5px 18px rgba(0,0,0,.14);
-}
-.btn-big:active { transform:scale(.97); }
-.btn-big-exam { background:linear-gradient(135deg,#c22,var(--red)); color:white; }
-.btn-big-prac { background:linear-gradient(135deg,var(--blue),var(--blue-dk)); color:white; }
-.btn-big-icon { font-size:1.5rem; }
-
-/* 默寫模式：右下角浮動小按鈕組 */
-.dict-float-bar {
-  position:fixed; bottom:20px; right:16px; z-index:60;
-  display:flex; flex-direction:column; gap:8px; align-items:flex-end;
-}
-.btn-float {
-  border:none; border-radius:50px;
-  font-family:'Nunito','Noto Sans TC',sans-serif;
-  font-size:.88rem; font-weight:900; cursor:pointer; transition:all .15s;
-  display:flex; align-items:center; gap:8px;
-  padding:11px 18px;
-  box-shadow:0 4px 16px rgba(0,0,0,.22);
-  white-space:nowrap;
-}
-.btn-float:active { transform:scale(.95); }
-.btn-float-submit { background:linear-gradient(135deg,#c22,var(--red)); color:white; }
-.btn-float-prac   { background:linear-gradient(135deg,var(--blue),var(--blue-dk)); color:white; }
 
 /* Toast — chinese.html 覆寫：改為頂部顯示，避免被底部浮動按鈕遮住 */
 #toast {
@@ -497,7 +417,7 @@ body {
   transform: translateX(-50%) translateY(0);
 }
 
-@keyframes sparkle { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+
 
 /* ══ 首頁課程選擇 ══ */
 /* 首頁頂部個人按鈕（chinese 專用） */
@@ -576,36 +496,7 @@ body {
 .exam-voice-label { font-size:1.1rem; font-weight:900; }
 .exam-voice-hint  { font-size:.8rem; font-weight:700; color:var(--muted); }
 
-/* ══ 生字選單進度概覽列 ══ */
-.menu-progress-bar {
-  margin:12px 16px 0;
-  background:white; border-radius:14px;
-  padding:14px 16px; box-shadow:var(--shadow);
-}
-.menu-progress-title {
-  font-size:.8rem; font-weight:800; color:var(--muted);
-  margin-bottom:10px;
-}
-.progress-track {
-  height:14px; background:#eef2f8; border-radius:20px;
-  overflow:hidden; display:flex;
-}
-.progress-seg {
-  height:100%; transition:width .6s cubic-bezier(.34,1.56,.64,1);
-}
-.progress-seg.mastered  { background:var(--green); }
-.progress-seg.practiced { background:var(--yellow); }
-.progress-seg.new       { background:#d0e4f5; }
-.progress-counts {
-  display:flex; gap:12px; margin-top:8px; flex-wrap:wrap;
-}
-.progress-count-item {
-  display:flex; align-items:center; gap:5px;
-  font-size:.78rem; font-weight:800;
-}
-.progress-count-dot {
-  width:10px; height:10px; border-radius:50%; flex-shrink:0;
-}
+
 
 /* ══ 生字選單底部測驗按鈕 ══ */
 .menu-exam-bar {
@@ -860,7 +751,7 @@ body {
   <div class="menu-body" id="menu-body"></div>
   <!-- 測驗按鈕 -->
   <div class="menu-exam-bar">
-    <button class="btn-big btn-big-exam" id="btn-start-exam" onclick="startFullExam()">
+    <button class="btn-big btn-big-danger" id="btn-start-exam" onclick="startFullExam()">
       <span class="btn-big-icon">📝</span><span>開始今日測驗</span>
     </button>
   </div>
@@ -895,7 +786,7 @@ body {
 
       <!-- 完全空白九宮格 -->
       <div class="exam-box" id="exam-quiz-target"></div>
-      <button class="btn-ctrl btn-clear" style="margin-top:10px;width:var(--grid)" onclick="skipExamChar()">
+      <button class="btn-ctrl btn-ctrl-clear" style="margin-top:10px;width:var(--grid)" onclick="skipExamChar()">
         ⏭ 我不會，跳過
       </button>
     </div>
@@ -920,10 +811,10 @@ body {
         <div class="exam-score-grid" id="round-fail-grid"></div>
       </div>
 
-      <button class="btn-big btn-big-exam" id="btn-next-round" onclick="doStartNextRound()"
+      <button class="btn-big btn-big-danger" id="btn-ctrl-next-round" onclick="doStartNextRound()"
         style="margin-top:8px">
         <span class="btn-big-icon">▶</span>
-        <span id="btn-next-round-label">開始第 2 輪</span>
+        <span id="btn-ctrl-next-round-label">開始第 2 輪</span>
       </button>
     </div>
 
@@ -936,7 +827,7 @@ body {
       </div>
       <div class="exam-score-grid" id="exam-score-grid"></div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
-        <button class="btn-big btn-big-prac" style="max-width:260px" onclick="goTo('menu')">
+        <button class="btn-big btn-big-primary" style="max-width:260px" onclick="goTo('menu')">
           <span class="btn-big-icon">📋</span><span>回到生字選單</span>
         </button>
       </div>
@@ -1011,7 +902,7 @@ body {
         <div id="quiz-controls" style="display:none;flex-direction:column;align-items:center;gap:8px;width:100%">
           <div class="feedback-box fb-idle" id="feedback-box">照著左邊的筆順<br>在右邊一筆一筆寫！</div>
           <div class="practice-ctrl">
-            <button class="btn-ctrl btn-clear" onclick="restartQuiz()">🔄 重新練習</button>
+            <button class="btn-ctrl btn-ctrl-clear" onclick="restartQuiz()">🔄 重新練習</button>
           </div>
         </div>
 
@@ -1034,7 +925,7 @@ body {
 
         <!-- 清除 + 交卷 同一列，永遠顯示 -->
         <div id="dict-ctrl-row" style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:12px">
-          <button class="btn-ctrl btn-clear" onclick="clearDictCanvas()">🗑 清除重寫</button>
+          <button class="btn-ctrl btn-ctrl-clear" onclick="clearDictCanvas()">🗑 清除重寫</button>
           <button id="btn-dict-submit" onclick="submitDictation()"
             style="padding:13px 28px;border:none;border-radius:50px;background:linear-gradient(135deg,#c22,var(--red));color:white;font-size:1rem;font-weight:900;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,.2)">
             <span>✓</span><span>交　卷</span>
@@ -1076,7 +967,7 @@ body {
           <!-- 評完後：像 → 顯示慶祝＋下一個字 -->
           <div id="after-eval" style="display:none;flex-direction:column;align-items:center;gap:12px;width:100%">
             <div id="eval-verdict" style="border-radius:14px;padding:14px 20px;text-align:center;font-size:1.2rem;font-weight:900;width:100%"></div>
-            <button class="btn-big btn-big-prac" id="btn-dict-next" onclick="goBackToMenu()"
+            <button class="btn-big btn-big-primary" id="btn-dict-next" onclick="goBackToMenu()"
               style="max-width:320px;font-size:1.1rem">
               <span class="btn-big-icon">📋</span><span>回到列表</span>
             </button>
@@ -1084,7 +975,7 @@ body {
 
           <!-- 評完後：不像 → 只有一個大按鈕「再練習一次」 -->
           <div id="retry-only-btn" style="display:none;width:100%">
-            <button class="btn-big btn-big-exam" onclick="switchToPractice()"
+            <button class="btn-big btn-big-danger" onclick="switchToPractice()"
               style="font-size:1.1rem">
               <span class="btn-big-icon">✏️</span><span>再練習一次</span>
             </button>
@@ -1111,7 +1002,7 @@ body {
           <div class="exam-result-title" id="exam-result-title"></div>
           <div class="exam-result-detail" id="exam-result-detail"></div>
           <div class="exam-mistake-bar" id="exam-mistake-bar"></div>
-          <button class="btn-big btn-big-prac" id="btn-exam-next" onclick="nextChar()" style="max-width:320px">
+          <button class="btn-big btn-big-primary" id="btn-exam-next" onclick="nextChar()" style="max-width:320px">
             <span class="btn-big-icon">➡️</span><span>下一個字</span>
           </button>
           <button class="btn-big" id="btn-exam-retry" onclick="retryExam()"
@@ -1182,85 +1073,7 @@ function saveStroke(char, strokes) {
 // 存檔時機：每次 charStatus 更新後呼叫
 // 在 renderMenu 裡加入 saveProgress（每次狀態改變都存）
 
-// ═══════════════════════════════════════
-//  Web Audio API 音效引擎
-// ═══════════════════════════════════════
-var AC = null;
-function getAC() {
-  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
-  return AC;
-}
 
-// 解鎖 AudioContext（iOS 需要在 touch 事件中初始化）
-document.addEventListener('touchstart', function(){ getAC(); }, { once:true });
-document.addEventListener('click',      function(){ getAC(); }, { once:true });
-
-function playTone(freq, type, duration, vol, delay) {
-  try {
-    var ac  = getAC();
-    var osc = ac.createOscillator();
-    var gain= ac.createGain();
-    osc.connect(gain); gain.connect(ac.destination);
-    osc.type = type || 'sine';
-    osc.frequency.setValueAtTime(freq, ac.currentTime + (delay||0));
-    gain.gain.setValueAtTime(vol||0.18, ac.currentTime + (delay||0));
-    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (delay||0) + duration);
-    osc.start(ac.currentTime + (delay||0));
-    osc.stop(ac.currentTime  + (delay||0) + duration);
-  } catch(e){}
-}
-
-// 介面切換音：低鳴一聲
-function sfxSwipe() {
-  playTone(220, 'sine', 0.12, 0.10);
-}
-
-// 點擊音：輕脆一聲
-function sfxTap() {
-  playTone(660, 'triangle', 0.08, 0.12);
-}
-
-// 筆畫正確：上升兩音
-function sfxCorrect() {
-  playTone(523, 'sine', 0.12, 0.14, 0);
-  playTone(659, 'sine', 0.12, 0.14, 0.12);
-}
-
-// 筆畫錯誤：短促低音
-function sfxWrong() {
-  playTone(180, 'square', 0.10, 0.10, 0);
-}
-
-// 慶祝音效：一般（五音上升）
-function sfxCelebrate() {
-  var notes = [523,659,784,880,1047];
-  notes.forEach(function(f,i){ playTone(f,'sine',0.18,0.18,i*0.1); });
-}
-
-// 大慶祝音效：全部完成用，三波爆發
-function sfxGrandCelebrate() {
-  // 第一波：快速上升琶音
-  [523,659,784,1047,1319].forEach(function(f,i){
-    playTone(f,'sine',0.2,0.22,i*0.07);
-  });
-  // 第二波：和弦爆發
-  [523,659,784].forEach(function(f,i){
-    playTone(f,'triangle',0.3,0.25,0.5+i*0.02);
-  });
-  // 第三波：最高音收尾
-  playTone(1047,'sine',0.4,0.28,0.9);
-  playTone(1319,'sine',0.4,0.25,1.0);
-  playTone(1568,'sine',0.5,0.22,1.1);
-  // 底鼓感：低頻短音
-  [80,100,120].forEach(function(f,i){
-    playTone(f,'square',0.08,0.15,0.5+i*0.1);
-  });
-}
-
-// 默寫合格音效：和弦
-function sfxPass() {
-  [523,659,784].forEach(function(f,i){ playTone(f,'sine',0.3,0.15,i*0.05); });
-}
 
 // ═══════════════════════════════════════
 //  語音合成（國字讀音）
@@ -1711,7 +1524,7 @@ function startQuiz() {
         ms.style.background = '';
         ms.style.color = '';
         ms.style.cursor = '';
-        ms.className = 'btn-big btn-big-exam';
+        ms.className = 'btn-big btn-big-danger';
         ms.innerHTML = '<span class="btn-big-icon">📝</span><span>開始默寫測驗</span>';
         ms.onclick = switchToDict;
       }
@@ -1719,13 +1532,7 @@ function startQuiz() {
   });
 }
 
-function flashBox(id, color) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  el.classList.remove('flash-green','flash-red');
-  void el.offsetWidth;
-  el.classList.add(color==='red'?'flash-red':'flash-green');
-}
+
 
 function restartQuiz() {
   sfxTap();
@@ -1778,7 +1585,7 @@ function switchToExam() {
   if (old) old.remove();
   var fbar2 = document.createElement('div');
   fbar2.className = 'dict-float-bar'; fbar2.id = 'dict-float-bar';
-  fbar2.innerHTML = '<button class="btn-float btn-float-submit" onclick="submitExam()">'
+  fbar2.innerHTML = '<button class="btn-float btn-float-danger" onclick="submitExam()">'
     +'<span>✓</span><span>交　卷</span></button>';
   document.body.appendChild(fbar2);
 
@@ -1889,7 +1696,7 @@ function retryExam() {
   if (old) old.remove();
   var fbar = document.createElement('div');
   fbar.className = 'dict-float-bar'; fbar.id = 'dict-float-bar';
-  fbar.innerHTML = '<button class="btn-float btn-float-submit" onclick="submitExam()">'
+  fbar.innerHTML = '<button class="btn-float btn-float-danger" onclick="submitExam()">'
     +'<span>✓</span><span>交　卷</span></button>';
   document.body.appendChild(fbar);
   initExam(chars[currentIdx]);
@@ -2429,7 +2236,7 @@ function showRoundSummary() {
     }
 
     // ── 下一輪按鈕 ──
-    var lbl = document.getElementById('btn-next-round-label');
+    var lbl = document.getElementById('btn-ctrl-next-round-label');
     if (lbl) lbl.textContent = '開始第 ' + (examRound + 1) + ' 輪';
 
   } catch(e) {
