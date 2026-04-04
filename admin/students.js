@@ -89,32 +89,46 @@ function renderCourseProgress(currSnap, cs) {
     }
 
     wrap.innerHTML = versions.map(function(v) {
-      var lessonsHtml = v.lessons.map(function(l) {
-        var total    = l.chars.length;
-        if (!total) return '';
-        var mastered = l.chars.filter(function(c){ return cs[c] === 'mastered'; }).length;
-        var pct      = Math.round(mastered / total * 100);
-        var allDone  = mastered === total;
-        var barColor = allDone ? 'var(--green)' : 'var(--blue)';
-        return '<div style="margin-bottom:10px">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-          +   '<span style="font-size:.85rem;font-weight:800;color:var(--text)">'
-          +     '第 ' + l.lessonNum + ' 課　' + l.name
-          +   '</span>'
-          +   '<span style="font-size:.8rem;font-weight:700;color:' + (allDone ? 'var(--green-dk)' : 'var(--blue-dk)') + '">'
-          +     mastered + ' / ' + total + ' 字'
-          +     (allDone ? '　✅' : '')
-          +   '</span>'
-          + '</div>'
-          + '<div style="height:8px;border-radius:6px;background:#e8f0f8;overflow:hidden">'
-          +   '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:6px;transition:width .4s"></div>'
-          + '</div>'
+      // 按年級分組，保留出現順序
+      var gradeOrder = [];
+      var gradeMap   = {};
+      v.lessons.forEach(function(l) {
+        var g = l.grade || '未分冊';
+        if (!gradeMap[g]) { gradeMap[g] = []; gradeOrder.push(g); }
+        gradeMap[g].push(l);
+      });
+
+      var gradesHtml = gradeOrder.map(function(grade) {
+        var lessonsHtml = gradeMap[grade].map(function(l) {
+          var total    = l.chars.length;
+          if (!total) return '';
+          var mastered = l.chars.filter(function(c){ return cs[c] === 'mastered'; }).length;
+          var pct      = Math.round(mastered / total * 100);
+          var allDone  = mastered === total;
+          var barColor = allDone ? 'var(--green)' : 'var(--blue)';
+          var textColor = allDone ? 'var(--green-dk)' : 'var(--blue-dk)';
+          return '<div style="margin-bottom:10px">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+            +   '<span style="font-size:.85rem;font-weight:800;color:var(--text)">第 ' + l.lessonNum + ' 課　' + l.name + '</span>'
+            +   '<span style="font-size:.8rem;font-weight:700;color:' + textColor + '">'
+            +     mastered + ' / ' + total + ' 字' + (allDone ? '　✅' : '')
+            +   '</span>'
+            + '</div>'
+            + '<div style="height:8px;border-radius:6px;background:#e8f0f8;overflow:hidden">'
+            +   '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:6px;transition:width .4s"></div>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+
+        return '<div style="margin-bottom:14px">'
+          + '<div style="font-size:.78rem;font-weight:900;color:var(--muted);letter-spacing:.5px;margin:10px 0 8px 2px">📖 ' + grade + '</div>'
+          + lessonsHtml
           + '</div>';
       }).join('');
 
       return '<div style="margin-bottom:16px">'
-        + '<div style="font-size:.8rem;font-weight:900;color:var(--blue-dk);background:var(--blue-lt);padding:5px 10px;border-radius:8px;margin-bottom:10px">📚 ' + v.name + '</div>'
-        + lessonsHtml
+        + '<div style="font-size:.8rem;font-weight:900;color:var(--blue-dk);background:var(--blue-lt);padding:5px 10px;border-radius:8px;margin-bottom:4px">📚 ' + v.name + '</div>'
+        + gradesHtml
         + '</div>';
     }).join('');
   });
