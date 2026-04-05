@@ -47,16 +47,12 @@ function loadCharInfo(char) {
 
   if (charInfoCache[char]) { applyCharInfo(charInfoCache[char]); return; }
 
-  // 不使用 encodeURIComponent，直接傳漢字，萌典 API 相容性較佳
-  fetch('https://www.moedict.tw/a/' + char + '.json')
+  fetch('https://www.moedict.tw/' + char + '.json')
     .then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     })
     .then(function(data) {
-      console.log('[moedict keys]', Object.keys(data));
-      console.log('[moedict h0]', data.heteronyms && data.heteronyms[0] ? Object.keys(data.heteronyms[0]) : 'no h0');
-      console.log('[moedict values]', { radical: data.radical, stroke_count: data.stroke_count, bopomofo: data.heteronyms && data.heteronyms[0] && data.heteronyms[0].bopomofo });
       var zhuyin  = (data.heteronyms && data.heteronyms[0] && data.heteronyms[0].bopomofo) || '－';
       var radical = data.radical || '－';
       var strokes = data.stroke_count != null ? String(data.stroke_count) : '－';
