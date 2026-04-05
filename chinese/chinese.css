@@ -285,6 +285,28 @@
 }
 #btn-inline-dict { width: 100%; }
 
+/* ── 注音 Tab 區塊 ── */
+#char-zhuyin-bar {
+  width: 100%; background: white; border-radius: 14px;
+  box-shadow: var(--shadow); border: 2px solid #e0edf8;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;
+}
+#info-zhuyin-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.zhuyin-tab {
+  padding: 6px 16px; border-radius: 20px; border: 2px solid #c8dff5;
+  background: var(--blue-lt); color: var(--blue-dk);
+  font-size: 1.15rem; font-family: 'Noto Serif TC', serif; font-weight: 900;
+  cursor: pointer; transition: all .18s; letter-spacing: 2px;
+  font-family: inherit;
+}
+.zhuyin-tab.active {
+  background: var(--blue); color: white; border-color: var(--blue);
+  box-shadow: 0 2px 8px rgba(74,144,217,.35);
+}
+.zhuyin-tab:active { transform: scale(.94); }
+
 /* ── 造詞 / 字義 區塊 ── */
 .char-extra-bar {
   width: 100%; background: white; border-radius: 14px;
@@ -333,7 +355,9 @@
   .char-info-item + .char-info-item { border-left: none; border-top: 1.5px solid #d4e8f8; }
   .char-info-label { font-size: .72rem; min-width: 2.5em; }
   .char-info-value { font-size: 1.4rem; }
-  .char-info-value.zhuyin { font-size: 2rem; letter-spacing: 3px; }
+  #char-zhuyin-bar { flex-direction: row; align-items: center; gap: 12px; }
+  #info-zhuyin-tabs { flex: 1; }
+  .zhuyin-tab { font-size: 1.3rem; }
   #btn-inline-dict { width: 100%; }
 }
 

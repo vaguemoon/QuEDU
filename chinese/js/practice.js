@@ -41,15 +41,17 @@ function stripHtml(str) {
 }
 
 function loadCharInfo(char) {
-  var elZ = document.getElementById('info-zhuyin');
   var elR = document.getElementById('info-radical');
   var elS = document.getElementById('info-strokes');
+  var elT = document.getElementById('info-zhuyin-tabs');
   var elW = document.getElementById('info-words');
   var elD = document.getElementById('info-def');
-  if (!elZ) return;
+  if (!elT) return;
 
-  elZ.textContent = '⋯'; elR.textContent = '⋯'; elS.textContent = '⋯';
-  if (elW) elW.innerHTML = '<span style="color:var(--muted);font-size:.85rem">查詢中…</span>';
+  if (elR) elR.textContent = '⋯';
+  if (elS) elS.textContent = '⋯';
+  elT.innerHTML = '<span style="color:var(--muted);font-size:.85rem">查詢中…</span>';
+  if (elW) elW.innerHTML = '';
   if (elD) elD.textContent = '查詢中…';
 
   if (charInfoCache[char]) { applyCharInfo(charInfoCache[char]); return; }
@@ -60,37 +62,40 @@ function loadCharInfo(char) {
       return res.json();
     })
     .then(function(data) {
-      var zhuyin  = (data.heteronyms && data.heteronyms[0] && data.heteronyms[0].bopomofo) || '－';
       var radical = stripHtml(data.radical) || '－';
       var strokes = data.stroke_count != null ? String(data.stroke_count) : '－';
 
-      // 建立造詞→字義對應表：從「」內抓詞，每個詞記住來源定義的字義，最多 3 組
-      var wordDefPairs = [];
-      if (data.heteronyms) {
-        data.heteronyms.forEach(function(h) {
-          if (!h.definitions) return;
-          h.definitions.forEach(function(d) {
-            if (wordDefPairs.length >= 3 || !d.example) return;
-            var defText = stripHtml(d.def) || '－';
-            d.example.forEach(function(ex) {
+      // 每個讀音（heteronym）建立一個物件，包含注音與其造詞字義對應
+      var heteronyms = [];
+      (data.heteronyms || []).forEach(function(h) {
+        var bopomofo = h.bopomofo || '－';
+        var wordDefPairs = [];
+        (h.definitions || []).forEach(function(d) {
+          if (!d.example) return;
+          var defText = stripHtml(d.def) || '－';
+          d.example.forEach(function(ex) {
+            if (wordDefPairs.length >= 3) return;
+            var cleaned = stripHtml(ex).replace(/～/g, char);
+            var matches = cleaned.match(/「([^」]+)」/g) || [];
+            matches.forEach(function(m) {
               if (wordDefPairs.length >= 3) return;
-              var cleaned = stripHtml(ex).replace(/～/g, char);
-              // 抓取「」內的詞語
-              var matches = cleaned.match(/「([^」]+)」/g) || [];
-              matches.forEach(function(m) {
-                if (wordDefPairs.length >= 3) return;
-                var word = m.replace(/「|」/g, '').trim();
-                var already = wordDefPairs.some(function(p) { return p.word === word; });
-                if (word.length >= 2 && word.length <= 4 && !already) {
-                  wordDefPairs.push({ word: word, def: defText });
-                }
-              });
+              var word = m.replace(/「|」/g, '').trim();
+              var already = wordDefPairs.some(function(p) { return p.word === word; });
+              if (word.length >= 2 && word.length <= 4 && !already) {
+                wordDefPairs.push({ word: word, def: defText });
+              }
             });
           });
         });
-      }
+        // 若無造詞，仍保留此讀音，字義取第一條定義
+        var fallbackDef = '－';
+        if (h.definitions && h.definitions[0]) {
+          fallbackDef = stripHtml(h.definitions[0].def) || '－';
+        }
+        heteronyms.push({ bopomofo: bopomofo, wordDefPairs: wordDefPairs, fallbackDef: fallbackDef });
+      });
 
-      var info = { zhuyin: zhuyin, radical: radical, strokes: strokes, wordDefPairs: wordDefPairs };
+      var info = { radical: radical, strokes: strokes, heteronyms: heteronyms };
       charInfoCache[char] = info;
       applyCharInfo(info);
     })
@@ -98,21 +103,43 @@ function loadCharInfo(char) {
 }
 
 function applyCharInfo(info) {
-  var elZ = document.getElementById('info-zhuyin');
   var elR = document.getElementById('info-radical');
   var elS = document.getElementById('info-strokes');
+  var elT = document.getElementById('info-zhuyin-tabs');
   var elW = document.getElementById('info-words');
   var elD = document.getElementById('info-def');
-  if (elZ) elZ.textContent = info.zhuyin;
   if (elR) elR.textContent = info.radical;
   if (elS) elS.textContent = info.strokes;
+  if (!elT) return;
 
-  var pairs = info.wordDefPairs || [];
+  elT.innerHTML = '';
+  var heteronyms = info.heteronyms || [];
+  if (!heteronyms.length) { elT.textContent = '－'; return; }
 
+  // 建立注音 tab
+  heteronyms.forEach(function(h, idx) {
+    var tab = document.createElement('button');
+    tab.className = 'zhuyin-tab' + (idx === 0 ? ' active' : '');
+    tab.textContent = h.bopomofo;
+    tab.onclick = function() {
+      elT.querySelectorAll('.zhuyin-tab').forEach(function(t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+      renderWordDef(h, elW, elD);
+    };
+    elT.appendChild(tab);
+  });
+
+  // 預設顯示第一個讀音的造詞字義
+  renderWordDef(heteronyms[0], elW, elD);
+}
+
+function renderWordDef(h, elW, elD) {
+  var pairs = h.wordDefPairs || [];
   if (elW) {
     elW.innerHTML = '';
     if (pairs.length === 0) {
       elW.textContent = '－';
+      if (elD) elD.textContent = h.fallbackDef;
     } else {
       pairs.forEach(function(pair, idx) {
         var chip = document.createElement('span');
@@ -126,22 +153,20 @@ function applyCharInfo(info) {
         };
         elW.appendChild(chip);
       });
+      if (elD) elD.textContent = pairs[0].def;
     }
   }
-
-  // 預設顯示第一個詞的字義
-  if (elD) elD.textContent = (pairs.length > 0 ? pairs[0].def : '－');
 }
 
 function showCharInfoError() {
-  var elZ = document.getElementById('info-zhuyin');
   var elR = document.getElementById('info-radical');
   var elS = document.getElementById('info-strokes');
+  var elT = document.getElementById('info-zhuyin-tabs');
   var elW = document.getElementById('info-words');
   var elD = document.getElementById('info-def');
-  if (elZ) elZ.textContent = '－';
   if (elR) elR.textContent = '－';
   if (elS) elS.textContent = '－';
+  if (elT) elT.textContent = '－';
   if (elW) elW.textContent = '－';
   if (elD) elD.textContent = '無法取得資料';
 }
