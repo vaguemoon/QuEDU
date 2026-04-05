@@ -217,6 +217,33 @@
 }
 #btn-inline-dict { width: 100%; }
 
+/* ── 造詞 / 字義 區塊 ── */
+.char-extra-bar {
+  width: 100%; background: white; border-radius: 14px;
+  box-shadow: var(--shadow); border: 2px solid #e0edf8;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;
+}
+.char-extra-label {
+  font-size: .65rem; font-weight: 800; color: var(--muted); letter-spacing: 1px;
+  display: flex; align-items: center; gap: 6px;
+}
+.char-extra-hint {
+  font-weight: 600; font-size: .62rem; color: #b0c4d8; letter-spacing: 0;
+}
+.char-words-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.char-word-chip {
+  background: var(--blue-lt); border: 1.5px solid #bfdbfe; border-radius: 10px;
+  padding: 5px 12px; font-size: 1rem; font-family: 'Noto Serif TC', serif;
+  font-weight: 900; color: var(--blue-dk); cursor: pointer;
+  transition: all .15s; letter-spacing: 1px; user-select: none;
+}
+.char-word-chip:active { background: var(--blue); color: white; transform: scale(.94); }
+.char-def-text {
+  font-size: .9rem; font-weight: 600; color: var(--text); line-height: 1.65;
+}
+
 /* ── 橫向版面（landscape） ── */
 @media (orientation: landscape) {
   :root {
