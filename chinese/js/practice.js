@@ -1,7 +1,7 @@
 /**
  * practice.js — 筆順練習模式
  * 負責：switchToPractice()、switchPracticeTab()、initQuiz()、
- *        startQuiz()、restartQuiz()、playRef()、setFeedback()
+ *        startQuiz()、restartQuiz()、playRef()、loadCharInfo()
  *        以及單字測驗（switchToSingleExam、initExam、startExamQuiz、showSingleExamResult）
  * 依賴：state.js、nav.js、menu.js（updateProgressBar）、shared.js（sfx 系列）
  */
@@ -26,19 +26,58 @@ function getGridPx() {
   return 340;
 }
 
+// ── 工具函式 ──
+
 /**
- * 更新回饋訊息框
- * @param {string} cls  CSS class（fb-idle / fb-ok / fb-wrong / fb-praise / fb-big）
- * @param {string} html 顯示內容（可含 HTML）
+ * 從萌典 API 查詢注音／部首／筆畫，填入 #char-info-bar
+ * 結果快取於 charInfoCache，避免重複請求
+ * @param {string} char 目標漢字
  */
-function setFeedback(cls, html) {
-  var el = document.getElementById('feedback-box');
-  if (!el) return;
-  el.className = 'feedback-box ' + cls;
-  el.innerHTML = html;
+function loadCharInfo(char) {
+  var elZ = document.getElementById('info-zhuyin');
+  var elR = document.getElementById('info-radical');
+  var elS = document.getElementById('info-strokes');
+  if (!elZ || !elR || !elS) return;
+
+  // 顯示載入中
+  elZ.textContent = '⋯'; elR.textContent = '⋯'; elS.textContent = '⋯';
+
+  if (charInfoCache[char]) {
+    applyCharInfo(charInfoCache[char]);
+    return;
+  }
+
+  fetch('https://www.moedict.tw/a/' + encodeURIComponent(char) + '.json')
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(data) {
+      if (!data) { showCharInfoError(); return; }
+      var zhuyin  = (data.heteronyms && data.heteronyms[0] && data.heteronyms[0].bopomofo) || '－';
+      var radical = data.radical || '－';
+      var strokes = data.stroke_count != null ? String(data.stroke_count) : '－';
+      var info = { zhuyin: zhuyin, radical: radical, strokes: strokes };
+      charInfoCache[char] = info;
+      applyCharInfo(info);
+    })
+    .catch(function() { showCharInfoError(); });
 }
 
-// ── 工具函式 ──
+function applyCharInfo(info) {
+  var elZ = document.getElementById('info-zhuyin');
+  var elR = document.getElementById('info-radical');
+  var elS = document.getElementById('info-strokes');
+  if (elZ) elZ.textContent = info.zhuyin;
+  if (elR) elR.textContent = info.radical;
+  if (elS) elS.textContent = info.strokes;
+}
+
+function showCharInfoError() {
+  var elZ = document.getElementById('info-zhuyin');
+  var elR = document.getElementById('info-radical');
+  var elS = document.getElementById('info-strokes');
+  if (elZ) elZ.textContent = '－';
+  if (elR) elR.textContent = '－';
+  if (elS) elS.textContent = '－';
+}
 
 /**
  * 建立範例筆順 HanziWriter（ref-target），載入後自動播放動畫
@@ -125,10 +164,10 @@ function switchToPractice() {
       + '<span class="btn-big-icon">📝</span><span>完成練習後開始默寫</span></button>';
   }
 
-  setFeedback('fb-idle', '照著左邊的筆順<br>在右邊一筆一筆寫！');
   switchPracticeTab('ref');
 
   var char = chars[currentIdx];
+  loadCharInfo(char);
   var rt   = document.getElementById('ref-target');
   if (rt) {
     rt.innerHTML = '';
@@ -159,41 +198,27 @@ function initQuiz(char) {
 function startQuiz() {
   quizCompleted = false;
   quizWriter.quiz({
-    onMistake: function() {
-      flashBox('quiz-target', 'red'); sfxWrong();
-      setFeedback('fb-wrong', '⚠️ 偏掉囉！<br>跟著黃色提示筆畫寫！');
-    },
-    onCorrectStroke: function(data) {
-      flashBox('quiz-target', 'green'); sfxCorrect();
-      var r = data.strokesRemaining;
-      if (r > 0) setFeedback('fb-ok', '👍 對了！還有 ' + r + ' 筆');
-    },
+    onMistake:       function() { flashBox('quiz-target', 'red');   sfxWrong();   },
+    onCorrectStroke: function() { flashBox('quiz-target', 'green'); sfxCorrect(); },
     onComplete: function(data) {
       if (quizCompleted) return;
       quizCompleted = true;
 
-      var m = data.totalMistakes;
       sfxCelebrate();
-      if      (m === 0)  setFeedback('fb-big fb-praise', '🌟 完美！一筆都沒錯！');
-      else if (m <= 2)   setFeedback('fb-big fb-ok',     '😊 寫對了！只錯了 ' + m + ' 次');
-      else               setFeedback('fb-big fb-ok',     '👍 完成了！再練幾次會更好');
 
-      // 筆順練習完成，不改變狀態（只有測驗通過才升為 mastered）
-
-      // 在回饋框正下方插入「開始默寫測驗」按鈕（避免重複插入）
+      // 在 sidebar 插入「開始默寫測驗」按鈕（避免重複插入）
       if (!document.getElementById('btn-inline-dict')) {
-        var fb = document.getElementById('feedback-box');
-        if (fb) {
+        var sidebar = document.getElementById('practice-sidebar');
+        if (sidebar) {
           var dictBtn = document.createElement('button');
           dictBtn.id        = 'btn-inline-dict';
           dictBtn.className = 'btn-big btn-big-danger';
           dictBtn.innerHTML = '<span class="btn-big-icon">📝</span><span>開始默寫測驗</span>';
           dictBtn.onclick   = function(){ switchToDict(); };
-          fb.insertAdjacentElement('afterend', dictBtn);
+          sidebar.appendChild(dictBtn);
         }
       }
 
-      // 底部固定列不再使用
       var bb = document.getElementById('bottom-bar');
       if (bb) bb.style.display = 'none';
 
@@ -205,7 +230,6 @@ function startQuiz() {
 function restartQuiz() {
   sfxTap();
   quizCompleted = false;
-  setFeedback('fb-idle', '照著左邊的筆順<br>在右邊一筆一筆寫！');
   var qt = document.getElementById('quiz-target');
   if (qt) { qt.innerHTML = ''; qt.classList.remove('flash-green', 'flash-red'); }
   var inlineBtn = document.getElementById('btn-inline-dict');
@@ -257,7 +281,6 @@ function initExam(char) {
 
 function startExamQuiz(char) {
   if (!examWriter) return;
-  setFeedback('fb-idle', '靠記憶把「' + char + '」寫出來！');
   switchPracticeTab('quiz');
   examWriter.quiz({
     onMistake:       function(){ examMistakes++; flashBox('quiz-target', 'red');   sfxWrong();   },
@@ -268,10 +291,6 @@ function startExamQuiz(char) {
 
 function showSingleExamResult(char, mistakes) {
   sfxCelebrate();
-  setFeedback(
-    mistakes === 0 ? 'fb-big fb-praise' : mistakes <= 2 ? 'fb-big fb-ok' : 'fb-big fb-wrong',
-    mistakes === 0 ? '🌟 完美！（錯 0 次）' : '😊 完成！（錯 ' + mistakes + ' 次）'
-  );
   if (upgradeCharStatus(char, mistakes) === 'mastered') sfxGrandCelebrate();
   saveProgress(); updateProgressBar();
 

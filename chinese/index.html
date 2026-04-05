@@ -109,20 +109,37 @@
   <div class="learn-body" id="learn-body">
     <div id="panel-practice">
       <div class="practice-wrap">
-        <div class="practice-tab-bar">
-          <button class="practice-tab active" id="tab-ref"  onclick="switchPracticeTab('ref')">👁 範例筆順</button>
-          <button class="practice-tab"        id="tab-quiz" onclick="switchPracticeTab('quiz')">✍️ 練習格</button>
+        <div class="practice-left-col">
+          <div class="practice-tab-bar">
+            <button class="practice-tab active" id="tab-ref"  onclick="switchPracticeTab('ref')">👁 範例筆順</button>
+            <button class="practice-tab"        id="tab-quiz" onclick="switchPracticeTab('quiz')">✍️ 練習格</button>
+          </div>
+          <div class="practice-grid-wrap">
+            <div id="ref-target"></div>
+            <div class="quiz-box" id="quiz-target"></div>
+          </div>
+          <div class="practice-ctrl" id="quiz-controls" style="display:none">
+            <button class="btn-ctrl btn-ctrl-clear" onclick="restartQuiz()">🔄 重寫</button>
+          </div>
+          <div id="ref-controls">
+            <button class="btn-replay" onclick="playRef()">▶ 再播一次筆順</button>
+          </div>
         </div>
-        <div class="practice-grid-wrap">
-          <div id="ref-target"></div>
-          <div class="quiz-box" id="quiz-target"></div>
-        </div>
-        <div class="feedback-box fb-idle" id="feedback-box">照著左邊的筆順<br>在右邊一筆一筆寫！</div>
-        <div class="practice-ctrl" id="quiz-controls" style="display:none">
-          <button class="btn-ctrl btn-ctrl-clear" onclick="restartQuiz()">🔄 重寫</button>
-        </div>
-        <div id="ref-controls">
-          <button class="btn-replay" onclick="playRef()">▶ 再播一次筆順</button>
+        <div id="practice-sidebar">
+          <div id="char-info-bar">
+            <div class="char-info-item">
+              <div class="char-info-label">注音</div>
+              <div class="char-info-value zhuyin" id="info-zhuyin">⋯</div>
+            </div>
+            <div class="char-info-item">
+              <div class="char-info-label">部首</div>
+              <div class="char-info-value" id="info-radical">⋯</div>
+            </div>
+            <div class="char-info-item">
+              <div class="char-info-label">筆畫</div>
+              <div class="char-info-value" id="info-strokes">⋯</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

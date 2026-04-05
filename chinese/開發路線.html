@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>國字學習 App — 功能開發路線圖</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --border: #E2DDD6;
+    --text: #1A1714;
+    --muted: #7A746C;
+
+    --fatal-bg: #FEF0EE;
+    --fatal-border: #F5C4B6;
+    --fatal-tag: #C23E22;
+    --fatal-tag-bg: #FCE5DF;
+
+    --miss-bg: #FEF8EE;
+    --miss-border: #F0DDA8;
+    --miss-tag: #9A6B00;
+    --miss-tag-bg: #FEF0C6;
+
+    --nice-bg: #EEF7F0;
+    --nice-border: #B8DEC0;
+    --nice-tag: #1A6B35;
+    --nice-tag-bg: #D4EDDA;
+
+    --b1: #1A3A8F;
+    --b2: #2952CC;
+    --b2-bg: #EEF2FF;
+    --b2-border: #C7D4F8;
+
+    --b3: #5C3D99;
+    --b3-bg: #F3EEF9;
+    --b3-border: #D4C4ED;
+
+    --free-bg: #F0F7FF;
+    --free-border: #B8D4F0;
+
+    --paid-bg: #FFF8EE;
+    --paid-border: #F0D8A8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 40px 24px 60px;
+  }
+
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 36px;
+  }
+  .header-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .header-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .header-sub {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 28px;
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 10px 10px 0 0;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .section-head-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .section-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+  }
+  thead th {
+    padding: 9px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    background: #FAFAF8;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  thead th:first-child { width: 28px; text-align: center; }
+  thead th:nth-child(2) { min-width: 130px; }
+  thead th:nth-child(3) { min-width: 200px; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #FAFAF8; }
+
+  td {
+    padding: 10px 14px;
+    vertical-align: top;
+  }
+  td:first-child {
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 500;
+    padding-top: 12px;
+  }
+
+  .feat-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .feat-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .effort-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .effort-bar {
+    display: flex;
+    gap: 2px;
+  }
+  .effort-pip {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--border);
+  }
+  .effort-pip.fill { background: var(--b2); }
+  .effort-label {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .tier-free {
+    background: var(--free-bg);
+    color: #1A5A8F;
+    border: 1px solid var(--free-border);
+  }
+  .tier-paid {
+    background: var(--paid-bg);
+    color: #7A4800;
+    border: 1px solid var(--paid-border);
+  }
+  .tier-both {
+    background: #F3EEF9;
+    color: #5C3D99;
+    border: 1px solid #D4C4ED;
+  }
+
+  /* Divider phase */
+  .phase-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 32px 0 20px;
+  }
+  .phase-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .phase-divider-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* Summary bar */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .summary-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .summary-label {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Effort pip helpers */
+  .e1 .effort-pip:nth-child(-n+1) { background: var(--b2); }
+  .e2 .effort-pip:nth-child(-n+2) { background: var(--b2); }
+  .e3 .effort-pip:nth-child(-n+3) { background: var(--b2); }
+  .e4 .effort-pip:nth-child(-n+4) { background: var(--b2); }
+  .e5 .effort-pip:nth-child(-n+5) { background: var(--b2); }
+
+  @media print {
+    body { background: white; padding: 20px; }
+    .section-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    table { page-break-inside: avoid; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-label">Product Roadmap</div>
+    <div class="header-title">國字學習 App 功能開發路線圖</div>
+    <div class="header-sub">依優先順序排列 · 共三個開發階段 · 完成後具備完整商業化條件</div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#C23E22"></div>致命缺失（沒有無法收費）</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9A6B00"></div>重要缺失（影響付費轉換）</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1A6B35"></div>加分功能（提升留存與續訂）</div>
+    <div class="legend-item" style="margin-left:8px"><div class="legend-dot" style="background:#2952CC;border-radius:2px"></div>開發工時參考（1格≈1週）</div>
+  </div>
+
+  <!-- ══════════════════════ PHASE 1 ══════════════════════ -->
+  <div class="phase-divider">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-label">第一階段 — 商業化地基（先做，才能收錢）</div>
+    <div class="phase-divider-line"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head" style="background:var(--fatal-bg);border-color:var(--fatal-border);color:var(--fatal-tag);">
+      <div class="section-head-dot" style="background:var(--fatal-tag)"></div>
+      致命缺失 — 沒有這些就無法對外販售
+      <div class="section-count">4 項</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>功能名稱</th>
+          <th>具體說明</th>
+          <th>開發工時</th>
+          <th>誰能用</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>
+            <div class="feat-name">自助註冊流程</div>
+            <div class="feat-desc">老師 / 家長自行建立帳號，無需你手動開通</div>
+          </td>
+          <td class="feat-desc">Email 驗證、設定密碼、選擇角色（老師／家長）、綁定班級碼。完成後系統自動建立 Firebase 帳號，不需任何人工介入。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-both">所有人</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>
+            <div class="feat-name">金流串接（訂閱制）</div>
+            <div class="feat-desc">讓家長可以在網頁直接刷卡訂閱</div>
+          </td>
+          <td class="feat-desc">串接綠界或藍新（台灣金流），支援信用卡定期扣款。建立訂閱狀態欄位（active / expired / trial），到期自動鎖定付費功能。建議先設「7 天試用期」降低付費門檻。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e3"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 3 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>
+            <div class="feat-name">免費／付費功能閘道</div>
+            <div class="feat-desc">根據訂閱狀態決定每個功能的開放程度</div>
+          </td>
+          <td class="feat-desc">免費版：每日手寫測驗限 5 字、僅開放第 1 冊課程、進度只存本機。付費版：全功能無限制。在 state.js 加入 isPremium 旗標，所有功能入口處判斷此旗標。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e1"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 1 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-both">所有人</span></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>
+            <div class="feat-name">家長帳號與基本報表</div>
+            <div class="feat-desc">家長登入後可看到孩子的學習狀況</div>
+          </td>
+          <td class="feat-desc">家長帳號綁定一或多個孩子的學生 ID。報表頁顯示：本週練習天數、已通過字數、待加強字清單。資料直接從現有的 charStatus 與 activities 集合讀取，不需要新的資料結構。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════ PHASE 2 ══════════════════════ -->
+  <div class="phase-divider">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-label">第二階段 — 提升產品說服力（做完才值得推廣）</div>
+    <div class="phase-divider-line"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head" style="background:var(--miss-bg);border-color:var(--miss-border);color:var(--miss-tag);">
+      <div class="section-head-dot" style="background:var(--miss-tag)"></div>
+      重要缺失 — 嚴重影響付費轉換與口碑
+      <div class="section-count">6 項</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>功能名稱</th>
+          <th>具體說明</th>
+          <th>開發工時</th>
+          <th>誰能用</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>5</td>
+          <td>
+            <div class="feat-name">注音顯示</div>
+            <div class="feat-desc">每個字旁邊顯示注音符號</div>
+          </td>
+          <td class="feat-desc">低年級核心需求，競爭對手標配功能。可串接開放資料「萌典 API」或內嵌注音對照表（教育部有公開資料）。在生字卡、練習頁、測驗頁三處加入注音。多音字需特別標記。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-free">免費版</span></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>
+            <div class="feat-name">造詞與詞意顯示</div>
+            <div class="feat-desc">練習完一個字後顯示 2～3 個常見造詞</div>
+          </td>
+          <td class="feat-desc">競爭對手最被稱讚的功能。資料來源同萌典或教育部國語辭典 API。在默寫自評通過後的結果頁面，顯示該字的造詞卡片（詞語＋簡短釋義）。讓「會寫」延伸到「會用」。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-free">免費版</span></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>
+            <div class="feat-name">老師後台（班級管理）</div>
+            <div class="feat-desc">老師可建班、加學生、指定本週生字</div>
+          </td>
+          <td class="feat-desc">獨立的老師介面（/teacher 路由）。功能包含：建立班級並產生邀請碼、查看全班每位學生的進度一覽表、一鍵指定本週課程生字（推送到全班）、匯出 PDF 進度報表。這是讓老師主動推薦家長付費的核心工具。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e4"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 4 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>
+            <div class="feat-name">雲端進度同步（多裝置）</div>
+            <div class="feat-desc">換手機或換裝置，學習進度不中斷</div>
+          </td>
+          <td class="feat-desc">目前 charStatus 已存到 Firebase，但免費版只存本機 localStorage。付費版啟用雲端同步，讓孩子在平板練習、家長在手機上看到相同進度。這是讓家長感受到「付費有感」的功能之一。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e1"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 1 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td>
+            <div class="feat-name">每日練習提醒（Email）</div>
+            <div class="feat-desc">孩子超過 1 天未練習，自動寄提醒給家長</div>
+          </td>
+          <td class="feat-desc">純網頁無法推播通知，但 Email 提醒完全可行。使用 Firebase Cloud Functions 搭配 SendGrid（免費方案每日 100 封）。提醒信主旨：「小明今天還沒練習國字，點此開始」。這是提升 7 日留存率的關鍵。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td>
+            <div class="feat-name">PWA 離線支援</div>
+            <div class="feat-desc">學校網路不穩時也能使用</div>
+          </td>
+          <td class="feat-desc">加入 Service Worker，快取靜態資源與已載入的課程資料。離線時可完成筆順練習與手寫測驗，聯網後再同步進度。這是從網頁版升 App 前最重要的中間步驟，也大幅改善低網速環境的體驗。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-both">所有人</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════ PHASE 3 ══════════════════════ -->
+  <div class="phase-divider">
+    <div class="phase-divider-line"></div>
+    <div class="phase-divider-label">第三階段 — 規模化與留存（做完才能擴大推廣）</div>
+    <div class="phase-divider-line"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-head" style="background:var(--nice-bg);border-color:var(--nice-border);color:var(--nice-tag);">
+      <div class="section-head-dot" style="background:var(--nice-tag)"></div>
+      加分功能 — 大幅提升留存率與續訂率
+      <div class="section-count">5 項</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>功能名稱</th>
+          <th>具體說明</th>
+          <th>開發工時</th>
+          <th>誰能用</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>11</td>
+          <td>
+            <div class="feat-name">錯字自動複習模式</div>
+            <div class="feat-desc">歷次答錯的字自動整理成複習清單</div>
+          </td>
+          <td class="feat-desc">從 activities 集合撈出歷次 failed 陣列，去重後產生「待複習字庫」。在選單頁加入「複習弱字」按鈕，直接進入只包含錯字的練習流程。競爭對手完全沒有此功能，是明顯的差異化加分點。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e1"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 1 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td>
+            <div class="feat-name">連續練習天數與成就徽章</div>
+            <div class="feat-desc">每日登入練習累積連續天數，達標解鎖徽章</div>
+          </td>
+          <td class="feat-desc">在 Firebase 記錄每日最後練習時間，計算連續天數（streak）。設計 5 個里程碑：3天、7天、14天、30天、60天，各有對應圖示。主畫面顯示連續天數計數器。這是提升每日回訪率最有效的輕量 gamification。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-free">免費版</span></td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td>
+            <div class="feat-name">家長週報 Email</div>
+            <div class="feat-desc">每週自動寄出孩子的學習摘要</div>
+          </td>
+          <td class="feat-desc">每週日晚上 Cloud Functions 自動觸發，彙整：本週練習天數、新通過字數、累計總通過字數、本週待加強字（附圖示）。這封 Email 讓家長每週都「感受到付費價值」，是降低退訂率最強的工具。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td>
+            <div class="feat-name">多子女帳號支援</div>
+            <div class="feat-desc">一個家長帳號下可管理多個孩子</div>
+          </td>
+          <td class="feat-desc">家長帳號可綁定多個學生 ID（加入 children 陣列欄位）。家長端切換孩子頁面時只需點選姓名切換，不用重新登入。避免有兩個孩子的家長為第二個孩子去找免費替代品。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e1"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 1 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+        <tr>
+          <td>15</td>
+          <td>
+            <div class="feat-name">學生歷史紀錄頁面</div>
+            <div class="feat-desc">學生可看到自己過去的練習歷程與進步曲線</div>
+          </td>
+          <td class="feat-desc">從 activities 集合彙整：每週通過字數折線圖、總計練習次數、最強的字（通過最快）、最弱的字（錯誤最多次）。讓學生對自己的成長有感，強化學習動機與每日使用習慣。</td>
+          <td>
+            <div class="effort-bar-wrap">
+              <div class="effort-bar e2"><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div><div class="effort-pip"></div></div>
+              <span class="effort-label">約 2 週</span>
+            </div>
+          </td>
+          <td><span class="tier-badge tier-paid">付費功能</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary">
+    <div class="summary-card">
+      <div class="summary-num" style="color:var(--b2)">~8 週</div>
+      <div class="summary-label">完成第一階段所需時間<br>（利用下班與假日開發）</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num" style="color:#9A6B00">~15 週</div>
+      <div class="summary-label">完成第一＋二階段所需時間<br>（具備推廣條件）</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num" style="color:#1A6B35">~22 週</div>
+      <div class="summary-label">完成全部三個階段<br>（約 5～6 個月，具備規模化條件）</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

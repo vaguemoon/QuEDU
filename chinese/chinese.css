@@ -157,7 +157,12 @@
 #ref-target > * { position: relative; z-index: 1; }
 
 /* ── 練習模式 ── */
-.practice-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.practice-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;
+}
+.practice-left-col {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
 .practice-tab-bar {
   display: flex; width: var(--grid); border-radius: 14px; overflow: hidden;
   border: 2.5px solid #c8d8ec; background: #f5f9fd; flex-shrink: 0;
@@ -180,9 +185,61 @@
   cursor: pointer; transition: all .15s;
 }
 .btn-replay:active { transform: scale(.97); background: var(--blue-dk); }
-.feedback-box { width: var(--grid); }
 .practice-ctrl { display: flex; gap: 10px; width: var(--grid); margin-top: 4px; flex-wrap: wrap; }
 .practice-ctrl .btn-ctrl { flex: 1; min-width: 100px; }
+
+/* ── 輔助資訊 sidebar（縱向：格子下方；橫向：右側欄） ── */
+#practice-sidebar {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; width: var(--grid);
+}
+#char-info-bar {
+  width: 100%; background: white; border-radius: 16px;
+  box-shadow: var(--shadow); display: flex; align-items: stretch;
+  overflow: hidden; border: 2px solid #e0edf8;
+}
+.char-info-item {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px; padding: 10px 6px;
+}
+.char-info-item + .char-info-item { border-left: 1.5px solid #d4e8f8; }
+.char-info-label {
+  font-size: .65rem; font-weight: 800; color: var(--muted);
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.char-info-value {
+  font-size: 1.2rem; font-weight: 900; color: var(--text);
+  font-family: 'Noto Serif TC', serif; line-height: 1.2;
+}
+.char-info-value.zhuyin {
+  font-size: 1.3rem; color: var(--blue-dk); letter-spacing: 2px;
+}
+#btn-inline-dict { width: 100%; }
+
+/* ── 橫向版面（landscape） ── */
+@media (orientation: landscape) {
+  :root {
+    --grid: min(calc(100vh - 100px), 340px);
+  }
+  .learn-body { flex-direction: row; align-items: flex-start; justify-content: center; padding: 14px 20px 20px; }
+  .practice-wrap { flex-direction: row; align-items: flex-start; gap: 16px; width: auto; }
+  #practice-sidebar {
+    width: 220px; align-items: stretch; flex: 1; max-width: 280px;
+  }
+  #char-info-bar {
+    flex-direction: column; border-radius: 16px;
+  }
+  .char-info-item {
+    flex-direction: row; align-items: center; justify-content: flex-start;
+    gap: 12px; padding: 12px 16px;
+  }
+  .char-info-item + .char-info-item { border-left: none; border-top: 1.5px solid #d4e8f8; }
+  .char-info-label { font-size: .72rem; min-width: 2.5em; }
+  .char-info-value { font-size: 1.4rem; }
+  .char-info-value.zhuyin { font-size: 2rem; letter-spacing: 3px; }
+  #btn-inline-dict { width: 100%; }
+}
 
 /* ── 默寫模式 ── */
 .dict-wrap  { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }

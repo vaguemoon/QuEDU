@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/githubdesk/taiping-special-ed/**)"
+    ]
+  }
+}

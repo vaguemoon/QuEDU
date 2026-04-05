@@ -26,6 +26,7 @@ var dAllStrokes    = [];
 var charStrokes    = {};  // 已儲存的筆畫資料快取
 var dictScore      = -1;
 var currentPracticeSz = 300; // 記住練習格尺寸供切 tab 時使用
+var charInfoCache  = {};      // 萌典 API 快取 { '字': { zhuyin, radical, strokes } }
 
 // ── Firebase 存取 ──
 
