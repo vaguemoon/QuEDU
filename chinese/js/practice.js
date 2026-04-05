@@ -81,7 +81,7 @@ function loadCharInfo(char) {
                 if (wordDefPairs.length >= 3) return;
                 var word = m.replace(/「|」/g, '').trim();
                 var already = wordDefPairs.some(function(p) { return p.word === word; });
-                if (word.length >= 2 && !already) {
+                if (word.length >= 2 && word.length <= 4 && !already) {
                   wordDefPairs.push({ word: word, def: defText });
                 }
               });
