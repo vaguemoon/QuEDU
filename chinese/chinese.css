@@ -292,12 +292,11 @@
   padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;
 }
 #info-zhuyin-tabs {
-  display: flex; flex-wrap: nowrap; gap: 6px;
-  overflow-x: auto; padding-bottom: 2px;
-  /* 隱藏捲軸但保留功能 */
-  scrollbar-width: none;
+  display: flex; flex-wrap: wrap; gap: 6px;
 }
-#info-zhuyin-tabs::-webkit-scrollbar { display: none; }
+.zhuyin-tab {
+  flex-shrink: 0;
+}
 .zhuyin-tab {
   padding: 6px 16px; border-radius: 20px; border: 2px solid #c8dff5;
   background: var(--blue-lt); color: var(--blue-dk);
@@ -364,8 +363,6 @@
   .char-info-item + .char-info-item { border-left: none; border-top: 1.5px solid #d4e8f8; }
   .char-info-label { font-size: .72rem; min-width: 2.5em; }
   .char-info-value { font-size: 1.4rem; }
-  #char-zhuyin-bar { flex-direction: row; align-items: center; gap: 12px; }
-  #info-zhuyin-tabs { flex: 1; }
   .zhuyin-tab { font-size: 1.3rem; }
   #btn-inline-dict { width: 100%; }
 }
