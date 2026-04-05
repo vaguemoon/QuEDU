@@ -292,10 +292,10 @@
   padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;
 }
 #info-zhuyin-tabs {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
 }
 .zhuyin-tab {
-  flex-shrink: 0;
+  width: 100%; text-align: center;
 }
 .zhuyin-tab {
   padding: 6px 16px; border-radius: 20px; border: 2px solid #c8dff5;
