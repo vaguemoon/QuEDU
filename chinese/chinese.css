@@ -173,6 +173,22 @@
   position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 16px 20px;
   background: linear-gradient(to top, rgba(238,245,252,1) 60%, rgba(238,245,252,0)); z-index: 50;
 }
+.exam-rec-bar {
+  background: white; border-radius: 14px; border: 2px solid #d4e8f8;
+  padding: 10px 14px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.exam-rec-label {
+  font-size: .75rem; font-weight: 800; color: var(--muted); white-space: nowrap;
+}
+.exam-rec-chars {
+  font-size: 1.15rem; font-family: 'Noto Serif TC', serif; font-weight: 900;
+  color: var(--blue-dk); letter-spacing: 4px;
+}
+.exam-adjust-hint {
+  font-size: .78rem; color: #185FA5; text-align: center;
+  padding: 4px 0 8px; font-weight: 600;
+}
 
 /* ── 模式選擇頁 ── */
 #page-mode { display: none; align-items: center; justify-content: center; flex-direction: column; gap: 24px; padding: 40px 20px; min-height: calc(100vh - 54px); }

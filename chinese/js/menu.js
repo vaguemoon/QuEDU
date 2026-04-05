@@ -81,29 +81,58 @@ function renderMenu() {
 }
 
 /**
- * 渲染底部測驗按鈕區（一般模式 / 勾選模式）
+ * 渲染底部測驗按鈕區（推薦模式 / 調整模式）
  */
 function _renderExamButtons() {
   var bb = document.getElementById('menu-exam-bar');
   if (!bb) return;
 
   if (examSelectMode) {
+    // ── 調整模式：點選卡片挑字 ──
     var n = Object.keys(examSelected).filter(function(k){ return examSelected[k]; }).length;
     bb.innerHTML =
-      '<div style="font-size:12px;color:#185FA5;text-align:center;padding:4px 0;font-weight:500;">點選要測驗的字（已選 ' + n + ' 字）</div>' +
-      '<button class="btn-big btn-big-primary" style="opacity:' + (n > 0 ? '1' : '.4') + ';cursor:' + (n > 0 ? 'pointer' : 'not-allowed') + ';" ' +
-        (n > 0 ? 'onclick="startSelectedExam()"' : 'disabled') + '>' +
-        '<span class="btn-big-icon">📝</span><span>開始測驗（' + n + ' 字）</span></button>' +
-      '<button class="btn-big" style="background:#f0f4f8;color:#5a7080;" onclick="cancelExamSelect()">' +
-        '<span>取消</span></button>';
+      '<div class="exam-adjust-hint">點選要測驗的字（已選 <b>' + n + '</b> 字）</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button class="btn-big" style="background:#f0f4f8;color:#5a7080;flex:0 0 auto;padding:13px 20px;" onclick="cancelExamSelect()">' +
+          '<span>取消</span></button>' +
+        '<button class="btn-big btn-big-danger" style="flex:1;opacity:' + (n > 0 ? '1' : '.4') + ';" ' +
+          (n > 0 ? 'onclick="startSelectedExam()"' : 'disabled') + '>' +
+          '<span class="btn-big-icon">📝</span><span>開始測驗（' + n + ' 字）</span></button>' +
+      '</div>';
   } else {
+    // ── 推薦模式：自動抓 5 個未測的字 ──
+    var notMastered = chars.filter(function(c){ return charStatus[c] !== 'mastered'; });
+    var recommended = notMastered.slice(0, 5);
+    var recLabel = recommended.join('　');
+    var hasRec   = recommended.length > 0;
+
     bb.innerHTML =
-      '<button class="btn-big btn-big-danger" id="btn-start-exam" onclick="startFullExam()">' +
-        '<span class="btn-big-icon">📝</span><span>全部測驗（' + chars.length + ' 字）</span></button>' +
-      '<button class="btn-big" style="background:#e6f1fb;color:#185FA5;border:1.5px solid #85B7EB;" onclick="enterExamSelectMode()">' +
-        '<span class="btn-big-icon">☑</span><span>自選測驗</span></button>';
+      '<div class="exam-rec-bar">' +
+        (hasRec
+          ? '<div class="exam-rec-label">✨ 建議今天練習</div>' +
+            '<div class="exam-rec-chars">' + recLabel + '</div>'
+          : '<div class="exam-rec-label">🎉 所有字都通過了！</div>'
+        ) +
+      '</div>' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button class="btn-big" style="background:#e6f1fb;color:#185FA5;border:1.5px solid #85B7EB;flex:0 0 auto;padding:13px 20px;" onclick="enterExamSelectMode()">' +
+          '<span>自己調整</span></button>' +
+        '<button class="btn-big btn-big-danger" id="btn-start-exam" style="flex:1;" ' +
+          (hasRec ? 'onclick="startRecommendedExam()"' : 'disabled style="opacity:.4"') + '>' +
+          '<span class="btn-big-icon">📝</span><span>直接開始（' + recommended.length + ' 字）</span></button>' +
+      '</div>';
     updateProgressBar();
   }
+}
+
+/**
+ * 以推薦的 5 個字開始測驗
+ */
+function startRecommendedExam() {
+  var notMastered = chars.filter(function(c){ return charStatus[c] !== 'mastered'; });
+  var recommended = notMastered.slice(0, 5);
+  if (!recommended.length) return;
+  startFullExam(recommended);
 }
 
 /**
