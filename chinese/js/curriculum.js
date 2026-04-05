@@ -173,25 +173,14 @@ function selectBook(bookId) {
   if (c2) c2.textContent = bookId;
 }
 
-// ── Step 3 → 選課次 ──
+// ── Step 3 → 選課次（直接進入） ──
 
 function selectLesson(lesson, cardEl) {
   currSelectedLesson = lesson;
-
-  document.querySelectorAll('.curr-lesson-card').forEach(function(c) {
-    c.classList.remove('active');
-  });
+  document.querySelectorAll('.curr-lesson-card').forEach(function(c) { c.classList.remove('active'); });
   cardEl.classList.add('active');
-
-  var bar = document.getElementById('curr-start-bar');
-  if (bar) {
-    bar.style.display = '';
-    var charsEl = document.getElementById('curr-selected-chars');
-    if (charsEl) {
-      charsEl.innerHTML =
-        '<div class="lesson-chars-chip">' + (lesson.chars || []).join('') + '</div>';
-    }
-  }
+  sfxTap();
+  startCurriculumLesson();
 }
 
 // ── 開始課程 ──
@@ -200,7 +189,6 @@ function startCurriculumLesson() {
   if (!currSelectedVer || !currSelectedBook || !currSelectedLesson) return;
   var lesson  = currSelectedLesson;
   var verName = currSelectedVer.name;
-  sfxTap();
   currentLessonLabel = verName + '　' + currSelectedBook +
     '・第 ' + (lesson.lessonNum || '') + ' 課　' + (lesson.name || '');
   chars = lesson.chars.slice();
