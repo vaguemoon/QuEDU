@@ -181,7 +181,7 @@
   position: fixed; bottom: 0; left: 0; right: 0; padding: 8px 14px 16px;
   background: linear-gradient(to top, rgba(238,245,252,1) 60%, rgba(238,245,252,0)); z-index: 50;
 }
-.menu-exam-bar .btn-big { padding: 11px 14px; font-size: .9rem; border-radius: 12px; }
+.menu-exam-bar .btn-big { padding: 11px 14px; font-size: .9rem; border-radius: 12px; width: auto; }
 .menu-exam-bar .btn-big-icon { font-size: 1.1rem; }
 .exam-rec-bar {
   background: white; border-radius: 14px; border: 2px solid #d4e8f8;

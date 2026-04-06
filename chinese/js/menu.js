@@ -58,6 +58,9 @@ function renderMenu() {
   saveProgress();
   updateProgressBar();
 
+  // 背景預抓未快取字的筆畫數（首次載入時觸發，抓完後自動更新推薦）
+  prefetchStrokeCounts();
+
   // 找出推薦字：筆畫最少的 new 字（利用已快取的萌典資料）
   var recIdx = _getRecommendedIdx();
 
@@ -121,7 +124,7 @@ function _renderExamButtons() {
     bb.innerHTML =
       '<div class="exam-adjust-hint">點選要測驗的字（已選 <b>' + n + '</b> 字）</div>' +
       '<div style="display:flex;gap:10px;">' +
-        '<button class="btn-big" style="background:#f0f4f8;color:#5a7080;flex:0 0 auto;padding:13px 20px;" onclick="cancelExamSelect()">' +
+        '<button class="btn-big" style="background:#f0f4f8;color:#5a7080;flex:0 0 auto;" onclick="cancelExamSelect()">' +
           '<span>取消</span></button>' +
         '<button class="btn-big btn-big-danger" style="flex:1;opacity:' + (n > 0 ? '1' : '.4') + ';" ' +
           (n > 0 ? 'onclick="startSelectedExam()"' : 'disabled') + '>' +
@@ -274,4 +277,35 @@ function nextChar() {
     showPage('menu');
     renderMenu();
   }
+}
+
+/**
+ * 背景預抓所有未快取字的萌典資料（僅取筆畫數與部首）
+ * 全部完成後重新渲染選單，以更新推薦字
+ */
+function prefetchStrokeCounts() {
+  var uncached = chars.filter(function(c) { return !charInfoCache[c]; });
+  if (!uncached.length) return;
+
+  var done = 0;
+  var gotNew = false;
+  uncached.forEach(function(c) {
+    fetch('https://www.moedict.tw/' + encodeURIComponent(c) + '.json')
+      .then(function(res) { return res.ok ? res.json() : null; })
+      .then(function(data) {
+        if (data && !charInfoCache[c]) {
+          charInfoCache[c] = {
+            radical: (data.radical || '－').replace(/<[^>]+>/g, '').trim() || '－',
+            strokes: data.stroke_count != null ? String(data.stroke_count) : '－',
+            heteronyms: []
+          };
+          gotNew = true;
+        }
+      })
+      .catch(function() {})
+      .then(function() {
+        done++;
+        if (done === uncached.length && gotNew) renderMenu();
+      });
+  });
 }
