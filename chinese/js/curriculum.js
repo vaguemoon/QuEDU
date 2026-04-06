@@ -88,11 +88,63 @@ function goToCurrStep(step) {
   [1, 2, 3].forEach(function(n) {
     var el = document.getElementById('curr-step-' + n);
     if (el) el.style.display = n === step ? '' : 'none';
-    var crumb = document.getElementById('crumb-' + n);
-    if (crumb) crumb.classList.toggle('active', n <= step);
   });
   if (step < 3) currSelectedLesson = null;
   if (step < 2) currSelectedBook = null;
+  updateTopbarBreadcrumb(step);
+}
+
+/**
+ * 更新頂端列麵包屑（step 1-3 = 課程選擇中，step 4 = 生字列表/練習中）
+ */
+function updateTopbarBreadcrumb(step) {
+  var titleEl = document.getElementById('topbar-title');
+  var bcEl    = document.getElementById('topbar-breadcrumb');
+  if (!bcEl) return;
+
+  // 顯示麵包屑、隱藏一般標題
+  if (titleEl) titleEl.classList.add('hidden');
+  bcEl.classList.remove('hidden');
+
+  var c1 = document.getElementById('tb-crumb-1');
+  var c2 = document.getElementById('tb-crumb-2');
+  var c3 = document.getElementById('tb-crumb-3');
+  if (!c1 || !c2 || !c3) return;
+
+  // 裁 1：出版社 / 版本名
+  c1.textContent = currSelectedVer ? currSelectedVer.name : '出版社';
+  c1.className   = 'tb-crumb' + (step > 1 ? ' tb-link' : ' tb-active');
+  c1.onclick     = step > 1 ? function() { jumpToCurrStep(1); } : null;
+
+  // 裁 2：冊次
+  c2.textContent = currSelectedBook || '冊次';
+  c2.className   = 'tb-crumb' + (step > 2 ? ' tb-link' : step === 2 ? ' tb-active' : '');
+  c2.onclick     = step > 2 ? function() { jumpToCurrStep(2); } : null;
+
+  // 裁 3：課次
+  var lessonLabel = currSelectedLesson
+    ? '第 ' + (currSelectedLesson.lessonNum || '') + ' 課'
+    : '課次';
+  c3.textContent = lessonLabel;
+  c3.className   = 'tb-crumb' + (step >= 4 ? ' tb-link' : step === 3 ? ' tb-active' : '');
+  c3.onclick     = step >= 4 ? function() { jumpToCurrStep(3); } : null;
+}
+
+/**
+ * 從任意頁面跳回課程選擇的指定步驟
+ */
+function jumpToCurrStep(step) {
+  if (currentPage !== 'curriculum') {
+    // 不推進堆疊，直接替換當前頁面
+    document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('active'); });
+    var el = document.getElementById('page-curriculum');
+    if (el) el.classList.add('active');
+    if (PAGE_STACK.length > 0) PAGE_STACK[PAGE_STACK.length - 1] = 'curriculum';
+    currentPage = 'curriculum';
+    var backBtn = document.getElementById('topbar-back');
+    if (backBtn) backBtn.classList.remove('hidden');
+  }
+  goToCurrStep(step);
 }
 
 // ── Step 1 → 選版本 ──
@@ -130,9 +182,6 @@ function selectVersion(verId, verName, cardEl, color) {
   }
 
   goToCurrStep(2);
-  // 更新麵包屑顯示版本名
-  var c1 = document.getElementById('crumb-1');
-  if (c1) c1.textContent = verName;
 }
 
 // ── Step 2 → 選冊次 ──
@@ -162,9 +211,6 @@ function selectBook(bookId) {
   });
 
   goToCurrStep(3);
-  // 更新麵包屑
-  var c2 = document.getElementById('crumb-2');
-  if (c2) c2.textContent = bookId;
 }
 
 // ── Step 3 → 選課次（直接進入） ──
@@ -189,6 +235,7 @@ function startCurriculumLesson() {
   chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
   renderMenu();
   showPage('menu');
+  updateTopbarBreadcrumb(4); // 進入生字列表後，麵包屑可點選返回課次
 }
 
 // ── 自由練習輸入 ──

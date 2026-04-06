@@ -6,7 +6,7 @@
 
 var PAGE_STACK = [];
 var PAGE_CONFIG = {
-  'mode-select': { title:'✏️ <span>國字學習系統</span>', back:false },
+  'mode-select': { title:'✏️ <span>練字趣</span>', back:false },
   'curriculum':  { title:'📚 <span>選擇課程</span>',    back:true  },
   'free':        { title:'✏️ <span>自由練習</span>',    back:true  },
   'menu':        { title:'📋 <span>今天的生字</span>',  back:true  },
@@ -28,7 +28,23 @@ function showPage(name, pushHistory) {
   // 更新頂端列
   var titleEl = document.getElementById('topbar-title');
   var backBtn = document.getElementById('topbar-back');
-  if (titleEl) titleEl.innerHTML = cfg.title;
+  var bcEl    = document.getElementById('topbar-breadcrumb');
+
+  if (name === 'mode-select' || name === 'free') {
+    // 這兩個頁面強制顯示標題、隱藏麵包屑
+    if (titleEl) { titleEl.innerHTML = cfg.title; titleEl.classList.remove('hidden'); }
+    if (bcEl) bcEl.classList.add('hidden');
+  } else if (name === 'curriculum') {
+    // 課程選擇：判斷目前步驟，讓 curriculum.js 渲染麵包屑
+    var cStep = (typeof currSelectedBook !== 'undefined' && currSelectedBook) ? 3
+              : (typeof currSelectedVer  !== 'undefined' && currSelectedVer)  ? 2 : 1;
+    if (typeof updateTopbarBreadcrumb === 'function') updateTopbarBreadcrumb(cStep);
+  } else {
+    // menu / learn / exam / mode：若麵包屑已在顯示就不動；否則顯示標題
+    var bcVisible = bcEl && !bcEl.classList.contains('hidden');
+    if (!bcVisible && titleEl) { titleEl.innerHTML = cfg.title; }
+  }
+
   if (backBtn) backBtn.classList.toggle('hidden', !cfg.back);
 }
 

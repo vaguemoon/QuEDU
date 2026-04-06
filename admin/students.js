@@ -48,9 +48,10 @@ function showStudentDetail(studentId) {
       acts.sort(function(a, b){ return (b.time || '').localeCompare(a.time || ''); });
       renderActivities(acts.slice(0, 3));
     }).catch(function(e){
-      document.getElementById('detail-activities').innerHTML =
-        '<div style="color:var(--muted);font-size:.85rem;padding:8px">測驗紀錄尚無資料或載入失敗。</div>';
       console.warn('activities error:', e);
+      document.getElementById('detail-activities').innerHTML =
+        '<div style="color:var(--red);font-size:.82rem;font-weight:700;padding:8px;background:#fff5f5;border-radius:8px">'
+        + '⚠️ 讀取失敗：' + (e.message || e.code || String(e)) + '</div>';
     });
 }
 

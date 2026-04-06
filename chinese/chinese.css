@@ -40,6 +40,23 @@
   color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 #topbar-title span { color: var(--text); }
+#topbar-title.hidden { display: none; }
+#topbar-breadcrumb {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 2px; overflow: hidden; min-width: 0;
+}
+#topbar-breadcrumb.hidden { display: none; }
+.tb-crumb {
+  font-size: .78rem; font-weight: 800; color: var(--muted);
+  padding: 4px 10px; border-radius: 14px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 88px;
+  transition: all .15s; cursor: default;
+}
+.tb-crumb.tb-active { color: var(--blue-dk); background: var(--blue-lt); }
+.tb-crumb.tb-link   { cursor: pointer; }
+.tb-crumb.tb-link:hover  { background: var(--blue-lt); color: var(--blue-dk); }
+.tb-crumb.tb-link:active { background: var(--blue); color: white; transform: scale(.94); }
+.tb-sep { color: var(--border); font-size: .85rem; flex-shrink: 0; }
 #topbar-student {
   flex-shrink: 0; display: flex; align-items: center; gap: 5px;
   padding: 5px 10px; border-radius: 20px; cursor: pointer;

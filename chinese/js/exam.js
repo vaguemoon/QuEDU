@@ -340,6 +340,14 @@ function showExamFinalResult() {
 }
 
 /**
+ * 離開測驗並返回生字列表（中途離開時仍儲存已答題目的記錄）
+ */
+function exitExam() {
+  if (Object.keys(examResults).length > 0) saveActivity();
+  showPage('menu');
+}
+
+/**
  * 將本次測驗結果寫入 Firestore activities 子集合
  */
 function saveActivity() {

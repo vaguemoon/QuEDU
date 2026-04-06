@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>國字學習系統｜太平國小</title>
+<title>練字趣｜太平國小</title>
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -24,7 +24,14 @@
 <div id="page-topbar">
   <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
   <button class="btn-back" id="topbar-back" onclick="goBack()">← 返回</button>
-  <div id="topbar-title">✏️ <span>國字學習系統</span></div>
+  <div id="topbar-title">✏️ <span>練字趣</span></div>
+  <div id="topbar-breadcrumb" class="hidden">
+    <span id="tb-crumb-1" class="tb-crumb">出版社</span>
+    <span class="tb-sep">›</span>
+    <span id="tb-crumb-2" class="tb-crumb">冊次</span>
+    <span class="tb-sep">›</span>
+    <span id="tb-crumb-3" class="tb-crumb">課次</span>
+  </div>
   <div id="topbar-student" onclick="toggleLogoutMenu()">
     <span id="topbar-avatar">🐣</span>
     <span id="topbar-name">—</span>
@@ -48,13 +55,6 @@
 </div>
 
 <div id="page-curriculum" class="page">
-  <div class="curr-stepbar">
-    <span class="curr-crumb active" id="crumb-1">出版社</span>
-    <span class="curr-crumb-sep">›</span>
-    <span class="curr-crumb" id="crumb-2">冊　次</span>
-    <span class="curr-crumb-sep">›</span>
-    <span class="curr-crumb" id="crumb-3">課　次</span>
-  </div>
 
   <!-- Step 1：選出版社 -->
   <div class="curr-step" id="curr-step-1">
@@ -66,14 +66,12 @@
 
   <!-- Step 2：選冊次 -->
   <div class="curr-step" id="curr-step-2" style="display:none">
-    <button class="curr-back-btn" onclick="goToCurrStep(1)">← 返回</button>
     <div class="curr-step-title" id="step2-title">選擇冊次</div>
     <div class="curr-book-cards" id="book-cards"></div>
   </div>
 
   <!-- Step 3：選課次 -->
   <div class="curr-step" id="curr-step-3" style="display:none">
-    <button class="curr-back-btn" onclick="goToCurrStep(2)">← 返回</button>
     <div class="curr-step-title" id="step3-title">選擇課次</div>
     <div class="curr-lesson-cards" id="lesson-cards"></div>
   </div>
@@ -244,9 +242,9 @@
       <button class="btn-exam-voice" id="btn-exam-voice" onclick="playExamVoice()">
         <span class="exam-voice-icon">🔊</span><span class="exam-voice-label">再聽一次</span>
       </button>
-      <button class="btn-exam-voice" onclick="showPage('menu')">
-  <span class="exam-voice-icon">📋</span><span class="exam-voice-label">返回生字列表</span>
-</button>
+      <button class="btn-exam-voice" onclick="exitExam()">
+        <span class="exam-voice-icon">📋</span><span class="exam-voice-label">返回生字列表</span>
+      </button>
     </div>
       <div class="exam-box" id="exam-quiz-target"></div>
       <button class="btn-ctrl btn-ctrl-clear" style="margin-top:10px;width:var(--grid)" onclick="skipExamChar()">⏭ 我不會，跳過</button>

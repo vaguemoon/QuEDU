@@ -8,7 +8,7 @@
 var SUBJECTS = [
   {
     id:'chinese', file:'chinese/index.html',
-    icon:'國', name:'國字練習', desc:'筆順練習・默寫測驗',
+    icon:'國', name:'練字趣', desc:'國小國字筆順學習',
     theme:'theme-blue', badge:'可以練習', badgeClass:'green',
     activity:function(sid){
       return db.collection('students').doc(sid).collection('progress').doc('hanzi').get()
