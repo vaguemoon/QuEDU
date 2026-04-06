@@ -1,20 +1,6 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
-.app{width:100vw;height:100vh;display:flex;flex-direction:column}
-
-/* === TOPBAR === */
-#main-topbar{flex-shrink:0;background:var(--white);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.07);z-index:100;min-height:54px}
-#main-topbar.hidden{display:none}
-.topbar-brand-name{font-size:.95rem;font-weight:900;color:var(--blue-dk)}
-.topbar-brand-sub{font-size:.72rem;color:var(--muted);font-weight:600}
-.topbar-right{display:flex;align-items:center;gap:10px}
-.student-badge{display:flex;align-items:center;gap:6px;background:var(--blue-lt);border-radius:20px;padding:5px 12px;cursor:pointer;border:1.5px solid rgba(74,144,217,.25);transition:all .15s}
-.student-badge:active{transform:scale(.96)}
-.student-badge-avatar{font-size:1.2rem}
-.student-badge-name{font-size:.85rem;font-weight:800;color:var(--blue-dk)}
-.btn-back-subject{background:var(--blue-lt);border:none;border-radius:12px;padding:7px 14px;font-size:.82rem;font-weight:800;color:var(--blue-dk);cursor:pointer;font-family:inherit;transition:all .15s;display:none}
-.btn-back-subject.show{display:block}
-.btn-back-subject:active{transform:scale(.95)}
+.app{width:100vw;height:100vh}
 
 /* === PANELS === */
 #main-content{flex:1;position:relative;overflow:hidden}
@@ -59,6 +45,8 @@ body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:v
 .hub-welcome-avatar{font-size:3rem;margin-bottom:8px}
 .hub-welcome-name{font-size:1.5rem;font-weight:900;color:var(--blue-dk)}
 .hub-welcome-sub{font-size:.85rem;color:var(--muted);font-weight:600;margin-top:4px}
+.btn-hub-settings{margin-top:12px;background:none;border:1.5px solid var(--border);border-radius:20px;padding:5px 14px;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-hub-settings:active{background:var(--blue-lt);color:var(--blue-dk)}
 .hub-section-label{font-size:.78rem;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:12px}
 .subjects-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:28px}
 .subject-card{background:var(--white);border-radius:20px;padding:20px 14px 18px;box-shadow:0 4px 18px rgba(44,100,160,.1);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .18s;border:2.5px solid transparent;text-align:center}

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Read(//d/githubdesk/taiping-special-ed/**)"
+      "Read(//d/githubdesk/taiping-special-ed/**)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
     ]
   }
 }

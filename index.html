@@ -19,21 +19,6 @@
 <body>
 <div class="app">
 
-  <!-- 主系統 Topbar：子項目不碰這裡 -->
-  <div id="main-topbar" class="hidden">
-    <div>
-      <div class="topbar-brand-name">太平國小資源班</div>
-      <div class="topbar-brand-sub" id="topbar-sub">學習系統</div>
-    </div>
-    <div class="topbar-right">
-      <button class="btn-back-subject" id="btn-back-subject" onclick="backToHub()">← 返回</button>
-      <div class="student-badge" onclick="showProfile()">
-        <span class="student-badge-avatar" id="badge-avatar">🐣</span>
-        <span class="student-badge-name"   id="badge-name">—</span>
-      </div>
-    </div>
-  </div>
-
   <div id="main-content">
 
     <!-- 登入 -->
@@ -106,8 +91,9 @@
       <div class="hub-body">
         <div class="hub-welcome">
           <div class="hub-welcome-avatar" id="hub-avatar">🐣</div>
-          <div class="hub-welcome-name"   id="hub-name">—</div>
+          <div class="hub-welcome-name" id="hub-name">—</div>
           <div class="hub-welcome-sub">歡迎回來</div>
+          <button class="btn-hub-settings" onclick="showProfile()">⚙ 個人設定</button>
         </div>
         <div class="hub-section-label">📚 學習區</div>
         <div class="subjects-grid" id="subjects-grid"></div>

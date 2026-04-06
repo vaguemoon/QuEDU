@@ -21,6 +21,18 @@
 </head>
 <body>
 
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back" id="topbar-back" onclick="goBack()">← 返回</button>
+  <div id="topbar-title">✏️ <span>國字學習系統</span></div>
+  <div id="topbar-student" onclick="toggleLogoutMenu()">
+    <span id="topbar-avatar">🐣</span>
+    <span id="topbar-name">—</span>
+    <div id="topbar-logout-menu" class="logout-menu hidden">
+      <button onclick="sendLogout(event)">登出</button>
+    </div>
+  </div>
+</div>
 
 <div id="page-mode-select" class="page fill active">
   <button class="mode-choice" onclick="showPage('curriculum')">

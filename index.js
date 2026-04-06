@@ -59,17 +59,6 @@ function showPanel(name){
   });
 }
 
-/* Topbar */
-function showTopbar(){document.getElementById('main-topbar').classList.remove('hidden');}
-function hideTopbar(){document.getElementById('main-topbar').classList.add('hidden');}
-function setTopbarMode(mode){
-  document.getElementById('btn-back-subject').classList.toggle('show', mode==='subject');
-}
-function updateBadge(){
-  if(!currentStudent) return;
-  document.getElementById('badge-name').textContent  =currentStudent.nickname||currentStudent.name;
-  document.getElementById('badge-avatar').textContent=currentStudent.avatar||'🐣';
-}
 
 /* 登入 */
 function updateLoginBtn(){
@@ -105,8 +94,7 @@ function doLogin(){
 function onLoginSuccess(student){
   currentStudent=student; selectedAvatar=student.avatar||'🐣';
   sessionStorage.setItem('hub_student',JSON.stringify(student));
-  updateBadge(); renderHub(); showTopbar(); setTopbarMode('hub'); showPanel('hub');
-  loadActivity();
+  renderHub(); showPanel('hub'); loadActivity();
   showToast('👋 歡迎，'+(student.nickname||student.name)+'！');
 }
 
@@ -165,23 +153,12 @@ function openSubject(id){
   if(!s||!currentStudent) return;
   sessionStorage.setItem('hub_student',JSON.stringify(currentStudent));
   document.getElementById('subject-frame').src=s.file;
-  document.getElementById('topbar-sub').textContent=s.name;
-  setTopbarMode('subject'); showPanel('subject');
-}
-function backToHub(){
-  var frame=document.getElementById('subject-frame');
-  if(frame&&frame.contentWindow&&frame.src!=='about:blank'){
-    frame.contentWindow.postMessage({type:'hanzi-back'},'*');
-  } else {
-    document.getElementById('topbar-sub').textContent='學習系統';
-    setTopbarMode('hub'); showPanel('hub');
-  }
+  showPanel('subject');
 }
 function returnToHub(){
   var frame=document.getElementById('subject-frame');
   if(frame) frame.src='about:blank';
-  document.getElementById('topbar-sub').textContent='學習系統';
-  setTopbarMode('hub'); showPanel('hub');
+  showPanel('hub'); loadActivity();
 }
 
 /* 近期記錄 */
@@ -266,22 +243,15 @@ function doLogout(){
   document.getElementById('btn-login-ok').disabled=true;
   document.getElementById('subject-frame').src='about:blank';
   document.getElementById('activity-list').innerHTML='<div class="activity-empty">登入後查看學習記錄</div>';
-  hideLogoutConfirm(); hideTopbar(); showPanel('login');
+  hideLogoutConfirm(); showPanel('login');
   showToast('已登出，掰掰！👋');
 }
 
-/* 接收 iframe 內的導覽訊息 */
+/* 接收 iframe 內的訊息 */
 window.addEventListener('message',function(e){
   if(!e.data) return;
-  if(e.data.type==='hanzi-nav'){
-    var tmp=document.createElement('div');
-    tmp.innerHTML=e.data.title;
-    var text=tmp.textContent||tmp.innerText||'國字練習';
-    var sub=document.getElementById('topbar-sub');
-    if(sub) sub.textContent=text;
-  } else if(e.data.type==='hanzi-at-root'){
-    returnToHub();
-  }
+  if(e.data.type==='hanzi-back-to-hub') returnToHub();
+  else if(e.data.type==='hanzi-logout') doLogout();
 });
 
 /* 啟動 */

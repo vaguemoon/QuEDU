@@ -13,11 +13,61 @@
   :root { --grid: min(58vh, 440px); }
 }
 
+/* ── 頂端列 ── */
+#page-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 52px; display: flex; align-items: center; gap: 6px;
+  background: var(--white); border-bottom: 1.5px solid var(--border);
+  padding: 0 10px; box-shadow: 0 2px 8px rgba(44,100,160,.08);
+}
+.btn-back-hub {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back-hub:active { background: var(--blue); color: white; }
+.btn-back {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: transparent; color: var(--muted);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back:active { background: var(--blue-lt); color: var(--blue-dk); }
+.btn-back.hidden { display: none; }
+#topbar-title {
+  flex: 1; text-align: center; font-size: .95rem; font-weight: 900;
+  color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#topbar-title span { color: var(--text); }
+#topbar-student {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 20px; cursor: pointer;
+  background: var(--blue-lt); border: 1.5px solid var(--border);
+  font-size: .82rem; font-weight: 700; color: var(--blue-dk);
+  position: relative; user-select: none; transition: background .15s;
+}
+#topbar-student:active { background: #d0e8f8; }
+#topbar-avatar { font-size: 1.1rem; line-height: 1; }
+#topbar-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: white; border: 1.5px solid var(--border); border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(44,100,160,.18); min-width: 100px; overflow: hidden;
+}
+.logout-menu.hidden { display: none; }
+.logout-menu button {
+  display: block; width: 100%; padding: 12px 16px; border: none; background: none;
+  font-size: .88rem; font-weight: 800; color: var(--red); cursor: pointer;
+  font-family: inherit; text-align: center; transition: background .15s;
+}
+.logout-menu button:active { background: #fff0f0; }
+
 /* ── 畫面切換 ── */
 .page { display: none; }
-.page.active { display: block; }
-.page.fill { display: none; min-height: 100vh; }
-.page.fill.active { display: flex; }
+.page.active { display: block; padding-top: 52px; }
+.page.fill { display: none; min-height: calc(100vh - 52px); }
+.page.fill.active { display: flex; padding-top: 52px; }
 
 /* ── 首頁兩大卡 ── */
 #page-mode-select { flex-direction: row; }

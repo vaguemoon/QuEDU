@@ -24,14 +24,12 @@ function showPage(name, pushHistory) {
   var cfg = PAGE_CONFIG[name] || { title:'', back:true };
   if (pushHistory) PAGE_STACK.push(name);
   currentPage = name;
-  try {
-    window.parent.postMessage({
-      type: 'hanzi-nav',
-      title: cfg.title,
-      back: cfg.back,
-      stackLen: PAGE_STACK.length
-    }, '*');
-  } catch(e) {}
+
+  // 更新頂端列
+  var titleEl = document.getElementById('topbar-title');
+  var backBtn = document.getElementById('topbar-back');
+  if (titleEl) titleEl.innerHTML = cfg.title;
+  if (backBtn) backBtn.classList.toggle('hidden', !cfg.back);
 }
 
 function goBack() {
@@ -39,12 +37,9 @@ function goBack() {
     PAGE_STACK.pop();
     var prev = PAGE_STACK[PAGE_STACK.length - 1];
     showPage(prev, false);
-  } else {
-    try { window.parent.postMessage({ type: 'hanzi-at-root' }, '*'); } catch(e) {}
   }
 }
 
-/* 接收外層頂端列的返回指令 */
-window.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'hanzi-back') goBack();
-});
+function backToHub() {
+  try { window.parent.postMessage({ type: 'hanzi-back-to-hub' }, '*'); } catch(e) {}
+}

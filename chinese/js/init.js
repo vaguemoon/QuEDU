@@ -56,6 +56,12 @@ window.addEventListener('load', function() {
             avatar:   sData.avatar   || '🐣'
           };
 
+          // 更新頂端列學生資訊
+          var avEl = document.getElementById('topbar-avatar');
+          var nmEl = document.getElementById('topbar-name');
+          if (avEl) avEl.textContent = currentStudent.avatar;
+          if (nmEl) nmEl.textContent = currentStudent.nickname || currentStudent.name;
+
           // 載入學習進度
           charStatus = pData.charStatus || {};
 
@@ -81,5 +87,25 @@ window.addEventListener('load', function() {
     }
   } catch(e) {
     setTimeout(loadCurriculumVersions, 500);
+  }
+});
+
+/* ── 頂端列學生選單 ── */
+function toggleLogoutMenu() {
+  var menu = document.getElementById('topbar-logout-menu');
+  if (menu) menu.classList.toggle('hidden');
+}
+
+function sendLogout(evt) {
+  if (evt) evt.stopPropagation();
+  try { window.parent.postMessage({ type: 'hanzi-logout' }, '*'); } catch(e) {}
+}
+
+/* 點其他地方時收起選單 */
+document.addEventListener('click', function(e) {
+  var student = document.getElementById('topbar-student');
+  var menu    = document.getElementById('topbar-logout-menu');
+  if (menu && !menu.classList.contains('hidden') && student && !student.contains(e.target)) {
+    menu.classList.add('hidden');
   }
 });
