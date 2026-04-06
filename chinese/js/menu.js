@@ -76,7 +76,6 @@ function renderMenu() {
       : 'onCardClick(event,' + i + ')';
     return '<div class="' + card + '" id="card-' + i + '" onclick="' + onclick + '">'
       + (sel ? '<div class="char-card-select-check">✓</div>' : '<div class="char-card-check">✓</div>')
-      + (isRec ? '<div class="char-card-rec-badge">✨</div>' : '')
       + '<div class="char-card-glyph">' + c + '</div>'
       + '<div class="char-card-status ' + statusClass[st] + '">' + statusLabel[st] + '</div>'
       + '</div>';
@@ -145,16 +144,12 @@ function _renderExamButtons() {
     } else if (canTest) {
       var dictLabel = dictated.join('　');
       bb.innerHTML =
-        '<div class="exam-rec-bar">' +
-          '<div class="exam-rec-label">📝 可以測驗了</div>' +
+        '<button class="exam-rec-bar-btn" onclick="startDictatedExam()">' +
+          '<div class="exam-rec-label">📝 可以測驗了，點這裡開始</div>' +
           '<div class="exam-rec-chars">' + dictLabel + '</div>' +
-        '</div>' +
-        '<div style="display:flex;gap:10px;">' +
-          '<button class="btn-big" style="background:#e6f1fb;color:#185FA5;border:1.5px solid #85B7EB;flex:0 0 auto;padding:13px 20px;" onclick="enterExamSelectMode()">' +
-            '<span>自己調整</span></button>' +
-          '<button class="btn-big btn-big-danger" id="btn-start-exam" style="flex:1;" onclick="startDictatedExam()">' +
-            '<span class="btn-big-icon">📝</span><span>開始測驗（' + dictated.length + ' 字）</span></button>' +
-        '</div>';
+        '</button>' +
+        '<button class="btn-big" style="background:#e6f1fb;color:#185FA5;border:1.5px solid #85B7EB;" onclick="enterExamSelectMode()">' +
+          '<span>自己調整測驗字</span></button>';
     } else {
       bb.innerHTML =
         '<div class="exam-rec-bar">' +
