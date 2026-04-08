@@ -7,7 +7,7 @@
 var currentTeacher = null; // Firebase Auth User 物件
 
 function onFirebaseReady() {
-  loadCourseOverview();
+  loadClasses();
 }
 
 window.addEventListener('load', function() {
@@ -46,12 +46,11 @@ function doLogout() {
 }
 
 function switchTab(tab) {
-  ['overview','classes','curriculum'].forEach(function(t) {
+  ['classes','curriculum'].forEach(function(t) {
     document.getElementById('panel-'+t).style.display = t===tab ? '' : 'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
   });
   document.getElementById('panel-student').style.display = 'none';
-  if (tab === 'overview')   loadCourseOverview();
-  if (tab === 'classes')    loadClasses();
+  if (tab === 'classes')    { backToClasses(); loadClasses(); }
   if (tab === 'curriculum') loadVersions();
 }

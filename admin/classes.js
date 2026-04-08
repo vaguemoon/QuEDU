@@ -87,7 +87,8 @@ function renderClasses() {
         '</div>' +
       '</div>' +
       '<div class="class-footer" id="cs-' + cls.id + '">' +
-        '<span style="color:var(--muted);font-size:.78rem">載入學生數…</span>' +
+        '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
+        '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -96,9 +97,8 @@ function renderClasses() {
   currentClasses.forEach(function(cls) {
     db.collection('students').where('classId', '==', cls.id).get()
       .then(function(snap) {
-        var el = document.getElementById('cs-' + cls.id);
-        if (el) el.innerHTML =
-          '<span class="class-stat">👥 ' + snap.size + ' 位學生已加入</span>';
+        var el = document.getElementById('cs-count-' + cls.id);
+        if (el) el.textContent = '👥 ' + snap.size + ' 位學生已加入';
       }).catch(function() {});
   });
 }
@@ -183,4 +183,24 @@ function createClass() {
       errEl.textContent = '建立失敗：' + e.message;
       btnEl.disabled = false; btnEl.textContent = '建立班級';
     });
+}
+
+/* ── 切換到班級學生名單 ── */
+var currentRosterClassId = null;
+
+function viewClassStudents(classId, className) {
+  currentRosterClassId = classId;
+  document.getElementById('classes-list-view').style.display = 'none';
+  document.getElementById('class-roster-view').style.display = '';
+  document.getElementById('roster-class-name').textContent = className;
+  loadClassRoster(classId);
+}
+
+function backToClasses() {
+  document.getElementById('class-roster-view').style.display = 'none';
+  document.getElementById('classes-list-view').style.display = '';
+}
+
+function refreshRoster() {
+  if (currentRosterClassId) loadClassRoster(currentRosterClassId);
 }

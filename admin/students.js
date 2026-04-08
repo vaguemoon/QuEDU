@@ -9,7 +9,7 @@ var currentDetailId = null;
 function showStudentDetail(studentId) {
   if (!db) return;
   currentDetailId = studentId;
-  document.getElementById('panel-overview').style.display = 'none';
+  document.getElementById('panel-classes').style.display = 'none';
   document.getElementById('panel-student').style.display  = '';
   document.getElementById('detail-course-progress').innerHTML =
     '<div class="loading-wrap"><div class="spinner"></div></div>';
@@ -195,11 +195,11 @@ function deleteStudent() {
     }).then(function(){
       showToast('🗑 已刪除「'+name+'」的資料。');
       backToOverview();
-      loadStudents();
+      if (currentRosterClassId) loadClassRoster(currentRosterClassId);
     }).catch(function(e){ showToast('❌ 刪除失敗：'+e.message); });
 }
 
 function backToOverview() {
-  document.getElementById('panel-student').style.display  = 'none';
-  document.getElementById('panel-overview').style.display = '';
+  document.getElementById('panel-student').style.display = 'none';
+  document.getElementById('panel-classes').style.display = '';
 }

@@ -405,6 +405,12 @@ body {
 .class-empty {
   text-align:center; padding:48px 20px; color:var(--muted);
 }
+.btn-view-students {
+  padding:5px 12px; border-radius:8px; border:1.5px solid #bfdbfe;
+  background:var(--blue-lt); font-size:.78rem; font-weight:800; cursor:pointer;
+  font-family:inherit; color:var(--blue); flex-shrink:0; transition:all .15s;
+}
+.btn-view-students:hover { background:#dbeafe; border-color:var(--blue); }
 
 /* 載入動畫 */
 .spinner {

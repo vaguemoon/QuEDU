@@ -37,60 +37,53 @@
 
     <!-- 分頁 -->
     <div class="admin-tabs">
-      <button class="admin-tab active" id="tab-overview"    onclick="switchTab('overview')">📊 學習總覽</button>
-      <button class="admin-tab"        id="tab-classes"     onclick="switchTab('classes')">🏫 班級管理</button>
+      <button class="admin-tab active" id="tab-classes"     onclick="switchTab('classes')">🏫 班級管理</button>
       <button class="admin-tab"        id="tab-curriculum"  onclick="switchTab('curriculum')">📚 課程管理</button>
     </div>
 
-    <!-- 班級總覽 -->
-    <div id="panel-overview">
-      <div class="stats-row">
-        <div class="stat-card stat-blue">
-          <div class="stat-num" id="stat-total">—</div>
-          <div class="stat-lbl">學生總數</div>
-        </div>
-        <div class="stat-card stat-green">
-          <div class="stat-num" id="stat-active">—</div>
-          <div class="stat-lbl">今日活躍</div>
-        </div>
-        <div class="stat-card stat-yellow">
-          <div class="stat-num" id="stat-mastered">—</div>
-          <div class="stat-lbl">平均通過測驗字數</div>
-        </div>
-      </div>
-
-      <!-- 學生名單 -->
-      <div class="card" id="student-roster-card">
-        <div class="card-title">👥 學生名單
-          <button onclick="loadCourseOverview()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
-        </div>
-        <div id="course-overview-wrap">
-          <div class="loading-wrap"><div class="spinner"></div><br>載入中…</div>
-        </div>
-      </div>
-
-      <!-- 學生課程詳細頁（點學生後顯示） -->
-      <div class="card" id="student-course-card" style="display:none">
-        <div class="card-title">
-          <button class="back-btn" style="margin:0;padding:0" onclick="backToRoster()">← 返回名單</button>
-          <span id="student-course-name" style="margin-left:10px;font-weight:900"></span>
-        </div>
-        <div id="student-course-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-      </div>
-    </div>
-
     <!-- 班級管理 -->
-    <div id="panel-classes" style="display:none">
-      <div class="card">
-        <div class="card-title">🏫 我的班級
-          <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showCreateClassModal()">＋ 新增班級</button>
-        </div>
-        <div id="classes-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
+    <div id="panel-classes">
+
+      <!-- 子視圖①：班級列表 -->
+      <div id="classes-list-view">
+        <div class="card">
+          <div class="card-title">🏫 我的班級
+            <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showCreateClassModal()">＋ 新增班級</button>
+          </div>
+          <div id="classes-wrap">
+            <div class="loading-wrap"><div class="spinner"></div></div>
+          </div>
         </div>
       </div>
+
+      <!-- 子視圖②：班級學生名單 -->
+      <div id="class-roster-view" style="display:none">
+        <div class="stats-row">
+          <div class="stat-card stat-blue">
+            <div class="stat-num" id="roster-stat-total">—</div>
+            <div class="stat-lbl">班級學生</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-num" id="roster-stat-active">—</div>
+            <div class="stat-lbl">今日活躍</div>
+          </div>
+          <div class="stat-card stat-yellow">
+            <div class="stat-num" id="roster-stat-mastered">—</div>
+            <div class="stat-lbl">平均通過字數</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">
+            <button class="back-btn" style="margin:0;padding:0" onclick="backToClasses()">← 返回班級</button>
+            <span id="roster-class-name" style="margin-left:10px;font-weight:900"></span>
+            <button onclick="refreshRoster()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+          </div>
+          <div id="class-roster-wrap">
+            <div class="loading-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- 課程管理 -->
