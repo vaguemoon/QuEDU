@@ -6,6 +6,7 @@
 <title>太平國小｜教師管理後台</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="admin.css">
 <style></style>
 </head>
@@ -27,6 +28,7 @@
     </div>
     <div class="topbar-right">
       <span style="font-size:.82rem;font-weight:700;color:var(--muted)" id="last-update"></span>
+      <span style="font-size:.78rem;font-weight:600;color:var(--muted)" id="teacher-email-display"></span>
       <button class="btn-logout" onclick="doLogout()">登出</button>
     </div>
   </div>

@@ -9,9 +9,45 @@ body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:v
 .panel.right{transform:translateX(100%);opacity:0;pointer-events:none}
 .panel.left{transform:translateX(-100%);opacity:0;pointer-events:none}
 
-/* === 登入 === */
-#panel-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:24px;background:linear-gradient(160deg,#dbeeff 0%,var(--bg) 60%)}
-.login-card{width:100%;max-width:360px;background:var(--white);border-radius:24px;padding:28px 24px;box-shadow:0 8px 32px rgba(44,100,160,.15)}
+/* === 角色選擇 === */
+#panel-role{display:flex;align-items:center;justify-content:center;min-height:100%;padding:24px;background:linear-gradient(160deg,#dbeeff 0%,var(--bg) 60%)}
+.role-wrap{width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:36px}
+.role-header{text-align:center}
+.role-school{font-size:.85rem;font-weight:700;color:var(--muted);letter-spacing:2px;margin-bottom:6px}
+.role-title{font-size:1.8rem;font-weight:900;color:var(--blue-dk);margin-bottom:6px}
+.role-title span{color:var(--orange)}
+.role-subtitle{font-size:.88rem;font-weight:600;color:var(--muted)}
+.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}
+.role-card{background:white;border-radius:24px;padding:28px 12px 22px;box-shadow:0 8px 28px rgba(44,100,160,.12);border:2.5px solid transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:inherit;transition:all .18s}
+.role-card:active{transform:scale(.94)}
+.role-card.role-teacher{border-color:#b3d7f5}
+.role-card.role-teacher:hover{border-color:var(--blue);box-shadow:0 12px 36px rgba(44,100,160,.2);transform:translateY(-3px)}
+.role-card.role-student{border-color:#ffc9a0}
+.role-card.role-student:hover{border-color:var(--orange);box-shadow:0 12px 36px rgba(230,126,34,.15);transform:translateY(-3px)}
+.role-icon{font-size:3rem;line-height:1}
+.role-name{font-size:1.05rem;font-weight:900;color:var(--blue-dk)}
+.role-sub{font-size:.72rem;font-weight:600;color:var(--muted);text-align:center;line-height:1.5}
+
+/* === 教師登入 === */
+#panel-teacher-login{display:flex;align-items:center;justify-content:center;min-height:100%;padding:24px;background:linear-gradient(160deg,#dbeeff 0%,var(--bg) 60%)}
+.tlogin-wrap{width:100%;max-width:360px}
+.tlogin-card{background:white;border-radius:24px;padding:28px 24px;box-shadow:0 8px 32px rgba(44,100,160,.15)}
+.btn-back-role{background:none;border:none;color:var(--muted);font-size:.82rem;font-weight:700;cursor:pointer;padding:0;margin-bottom:18px;font-family:inherit;display:flex;align-items:center;gap:4px;transition:color .15s}
+.btn-back-role:hover{color:var(--blue-dk)}
+.btn-google{width:100%;padding:12px;border:2px solid var(--border);border-radius:12px;background:white;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;transition:all .15s;color:var(--text)}
+.btn-google:hover{border-color:var(--blue);background:var(--blue-lt)}
+.btn-google:active{transform:scale(.97)}
+.login-divider{text-align:center;position:relative;margin:14px 0}
+.login-divider::before{content:'';position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border)}
+.login-divider span{background:white;padding:0 12px;font-size:.76rem;font-weight:700;color:var(--muted);position:relative}
+.btn-login-primary{width:100%;padding:13px;border:none;border-radius:12px;background:var(--blue);color:white;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:4px}
+.btn-login-primary:active{background:var(--blue-dk);transform:scale(.97)}
+.btn-login-primary:disabled{opacity:.6;cursor:not-allowed}
+
+/* === 學生登入 === */
+#panel-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:24px;background:linear-gradient(160deg,#fff4e6 0%,var(--bg) 60%)}
+.slogin-wrap{width:100%;max-width:360px}
+.login-card{width:100%;background:var(--white);border-radius:24px;padding:28px 24px;box-shadow:0 8px 32px rgba(44,100,160,.15)}
 .login-school{text-align:center;font-size:.85rem;font-weight:700;color:var(--muted);letter-spacing:2px;margin-bottom:6px}
 .login-title{text-align:center;font-size:1.6rem;font-weight:900;color:var(--blue-dk);margin-bottom:24px}
 .login-title span{color:var(--orange)}
@@ -31,12 +67,6 @@ body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:v
 .login-error.show{display:block}
 .login-switch{text-align:center;font-size:.82rem;font-weight:700;color:var(--muted);margin-top:14px}
 .login-switch a{color:var(--blue);cursor:pointer;font-weight:800}
-.teacher-entry{margin-top:10px;text-align:center}
-.btn-teacher{background:none;border:none;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;padding:4px 8px}
-.teacher-pin-wrap{display:flex;gap:8px;justify-content:center;align-items:center;margin-top:10px}
-.teacher-pin-wrap.hidden{display:none}
-.teacher-pin-input{border:2px solid #d4e8f8;border-radius:10px;padding:8px 12px;font-size:.9rem;font-family:inherit;outline:none;width:130px;text-align:center}
-.btn-teacher-go{padding:8px 14px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit}
 
 /* === HUB === */
 #panel-hub{background:var(--bg)}

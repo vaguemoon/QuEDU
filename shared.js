@@ -21,7 +21,8 @@ var firebaseConfig = {
   appId:             "1:158917910126:web:e52a1d0456d1fd4fe6907f"
 };
 
-var db = null;
+var db   = null;
+var auth = null;
 
 function initFirebase() {
   if (typeof firebase === 'undefined' || typeof firebase.firestore === 'undefined') {
@@ -31,6 +32,12 @@ function initFirebase() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    // Firebase Auth（若頁面有載入 Auth SDK 才初始化）
+    if (typeof firebase.auth !== 'undefined') {
+      auth = firebase.auth();
+      // 使用 SESSION 持久化：關閉分頁即登出，適合學校共用裝置
+      auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(function(){});
+    }
   } catch (e) {
     db = null;
     setTimeout(initFirebase, 300);

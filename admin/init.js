@@ -1,39 +1,48 @@
 /**
  * admin/init.js — 後台初始化、登出、分頁切換
- * 依賴：shared.js（initFirebase、db、showToast）
+ * 依賴：shared.js（initFirebase、db、auth、showToast）
  */
 'use strict';
+
+var currentTeacher = null; // Firebase Auth User 物件
 
 function onFirebaseReady() {
   loadCourseOverview();
 }
 
-function showFirebaseError(msg) {
-  var wrap = document.getElementById('course-overview-wrap') || document.getElementById('student-list-wrap');
-  if (wrap) {
-    wrap.innerHTML = '<div style="padding:20px;background:#fff5f5;border-radius:10px;color:#dc2626;font-weight:700;font-size:.9rem;line-height:1.8">'
-      + '❌ 資料庫連線失敗<br>'
-      + '<span style="font-weight:600;color:#6b7280">'+msg+'</span><br><br>'
-      + '<button onclick="location.reload()" style="padding:8px 18px;border:none;border-radius:8px;background:#2563eb;color:white;font-weight:700;cursor:pointer;font-size:.88rem">🔄 重新整理</button>'
-      + '</div>';
-  }
-}
-
 window.addEventListener('load', function() {
-  if (sessionStorage.getItem('adminAuth') !== '381418') {
-    window.location.href = 'index.html';
-    return;
-  }
   initFirebase();
-  (function waitDb() {
-    if (!db) { setTimeout(waitDb, 150); return; }
-    onFirebaseReady();
+
+  // 等 auth 初始化後，監聽登入狀態
+  (function waitAuth() {
+    if (!auth) { setTimeout(waitAuth, 150); return; }
+    auth.onAuthStateChanged(function(user) {
+      if (!user) {
+        // 未登入 → 回登入頁
+        window.location.href = 'index.html';
+        return;
+      }
+      currentTeacher = user;
+      // 更新後台頂列顯示教師 Email
+      var emailEl = document.getElementById('teacher-email-display');
+      if (emailEl) emailEl.textContent = user.email;
+      // 等 Firestore 就緒
+      (function waitDb() {
+        if (!db) { setTimeout(waitDb, 150); return; }
+        onFirebaseReady();
+      })();
+    });
   })();
 });
 
 function doLogout() {
-  sessionStorage.removeItem('adminAuth');
-  window.location.href = 'index.html';
+  if (auth) {
+    auth.signOut().then(function() {
+      window.location.href = 'index.html';
+    });
+  } else {
+    window.location.href = 'index.html';
+  }
 }
 
 function switchTab(tab) {

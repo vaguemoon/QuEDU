@@ -6,6 +6,7 @@
 <title>臺東縣太平國小資源班</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="shared.css">
 <script>
 (function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
@@ -18,75 +19,147 @@
 </head>
 <body>
 <div class="app">
-
   <div id="main-content">
 
-    <!-- 登入 -->
-    <div class="panel active" id="panel-login">
-      <div class="login-card">
-        <div class="login-school">臺東縣太平國小資源班</div>
-        <div class="login-title">學習<span>系統</span></div>
-        <div id="login-form">
-          <label class="login-label">你的名字</label>
-          <input class="login-input" id="login-name" type="text" placeholder="輸入姓名" autocomplete="off" oninput="updateLoginBtn()">
-          <label class="login-label">PIN 碼（4位數字）</label>
-          <div class="pin-display" id="pin-display">
-            <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
-            <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
-          </div>
-          <div class="pin-pad">
-            <button class="pin-btn" onclick="pinInput('1')">1</button>
-            <button class="pin-btn" onclick="pinInput('2')">2</button>
-            <button class="pin-btn" onclick="pinInput('3')">3</button>
-            <button class="pin-btn" onclick="pinInput('4')">4</button>
-            <button class="pin-btn" onclick="pinInput('5')">5</button>
-            <button class="pin-btn" onclick="pinInput('6')">6</button>
-            <button class="pin-btn" onclick="pinInput('7')">7</button>
-            <button class="pin-btn" onclick="pinInput('8')">8</button>
-            <button class="pin-btn" onclick="pinInput('9')">9</button>
-            <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
-            <button class="pin-btn" onclick="pinInput('0')">0</button>
-            <button class="pin-btn pin-btn-ok" id="btn-login-ok" onclick="doLogin()" disabled>✓</button>
-          </div>
-          <div class="login-error" id="login-error">名字或 PIN 碼不正確，請再試一次</div>
-          <div class="login-switch">還沒有帳號？<a onclick="showRegister()">點這裡註冊</a></div>
+    <!-- ① 角色選擇（預設顯示） -->
+    <div class="panel active" id="panel-role">
+      <div class="role-wrap">
+        <div class="role-header">
+          <div class="role-school">臺東縣太平國小資源班</div>
+          <div class="role-title">學習<span>系統</span></div>
+          <div class="role-subtitle">請選擇你的身份</div>
         </div>
-        <div id="register-form" style="display:none">
-          <label class="login-label">你的名字</label>
-          <input class="login-input" id="reg-name" type="text" placeholder="輸入姓名" autocomplete="off" oninput="updateRegBtn()">
-          <label class="login-label">設定 PIN 碼（4位數字）</label>
-          <div class="pin-display" id="reg-pin-display">
-            <div class="pin-dot" id="rpd0"></div><div class="pin-dot" id="rpd1"></div>
-            <div class="pin-dot" id="rpd2"></div><div class="pin-dot" id="rpd3"></div>
-          </div>
-          <div class="pin-pad">
-            <button class="pin-btn" onclick="regPinInput('1')">1</button>
-            <button class="pin-btn" onclick="regPinInput('2')">2</button>
-            <button class="pin-btn" onclick="regPinInput('3')">3</button>
-            <button class="pin-btn" onclick="regPinInput('4')">4</button>
-            <button class="pin-btn" onclick="regPinInput('5')">5</button>
-            <button class="pin-btn" onclick="regPinInput('6')">6</button>
-            <button class="pin-btn" onclick="regPinInput('7')">7</button>
-            <button class="pin-btn" onclick="regPinInput('8')">8</button>
-            <button class="pin-btn" onclick="regPinInput('9')">9</button>
-            <button class="pin-btn pin-btn-del" onclick="regPinDelete()">⌫</button>
-            <button class="pin-btn" onclick="regPinInput('0')">0</button>
-            <button class="pin-btn pin-btn-ok" id="btn-reg-ok" onclick="doRegister()" disabled>✓</button>
-          </div>
-          <div class="login-error" id="reg-error"></div>
-          <div class="login-switch">已有帳號？<a onclick="showLogin()">點這裡登入</a></div>
+        <div class="role-cards">
+          <button class="role-card role-teacher" onclick="showPanel('teacher-login')">
+            <div class="role-icon">👩‍🏫</div>
+            <div class="role-name">教　師</div>
+            <div class="role-sub">管理課程與班級</div>
+          </button>
+          <button class="role-card role-student" onclick="showPanel('login')">
+            <div class="role-icon">🧒</div>
+            <div class="role-name">學　生</div>
+            <div class="role-sub">開始今天的學習</div>
+          </button>
         </div>
-        <div class="teacher-entry">
-          <button class="btn-teacher" onclick="toggleTeacherEntry()">🔑 教師登入</button>
-          <div class="teacher-pin-wrap hidden" id="teacher-pin-wrap">
-            <input class="teacher-pin-input" id="teacher-pin-input" type="password" placeholder="教師密碼">
-            <button class="btn-teacher-go" onclick="doTeacherLogin()">進入</button>
+      </div>
+    </div>
+
+    <!-- ② 教師登入 -->
+    <div class="panel right" id="panel-teacher-login">
+      <div class="tlogin-wrap">
+        <div class="tlogin-card">
+          <button class="btn-back-role" onclick="showPanel('role')">← 返回</button>
+          <div class="login-school">教師後台</div>
+          <div class="login-title">教師<span>登入</span></div>
+
+          <!-- Google 登入 -->
+          <button class="btn-google" onclick="doGoogleLogin()">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            以 Google 帳號登入
+          </button>
+
+          <div class="login-divider"><span>或以 Email 登入</span></div>
+
+          <!-- 登入表單 -->
+          <div id="teacher-login-form">
+            <input class="login-input" id="teacher-email-input" type="email"
+              placeholder="教師 Email" autocomplete="username">
+            <input class="login-input" id="teacher-password-input" type="password"
+              placeholder="密碼" autocomplete="current-password"
+              onkeydown="if(event.key==='Enter')doTeacherLogin()">
+            <div class="login-error" id="teacher-login-error"></div>
+            <button class="btn-login-primary" id="btn-teacher-go" onclick="doTeacherLogin()">登入後台</button>
+            <div class="login-switch">還沒有帳號？<a onclick="showTeacherRegister()">點這裡註冊</a></div>
+          </div>
+
+          <!-- 註冊表單 -->
+          <div id="teacher-register-form" style="display:none">
+            <input class="login-input" id="teacher-reg-email" type="email"
+              placeholder="教師 Email" autocomplete="username">
+            <input class="login-input" id="teacher-reg-password" type="password"
+              placeholder="設定密碼（至少 6 位）" autocomplete="new-password">
+            <input class="login-input" id="teacher-reg-confirm" type="password"
+              placeholder="再輸入一次密碼" autocomplete="new-password"
+              onkeydown="if(event.key==='Enter')doTeacherRegister()">
+            <div class="login-error" id="teacher-reg-error"></div>
+            <button class="btn-login-primary" id="btn-teacher-reg" onclick="doTeacherRegister()">建立帳號</button>
+            <div class="login-switch">已有帳號？<a onclick="showTeacherLogin()">點這裡登入</a></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Hub 主頁 -->
+    <!-- ③ 學生登入 -->
+    <div class="panel right" id="panel-login">
+      <div class="slogin-wrap">
+        <div class="login-card">
+          <button class="btn-back-role" onclick="showPanel('role')">← 返回</button>
+          <div class="login-school">學生登入</div>
+          <div class="login-title">歡迎<span>回來</span></div>
+
+          <div id="login-form">
+            <label class="login-label">你的名字</label>
+            <input class="login-input" id="login-name" type="text" placeholder="輸入姓名"
+              autocomplete="off" oninput="updateLoginBtn()">
+            <label class="login-label">PIN 碼（4位數字）</label>
+            <div class="pin-display" id="pin-display">
+              <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+              <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+            </div>
+            <div class="pin-pad">
+              <button class="pin-btn" onclick="pinInput('1')">1</button>
+              <button class="pin-btn" onclick="pinInput('2')">2</button>
+              <button class="pin-btn" onclick="pinInput('3')">3</button>
+              <button class="pin-btn" onclick="pinInput('4')">4</button>
+              <button class="pin-btn" onclick="pinInput('5')">5</button>
+              <button class="pin-btn" onclick="pinInput('6')">6</button>
+              <button class="pin-btn" onclick="pinInput('7')">7</button>
+              <button class="pin-btn" onclick="pinInput('8')">8</button>
+              <button class="pin-btn" onclick="pinInput('9')">9</button>
+              <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
+              <button class="pin-btn" onclick="pinInput('0')">0</button>
+              <button class="pin-btn pin-btn-ok" id="btn-login-ok" onclick="doLogin()" disabled>✓</button>
+            </div>
+            <div class="login-error" id="login-error">名字或 PIN 碼不正確，請再試一次</div>
+            <div class="login-switch">還沒有帳號？<a onclick="showRegister()">點這裡註冊</a></div>
+          </div>
+
+          <div id="register-form" style="display:none">
+            <label class="login-label">你的名字</label>
+            <input class="login-input" id="reg-name" type="text" placeholder="輸入姓名"
+              autocomplete="off" oninput="updateRegBtn()">
+            <label class="login-label">設定 PIN 碼（4位數字）</label>
+            <div class="pin-display" id="reg-pin-display">
+              <div class="pin-dot" id="rpd0"></div><div class="pin-dot" id="rpd1"></div>
+              <div class="pin-dot" id="rpd2"></div><div class="pin-dot" id="rpd3"></div>
+            </div>
+            <div class="pin-pad">
+              <button class="pin-btn" onclick="regPinInput('1')">1</button>
+              <button class="pin-btn" onclick="regPinInput('2')">2</button>
+              <button class="pin-btn" onclick="regPinInput('3')">3</button>
+              <button class="pin-btn" onclick="regPinInput('4')">4</button>
+              <button class="pin-btn" onclick="regPinInput('5')">5</button>
+              <button class="pin-btn" onclick="regPinInput('6')">6</button>
+              <button class="pin-btn" onclick="regPinInput('7')">7</button>
+              <button class="pin-btn" onclick="regPinInput('8')">8</button>
+              <button class="pin-btn" onclick="regPinInput('9')">9</button>
+              <button class="pin-btn pin-btn-del" onclick="regPinDelete()">⌫</button>
+              <button class="pin-btn" onclick="regPinInput('0')">0</button>
+              <button class="pin-btn pin-btn-ok" id="btn-reg-ok" onclick="doRegister()" disabled>✓</button>
+            </div>
+            <div class="login-error" id="reg-error"></div>
+            <div class="login-switch">已有帳號？<a onclick="showLogin()">點這裡登入</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ Hub 主頁 -->
     <div class="panel right" id="panel-hub">
       <div class="hub-body">
         <div class="hub-welcome">
@@ -104,12 +177,12 @@
       </div>
     </div>
 
-    <!-- 子項目 iframe（子項目的一切在這裡，和主系統完全隔離）-->
+    <!-- ⑤ 子項目 iframe -->
     <div class="panel right" id="panel-subject">
       <iframe id="subject-frame" src="about:blank" allow="microphone"></iframe>
     </div>
 
-    <!-- 個人設定 -->
+    <!-- ⑥ 個人設定 -->
     <div class="panel right" id="panel-profile">
       <div class="profile-header">
         <div class="profile-avatar-big" id="profile-avatar-big">🐣</div>
@@ -121,7 +194,8 @@
       <div class="profile-body">
         <div class="profile-section">
           <div class="profile-section-title">暱稱</div>
-          <input class="profile-input" id="profile-nickname" type="text" placeholder="輸入暱稱（選填）" maxlength="10">
+          <input class="profile-input" id="profile-nickname" type="text"
+            placeholder="輸入暱稱（選填）" maxlength="10">
         </div>
         <div class="profile-section">
           <div class="profile-section-title">頭像</div>
