@@ -352,6 +352,60 @@ body {
   background:var(--blue); color:white; font-size:.9rem; font-weight:800; cursor:pointer; font-family:inherit;
 }
 
+/* ══ 班級管理 ══ */
+.class-card {
+  border:1.5px solid var(--border); border-radius:14px;
+  padding:16px 18px; margin-bottom:12px; background:white;
+  box-shadow:var(--shadow); transition:border-color .15s;
+}
+.class-card:hover { border-color:#93c5fd; }
+.class-inactive { opacity:.6; }
+.class-card-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
+.class-info { flex:1; min-width:0; }
+.class-name { font-size:1.05rem; font-weight:900; color:var(--text); margin-bottom:6px; }
+.class-code-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.class-code {
+  font-size:1.1rem; font-weight:900; letter-spacing:4px;
+  color:var(--blue-dk); background:var(--blue-lt);
+  border:1.5px solid #bfdbfe; border-radius:8px; padding:3px 12px;
+  font-family:'Courier New',monospace;
+}
+.class-status-badge { font-size:.72rem; font-weight:800; padding:3px 10px; border-radius:20px; }
+.badge-green { background:var(--green-lt); color:var(--green); }
+.badge-gray  { background:#f1f5f9; color:var(--muted); }
+.class-top-actions { display:flex; gap:6px; flex-shrink:0; }
+.btn-cls-toggle {
+  padding:6px 12px; border-radius:8px; border:1.5px solid var(--border);
+  background:white; font-size:.78rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--gray); transition:all .15s;
+}
+.btn-cls-toggle:hover { border-color:var(--blue); color:var(--blue); }
+.btn-cls-delete {
+  padding:6px 12px; border-radius:8px; border:1.5px solid #fecaca;
+  background:#fff5f5; font-size:.78rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--red); transition:all .15s;
+}
+.btn-cls-delete:hover { background:#fee2e2; }
+.class-link-row {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  background:#f8fafc; border-radius:8px; padding:8px 10px; margin-bottom:10px;
+}
+.class-link-text {
+  flex:1; font-size:.75rem; color:var(--muted); font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.btn-copy-link {
+  padding:5px 12px; border-radius:7px; border:1.5px solid var(--border);
+  background:white; font-size:.75rem; font-weight:800; cursor:pointer;
+  font-family:inherit; color:var(--blue); flex-shrink:0; transition:all .15s;
+}
+.btn-copy-link:hover { background:var(--blue-lt); border-color:var(--blue); }
+.class-footer { font-size:.78rem; }
+.class-stat { font-weight:700; color:var(--gray); }
+.class-empty {
+  text-align:center; padding:48px 20px; color:var(--muted);
+}
+
 /* 載入動畫 */
 .spinner {
   width:28px; height:28px; border-radius:50%;

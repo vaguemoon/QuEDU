@@ -37,8 +37,9 @@
 
     <!-- 分頁 -->
     <div class="admin-tabs">
-      <button class="admin-tab active" id="tab-overview"    onclick="switchTab('overview')">📊 班級總覽</button>
-      <button class="admin-tab"        id="tab-curriculum" onclick="switchTab('curriculum')">📚 課程管理</button>
+      <button class="admin-tab active" id="tab-overview"    onclick="switchTab('overview')">📊 學習總覽</button>
+      <button class="admin-tab"        id="tab-classes"     onclick="switchTab('classes')">🏫 班級管理</button>
+      <button class="admin-tab"        id="tab-curriculum"  onclick="switchTab('curriculum')">📚 課程管理</button>
     </div>
 
     <!-- 班級總覽 -->
@@ -75,6 +76,18 @@
           <span id="student-course-name" style="margin-left:10px;font-weight:900"></span>
         </div>
         <div id="student-course-wrap">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 班級管理 -->
+    <div id="panel-classes" style="display:none">
+      <div class="card">
+        <div class="card-title">🏫 我的班級
+          <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showCreateClassModal()">＋ 新增班級</button>
+        </div>
+        <div id="classes-wrap">
           <div class="loading-wrap"><div class="spinner"></div></div>
         </div>
       </div>
@@ -229,10 +242,30 @@
   </div>
 </div>
 
+<!-- 新增班級 Modal -->
+<div id="class-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:20px">🏫 新增班級</div>
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:6px">班級名稱</label>
+    <input id="new-class-name" type="text" placeholder="例如：三年甲班、資源班 112 學年"
+      maxlength="30"
+      style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:8px"
+      onkeydown="if(event.key==='Enter')createClass()">
+    <div id="class-modal-error" style="font-size:.82rem;font-weight:700;color:var(--red);min-height:20px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="hideCreateClassModal()"
+        style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">取消</button>
+      <button id="btn-create-class" onclick="createClass()"
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">建立班級</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="shared.js"></script>
 <script src="admin/init.js"></script>
+<script src="admin/classes.js"></script>
 <script src="admin/overview.js"></script>
 <script src="admin/students.js"></script>
 <script src="admin/curriculum.js"></script>

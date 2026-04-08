@@ -46,11 +46,12 @@ function doLogout() {
 }
 
 function switchTab(tab) {
-  ['overview','curriculum'].forEach(function(t) {
+  ['overview','classes','curriculum'].forEach(function(t) {
     document.getElementById('panel-'+t).style.display = t===tab ? '' : 'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
   });
   document.getElementById('panel-student').style.display = 'none';
   if (tab === 'overview')   loadCourseOverview();
+  if (tab === 'classes')    loadClasses();
   if (tab === 'curriculum') loadVersions();
 }
