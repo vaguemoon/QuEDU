@@ -37,8 +37,7 @@
 
     <!-- 分頁 -->
     <div class="admin-tabs">
-      <button class="admin-tab active" id="tab-classes"     onclick="switchTab('classes')">🏫 班級管理</button>
-      <button class="admin-tab"        id="tab-curriculum"  onclick="switchTab('curriculum')">📚 課程管理</button>
+      <button class="admin-tab active" id="tab-classes" onclick="switchTab('classes')">🏫 班級管理</button>
     </div>
 
     <!-- 班級管理 -->
@@ -86,110 +85,7 @@
 
     </div>
 
-    <!-- 課程管理 -->
-    <div id="panel-curriculum" style="display:none">
-
-      <!-- 版本選擇 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">📚 課程版本
-          <button class="btn-edit" style="margin-left:auto" onclick="showAddVersion()">＋ 新增版本</button>
-        </div>
-        <div id="version-list-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-        <!-- 新增版本表單 -->
-        <div id="add-version-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input id="new-version-name" type="text" placeholder="例如：太平國小112學年"
-              style="flex:1;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.92rem;font-family:inherit;outline:none;min-width:180px">
-            <button class="btn-save-lesson" style="padding:9px 18px" onclick="addVersion()">
-              <span>＋</span><span>建立</span>
-            </button>
-            <button class="btn-edit" onclick="hideAddVersion()">取消</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- CSV 上傳 -->
-      <div class="card" style="margin-bottom:16px" id="csv-upload-card">
-        <div class="card-title">📥 批次匯入課程（CSV）</div>
-        <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:14px;font-size:.82rem;font-weight:600;color:var(--gray);line-height:1.8">
-          <strong>CSV 格式（第一欄為版本名稱）：</strong><br>
-          版本,年級,課,課名,生字<br>
-          康軒,一上,1,拍拍手,山水火土木<br>
-          康軒,一上,2,第二課,日月星雲風<br>
-          康軒,一下,1,第一課,春夏秋冬<br>
-          <span style="color:var(--blue)">✦ 上傳後系統會自動建立版本，不需要事先手動建立</span>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:2px dashed var(--border);border-radius:10px;cursor:pointer;font-size:.88rem;font-weight:700;color:var(--gray);transition:all .15s"
-            id="csv-label" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
-            <span>📎</span><span id="csv-filename">選擇 CSV 檔案</span>
-            <input type="file" accept=".csv" id="csv-file" style="display:none" onchange="onCSVSelected()">
-          </label>
-          <button class="btn-save-lesson" onclick="importCSV()" id="btn-import-csv" disabled
-            style="opacity:.5;cursor:not-allowed">
-            <span>📥</span><span>匯入</span>
-          </button>
-        </div>
-        <div id="csv-preview" style="margin-top:12px"></div>
-      </div>
-
-      <!-- 手動新增課程 -->
-      <div class="card" style="margin-bottom:16px" id="manual-add-card">
-        <div class="card-title">✏️ 手動新增課程</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-          <div style="grid-column:1/-1">
-            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">
-              版本名稱
-              <span style="font-weight:600;color:var(--blue)">（輸入新版本名稱可自動建立，或輸入已有版本名稱）</span>
-            </label>
-            <input id="manual-version-input" type="text"
-              list="version-datalist"
-              placeholder="例如：康軒一年級、翰林112學年…"
-              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
-            <datalist id="version-datalist"></datalist>
-          </div>
-          <div>
-            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">年級</label>
-            <input id="manual-grade" type="text" placeholder="例如：一上"
-              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
-          </div>
-          <div>
-            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">課次（數字）</label>
-            <input id="manual-lesson-num" type="number" placeholder="例如：1" min="1"
-              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
-          </div>
-          <div>
-            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">課名</label>
-            <input id="manual-lesson-name" type="text" placeholder="例如：拍拍手"
-              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
-          </div>
-        </div>
-        <div style="margin-bottom:12px">
-          <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">生字</label>
-          <input id="manual-chars" type="text" placeholder="例如：山水火土木" maxlength="30"
-            style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:1.1rem;font-family:'Noto Sans TC',sans-serif;letter-spacing:4px;outline:none"
-            oninput="updateManualPreview()">
-          <div id="manual-chars-preview" style="margin-top:8px;min-height:24px"></div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <button class="btn-save-lesson" onclick="saveManualLesson()">
-            <span>💾</span><span>新增課程</span>
-          </button>
-          <span id="manual-status" style="font-size:.82rem;font-weight:700"></span>
-        </div>
-      </div>
-
-      <!-- 課程內容瀏覽 -->
-      <div class="card" id="curriculum-browse-card" style="display:none">
-        <div class="card-title">
-          <span id="browse-version-name">課程內容</span>
-          <button class="btn-danger" style="margin-left:auto;font-size:.75rem;padding:4px 10px" onclick="deleteVersion()">🗑 刪除此版本</button>
-        </div>
-        <div id="curriculum-content"></div>
-      </div>
-    </div>
+    <!-- 課程管理已移至管理者後台 (super-admin.html) -->
 
     <!-- 學生詳細頁 -->
     <div id="panel-student" style="display:none">
@@ -261,6 +157,5 @@
 <script src="admin/classes.js"></script>
 <script src="admin/overview.js"></script>
 <script src="admin/students.js"></script>
-<script src="admin/curriculum.js"></script>
 </body>
 </html>
