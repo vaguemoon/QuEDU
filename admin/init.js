@@ -29,7 +29,26 @@ window.addEventListener('load', function() {
       // 等 Firestore 就緒
       (function waitDb() {
         if (!db) { setTimeout(waitDb, 150); return; }
-        onFirebaseReady();
+        // 檢查是否被管理者封鎖
+        db.collection('teachers').doc(user.uid).get().then(function(doc) {
+          if (doc.exists && doc.data().blocked) {
+            auth.signOut().then(function() {
+              window.location.href = 'index.html';
+            });
+            return;
+          }
+          // 記錄教師登入資料（供管理者後台帳號管理使用）
+          db.collection('teachers').doc(user.uid).set({
+            uid:          user.uid,
+            email:        user.email || '',
+            displayName:  user.displayName || '',
+            lastLoginAt:  new Date().toISOString()
+          }, { merge: true }).catch(function() {});
+          onFirebaseReady();
+        }).catch(function() {
+          // Firestore 讀取失敗時仍允許進入，不中斷教師工作
+          onFirebaseReady();
+        });
       })();
     });
   })();
@@ -46,11 +65,10 @@ function doLogout() {
 }
 
 function switchTab(tab) {
-  ['classes','curriculum'].forEach(function(t) {
+  ['classes'].forEach(function(t) {
     document.getElementById('panel-'+t).style.display = t===tab ? '' : 'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
   });
   document.getElementById('panel-student').style.display = 'none';
-  if (tab === 'classes')    { backToClasses(); loadClasses(); }
-  if (tab === 'curriculum') loadVersions();
+  if (tab === 'classes') { backToClasses(); loadClasses(); }
 }
