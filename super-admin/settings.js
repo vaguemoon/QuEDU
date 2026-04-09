@@ -165,7 +165,7 @@ function addAdmin() {
     return;
   }
 
-  var emailKey = email.replace(/\./g, '_');
+  var emailKey = email.replace(/[@.]/g, '_');
   db.collection('superAdmins').doc(emailKey).set({
     email:     email,
     enabled:   true,

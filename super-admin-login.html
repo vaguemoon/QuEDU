@@ -113,8 +113,8 @@ function doAdminLogin() {
 function checkAdminAndRedirect(user) {
   (function waitDb() {
     if (!db) { setTimeout(waitDb, 150); return; }
-    // email 中的 "." 在 Firestore doc id 用 "_" 取代
-    var emailKey = user.email.replace(/\./g, '_');
+    // email 中的 "@" 和 "." 在 Firestore doc id 用 "_" 取代
+    var emailKey = user.email.replace(/[@.]/g, '_');
     db.collection('superAdmins').doc(emailKey).get()
       .then(function(doc) {
         if (doc.exists && doc.data().enabled !== false) {

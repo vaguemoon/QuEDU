@@ -20,7 +20,7 @@ window.addEventListener('load', function() {
       // 二次驗證：確認仍在 superAdmins 白名單
       (function waitDb() {
         if (!db) { setTimeout(waitDb, 150); return; }
-        var emailKey = user.email.replace(/\./g, '_');
+        var emailKey = user.email.replace(/[@.]/g, '_');
         db.collection('superAdmins').doc(emailKey).get()
           .then(function(doc) {
             if (!doc.exists || doc.data().enabled === false) {
