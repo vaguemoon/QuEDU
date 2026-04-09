@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>太平國小｜管理者後台</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="admin.css">
+<style>
+/* ══ 管理者後台擴充樣式 ══ */
+
+/* tabs 捲動（行動版） */
+.admin-tabs { overflow-x:auto; flex-wrap:nowrap; }
+.admin-tab  { white-space:nowrap; }
+
+/* 4 欄統計（全校總覽） */
+.stats-row-4 {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;
+}
+@media(max-width:700px){ .stats-row-4 { grid-template-columns:1fr 1fr; } }
+.stat-purple .stat-num { color:#7c3aed; }
+.stat-red    .stat-num { color:var(--red); }
+
+/* 通用 table */
+.sa-table { width:100%; border-collapse:collapse; }
+.sa-table th {
+  text-align:left; font-size:.72rem; font-weight:800; color:var(--muted);
+  padding:8px 12px; border-bottom:2px solid var(--border);
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.sa-table td {
+  padding:11px 12px; border-bottom:1px solid var(--border);
+  font-size:.88rem; font-weight:600; vertical-align:middle;
+}
+.sa-table tr:last-child td { border-bottom:none; }
+.sa-table tr:hover td { background:#f8fafc; }
+.sa-table .mono {
+  font-family:'Courier New',monospace; font-size:.95rem;
+  font-weight:900; letter-spacing:3px; color:var(--blue-dk);
+  background:var(--blue-lt); border:1px solid #bfdbfe;
+  border-radius:6px; padding:2px 8px; display:inline-block;
+}
+
+/* 按鈕小 */
+.btn-sm {
+  padding:5px 11px; border-radius:7px; border:1.5px solid var(--border);
+  background:white; font-size:.75rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--gray); transition:all .15s;
+}
+.btn-sm:hover { border-color:var(--blue); color:var(--blue); }
+.btn-sm-red {
+  padding:5px 11px; border-radius:7px; border:1.5px solid #fecaca;
+  background:#fff5f5; font-size:.75rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--red); transition:all .15s;
+}
+.btn-sm-red:hover { background:#fee2e2; }
+.btn-sm-green {
+  padding:5px 11px; border-radius:7px; border:1.5px solid #86efac;
+  background:var(--green-lt); font-size:.75rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--green); transition:all .15s;
+}
+
+/* badge 紅色 */
+.badge-red { background:#fef2f2; color:var(--red); }
+
+/* 設定開關 */
+.toggle-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 0; border-bottom:1px solid var(--border);
+}
+.toggle-row:last-child { border-bottom:none; }
+.toggle-label { font-size:.92rem; font-weight:700; color:var(--text); }
+.toggle-sub   { font-size:.78rem; color:var(--muted); font-weight:600; margin-top:2px; }
+.toggle-switch {
+  position:relative; width:52px; height:28px; cursor:pointer;
+  background:#cbd5e1; border-radius:20px; transition:background .2s; flex-shrink:0;
+}
+.toggle-switch.on { background:var(--green); }
+.toggle-switch::after {
+  content:''; position:absolute; top:3px; left:3px;
+  width:22px; height:22px; border-radius:50%; background:white;
+  transition:left .2s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-switch.on::after { left:27px; }
+
+/* 新增管理者表單 */
+.add-admin-form {
+  display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px;
+  padding-top:14px; border-top:1px solid var(--border);
+}
+.add-admin-input {
+  flex:1; border:2px solid var(--border); border-radius:8px;
+  padding:9px 12px; font-size:.9rem; font-family:inherit;
+  outline:none; min-width:200px;
+}
+.add-admin-input:focus { border-color:var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- ══ 管理者後台主畫面 ══ -->
+<div id="admin-screen">
+
+  <!-- 頂部列 -->
+  <div class="admin-topbar">
+    <div class="topbar-brand">
+      <div class="topbar-brand-icon">⚙️</div>
+      <div>
+        <div class="topbar-brand-name">太平國小 管理者後台</div>
+        <div class="topbar-brand-sub">系統管理</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="admin-email-display" style="font-size:.78rem;font-weight:600;color:var(--muted)"></span>
+      <button class="btn-logout" onclick="doLogout()">登出</button>
+    </div>
+  </div>
+
+  <div class="admin-main">
+
+    <!-- 分頁 -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" id="tab-overview"    onclick="switchTab('overview')">📊 全校總覽</button>
+      <button class="admin-tab"        id="tab-accounts"    onclick="switchTab('accounts')">👤 帳號管理</button>
+      <button class="admin-tab"        id="tab-curriculum"  onclick="switchTab('curriculum')">📚 課程管理</button>
+      <button class="admin-tab"        id="tab-invites"     onclick="switchTab('invites')">🔑 邀請碼管理</button>
+      <button class="admin-tab"        id="tab-settings"    onclick="switchTab('settings')">⚙️ 系統設定</button>
+    </div>
+
+    <!-- ① 全校總覽 -->
+    <div id="panel-overview">
+      <div class="stats-row-4" id="overview-stats">
+        <div class="stat-card stat-blue">
+          <div class="stat-num" id="stat-teachers">—</div>
+          <div class="stat-lbl">教師人數</div>
+        </div>
+        <div class="stat-card stat-purple">
+          <div class="stat-num" id="stat-classes">—</div>
+          <div class="stat-lbl">班級數</div>
+        </div>
+        <div class="stat-card stat-green">
+          <div class="stat-num" id="stat-students">—</div>
+          <div class="stat-lbl">學生人數</div>
+        </div>
+        <div class="stat-card stat-yellow">
+          <div class="stat-num" id="stat-active">—</div>
+          <div class="stat-lbl">今日活躍學生</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🏫 所有班級
+          <button onclick="loadOverview()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+        </div>
+        <div id="overview-classes-wrap">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② 帳號管理 -->
+    <div id="panel-accounts" style="display:none">
+      <div class="card">
+        <div class="card-title">👤 教師帳號列表
+          <button onclick="loadAccounts()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+        </div>
+        <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+          教師首次登入後即自動記錄。封鎖後教師將無法進入後台。
+        </div>
+        <div id="accounts-wrap">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ 課程管理（與教師後台共用 curriculum.js） -->
+    <div id="panel-curriculum" style="display:none">
+
+      <!-- 版本選擇 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📚 課程版本
+          <button class="btn-edit" style="margin-left:auto" onclick="showAddVersion()">＋ 新增版本</button>
+        </div>
+        <div id="version-list-wrap">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+        <div id="add-version-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input id="new-version-name" type="text" placeholder="例如：太平國小112學年"
+              style="flex:1;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.92rem;font-family:inherit;outline:none;min-width:180px">
+            <button class="btn-save-lesson" style="padding:9px 18px" onclick="addVersion()">
+              <span>＋</span><span>建立</span>
+            </button>
+            <button class="btn-edit" onclick="hideAddVersion()">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CSV 上傳 -->
+      <div class="card" style="margin-bottom:16px" id="csv-upload-card">
+        <div class="card-title">📥 批次匯入課程（CSV）</div>
+        <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:14px;font-size:.82rem;font-weight:600;color:var(--gray);line-height:1.8">
+          <strong>CSV 格式（第一欄為版本名稱）：</strong><br>
+          版本,年級,課,課名,生字<br>
+          康軒,一上,1,拍拍手,山水火土木<br>
+          康軒,一上,2,第二課,日月星雲風<br>
+          康軒,一下,1,第一課,春夏秋冬<br>
+          <span style="color:var(--blue)">✦ 上傳後系統會自動建立版本，不需要事先手動建立</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 18px;border:2px dashed var(--border);border-radius:10px;cursor:pointer;font-size:.88rem;font-weight:700;color:var(--gray);transition:all .15s"
+            id="csv-label" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+            <span>📎</span><span id="csv-filename">選擇 CSV 檔案</span>
+            <input type="file" accept=".csv" id="csv-file" style="display:none" onchange="onCSVSelected()">
+          </label>
+          <button class="btn-save-lesson" onclick="importCSV()" id="btn-import-csv" disabled
+            style="opacity:.5;cursor:not-allowed">
+            <span>📥</span><span>匯入</span>
+          </button>
+        </div>
+        <div id="csv-preview" style="margin-top:12px"></div>
+      </div>
+
+      <!-- 手動新增課程 -->
+      <div class="card" style="margin-bottom:16px" id="manual-add-card">
+        <div class="card-title">✏️ 手動新增課程</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div style="grid-column:1/-1">
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">
+              版本名稱
+              <span style="font-weight:600;color:var(--blue)">（輸入新版本名稱可自動建立，或輸入已有版本名稱）</span>
+            </label>
+            <input id="manual-version-input" type="text"
+              list="version-datalist"
+              placeholder="例如：康軒一年級、翰林112學年…"
+              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
+            <datalist id="version-datalist"></datalist>
+          </div>
+          <div>
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">年級</label>
+            <input id="manual-grade" type="text" placeholder="例如：一上"
+              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
+          </div>
+          <div>
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">課次（數字）</label>
+            <input id="manual-lesson-num" type="number" placeholder="例如：1" min="1"
+              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
+          </div>
+          <div>
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">課名</label>
+            <input id="manual-lesson-name" type="text" placeholder="例如：拍拍手"
+              style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.9rem;font-family:inherit;outline:none">
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">生字</label>
+          <input id="manual-chars" type="text" placeholder="例如：山水火土木" maxlength="30"
+            style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:1.1rem;font-family:'Noto Sans TC',sans-serif;letter-spacing:4px;outline:none"
+            oninput="updateManualPreview()">
+          <div id="manual-chars-preview" style="margin-top:8px;min-height:24px"></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn-save-lesson" onclick="saveManualLesson()">
+            <span>💾</span><span>新增課程</span>
+          </button>
+          <span id="manual-status" style="font-size:.82rem;font-weight:700"></span>
+        </div>
+      </div>
+
+      <!-- 課程內容瀏覽 -->
+      <div class="card" id="curriculum-browse-card" style="display:none">
+        <div class="card-title">
+          <span id="browse-version-name">課程內容</span>
+          <button class="btn-danger" style="margin-left:auto;font-size:.75rem;padding:4px 10px" onclick="deleteVersion()">🗑 刪除此版本</button>
+        </div>
+        <div id="curriculum-content"></div>
+      </div>
+    </div>
+
+    <!-- ④ 邀請碼管理 -->
+    <div id="panel-invites" style="display:none">
+      <div class="card">
+        <div class="card-title">🔑 所有班級邀請碼
+          <button onclick="loadInvites()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+        </div>
+        <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+          停用邀請碼後，學生無法用該邀請碼加入班級（已加入的學生不受影響）。
+        </div>
+        <div id="invites-wrap">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ 系統設定 -->
+    <div id="panel-settings" style="display:none">
+
+      <!-- 系統開關 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">⚙️ 系統控制</div>
+        <div id="settings-controls">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- 管理者帳號管理 -->
+      <div class="card">
+        <div class="card-title">🔐 管理者帳號</div>
+        <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+          新增管理者後，對方即可用 Google 帳號登入此後台。請確認 Email 正確。
+        </div>
+        <div id="admins-list-wrap">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+        <div class="add-admin-form">
+          <input id="new-admin-email" type="email" class="add-admin-input"
+            placeholder="輸入管理者 Google Email（例如：admin@gmail.com）"
+            onkeydown="if(event.key==='Enter')addAdmin()">
+          <button class="btn-save-lesson" style="padding:9px 18px" onclick="addAdmin()">
+            <span>＋</span><span>新增管理者</span>
+          </button>
+        </div>
+        <div id="add-admin-status" style="margin-top:10px;font-size:.82rem;font-weight:700"></div>
+      </div>
+    </div>
+
+  </div><!-- /admin-main -->
+</div><!-- /admin-screen -->
+
+<div id="toast"></div>
+
+<script src="shared.js"></script>
+<script src="super-admin/init.js"></script>
+<script src="super-admin/overview.js"></script>
+<script src="super-admin/accounts.js"></script>
+<script src="admin/curriculum.js"></script>
+<script src="super-admin/invites.js"></script>
+<script src="super-admin/settings.js"></script>
+</body>
+</html>

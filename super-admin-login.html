@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>太平國小｜管理者登入</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="admin.css">
+<style>
+body {
+  display:flex; align-items:center; justify-content:center;
+  min-height:100vh; background:#f1f5f9;
+}
+.login-wrap { width:100%; max-width:420px; padding:20px; }
+.login-card {
+  background:white; border-radius:20px; border:1px solid var(--border);
+  box-shadow:0 8px 32px rgba(0,0,0,.1); padding:44px 36px; text-align:center;
+}
+.login-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:#fef3c7; color:#92400e; border:1px solid #fcd34d;
+  border-radius:20px; padding:5px 14px; font-size:.75rem; font-weight:800;
+  margin-bottom:20px; letter-spacing:.5px;
+}
+.login-icon { font-size:2.8rem; margin-bottom:12px; }
+.login-title { font-size:1.6rem; font-weight:900; color:var(--text); margin-bottom:4px; }
+.login-sub   { font-size:.85rem; color:var(--muted); font-weight:600; margin-bottom:36px; }
+
+.btn-google {
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  width:100%; padding:13px 20px; border:2px solid var(--border); border-radius:12px;
+  background:white; font-size:.95rem; font-weight:800; cursor:pointer;
+  font-family:inherit; color:var(--text); transition:all .15s;
+}
+.btn-google:hover:not(:disabled) { border-color:#4285F4; background:#f8faff; }
+.btn-google:disabled { opacity:.6; cursor:not-allowed; }
+
+.login-error {
+  display:none; margin-top:16px; padding:12px 16px;
+  background:#fef2f2; border:1px solid #fecaca; border-radius:10px;
+  font-size:.85rem; font-weight:700; color:var(--red); text-align:left;
+}
+.login-footer {
+  margin-top:28px; font-size:.72rem; color:var(--muted); font-weight:600;
+  border-top:1px solid var(--border); padding-top:16px;
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-badge">🔐 系統管理後台</div>
+    <div class="login-icon">🏫</div>
+    <div class="login-title">管理者後台</div>
+    <div class="login-sub">臺東縣太平國小資源班</div>
+
+    <button class="btn-google" id="btn-login" onclick="doAdminLogin()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      使用 Google 帳號登入
+    </button>
+
+    <div class="login-error" id="login-error"></div>
+    <div class="login-footer">僅限授權管理者帳號使用。如需取得權限，請洽系統負責人。</div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+'use strict';
+
+var GOOGLE_SVG = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg> 使用 Google 帳號登入';
+
+window.addEventListener('load', function() {
+  initFirebase();
+  (function waitAuth() {
+    if (!auth) { setTimeout(waitAuth, 150); return; }
+    // 已登入狀態 → 直接驗證
+    auth.onAuthStateChanged(function(user) {
+      if (user) checkAdminAndRedirect(user);
+    });
+  })();
+});
+
+function doAdminLogin() {
+  if (!auth) return;
+  var btn = document.getElementById('btn-login');
+  btn.disabled = true;
+  btn.innerHTML = '驗證中…';
+  hideError();
+
+  var provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(function(result) {
+      checkAdminAndRedirect(result.user);
+    })
+    .catch(function(e) {
+      var msg = e.code === 'auth/popup-closed-by-user'
+        ? '登入視窗已關閉，請重新點擊登入。'
+        : '登入失敗：' + e.message;
+      showError(msg);
+      resetBtn();
+    });
+}
+
+function checkAdminAndRedirect(user) {
+  (function waitDb() {
+    if (!db) { setTimeout(waitDb, 150); return; }
+    // email 中的 "." 在 Firestore doc id 用 "_" 取代
+    var emailKey = user.email.replace(/\./g, '_');
+    db.collection('superAdmins').doc(emailKey).get()
+      .then(function(doc) {
+        if (doc.exists && doc.data().enabled !== false) {
+          window.location.href = 'super-admin.html';
+        } else {
+          auth.signOut();
+          showError('此帳號（' + user.email + '）沒有管理者權限。\n請聯繫系統負責人新增授權。');
+          resetBtn();
+        }
+      })
+      .catch(function(e) {
+        auth.signOut();
+        showError('權限驗證失敗：' + e.message);
+        resetBtn();
+      });
+  })();
+}
+
+function showError(msg) {
+  var el = document.getElementById('login-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('login-error').style.display = 'none';
+}
+function resetBtn() {
+  var btn = document.getElementById('btn-login');
+  btn.disabled = false;
+  btn.innerHTML = GOOGLE_SVG;
+}
+</script>
+</body>
+</html>
