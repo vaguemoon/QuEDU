@@ -89,7 +89,7 @@ function renderCourseProgress(currSnap, cs) {
       return;
     }
 
-    wrap.innerHTML = versions.map(function(v) {
+    wrap.innerHTML = versions.map(function(v, vi) {
       // 按年級分組，保留出現順序
       var gradeOrder = [];
       var gradeMap   = {};
@@ -99,7 +99,29 @@ function renderCourseProgress(currSnap, cs) {
         gradeMap[g].push(l);
       });
 
-      var gradesHtml = gradeOrder.map(function(grade) {
+      // 計算版本整體進度摘要
+      var verTotal = 0, verMastered = 0;
+      v.lessons.forEach(function(l) {
+        l.chars.forEach(function(c) {
+          verTotal++;
+          if (cs[c] === 'mastered') verMastered++;
+        });
+      });
+      var verPct = verTotal ? Math.round(verMastered / verTotal * 100) : 0;
+      var verBodyId = 'cp-v-' + vi;
+
+      var gradesHtml = gradeOrder.map(function(grade, gi) {
+        // 計算年級進度摘要
+        var grTotal = 0, grMastered = 0;
+        gradeMap[grade].forEach(function(l) {
+          l.chars.forEach(function(c) {
+            grTotal++;
+            if (cs[c] === 'mastered') grMastered++;
+          });
+        });
+        var grPct = grTotal ? Math.round(grMastered / grTotal * 100) : 0;
+        var grBodyId = 'cp-v-' + vi + '-g-' + gi;
+
         var lessonsHtml = gradeMap[grade].map(function(l) {
           var total    = l.chars.length;
           if (!total) return '';
@@ -121,15 +143,35 @@ function renderCourseProgress(currSnap, cs) {
             + '</div>';
         }).join('');
 
-        return '<div style="margin-bottom:14px">'
-          + '<div style="font-size:.78rem;font-weight:900;color:var(--muted);letter-spacing:.5px;margin:10px 0 8px 2px">📖 ' + grade + '</div>'
+        return '<div style="margin-bottom:8px">'
+          + '<div onclick="(function(btn,body){var open=body.style.display!==\'none\';body.style.display=open?\'none\':\'block\';btn.querySelector(\'.cp-arrow\').style.transform=open?\'rotate(0deg)\':\'rotate(90deg)\';})(this,document.getElementById(\'' + grBodyId + '\'))"'
+          +   ' style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:5px 8px;border-radius:6px;background:#f4f6f9;user-select:none"'
+          +   ' onmouseover="this.style.background=\'#e8edf5\'" onmouseout="this.style.background=\'#f4f6f9\'">'
+          +   '<span style="font-size:.78rem;font-weight:900;color:var(--muted);letter-spacing:.5px">📖 ' + grade + '</span>'
+          +   '<span style="display:flex;align-items:center;gap:8px">'
+          +     '<span style="font-size:.75rem;font-weight:700;color:var(--muted)">' + grPct + '%</span>'
+          +     '<span class="cp-arrow" style="font-size:.7rem;color:var(--muted);transition:transform .2s;display:inline-block;transform:rotate(0deg)">▶</span>'
+          +   '</span>'
+          + '</div>'
+          + '<div id="' + grBodyId + '" style="display:none;padding:10px 4px 4px 4px">'
           + lessonsHtml
+          + '</div>'
           + '</div>';
       }).join('');
 
-      return '<div style="margin-bottom:16px">'
-        + '<div style="font-size:.8rem;font-weight:900;color:var(--blue-dk);background:var(--blue-lt);padding:5px 10px;border-radius:8px;margin-bottom:4px">📚 ' + v.name + '</div>'
+      return '<div style="margin-bottom:10px;border:1px solid #dde6f0;border-radius:10px;overflow:hidden">'
+        + '<div onclick="(function(btn,body){var open=body.style.display!==\'none\';body.style.display=open?\'none\':\'block\';btn.querySelector(\'.cp-arrow\').style.transform=open?\'rotate(0deg)\':\'rotate(90deg)\';})(this,document.getElementById(\'' + verBodyId + '\'))"'
+        +   ' style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:8px 12px;background:var(--blue-lt);user-select:none"'
+        +   ' onmouseover="this.style.background=\'#d6e8f7\'" onmouseout="this.style.background=\'var(--blue-lt)\'">'
+        +   '<span style="font-size:.82rem;font-weight:900;color:var(--blue-dk)">📚 ' + v.name + '</span>'
+        +   '<span style="display:flex;align-items:center;gap:10px">'
+        +     '<span style="font-size:.75rem;font-weight:700;color:var(--blue-dk)">' + verMastered + ' / ' + verTotal + ' 字・' + verPct + '%</span>'
+        +     '<span class="cp-arrow" style="font-size:.7rem;color:var(--blue-dk);transition:transform .2s;display:inline-block;transform:rotate(0deg)">▶</span>'
+        +   '</span>'
+        + '</div>'
+        + '<div id="' + verBodyId + '" style="display:none;padding:10px 12px 6px 12px">'
         + gradesHtml
+        + '</div>'
         + '</div>';
     }).join('');
   });
