@@ -225,6 +225,7 @@ function recordAndNext(char, mistakes, skipped) {
   } else {
     upgradeCharStatus(char, mistakes);
     sfxCelebrate();
+    if (typeof onExamCharPassed === 'function') onExamCharPassed(char);
   }
 
   saveProgress();

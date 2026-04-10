@@ -36,7 +36,9 @@
     <span id="topbar-avatar">🐣</span>
     <span id="topbar-name">—</span>
     <div id="topbar-logout-menu" class="logout-menu hidden">
-      <button onclick="sendLogout(event)">登出</button>
+      <button class="lm-btn lm-settings" onclick="goToSettings(event)">⚙️ 設定</button>
+      <button class="lm-btn lm-achievement" onclick="goToAchievement(event)">🏆 成就</button>
+      <button class="lm-btn lm-logout" onclick="sendLogout(event)">🚪 登出</button>
     </div>
   </div>
 </div>
@@ -283,6 +285,24 @@
   </div>
 </div>
 
+<div id="page-settings" class="page">
+  <div class="settings-body">
+    <div class="settings-section-title">🎨 主題色系</div>
+    <div id="theme-grid"></div>
+    <div class="settings-section-title">🔊 音效</div>
+    <div class="sound-row">
+      <span class="sound-label">練習音效</span>
+      <button class="sound-toggle-btn" id="sound-toggle-btn" onclick="toggleSound();applySound();">
+        <div class="sound-toggle-knob" id="sound-toggle-knob"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="page-achievement" class="page">
+  <!-- 由 renderAchievementPage() 填充 -->
+</div>
+
 <div id="toast"></div>
 <script src="../shared.js"></script>
 <script src="js/nav.js"></script>
@@ -293,6 +313,7 @@
 <script src="js/practice.js"></script>
 <script src="js/dictation.js"></script>
 <script src="js/exam.js"></script>
+<script src="js/achievement.js"></script>
 <script src="js/init.js"></script>
 </body>
 </html>

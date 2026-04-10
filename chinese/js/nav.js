@@ -6,13 +6,15 @@
 
 var PAGE_STACK = [];
 var PAGE_CONFIG = {
-  'mode-select': { title:'✏️ <span>練字趣</span>', back:false },
-  'curriculum':  { title:'📚 <span>選擇課程</span>',    back:true  },
-  'free':        { title:'✏️ <span>自由練習</span>',    back:true  },
-  'menu':        { title:'📋 <span>今天的生字</span>',  back:true  },
-  'mode':        { title:'選擇模式',                     back:true  },
-  'learn':       { title:'學習中',                       back:false },
-  'exam':        { title:'今日測驗',                     back:false }
+  'mode-select':  { title:'✏️ <span>練字趣</span>',    back:false },
+  'curriculum':   { title:'📚 <span>選擇課程</span>',   back:true  },
+  'free':         { title:'✏️ <span>自由練習</span>',   back:true  },
+  'menu':         { title:'📋 <span>今天的生字</span>', back:true  },
+  'mode':         { title:'選擇模式',                    back:true  },
+  'learn':        { title:'學習中',                      back:false },
+  'exam':         { title:'今日測驗',                    back:false },
+  'settings':     { title:'⚙️ <span>設定</span>',       back:true  },
+  'achievement':  { title:'🏆 <span>我的成就</span>',   back:true  }
 };
 var currentPage = 'mode-select';
 

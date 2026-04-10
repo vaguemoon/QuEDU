@@ -68,17 +68,120 @@
 #topbar-avatar { font-size: 1.1rem; line-height: 1; }
 #topbar-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .logout-menu {
-  position: absolute; top: calc(100% + 6px); right: 0;
-  background: white; border: 1.5px solid var(--border); border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(44,100,160,.18); min-width: 100px; overflow: hidden;
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 200;
+  background: white; border: 1.5px solid var(--border); border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(44,100,160,.22); min-width: 130px; overflow: hidden;
 }
 .logout-menu.hidden { display: none; }
-.logout-menu button {
-  display: block; width: 100%; padding: 12px 16px; border: none; background: none;
-  font-size: .88rem; font-weight: 800; color: var(--red); cursor: pointer;
-  font-family: inherit; text-align: center; transition: background .15s;
+.lm-btn {
+  display: block; width: 100%; padding: 13px 18px; border: none; background: none;
+  font-size: .9rem; font-weight: 800; cursor: pointer;
+  font-family: inherit; text-align: left; transition: background .15s;
 }
-.logout-menu button:active { background: #fff0f0; }
+.lm-settings   { color: var(--blue-dk); }
+.lm-settings:active   { background: var(--blue-lt); }
+.lm-achievement { color: #8e44ad; }
+.lm-achievement:active { background: #f3f0fc; }
+.lm-logout     { color: var(--red); border-top: 1px solid var(--border); }
+.lm-logout:active     { background: #fff0f0; }
+
+/* ── 設定頁 ── */
+.settings-body {
+  max-width: 480px; margin: 0 auto; padding: 20px 16px; display: flex;
+  flex-direction: column; gap: 8px;
+}
+.settings-section-title {
+  font-size: .82rem; font-weight: 900; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 16px 0 6px; border-bottom: 1.5px solid var(--border);
+}
+.settings-section-title:first-child { padding-top: 4px; }
+.sound-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+}
+.sound-label { font-size: .9rem; font-weight: 700; color: #333; }
+.sound-toggle-btn {
+  position: relative; width: 56px; height: 30px; border-radius: 15px;
+  background: #cbd5e1; border: none; cursor: pointer; transition: background .2s;
+}
+.sound-toggle-btn[data-on="true"] { background: var(--blue); }
+.sound-toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: white; transition: left .2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+
+/* ── 成就頁 ── */
+.ach-header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 16px 14px; background: var(--blue-lt);
+  border-bottom: 1.5px solid var(--border);
+}
+.ach-avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+.ach-avatar { font-size: 2.8rem; line-height: 1; }
+.ach-title-badge {
+  font-size: .72rem; font-weight: 900; color: white;
+  background: var(--blue); border-radius: 20px; padding: 2px 8px;
+  white-space: nowrap;
+}
+.ach-header-info { flex: 1; min-width: 0; }
+.ach-name { font-size: 1rem; font-weight: 900; color: var(--blue-dk); margin-bottom: 2px; }
+.ach-stars-count { font-size: 1.1rem; font-weight: 900; color: #e67e22; }
+.ach-next-hint { font-size: .78rem; font-weight: 700; color: var(--muted); margin: 4px 0 6px; }
+.ach-prog-bar {
+  height: 8px; background: #dde; border-radius: 4px; overflow: hidden;
+}
+.ach-prog-fill { height: 100%; background: var(--blue); border-radius: 4px; transition: width .4s; }
+
+.ach-legend {
+  padding: 8px 14px; font-size: .8rem; font-weight: 700; color: var(--muted);
+  display: flex; align-items: center; gap: 4px;
+}
+.ach-legend-item {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px; font-size: .75rem;
+  border: 1.5px solid #bbb;
+}
+.locked-demo   { background: #e8e8e8; color: #aaa; font-weight: 900; }
+.unlocked-demo { background: #4a90d9; border-color: #2d6fa8; }
+
+.ach-grid-wrap { padding: 6px 10px 16px; display: flex; flex-direction: column; gap: 10px; }
+.ach-row { display: flex; align-items: center; gap: 8px; }
+.ach-row-label {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 46px; flex-shrink: 0;
+}
+.ach-row-icon  { font-size: 1.3rem; line-height: 1; }
+.ach-row-name  { font-size: .6rem; font-weight: 800; color: var(--muted); text-align: center; }
+.ach-cells { display: flex; gap: 5px; flex-wrap: nowrap; overflow-x: auto; flex: 1; }
+.ach-cell {
+  width: 44px; min-width: 44px; height: 52px; border-radius: 10px;
+  border: 2px solid #bbb; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px;
+  cursor: default; transition: transform .1s; flex-shrink: 0;
+}
+.ach-unlocked { cursor: pointer; }
+.ach-unlocked:active { transform: scale(.93); }
+.ach-cell-icon { font-size: 1.1rem; line-height: 1; }
+.ach-cell-lv   { font-size: .6rem; font-weight: 900; }
+.ach-cell-star { font-size: .6rem; font-weight: 700; }
+.ach-cell-lock { font-size: 1rem; font-weight: 900; }
+.ach-cell-need { font-size: .55rem; font-weight: 700; text-align: center; line-height: 1.2; }
+
+.ach-daily-summary {
+  margin: 0 12px 24px; padding: 14px 16px;
+  background: var(--blue-lt); border-radius: 14px;
+  border: 1.5px solid var(--border);
+}
+.ach-daily-title { font-size: .85rem; font-weight: 900; color: var(--blue-dk); margin-bottom: 10px; }
+.ach-daily-row {
+  display: flex; justify-content: space-between;
+  font-size: .85rem; font-weight: 700; padding: 4px 0;
+  border-bottom: 1px solid var(--border); color: #444;
+}
+.ach-daily-row:last-child { border-bottom: none; }
 
 /* ── 畫面切換 ── */
 .page { display: none; }
