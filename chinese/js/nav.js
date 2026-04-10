@@ -46,6 +46,8 @@ function showPage(name, pushHistory) {
   }
 
   if (backBtn) backBtn.classList.toggle('hidden', !cfg.back);
+
+  if (name === 'menu' && typeof renderMenu === 'function') renderMenu();
 }
 
 function goBack() {

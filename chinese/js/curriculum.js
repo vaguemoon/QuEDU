@@ -173,9 +173,13 @@ function selectVersion(verId, verName, cardEl, color) {
     bookCards.innerHTML = '<div class="curr-loading">此版本暫無資料</div>';
   } else {
     books.forEach(function(b) {
+      var lessonCount = ((data.books || {})[b] || []).length;
       var card = document.createElement('button');
       card.className = 'curr-book-card';
-      card.textContent = b;
+      card.innerHTML =
+        '<span class="curr-book-icon">📖</span>' +
+        '<span class="curr-book-label">' + b + '</span>' +
+        '<span class="curr-book-meta">' + lessonCount + ' 課</span>';
       card.onclick = function() { selectBook(b); };
       bookCards.appendChild(card);
     });
@@ -198,7 +202,14 @@ function selectBook(bookId) {
   document.getElementById('step3-title').textContent =
     currSelectedVer.name + '　' + bookId;
 
-  lessons.forEach(function(lesson) {
+  // 垂直兩欄：左欄前半，右欄後半
+  var half = Math.ceil(lessons.length / 2);
+  var col1 = document.createElement('div');
+  var col2 = document.createElement('div');
+  col1.className = 'curr-lesson-col';
+  col2.className = 'curr-lesson-col';
+
+  lessons.forEach(function(lesson, i) {
     var card = document.createElement('button');
     card.className = 'curr-lesson-card';
     var preview = (lesson.chars || []).slice(0, 8).join(' ');
@@ -207,8 +218,11 @@ function selectBook(bookId) {
       '<div class="curr-lesson-name">' + (lesson.name || '') + '</div>' +
       '<div class="curr-lesson-chars">' + preview + '</div>';
     card.onclick = function() { selectLesson(lesson, card); };
-    lessonCards.appendChild(card);
+    (i < half ? col1 : col2).appendChild(card);
   });
+
+  lessonCards.appendChild(col1);
+  lessonCards.appendChild(col2);
 
   goToCurrStep(3);
 }

@@ -58,12 +58,6 @@ function renderMenu() {
   saveProgress();
   updateProgressBar();
 
-  // 背景預抓未快取字的筆畫數（首次載入時觸發，抓完後自動更新推薦）
-  prefetchStrokeCounts();
-
-  // 找出推薦字：筆畫最少的 new 字（利用已快取的萌典資料）
-  var recIdx = _getRecommendedIdx();
-
   var statusLabel = { new:'尚未學習', dictated:'通過默寫', mastered:'通過測驗' };
   var statusClass = { new:'status-new', dictated:'status-new', mastered:'status-mastered' };
 
@@ -72,50 +66,18 @@ function renderMenu() {
     var st   = (raw === 'mastered' || raw === 'dictated') ? raw : 'new';
     var base = st === 'mastered' ? 'char-card mastered' : st === 'dictated' ? 'char-card dictated' : 'char-card';
     var sel  = examSelectMode && examSelected[i];
-    var isRec = (!examSelectMode && i === recIdx);
-    var card = base + (sel ? ' exam-select-active' : '') + (isRec ? ' char-card-recommended' : '');
+    var card = base + (sel ? ' exam-select-active' : '');
     var onclick = examSelectMode
       ? 'onCardSelectToggle(' + i + ')'
       : 'onCardClick(event,' + i + ')';
-    var label = isRec ? '推薦練習' : statusLabel[st];
-    var cls   = isRec ? 'status-rec' : statusClass[st];
     return '<div class="' + card + '" id="card-' + i + '" onclick="' + onclick + '">'
       + (sel ? '<div class="char-card-select-check">✓</div>' : '<div class="char-card-check">✓</div>')
       + '<div class="char-card-glyph">' + c + '</div>'
-      + '<div class="char-card-status ' + cls + '">' + label + '</div>'
+      + '<div class="char-card-status ' + statusClass[st] + '">' + statusLabel[st] + '</div>'
       + '</div>';
   }).join('');
 
   _renderExamButtons();
-}
-
-// 獨立的筆畫數快取（不干擾 charInfoCache，避免蓋掉完整的注音造詞資料）
-var strokeCountCache = {};
-
-/**
- * 找出筆畫最少的 new 字的索引，作為推薦練習的字
- * 優先用 strokeCountCache 的筆畫數，快取未載入則取第一個 new 字
- */
-function _getRecommendedIdx() {
-  var newIdxs = [];
-  chars.forEach(function(c, i) {
-    if ((charStatus[c] || 'new') === 'new') newIdxs.push(i);
-  });
-  if (!newIdxs.length) return -1;
-
-  // 優先從 strokeCountCache，其次從完整的 charInfoCache 取筆畫數
-  function getStrokes(c) {
-    if (strokeCountCache[c] != null) return strokeCountCache[c];
-    if (charInfoCache[c] && charInfoCache[c].strokes !== '－') return parseInt(charInfoCache[c].strokes);
-    return null;
-  }
-
-  var withStrokes = newIdxs.filter(function(i) { return getStrokes(chars[i]) != null; });
-  if (withStrokes.length) {
-    withStrokes.sort(function(a, b) { return getStrokes(chars[a]) - getStrokes(chars[b]); });
-    return withStrokes[0];
-  }
-  return newIdxs[0]; // 快取未載入時退回第一個 new 字
 }
 
 /**
@@ -286,33 +248,3 @@ function nextChar() {
   }
 }
 
-/**
- * 背景預抓所有未快取字的萌典資料（僅取筆畫數與部首）
- * 全部完成後重新渲染選單，以更新推薦字
- */
-/**
- * 背景預抓所有未快取字的筆畫數，寫入獨立的 strokeCountCache
- * 不寫 charInfoCache，避免蓋掉 loadCharInfo 的完整資料
- */
-function prefetchStrokeCounts() {
-  var uncached = chars.filter(function(c) { return strokeCountCache[c] == null && !charInfoCache[c]; });
-  if (!uncached.length) return;
-
-  var done = 0;
-  var gotNew = false;
-  uncached.forEach(function(c) {
-    fetch('https://www.moedict.tw/' + encodeURIComponent(c) + '.json')
-      .then(function(res) { return res.ok ? res.json() : null; })
-      .then(function(data) {
-        if (data && strokeCountCache[c] == null) {
-          strokeCountCache[c] = data.stroke_count != null ? data.stroke_count : 999;
-          gotNew = true;
-        }
-      })
-      .catch(function() {})
-      .then(function() {
-        done++;
-        if (done === uncached.length && gotNew) renderMenu();
-      });
-  });
-}
