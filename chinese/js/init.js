@@ -78,6 +78,11 @@ window.addEventListener('load', function() {
           setTimeout(loadCurriculumVersions, 300);
           showToast('👋 歡迎 ' + (currentStudent.nickname || currentStudent.name) + '！');
 
+          // 載入成就統計，完成後處理每日登入
+          loadAchStats(function() {
+            handleDailyLogin();
+          });
+
         }).catch(function(e){ console.warn('autoLogin error:', e); });
       })();
 
@@ -99,6 +104,23 @@ function toggleLogoutMenu() {
 function sendLogout(evt) {
   if (evt) evt.stopPropagation();
   try { window.parent.postMessage({ type: 'hanzi-logout' }, '*'); } catch(e) {}
+}
+
+function goToSettings(evt) {
+  if (evt) evt.stopPropagation();
+  var menu = document.getElementById('topbar-logout-menu');
+  if (menu) menu.classList.add('hidden');
+  if (typeof renderThemeGrid === 'function') renderThemeGrid();
+  if (typeof applySound === 'function') applySound();
+  showPage('settings');
+}
+
+function goToAchievement(evt) {
+  if (evt) evt.stopPropagation();
+  var menu = document.getElementById('topbar-logout-menu');
+  if (menu) menu.classList.add('hidden');
+  if (typeof renderAchievementPage === 'function') renderAchievementPage();
+  showPage('achievement');
 }
 
 /* 點其他地方時收起選單 */

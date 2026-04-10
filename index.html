@@ -29,6 +29,12 @@
           <div class="role-title">學習<span>系統</span></div>
           <div class="role-subtitle">請選擇你的身份</div>
         </div>
+        <!-- 公告橫幅（由 checkSiteSettings 控制顯示） -->
+        <div id="announcement-banner" style="display:none;background:#fffbeb;border:1.5px solid #fbbf24;border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:.88rem;font-weight:700;color:#92400e;gap:8px;align-items:flex-start">
+          <span>📢</span>
+          <span id="announcement-text"></span>
+        </div>
+
         <div class="role-cards">
           <button class="role-card role-teacher" onclick="showPanel('teacher-login')">
             <div class="role-icon">👩‍🏫</div>
@@ -224,6 +230,13 @@
     </div>
 
   </div>
+</div>
+
+<!-- 維護模式覆蓋層（由 checkSiteSettings 控制顯示） -->
+<div id="maintenance-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.92);align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:32px">
+  <div style="font-size:3.5rem;margin-bottom:20px">🔧</div>
+  <div style="font-size:1.5rem;font-weight:900;color:white;margin-bottom:10px">系統維護中</div>
+  <div style="font-size:.95rem;font-weight:600;color:rgba(255,255,255,.7);max-width:320px;line-height:1.6">系統目前正在進行維護，請稍後再回來。<br>造成不便，敬請見諒。</div>
 </div>
 
 <div class="overlay" id="logout-overlay">

@@ -146,7 +146,7 @@ function toggleSound() {
 function showToast(msg) {
   var t = document.getElementById('toast');
   if (!t) return;
-  t.innerHTML = msg;
+  t.textContent = msg;
   t.classList.add('show');
   setTimeout(function() { t.classList.remove('show'); }, 2800);
 }

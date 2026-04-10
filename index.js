@@ -93,6 +93,9 @@ function doLogin(){
 function onLoginSuccess(student){
   currentStudent=student; selectedAvatar=student.avatar||'🐣';
   sessionStorage.setItem('hub_student',JSON.stringify(student));
+  db.collection('students').doc(student.id)
+    .update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() })
+    .catch(function(){});
   renderHub(); showPanel('hub'); loadActivity();
   showToast('👋 歡迎，'+(student.nickname||student.name)+'！');
 }
@@ -216,8 +219,23 @@ function renderHub(){
       '<span class="subject-icon">'+s.icon+'</span>'+
       '<div class="subject-name">'+s.name+'</div>'+
       '<div class="subject-desc">'+s.desc+'</div>'+
-      '<div class="subject-badge '+s.badgeClass+'">'+s.badge+'</div></div>';
+      '<div class="subject-badge '+s.badgeClass+'" id="badge-'+s.id+'">'+s.badge+'</div></div>';
   }).join('');
+  loadSubjectBadges();
+}
+
+function loadSubjectBadges(){
+  if(!currentStudent||!db) return;
+  // 練字趣：從 stats/profile 取得稱號
+  db.collection('students').doc(currentStudent.id)
+    .collection('stats').doc('profile')
+    .get().then(function(doc){
+      var el=document.getElementById('badge-chinese');
+      if(!el) return;
+      if(doc.exists && doc.data().title){
+        el.textContent=doc.data().title;
+      }
+    }).catch(function(){});
 }
 
 /* 子項目 iframe */
@@ -261,7 +279,7 @@ function showProfile(){
   document.getElementById('profile-avatar-big').textContent=currentStudent.avatar||'🐣';
   document.getElementById('profile-header-name').textContent=currentStudent.nickname||currentStudent.name;
   selectedAvatar=currentStudent.avatar||'🐣';
-  renderAvatarGrid(); renderThemeGrid(); applySoundUI();
+  renderAvatarGrid(); _renderHubThemeGrid(); applySoundUI();
   loadStudentClass();
   showPanel('profile');
 }
@@ -347,14 +365,14 @@ function renderAvatarGrid(){
   }).join('');
 }
 function selectAvatar(av){selectedAvatar=av;document.getElementById('profile-avatar-big').textContent=av;renderAvatarGrid();}
-function renderThemeGrid(){
+function _renderHubThemeGrid(){
   var cur=localStorage.getItem('theme')||'blue';
   document.getElementById('theme-grid').innerHTML=THEMES.map(function(t){
     return '<button class="theme-btn'+(t.id===cur?' selected':'')+
       '" style="background:'+t.bg+';color:'+t.blueDk+'" onclick="selectTheme(\''+t.id+'\')">'+t.name+'</button>';
   }).join('');
 }
-function selectTheme(id){applyTheme(id);renderThemeGrid();}
+function selectTheme(id){applyTheme(id);_renderHubThemeGrid();}
 function applySoundUI(){
   var on=soundEnabled;
   var btn=document.getElementById('sound-toggle');
@@ -414,9 +432,35 @@ window.addEventListener('message',function(e){
   });
 })();
 
+/* 系統設定（維護模式 / 公告） */
+function checkSiteSettings() {
+  if (!db) { setTimeout(checkSiteSettings, 400); return; }
+  db.collection('siteSettings').doc('main').get()
+    .then(function(doc) {
+      if (!doc.exists) return;
+      var data = doc.data();
+      // 維護模式
+      if (data.maintenanceMode) {
+        var overlay = document.getElementById('maintenance-overlay');
+        if (overlay) overlay.style.display = 'flex';
+      }
+      // 公告橫幅
+      if (data.announcement && data.announcement.trim()) {
+        var banner = document.getElementById('announcement-banner');
+        var text   = document.getElementById('announcement-text');
+        if (banner && text) {
+          text.textContent = data.announcement.trim();
+          banner.style.display = 'flex';
+        }
+      }
+    })
+    .catch(function() {}); // 讀取失敗時靜默略過，不影響正常使用
+}
+
 /* 啟動 */
 window.addEventListener('load',function(){
   initFirebase(); applyTheme(currentTheme);
+  checkSiteSettings();
   try{
     var saved=sessionStorage.getItem('hub_student');
     if(saved){

@@ -28,6 +28,8 @@ injectStyle('exam-grid-style', [
   '.exam-compact-card.skip .exam-compact-label{color:#5F5E5A;}'
 ]);
 
+var EXAM_FAIL_MISTAKES = 99;  // 超過通過門檻，確保結果為不通過（用於跳過或強制失敗）
+
 // ── 測驗狀態 ──
 var examQueue         = [];   // 本輪待測字陣列
 var examQIdx          = 0;    // 目前題目索引
@@ -63,7 +65,7 @@ function startFullExam(customChars) {
   sfxSwipe();
   var src = (customChars && customChars.length) ? customChars : chars;
   if (!src.length) return;
-  examQueue   = src.slice().sort(function(){ return Math.random() - .5; });
+  examQueue   = shuffle(src);
   examQIdx    = 0; examResults = {}; examRound = 1; examFailed = [];
   showPage('exam');
   setTimeout(function() {
@@ -104,13 +106,12 @@ function showExamQuestion() {
       sz = parseFloat(cssGrid) || 300;
     }
     examQSz     = sz;
-    examQWriter = HanziWriter.create('exam-quiz-target', char, {
-      width: examQSz, height: examQSz, padding: Math.round(examQSz * 0.07),
-      strokeColor: '#2d6fa8', outlineColor: 'rgba(0,0,0,0)',
-      drawingColor: '#2d6fa8', drawingWidth: Math.max(4, Math.round(examQSz * 0.013)),
-      highlightColor: 'rgba(255,213,79,1)', showCharacter: false, showOutline: false, leniency: 1.2,
-      onLoadCharDataSuccess: function(){ startExamQQuiz(char); }
-    });
+    examQWriter = HanziWriter.create('exam-quiz-target', char,
+      makeWriterOpts(examQSz, {
+        outlineColor: 'rgba(0,0,0,0)', highlightColor: 'rgba(255,213,79,1)', showOutline: false,
+        onLoadCharDataSuccess: function(){ startExamQQuiz(char); }
+      })
+    );
     setTimeout(function(){ playExamVoice(); }, 600);
   });
 }
@@ -153,43 +154,29 @@ function startExamQQuiz(char) {
           while (target.firstChild) target.removeChild(target.firstChild);
         }
 
-        examQWriter = HanziWriter.create('exam-quiz-target', char, {
-          width: examQSz, height: examQSz,
-          padding: Math.round(examQSz * 0.08),
-          strokeColor: '#2d6fa8',
-          outlineColor: '#c8dff5',
-          drawingColor: '#2d6fa8',
-          drawingWidth: Math.max(4, Math.round(examQSz * 0.013)),
-          highlightColor: '#ffd54f',
-          showCharacter: true,
-          showOutline: true,
-          leniency: 1.5,
-          onLoadCharDataSuccess: function() {
-            examQWriter.quiz({
-              showHintAfterMisses: 1,
-              markStrokeCorrectAfterMisses: 3,
-              leniency: 1.5,
-              onMistake: function() { sfxWrong(); },
-              onCorrectStroke: function() {
-                sfxCorrect();
-                flashBox('exam-quiz-target', 'green');
-              },
-              onComplete: function() {
-                recordAndNext(char, 99, false);  // mistakes 設 99 確保算不通過
-              }
-            });
-          }
-        });
+        examQWriter = HanziWriter.create('exam-quiz-target', char,
+          makeWriterOpts(examQSz, {
+            padding: Math.round(examQSz * 0.08),
+            showCharacter: true, leniency: 1.5,
+            onLoadCharDataSuccess: function() {
+              examQWriter.quiz({
+                showHintAfterMisses: 1,
+                markStrokeCorrectAfterMisses: 3,
+                leniency: 1.5,
+                onMistake: function() { sfxWrong(); },
+                onCorrectStroke: function() {
+                  sfxCorrect();
+                  flashBox('exam-quiz-target', 'green');
+                },
+                onComplete: function() {
+                  recordAndNext(char, EXAM_FAIL_MISTAKES, false);
+                }
+              });
+            }
+          })
+        );
       }
-
-
-
-      
     },
-    // 總錯誤達 6 筆，顯示整個字讓學生描寫
-  
-     
-
     onCorrectStroke: function() {
       examQStrokeMistakes = 0;
       flashBox('exam-quiz-target', 'green'); sfxCorrect();
@@ -205,7 +192,7 @@ function skipExamChar() {
   sfxTap();
   var char = examQueue[examQIdx];
   if (examQWriter) { try { examQWriter.cancelQuiz(); } catch(e){} examQWriter = null; }
-  recordAndNext(char, 99, true);
+  recordAndNext(char, EXAM_FAIL_MISTAKES, true);
 }
 
 /**
@@ -225,6 +212,7 @@ function recordAndNext(char, mistakes, skipped) {
   } else {
     upgradeCharStatus(char, mistakes);
     sfxCelebrate();
+    if (typeof onExamCharPassed === 'function') onExamCharPassed(char);
   }
 
   saveProgress();
@@ -292,7 +280,7 @@ function showRoundSummary() {
 function doStartNextRound() {
   sfxTap();
   examRound++;
-  examQueue  = examFailed.slice().sort(function(){ return Math.random() - .5; });
+  examQueue  = shuffle(examFailed);
   examQIdx   = 0; examFailed = [];
   switchExamPanel('question');
   updateExamHeader();

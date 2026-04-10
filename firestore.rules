@@ -1,0 +1,46 @@
+rules_version = '2';
+// 部署指令：firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 系統設定（維護模式、公告）—— index.html 不需登入就要讀，所以允許公開讀
+    match /siteSettings/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 管理者白名單 —— 登入流程需要讀取，任何已登入使用者可讀
+    match /superAdmins/{doc} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // 教師帳號 —— 管理者後台需讀取全部，任何已登入使用者可讀
+    match /teachers/{uid} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // 班級 —— 學生 PIN 登入後需查詢班級，所以允許公開讀
+    match /classes/{classId} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 學生 —— PIN 登入不走 Firebase Auth，需要公開讀寫
+    match /students/{studentId} {
+      allow read:  if true;
+      allow write: if true;
+    }
+    match /students/{studentId}/{sub}/{doc} {
+      allow read:  if true;
+      allow write: if true;
+    }
+
+    // 課程 —— 已登入使用者（教師/管理者）可讀寫
+    match /curriculum/{doc=**} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}

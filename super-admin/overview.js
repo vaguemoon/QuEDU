@@ -113,22 +113,15 @@ function countTodayActive(studentsSnap, today) {
   var done = 0;
 
   studentsSnap.forEach(function(doc) {
-    db.collection('students').doc(doc.id)
-      .collection('progress').doc('hanzi').get()
-      .then(function(pd) {
-        if (pd.exists && pd.data().lastSeen &&
-            pd.data().lastSeen.seconds * 1000 > today.getTime()) {
-          activeCount++;
-        }
-      })
-      .catch(function() {})
-      .then(function() {
-        done++;
-        if (done === total) {
-          var el = document.getElementById('stat-active');
-          if (el) el.textContent = activeCount;
-        }
-      });
+    var ls = doc.data().lastSeen;
+    if (ls && ls.seconds * 1000 > today.getTime()) {
+      activeCount++;
+    }
+    done++;
+    if (done === total) {
+      var el = document.getElementById('stat-active');
+      if (el) el.textContent = activeCount;
+    }
   });
 }
 

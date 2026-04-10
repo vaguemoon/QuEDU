@@ -231,24 +231,44 @@ body {
 .char-status-item:hover { transform:scale(1.06); }
 .char-status-item.selecting { outline:3px solid var(--blue); outline-offset:2px; }
 
-/* 課程管理 */
+/* 課程管理 —— 舊版（保留相容，不再新增使用） */
 .version-item {
   display:flex; align-items:center; gap:10px; padding:10px 12px;
   border-radius:10px; border:1.5px solid var(--border);
-  margin-bottom:8px; cursor:pointer; transition:all .15s;
-  background:white;
+  margin-bottom:8px; cursor:pointer; transition:all .15s; background:white;
 }
 .version-item:hover { border-color:var(--blue); background:var(--blue-lt); }
 .version-item.active { border-color:var(--blue); background:var(--blue-lt); }
 .version-name { font-size:.92rem; font-weight:800; color:var(--text); flex:1; }
 .version-meta { font-size:.75rem; color:var(--muted); font-weight:600; }
 
-.book-section { margin-bottom:16px; }
+/* 課程管理 —— 手風琴版本列表 */
+.version-accordion {
+  border-radius:10px; border:1.5px solid var(--border);
+  margin-bottom:8px; background:white; transition:border-color .15s;
+  overflow:hidden;
+}
+.version-accordion.open { border-color:var(--blue); }
+.version-accordion-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; cursor:pointer; transition:background .15s;
+  user-select:none;
+}
+.version-accordion-header:hover { background:var(--blue-lt); }
+.version-accordion-body {
+  padding:12px 14px 14px; border-top:1px solid var(--border);
+}
+
+/* 冊次折疊（一上、一下…） */
+.book-section { margin-bottom:10px; }
 .book-title {
   font-size:.88rem; font-weight:900; color:var(--blue-dk);
   background:var(--blue-lt); border-radius:8px; padding:7px 12px;
-  margin-bottom:8px;
+  margin-bottom:0; display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; user-select:none; transition:background .15s;
 }
+.book-title:hover { background:#dbeafe; }
+.book-grade-body { padding:8px 0 4px; }
 .lesson-item {
   display:flex; align-items:center; gap:10px; padding:8px 12px;
   border-radius:8px; border:1px solid var(--border); margin-bottom:6px;

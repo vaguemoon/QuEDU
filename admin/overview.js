@@ -40,7 +40,7 @@ function loadClassRoster(classId) {
             students.push({
               id:         s.id,
               name:       s.data.name || s.id,
-              lastSeen:   pd.exists && pd.data().lastSeen ? pd.data().lastSeen : null,
+              lastSeen:   s.data.lastSeen || null,
               charStatus: pd.exists ? (pd.data().charStatus || {}) : {}
             });
           })

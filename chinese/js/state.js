@@ -77,3 +77,32 @@ function upgradeCharStatus(char, mistakes) {
 function markDictated(char) {
   if (charStatus[char] !== 'mastered') charStatus[char] = 'dictated';
 }
+
+/**
+ * HanziWriter 選項工廠（避免重複配置）
+ * 預設為「練習格」樣式；透過 overrides 覆蓋個別選項
+ * @param {number} sz        格子像素尺寸
+ * @param {object} overrides 覆蓋預設值的選項（含 onLoadCharDataSuccess 等回呼）
+ */
+function makeWriterOpts(sz, overrides) {
+  return Object.assign({
+    width: sz, height: sz, padding: Math.round(sz * 0.07),
+    strokeColor: '#2d6fa8', outlineColor: '#c8dff5',
+    drawingColor: '#2d6fa8', drawingWidth: Math.max(4, Math.round(sz * 0.013)),
+    highlightColor: '#ffd54f', showCharacter: false, showOutline: true, leniency: 1.2
+  }, overrides || {});
+}
+
+/**
+ * Fisher-Yates 無偏隨機排列
+ * @param {Array} arr 來源陣列（不修改原陣列）
+ * @returns {Array} 新的隨機排列陣列
+ */
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}

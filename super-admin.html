@@ -178,26 +178,6 @@
     <!-- ③ 課程管理（與教師後台共用 curriculum.js） -->
     <div id="panel-curriculum" style="display:none">
 
-      <!-- 版本選擇 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">📚 課程版本
-          <button class="btn-edit" style="margin-left:auto" onclick="showAddVersion()">＋ 新增版本</button>
-        </div>
-        <div id="version-list-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-        <div id="add-version-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <input id="new-version-name" type="text" placeholder="例如：太平國小112學年"
-              style="flex:1;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.92rem;font-family:inherit;outline:none;min-width:180px">
-            <button class="btn-save-lesson" style="padding:9px 18px" onclick="addVersion()">
-              <span>＋</span><span>建立</span>
-            </button>
-            <button class="btn-edit" onclick="hideAddVersion()">取消</button>
-          </div>
-        </div>
-      </div>
-
       <!-- CSV 上傳 -->
       <div class="card" style="margin-bottom:16px" id="csv-upload-card">
         <div class="card-title">📥 批次匯入課程（CSV）</div>
@@ -269,13 +249,32 @@
         </div>
       </div>
 
-      <!-- 課程內容瀏覽 -->
-      <div class="card" id="curriculum-browse-card" style="display:none">
-        <div class="card-title">
-          <span id="browse-version-name">課程內容</span>
-          <button class="btn-danger" style="margin-left:auto;font-size:.75rem;padding:4px 10px" onclick="deleteVersion()">🗑 刪除此版本</button>
+      <!-- 課程版本 + 課程資料（折疊頁） -->
+      <div class="card" id="curriculum-versions-card">
+        <div class="card-title" onclick="toggleVersionsPanel()" style="cursor:pointer;user-select:none">
+          📚 課程版本與資料
+          <button class="btn-edit" style="margin-left:auto;margin-right:10px"
+            onclick="event.stopPropagation();showAddVersion()">＋ 新增版本</button>
+          <span id="versions-toggle-icon" style="font-size:.85rem;color:var(--muted)">▼</span>
         </div>
-        <div id="curriculum-content"></div>
+        <!-- 預設閉合 -->
+        <div id="versions-panel-body" style="display:none">
+          <!-- 版本清單 -->
+          <div id="version-list-wrap">
+            <div class="loading-wrap"><div class="spinner"></div></div>
+          </div>
+          <!-- 新增版本表單 -->
+          <div id="add-version-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input id="new-version-name" type="text" placeholder="例如：太平國小112學年"
+                style="flex:1;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.92rem;font-family:inherit;outline:none;min-width:180px">
+              <button class="btn-save-lesson" style="padding:9px 18px" onclick="addVersion()">
+                <span>＋</span><span>建立</span>
+              </button>
+              <button class="btn-edit" onclick="hideAddVersion()">取消</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

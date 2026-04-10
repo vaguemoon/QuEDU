@@ -225,13 +225,9 @@ function switchPracticeTab(tab) {
         if (!char || !qt) return;
         qt.innerHTML = ''; qt.classList.remove('flash-green', 'flash-red');
         var sz = qt.getBoundingClientRect().width || currentPracticeSz || getGridPx();
-        quizWriter = HanziWriter.create('quiz-target', char, {
-          width: sz, height: sz, padding: Math.round(sz * 0.07),
-          strokeColor: '#2d6fa8', outlineColor: '#c8dff5',
-          drawingColor: '#2d6fa8', drawingWidth: Math.max(4, Math.round(sz * 0.013)),
-          highlightColor: '#ffd54f', showCharacter: false, showOutline: true, leniency: 1.2,
-          onLoadCharDataSuccess: function(){ startQuiz(); }
-        });
+        quizWriter = HanziWriter.create('quiz-target', char,
+          makeWriterOpts(sz, { onLoadCharDataSuccess: function(){ startQuiz(); } })
+        );
       });
     }
   }
@@ -284,13 +280,9 @@ function initQuiz(char) {
   if (!qt) return;
   qt.innerHTML = ''; qt.classList.remove('flash-green', 'flash-red');
   var sz = getGridPx();
-  quizWriter = HanziWriter.create('quiz-target', char, {
-    width: sz, height: sz, padding: Math.round(sz * 0.07),
-    strokeColor: '#2d6fa8', outlineColor: '#c8dff5',
-    drawingColor: '#2d6fa8', drawingWidth: Math.max(4, Math.round(sz * 0.013)),
-    highlightColor: '#ffd54f', showCharacter: false, showOutline: true, leniency: 1.2,
-    onLoadCharDataSuccess: function(){ startQuiz(); }
-  });
+  quizWriter = HanziWriter.create('quiz-target', char,
+    makeWriterOpts(sz, { onLoadCharDataSuccess: function(){ startQuiz(); } })
+  );
 }
 
 function startQuiz() {
@@ -368,13 +360,12 @@ function initExam(char) {
   qt.innerHTML = ''; qt.classList.remove('flash-green', 'flash-red');
   examMistakes = 0; examStrokes = 0;
   var sz = getGridPx();
-  examWriter = HanziWriter.create('quiz-target', char, {
-    width: sz, height: sz, padding: Math.round(sz * 0.07),
-    strokeColor: '#2d6fa8', outlineColor: 'rgba(0,0,0,0)',
-    drawingColor: '#2d6fa8', drawingWidth: Math.max(4, Math.round(sz * 0.013)),
-    highlightColor: 'rgba(0,0,0,0)', showCharacter: false, showOutline: false, leniency: 1.2,
-    onLoadCharDataSuccess: function(){ startExamQuiz(char); }
-  });
+  examWriter = HanziWriter.create('quiz-target', char,
+    makeWriterOpts(sz, {
+      outlineColor: 'rgba(0,0,0,0)', highlightColor: 'rgba(0,0,0,0)', showOutline: false,
+      onLoadCharDataSuccess: function(){ startExamQuiz(char); }
+    })
+  );
 }
 
 function startExamQuiz(char) {
@@ -460,13 +451,9 @@ function rebuildWriters() {
       quizWriter = null;
       requestAnimationFrame(function() {
         var sz = qt.getBoundingClientRect().width || getGridPxFromCSS();
-        quizWriter = HanziWriter.create('quiz-target', char, {
-          width: sz, height: sz, padding: Math.round(sz * 0.07),
-          strokeColor: '#2d6fa8', outlineColor: '#c8dff5',
-          drawingColor: '#2d6fa8', drawingWidth: Math.max(4, Math.round(sz * 0.013)),
-          highlightColor: '#ffd54f', showCharacter: false, showOutline: true, leniency: 1.2,
-          onLoadCharDataSuccess: function(){ startQuiz(); }
-        });
+        quizWriter = HanziWriter.create('quiz-target', char,
+          makeWriterOpts(sz, { onLoadCharDataSuccess: function(){ startQuiz(); } })
+        );
       });
     }
   } else if (currentMode === 'single-exam') {
