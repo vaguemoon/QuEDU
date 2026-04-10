@@ -255,9 +255,10 @@
           📚 課程版本與資料
           <button class="btn-edit" style="margin-left:auto;margin-right:10px"
             onclick="event.stopPropagation();showAddVersion()">＋ 新增版本</button>
-          <span id="versions-toggle-icon" style="font-size:.85rem;color:var(--muted)">▲</span>
+          <span id="versions-toggle-icon" style="font-size:.85rem;color:var(--muted)">▼</span>
         </div>
-        <div id="versions-panel-body">
+        <!-- 預設閉合 -->
+        <div id="versions-panel-body" style="display:none">
           <!-- 版本清單 -->
           <div id="version-list-wrap">
             <div class="loading-wrap"><div class="spinner"></div></div>

@@ -56,12 +56,11 @@ function loadVersions() {
     wrap.innerHTML = '';
     allVersions.forEach(function(v) {
       var item = document.createElement('div');
-      item.className = 'version-item';
+      item.className = 'version-accordion';
       item.id = 'vi-' + v.id;
 
       var header = document.createElement('div');
-      header.style.cssText =
-        'display:flex;align-items:center;justify-content:space-between;cursor:pointer';
+      header.className = 'version-accordion-header';
       header.innerHTML =
         '<div style="display:flex;align-items:center;gap:10px">' +
           '<div class="version-name">📚 ' + v.name + '</div>' +
@@ -75,7 +74,9 @@ function loadVersions() {
         return function() { toggleVersionContent(id, name); };
       })(v.id, v.name));
 
+      /* 預設閉合 */
       var content = document.createElement('div');
+      content.className = 'version-accordion-body';
       content.id = 'vc-' + v.id;
       content.style.display = 'none';
 
@@ -95,16 +96,19 @@ function loadVersions() {
 // ════════════════════════════════════════
 
 function toggleVersionContent(vId, vName) {
+  var item    = document.getElementById('vi-' + vId);
   var content = document.getElementById('vc-' + vId);
   var ico     = document.getElementById('vi-ico-' + vId);
   if (!content) return;
 
   if (content.style.display !== 'none') {
     content.style.display = 'none';
-    if (ico) ico.textContent = '▶';
+    if (ico)  ico.textContent = '▶';
+    if (item) item.classList.remove('open');
   } else {
     content.style.display = '';
-    if (ico) ico.textContent = '▼';
+    if (ico)  ico.textContent = '▼';
+    if (item) item.classList.add('open');
     if (!content.dataset.loaded) {
       loadVersionContent(vId, vName, content);
     }
@@ -145,17 +149,17 @@ function loadVersionContent(vId, vName, container) {
       });
 
       /* 渲染冊次折疊區塊 */
-      var html = '<div style="margin-top:10px">';
+      var html = '';
       gradeOrder.forEach(function(grade) {
         var gId = 'vg-' + vId + '-' + grade.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_');
+        /* 冊次預設閉合（display:none，圖示 ▼） */
         html +=
           '<div class="book-section">' +
-          '<div class="book-title" onclick="toggleGradeSection(\'' + _escQ(gId) + '\')" ' +
-               'style="cursor:pointer;display:flex;align-items:center;justify-content:space-between">' +
+          '<div class="book-title" onclick="toggleGradeSection(\'' + _escQ(gId) + '\')">' +
             '<span>' + grade + '</span>' +
-            '<span id="' + gId + '-ico" style="font-size:.72rem;color:var(--muted)">▲</span>' +
+            '<span id="' + gId + '-ico" style="font-size:.72rem">▼</span>' +
           '</div>' +
-          '<div id="' + gId + '">';
+          '<div class="book-grade-body" id="' + gId + '" style="display:none">';
 
         grades[grade].forEach(function(lesson) {
           html +=
@@ -170,9 +174,8 @@ function loadVersionContent(vId, vName, container) {
             '</div>';
         });
 
-        html += '</div></div>'; /* 關閉 gId div 與 book-section */
+        html += '</div></div>'; /* 關閉 book-grade-body 與 book-section */
       });
-      html += '</div>';
       html += _deleteVersionBtn(vId, vName);
 
       container.innerHTML = html;
@@ -202,6 +205,7 @@ function toggleGradeSection(gId) {
   if (!el) return;
   var hidden = el.style.display === 'none';
   el.style.display = hidden ? '' : 'none';
+  /* ▼ = 閉合中（可展開）  ▲ = 展開中（可收合） */
   if (ico) ico.textContent = hidden ? '▲' : '▼';
 }
 
