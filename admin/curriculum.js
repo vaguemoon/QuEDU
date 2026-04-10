@@ -77,6 +77,16 @@ function addVersion() {
   }).catch(function(e){ showToast('❌ 建立失敗：'+e.message); });
 }
 
+// ── 折疊版本面板 ──
+function toggleVersionsPanel() {
+  var body = document.getElementById('versions-panel-body');
+  var icon = document.getElementById('versions-toggle-icon');
+  if (!body) return;
+  var collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  if (icon) icon.textContent = collapsed ? '▲' : '▼';
+}
+
 // ── 刪除版本 ──
 function deleteVersion() {
   if (!currentVersionId) return;
@@ -84,7 +94,8 @@ function deleteVersion() {
   db.collection('curriculum').doc(currentVersionId).delete().then(function() {
     showToast('🗑 已刪除「'+currentVersionName+'」。');
     currentVersionId = null;
-    document.getElementById('curriculum-browse-card').style.display = 'none';
+    var browseSection = document.getElementById('curriculum-browse-section');
+    if (browseSection) browseSection.style.display = 'none';
     loadVersions();
   }).catch(function(e){ showToast('❌ 刪除失敗：'+e.message); });
 }
@@ -100,8 +111,8 @@ function browseVersion(versionId, versionName) {
   if (vi) vi.classList.add('active');
 
   document.getElementById('browse-version-name').textContent = '📚 ' + versionName;
-  var card = document.getElementById('curriculum-browse-card');
-  card.style.display = '';
+  var card = document.getElementById('curriculum-browse-section');
+  if (card) card.style.display = '';
   document.getElementById('curriculum-content').innerHTML =
     '<div class="loading-wrap"><div class="spinner"></div></div>';
 

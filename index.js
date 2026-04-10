@@ -414,9 +414,35 @@ window.addEventListener('message',function(e){
   });
 })();
 
+/* 系統設定（維護模式 / 公告） */
+function checkSiteSettings() {
+  if (!db) { setTimeout(checkSiteSettings, 400); return; }
+  db.collection('siteSettings').doc('main').get()
+    .then(function(doc) {
+      if (!doc.exists) return;
+      var data = doc.data();
+      // 維護模式
+      if (data.maintenanceMode) {
+        var overlay = document.getElementById('maintenance-overlay');
+        if (overlay) overlay.style.display = 'flex';
+      }
+      // 公告橫幅
+      if (data.announcement && data.announcement.trim()) {
+        var banner = document.getElementById('announcement-banner');
+        var text   = document.getElementById('announcement-text');
+        if (banner && text) {
+          text.textContent = data.announcement.trim();
+          banner.style.display = 'flex';
+        }
+      }
+    })
+    .catch(function() {}); // 讀取失敗時靜默略過，不影響正常使用
+}
+
 /* 啟動 */
 window.addEventListener('load',function(){
   initFirebase(); applyTheme(currentTheme);
+  checkSiteSettings();
   try{
     var saved=sessionStorage.getItem('hub_student');
     if(saved){
