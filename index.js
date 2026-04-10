@@ -219,8 +219,23 @@ function renderHub(){
       '<span class="subject-icon">'+s.icon+'</span>'+
       '<div class="subject-name">'+s.name+'</div>'+
       '<div class="subject-desc">'+s.desc+'</div>'+
-      '<div class="subject-badge '+s.badgeClass+'">'+s.badge+'</div></div>';
+      '<div class="subject-badge '+s.badgeClass+'" id="badge-'+s.id+'">'+s.badge+'</div></div>';
   }).join('');
+  loadSubjectBadges();
+}
+
+function loadSubjectBadges(){
+  if(!currentStudent||!db) return;
+  // 練字趣：從 stats/profile 取得稱號
+  db.collection('students').doc(currentStudent.id)
+    .collection('stats').doc('profile')
+    .get().then(function(doc){
+      var el=document.getElementById('badge-chinese');
+      if(!el) return;
+      if(doc.exists && doc.data().title){
+        el.textContent=doc.data().title;
+      }
+    }).catch(function(){});
 }
 
 /* 子項目 iframe */
