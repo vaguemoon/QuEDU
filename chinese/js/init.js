@@ -105,11 +105,35 @@ function sendLogout(evt) {
   try { window.parent.postMessage({ type: 'hanzi-logout' }, '*'); } catch(e) {}
 }
 
+var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','🐯','🐨','🐮','🐷','🐙','🦋','🌟','🌈','🎈','🚀','🎯'];
+
+function renderSettingsAvatarGrid() {
+  var grid = document.getElementById('settings-avatar-grid');
+  if (!grid) return;
+  var current = (currentStudent && currentStudent.avatar) ? currentStudent.avatar : '🐣';
+  grid.innerHTML = AVATARS.map(function(av) {
+    return '<button class="avatar-btn' + (av === current ? ' selected' : '') +
+      '" onclick="selectSettingsAvatar(\'' + av + '\')">' + av + '</button>';
+  }).join('');
+}
+
+function selectSettingsAvatar(av) {
+  if (!currentStudent) return;
+  currentStudent.avatar = av;
+  var avEl = document.getElementById('topbar-avatar');
+  if (avEl) avEl.textContent = av;
+  if (db && currentStudent.id) {
+    db.collection('students').doc(currentStudent.id).update({ avatar: av }).catch(function(){});
+  }
+  renderSettingsAvatarGrid();
+}
+
 function goToSettings(evt) {
   if (evt) evt.stopPropagation();
   var menu = document.getElementById('topbar-logout-menu');
   if (menu) menu.classList.add('hidden');
   if (typeof renderThemeGrid === 'function') renderThemeGrid();
+  renderSettingsAvatarGrid();
   if (typeof applySound === 'function') applySound();
   showPage('settings');
 }

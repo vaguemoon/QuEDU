@@ -107,6 +107,14 @@
   max-width: 480px; margin: 0 auto; padding: 20px 16px; display: flex;
   flex-direction: column; gap: 8px;
 }
+/* 設定頁：頭像格（shared.css 的 .avatar-grid 是 5 欄，這裡改 4 欄更適合） */
+#settings-avatar-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 4px;
+}
+/* 設定頁：主題色格（3 欄，index.css 未載入故在此補上） */
+#page-settings #theme-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 4px;
+}
 .settings-section-title {
   font-size: .82rem; font-weight: 900; color: var(--muted);
   text-transform: uppercase; letter-spacing: .05em;
