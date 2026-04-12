@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>太平國小｜教師管理後台</title>
+<title>上學趣｜教師管理後台</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -22,7 +22,7 @@
     <div class="topbar-brand">
       <div class="topbar-brand-icon">🏫</div>
       <div>
-        <div class="topbar-brand-name">太平國小 教師後台</div>
+        <div class="topbar-brand-name">上學趣 教師後台</div>
         <div class="topbar-brand-sub">國字學習管理系統</div>
       </div>
     </div>
@@ -131,6 +131,48 @@
   </div>
 </div>
 
+<!-- 分享班級 Modal -->
+<div id="share-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:6px">📤 分享給家長</div>
+    <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:20px" id="share-modal-classname"></div>
+
+    <!-- QR Code -->
+    <div style="display:flex;justify-content:center;margin-bottom:18px">
+      <div id="share-qrcode" style="border:2px solid var(--border);border-radius:12px;padding:10px;background:white;display:inline-block"></div>
+    </div>
+    <div style="text-align:center;font-size:.75rem;color:var(--muted);margin-bottom:18px;font-weight:600">家長用手機掃描後直接開啟 App</div>
+
+    <!-- App 網址 -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:.72rem;font-weight:800;color:var(--muted);margin-bottom:4px;letter-spacing:.04em">APP 網址</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="flex:1;background:var(--gray-lt);border:1.5px solid var(--border);border-radius:8px;padding:8px 11px;font-size:.78rem;font-weight:700;color:var(--gray);word-break:break-all" id="share-url-text"></div>
+        <button onclick="copyShareUrl()"
+          style="flex-shrink:0;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.78rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--blue)">複製</button>
+      </div>
+    </div>
+
+    <!-- 邀請碼 -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:800;color:var(--muted);margin-bottom:4px;letter-spacing:.04em">班級邀請碼（學生加入班級用）</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="flex:1;background:var(--blue-lt,#eef5fc);border:1.5px solid var(--blue);border-radius:8px;padding:8px 11px;font-size:1.2rem;font-weight:900;color:var(--blue-dk,#2d6fa8);letter-spacing:.15em;text-align:center" id="share-invite-code"></div>
+        <button onclick="copyShareCode()"
+          style="flex-shrink:0;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.78rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--blue)">複製</button>
+      </div>
+    </div>
+
+    <!-- 按鈕列 -->
+    <div style="display:flex;gap:10px">
+      <button onclick="hideShareModal()"
+        style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">關閉</button>
+      <button onclick="nativeShare()" id="btn-native-share"
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">📤 分享連結</button>
+    </div>
+  </div>
+</div>
+
 <!-- 新增班級 Modal -->
 <div id="class-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
@@ -152,6 +194,7 @@
 
 <div id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="shared.js"></script>
 <script src="admin/init.js"></script>
 <script src="admin/classes.js"></script>

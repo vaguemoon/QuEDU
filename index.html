@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>臺東縣太平國小資源班</title>
+<meta name="theme-color" content="#4a90d9">
+<title>上學趣</title>
+<link rel="manifest" href="/taiping-special-ed/manifest.json">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -25,7 +27,7 @@
     <div class="panel active" id="panel-role">
       <div class="role-wrap">
         <div class="role-header">
-          <div class="role-school" id="school-name-tap">臺東縣太平國小資源班</div>
+          <div class="role-school" id="school-name-tap">上學趣</div>
           <div class="role-title">學習<span>系統</span></div>
           <div class="role-subtitle">請選擇你的身份</div>
         </div>
@@ -168,12 +170,16 @@
     <!-- ④ Hub 主頁 -->
     <div class="panel right" id="panel-hub">
       <div class="hub-body">
-        <div class="hub-welcome">
-          <div class="hub-welcome-avatar" id="hub-avatar">🐣</div>
-          <div class="hub-welcome-name" id="hub-name">—</div>
-          <div class="hub-welcome-sub">歡迎回來</div>
-          <button class="btn-hub-settings" onclick="showProfile()">⚙ 個人設定</button>
-        </div>
+        <button class="hub-profile-card" onclick="showProfile()">
+          <div class="hub-profile-left">
+            <div class="hub-profile-avatar" id="hub-avatar">🐣</div>
+            <div>
+              <div class="hub-welcome-name" id="hub-name">—</div>
+              <div class="hub-welcome-sub">歡迎回來・點此編輯個人資料</div>
+            </div>
+          </div>
+          <span class="hub-profile-arrow">›</span>
+        </button>
         <div class="hub-section-label">📚 學習區</div>
         <div class="subjects-grid" id="subjects-grid"></div>
         <div class="hub-section-label">📊 近期記錄</div>
@@ -190,6 +196,9 @@
 
     <!-- ⑥ 個人設定 -->
     <div class="panel right" id="panel-profile">
+      <div class="profile-nav-row">
+        <button class="btn-back-profile" onclick="showPanel('hub')">← 返回</button>
+      </div>
       <div class="profile-header">
         <div class="profile-avatar-big" id="profile-avatar-big">🐣</div>
         <div>
@@ -251,8 +260,68 @@
   </div>
 </div>
 
+<!-- PWA 安裝橫幅 -->
+<div id="pwa-install-banner" class="pwa-banner" style="display:none">
+  <div class="pwa-banner-left">
+    <div class="pwa-banner-icon">📱</div>
+    <div>
+      <div class="pwa-banner-title">安裝練字趣 App</div>
+      <div class="pwa-banner-sub">加入主畫面，隨時快速開啟</div>
+    </div>
+  </div>
+  <div class="pwa-banner-btns">
+    <button class="btn-pwa-install" onclick="doInstallPwa()">安裝</button>
+    <button class="btn-pwa-dismiss" onclick="dismissPwaBanner()">✕</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script src="shared.js"></script>
-<script src="index.js"></script>
+<script src="auth.js"></script>
+<script src="hub.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/taiping-special-ed/sw.js')
+      .catch(function(err) { console.warn('SW 註冊失敗:', err); });
+  });
+}
+
+/* ── PWA 安裝提示 ── */
+var _deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault(); // 阻止瀏覽器自動顯示（含「Chrome 捷徑」選項的那個）
+  _deferredInstallPrompt = e;
+  // 若本次 session 未被關閉，延遲 2 秒後顯示我們的橫幅
+  if (!sessionStorage.getItem('pwa-banner-dismissed')) {
+    setTimeout(function() {
+      var banner = document.getElementById('pwa-install-banner');
+      if (banner) banner.style.display = 'flex';
+    }, 2000);
+  }
+});
+
+function doInstallPwa() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt(); // 直接呼叫 → 只顯示「加入主畫面」對話框，無 Chrome 捷徑選項
+  _deferredInstallPrompt.userChoice.then(function() {
+    _deferredInstallPrompt = null;
+    var banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.style.display = 'none';
+  });
+}
+
+function dismissPwaBanner() {
+  var banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  sessionStorage.setItem('pwa-banner-dismissed', '1');
+}
+
+window.addEventListener('appinstalled', function() {
+  var banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+});
+</script>
 </body>
 </html>

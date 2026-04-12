@@ -34,35 +34,35 @@ var ACH_DEFS = [
   {
     id: 'mastered', icon: '✏️', label: '精熟字數',
     thresholds: [10, 50, 100, 200, 300, 400, 500, 600, 800, 1000],
-    stars:      [ 1,  2,   3,   4,   5,   6,   7,   8,   9,   10],
+    stars:      [ 3,  6,   9,  12,  15,  18,  21,  24,  27,   30],
     getValue:   function() { return achStats.masteredChars.length; },
     unit: '字'
   },
   {
     id: 'lessons', icon: '📖', label: '完成課次',
     thresholds: [1, 5, 10, 20, 30, 40, 50, 60, 80, 100],
-    stars:      [1, 2,  3,  4,  5,  6,  7,  8,  9,  10],
+    stars:      [3, 6,  9, 12, 15, 18, 21, 24, 27,  30],
     getValue:   function() { return achStats.completedLessons.length; },
     unit: '課'
   },
   {
     id: 'books', icon: '📚', label: '完成整冊',
     thresholds: [1,  2,  3,  4,  5,  6,  7,  8,  9, 10],
-    stars:      [5,  7,  9, 12, 15, 18, 21, 24, 27, 30],
+    stars:      [15, 21, 27, 36, 45, 54, 63, 72, 81, 90],
     getValue:   function() { return achStats.completedBooks.length; },
     unit: '冊'
   },
   {
     id: 'loginDays', icon: '📅', label: '累積登入',
     thresholds: [1, 3, 5, 7, 10, 14, 17, 21, 25, 30],
-    stars:      [1, 2, 3, 4,  5,  6,  7,  8,  9, 10],
+    stars:      [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
     getValue:   function() { return achStats.totalLoginDays; },
     unit: '天'
   },
   {
     id: 'daily', icon: '⚡', label: '單日練習',
     thresholds: [1, 3, 5, 7, 9, 11, 13, 15, 18, 20],
-    stars:      [1, 2, 3, 4, 5,  6,  7,  8,  9, 10],
+    stars:      [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
     getValue:   function() { return achStats.todayPracticedChars; },
     unit: '字'
   }

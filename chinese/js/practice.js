@@ -1,17 +1,16 @@
 /**
  * practice.js — 筆順練習模式
  * 負責：switchToPractice()、switchPracticeTab()、initQuiz()、
- *        startQuiz()、restartQuiz()、playRef()、loadCharInfo()
+ *        startQuiz()、restartQuiz()、playRef()、
  *        以及單字測驗（switchToSingleExam、initExam、startExamQuiz、showSingleExamResult）
- * 依賴：state.js、nav.js、menu.js（updateProgressBar）、shared.js（sfx 系列）
+ * 依賴：state.js（makeWriterOpts）、nav.js、menu.js（updateProgressBar）、
+ *        shared.js（sfx 系列）、char-info.js（loadCharInfo）
  */
 'use strict';
 
 // ── 單字測驗計數器 ──
 var examMistakes = 0;
 var examStrokes  = 0;
-
-// ── 工具 ──
 
 var quizCompleted = false;
 
@@ -26,161 +25,6 @@ function getGridPx() {
   return 340;
 }
 
-// ── 工具函式 ──
-
-/**
- * 從萌典 API 查詢注音／部首／筆畫，填入 #char-info-bar
- * 結果快取於 charInfoCache，避免重複請求
- * @param {string} char 目標漢字
- */
-function stripHtml(str) {
-  if (!str) return '';
-  return str.replace(/<[^>]+>/g, '')
-            .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-            .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function loadCharInfo(char) {
-  var elR = document.getElementById('info-radical');
-  var elS = document.getElementById('info-strokes');
-  var elT = document.getElementById('info-zhuyin-tabs');
-  var elW = document.getElementById('info-words');
-  var elD = document.getElementById('info-def');
-  if (!elT) return;
-
-  if (elR) elR.textContent = '⋯';
-  if (elS) elS.textContent = '⋯';
-  elT.innerHTML = '<span style="color:var(--muted);font-size:.85rem">查詢中…</span>';
-  if (elW) elW.innerHTML = '';
-  if (elD) elD.textContent = '查詢中…';
-
-  if (charInfoCache[char]) { applyCharInfo(charInfoCache[char]); return; }
-
-  fetch('https://www.moedict.tw/' + char + '.json')
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then(function(data) {
-      var radical = stripHtml(data.radical) || '－';
-      var strokes = data.stroke_count != null ? String(data.stroke_count) : '－';
-
-      // 每個讀音（heteronym）建立一個物件，包含注音與其造詞字義對應
-      // 以 bopomofo 去重，最多保留 4 個讀音
-      var seenBopomofo = {};
-      var heteronyms = [];
-      (data.heteronyms || []).forEach(function(h) {
-        var bopomofo = h.bopomofo || '－';
-        if (seenBopomofo[bopomofo] || heteronyms.length >= 4) return;
-        seenBopomofo[bopomofo] = true;
-        var wordDefPairs = [];
-        (h.definitions || []).forEach(function(d) {
-          if (!d.example) return;
-          var defText = stripHtml(d.def) || '－';
-          d.example.forEach(function(ex) {
-            if (wordDefPairs.length >= 3) return;
-            var cleaned = stripHtml(ex).replace(/～/g, char);
-            var matches = cleaned.match(/「([^」]+)」/g) || [];
-            matches.forEach(function(m) {
-              if (wordDefPairs.length >= 3) return;
-              var word = m.replace(/「|」/g, '').trim();
-              var already = wordDefPairs.some(function(p) { return p.word === word; });
-              if (word.length >= 2 && word.length <= 4 && !already) {
-                wordDefPairs.push({ word: word, def: defText });
-              }
-            });
-          });
-        });
-        // 若無造詞，仍保留此讀音，字義取第一條定義
-        var fallbackDef = '－';
-        if (h.definitions && h.definitions[0]) {
-          fallbackDef = stripHtml(h.definitions[0].def) || '－';
-        }
-        heteronyms.push({ bopomofo: bopomofo, wordDefPairs: wordDefPairs, fallbackDef: fallbackDef });
-      });
-
-      var info = { radical: radical, strokes: strokes, heteronyms: heteronyms };
-      charInfoCache[char] = info;
-      applyCharInfo(info);
-    })
-    .catch(function(e) { console.warn('loadCharInfo:', e); showCharInfoError(); });
-}
-
-function applyCharInfo(info) {
-  var elR = document.getElementById('info-radical');
-  var elS = document.getElementById('info-strokes');
-  var elT = document.getElementById('info-zhuyin-tabs');
-  var elW = document.getElementById('info-words');
-  var elD = document.getElementById('info-def');
-  if (elR) elR.textContent = info.radical;
-  if (elS) elS.textContent = info.strokes;
-  if (!elT) return;
-
-  elT.innerHTML = '';
-  var heteronyms = info.heteronyms || [];
-  if (!heteronyms.length) { elT.textContent = '－'; return; }
-
-  // 建立注音 tab
-  heteronyms.forEach(function(h, idx) {
-    var tab = document.createElement('button');
-    tab.className = 'zhuyin-tab' + (idx === 0 ? ' active' : '');
-    tab.textContent = h.bopomofo;
-    tab.onclick = function() {
-      elT.querySelectorAll('.zhuyin-tab').forEach(function(t) { t.classList.remove('active'); });
-      tab.classList.add('active');
-      renderWordDef(h, elW, elD);
-    };
-    elT.appendChild(tab);
-  });
-
-  // 預設顯示第一個讀音的造詞字義
-  renderWordDef(heteronyms[0], elW, elD);
-}
-
-function renderWordDef(h, elW, elD) {
-  var pairs = h.wordDefPairs || [];
-  if (elW) {
-    elW.innerHTML = '';
-    if (pairs.length === 0) {
-      elW.textContent = '－';
-    } else {
-      pairs.forEach(function(pair, idx) {
-        var chip = document.createElement('span');
-        chip.className = 'char-word-chip' + (idx === 0 ? ' active' : '');
-        chip.textContent = pair.word;
-        chip.onclick = function() {
-          elW.querySelectorAll('.char-word-chip').forEach(function(c) { c.classList.remove('active'); });
-          chip.classList.add('active');
-          setDefText(elD, pair.def);
-          speakChar(pair.word);
-        };
-        elW.appendChild(chip);
-      });
-    }
-  }
-  // 字義：有造詞用第一個造詞的字義，否則用 fallbackDef
-  setDefText(elD, pairs.length > 0 ? pairs[0].def : h.fallbackDef);
-}
-
-function setDefText(elD, text) {
-  if (!elD) return;
-  elD.textContent = text || '－';
-  elD.onclick = function() { speakChar(elD.textContent); };
-}
-
-function showCharInfoError() {
-  var elR = document.getElementById('info-radical');
-  var elS = document.getElementById('info-strokes');
-  var elT = document.getElementById('info-zhuyin-tabs');
-  var elW = document.getElementById('info-words');
-  var elD = document.getElementById('info-def');
-  if (elR) elR.textContent = '－';
-  if (elS) elS.textContent = '－';
-  if (elT) elT.textContent = '－';
-  if (elW) elW.textContent = '－';
-  if (elD) elD.textContent = '無法取得資料';
-}
-
 /**
  * 建立範例筆順 HanziWriter（ref-target），載入後自動播放動畫
  * @param {string} char  目標漢字
@@ -193,8 +37,10 @@ function createRefWriter(char, sz) {
     width: sz, height: sz, padding: Math.round(sz * 0.07),
     strokeColor: '#ff8c42', strokeAnimationSpeed: .7, delayBetweenStrokes: 500,
     showCharacter: false, showOutline: true, outlineColor: '#c8dff5',
-    onLoadCharDataSuccess: function(){ setTimeout(function(){ refWriter && refWriter.animateCharacter(); }, 400); },
-    onLoadCharDataError:   function(){ if (rt) rt.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:.9rem">找不到筆順資料</div>'; }
+    onLoadCharDataSuccess: function() { setTimeout(function() { refWriter && refWriter.animateCharacter(); }, 400); },
+    onLoadCharDataError:   function() {
+      if (rt) rt.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;font-size:.9rem">找不到筆順資料</div>';
+    }
   });
 }
 
@@ -211,7 +57,7 @@ function switchPracticeTab(tab) {
 
   if (tab === 'ref') {
     rt.classList.remove('hidden-panel'); qt.classList.add('hidden-panel');
-    if (rc) rc.style.display = '';    if (qc) qc.style.display = 'none';
+    if (rc) rc.style.display = '';      if (qc) qc.style.display = 'none';
     if (tr) tr.classList.add('active'); if (tq) tq.classList.remove('active');
   } else {
     rt.classList.add('hidden-panel'); qt.classList.remove('hidden-panel');
@@ -226,7 +72,7 @@ function switchPracticeTab(tab) {
         qt.innerHTML = ''; qt.classList.remove('flash-green', 'flash-red');
         var sz = qt.getBoundingClientRect().width || currentPracticeSz || getGridPx();
         quizWriter = HanziWriter.create('quiz-target', char,
-          makeWriterOpts(sz, { onLoadCharDataSuccess: function(){ startQuiz(); } })
+          makeWriterOpts(sz, { onLoadCharDataSuccess: function() { startQuiz(); } })
         );
       });
     }
@@ -262,7 +108,7 @@ function switchToPractice() {
 
   var char = chars[currentIdx];
   loadCharInfo(char);
-  var rt   = document.getElementById('ref-target');
+  var rt = document.getElementById('ref-target');
   if (rt) {
     rt.innerHTML = '';
     requestAnimationFrame(function() {
@@ -271,9 +117,8 @@ function switchToPractice() {
       createRefWriter(char, sz);
     });
   }
-  quizWriter = null; // 等切到 quiz tab 時再建立
+  quizWriter = null;
 }
-
 
 function initQuiz(char) {
   var qt = document.getElementById('quiz-target');
@@ -281,7 +126,7 @@ function initQuiz(char) {
   qt.innerHTML = ''; qt.classList.remove('flash-green', 'flash-red');
   var sz = getGridPx();
   quizWriter = HanziWriter.create('quiz-target', char,
-    makeWriterOpts(sz, { onLoadCharDataSuccess: function(){ startQuiz(); } })
+    makeWriterOpts(sz, { onLoadCharDataSuccess: function() { startQuiz(); } })
   );
 }
 
@@ -296,7 +141,6 @@ function startQuiz() {
 
       sfxCelebrate();
 
-      // 在 sidebar 插入「開始默寫測驗」按鈕（避免重複插入）
       if (!document.getElementById('btn-inline-dict')) {
         var sidebar = document.getElementById('practice-sidebar');
         if (sidebar) {
@@ -304,7 +148,7 @@ function startQuiz() {
           dictBtn.id        = 'btn-inline-dict';
           dictBtn.className = 'btn-big btn-big-danger';
           dictBtn.innerHTML = '<span class="btn-big-icon">📝</span><span>開始默寫測驗</span>';
-          dictBtn.onclick   = function(){ switchToDict(); };
+          dictBtn.onclick   = function() { switchToDict(); };
           sidebar.appendChild(dictBtn);
         }
       }
@@ -363,7 +207,7 @@ function initExam(char) {
   examWriter = HanziWriter.create('quiz-target', char,
     makeWriterOpts(sz, {
       outlineColor: 'rgba(0,0,0,0)', highlightColor: 'rgba(0,0,0,0)', showOutline: false,
-      onLoadCharDataSuccess: function(){ startExamQuiz(char); }
+      onLoadCharDataSuccess: function() { startExamQuiz(char); }
     })
   );
 }
@@ -372,9 +216,9 @@ function startExamQuiz(char) {
   if (!examWriter) return;
   switchPracticeTab('quiz');
   examWriter.quiz({
-    onMistake:       function(){ examMistakes++; flashBox('quiz-target', 'red');   sfxWrong();   },
-    onCorrectStroke: function(){ examStrokes++;  flashBox('quiz-target', 'green'); sfxCorrect(); },
-    onComplete:      function(){ showSingleExamResult(char, examMistakes); }
+    onMistake:       function() { examMistakes++; flashBox('quiz-target', 'red');   sfxWrong();   },
+    onCorrectStroke: function() { examStrokes++;  flashBox('quiz-target', 'green'); sfxCorrect(); },
+    onComplete:      function() { showSingleExamResult(char, examMistakes); }
   });
 }
 
@@ -399,7 +243,7 @@ function retryExam() {
   initExam(chars[currentIdx]);
 }
 
-// ── 視窗大小改變時重建 HanziWriter（確保 SVG 跟著 CSS --grid 更新） ──
+// ── 視窗大小改變時重建 HanziWriter ──
 
 var _resizeTimer = null;
 var _lastGridPx  = 0;
@@ -407,16 +251,15 @@ var _lastGridPx  = 0;
 window.addEventListener('resize', function() {
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(function() {
-    // 取得 CSS 計算後的新格子尺寸
     var newSz = getGridPxFromCSS();
-    if (!newSz || Math.abs(newSz - _lastGridPx) < 4) return; // 變化不足 4px 不重建
+    if (!newSz || Math.abs(newSz - _lastGridPx) < 4) return;
     _lastGridPx = newSz;
     rebuildWriters();
   }, 200);
 });
 
 /**
- * 從 CSS --grid 變數取得實際像素值（比 getBoundingClientRect 更早得到正確值）
+ * 從 CSS --grid 變數取得實際像素值
  */
 function getGridPxFromCSS() {
   var dummy = document.querySelector('.practice-grid-wrap') ||
@@ -427,7 +270,7 @@ function getGridPxFromCSS() {
 }
 
 /**
- * 依目前模式重建 HanziWriter，使用新的格子尺寸
+ * 依目前模式重建 HanziWriter
  */
 function rebuildWriters() {
   var char = chars[currentIdx];
@@ -452,7 +295,7 @@ function rebuildWriters() {
       requestAnimationFrame(function() {
         var sz = qt.getBoundingClientRect().width || getGridPxFromCSS();
         quizWriter = HanziWriter.create('quiz-target', char,
-          makeWriterOpts(sz, { onLoadCharDataSuccess: function(){ startQuiz(); } })
+          makeWriterOpts(sz, { onLoadCharDataSuccess: function() { startQuiz(); } })
         );
       });
     }

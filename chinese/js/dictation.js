@@ -15,7 +15,6 @@ function switchToDict() {
 
   document.getElementById('panel-practice').style.display = 'none';
   document.getElementById('panel-dict').style.display     = '';
-  document.getElementById('result-panel').classList.remove('show');
 
   var wrap = document.getElementById('dict-canvas-wrap');
   if (wrap) wrap.style.display = '';
@@ -106,7 +105,7 @@ function dEnd() {
   dCurrentStroke = [];
 }
 
-// ── 清除與重試 ──
+// ── 清除重寫 ──
 
 function clearDictCanvas() {
   sfxTap();
@@ -114,16 +113,6 @@ function clearDictCanvas() {
   dCtx.clearRect(0, 0, dCanvas.width, dCanvas.height);
   dDrawing = false; dictScore = -1;
   dAllStrokes = []; dCurrentStroke = [];
-  var ov = document.getElementById('dict-overlay');
-  if (ov) ov.remove();
-}
-
-function retryDict() {
-  sfxTap();
-  if (dCtx) {
-    dCtx.clearRect(0, 0, dCanvas.width, dCanvas.height);
-    dDrawing = false; dAllStrokes = []; dCurrentStroke = [];
-  }
   var ov = document.getElementById('dict-overlay');
   if (ov) ov.remove();
 }
@@ -168,15 +157,14 @@ function submitDictation() {
         '<div style="font-size:16px;color:#b0bec5;">↔</div>' +
         '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">' +
           '<div style="font-size:11px;color:#8da4b8;">正確字形</div>' +
-          '<div style="width:100%;aspect-ratio:1;border-radius:8px;border:1px solid #c8dff5;background:#f5f8fc;display:flex;align-items:center;justify-content:center;font-size:7rem;color:#2d6fa8;font-family:\'LXGW WenKai TC\',DFKai-SB,serif;">' + char + '</div>' +
+          '<div style="width:100%;aspect-ratio:1;border-radius:8px;border:1px solid #c8dff5;background:#f5f8fc;display:flex;align-items:center;justify-content:center;font-size:7rem;color:#2d6fa8;font-family:\'標楷體\',DFKai-SB,\'BiauKai\',serif;">' + char + '</div>' +
         '</div>' +
       '</div>' +
       '<div style="font-size:12px;color:#5a7080;text-align:center;">你覺得寫得像嗎？</div>' +
-      '<div id="dict-eval-btns" style="display:flex;gap:8px;">' +
-        '<button class="btn-eval" onclick="selfEval(&quot;great&quot;)" style="flex:1;padding:10px 4px;border-radius:10px;font-size:13px;font-weight:500;background:#e8f8ee;color:#27500A;border:1px solid #97C459;cursor:pointer;">⭕ 像！</button>' +
-        '<button class="btn-eval" onclick="selfEval(&quot;retry&quot;)" style="flex:1;padding:10px 4px;border-radius:10px;font-size:13px;font-weight:500;background:#feecec;color:#791F1F;border:1px solid #F09595;cursor:pointer;">✖ 不像</button>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button onclick="selfEval(&quot;great&quot;)" style="flex:1;padding:10px 4px;border-radius:10px;font-size:13px;font-weight:500;background:#e8f8ee;color:#27500A;border:1px solid #97C459;cursor:pointer;">⭕ 像！</button>' +
+        '<button onclick="selfEval(&quot;retry&quot;)" style="flex:1;padding:10px 4px;border-radius:10px;font-size:13px;font-weight:500;background:#feecec;color:#791F1F;border:1px solid #F09595;cursor:pointer;">✖ 不像</button>' +
       '</div>' +
-      '<div id="dict-overlay-verdict" style="display:none;"></div>' +
     '</div>';
 
   wrap.appendChild(ov);
@@ -188,16 +176,10 @@ function submitDictation() {
  * @param {'great'|'retry'} result
  */
 function selfEval(result) {
-  sfxTap();
-  var char = chars[currentIdx];
-  document.querySelectorAll('.btn-eval').forEach(function(b){ b.disabled = true; b.style.opacity = '.4'; });
-
-  var verdict = document.getElementById('dict-overlay-verdict');
-
   if (result === 'great') {
     sfxCelebrate();
+    var char = chars[currentIdx];
     markDictated(char);
-
     if (dAllStrokes.length > 0 && dSize > 0) {
       var ns = dAllStrokes.map(function(s) {
         return s.map(function(pt) {
@@ -206,25 +188,10 @@ function selfEval(result) {
       });
       saveStroke(char, ns);
     }
-
-    if (verdict) {
-      verdict.style.display = 'flex';
-      verdict.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
-      verdict.innerHTML =
-        '<div style="border-radius:10px;padding:10px;text-align:center;font-size:1.1rem;font-weight:700;background:#e8f8ee;color:#27500A;">🎉 太棒了！</div>' +
-        '<button onclick="goBack()" style="padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:#2d6fa8;color:white;border:none;cursor:pointer;width:100%;">← 回到生字列表</button>';
-    }
-    showToast('🎉 太棒了！');
-
+    saveProgress(); updateProgressBar(); renderMenu();
+    goBack();
   } else {
     sfxWrong();
-    if (verdict) {
-      verdict.style.cssText = 'display:flex;flex-direction:column;gap:8px;';
-      verdict.innerHTML =
-        '<div style="border-radius:10px;padding:10px;text-align:center;font-size:1rem;font-weight:600;background:#feecec;color:#791F1F;">再練一次吧！</div>' +
-        '<button onclick="retryDict()" style="padding:10px;border-radius:10px;font-size:13px;font-weight:500;background:#d32f2f;color:white;border:none;cursor:pointer;width:100%;">🔄 重新練習</button>';
-    }
+    clearDictCanvas();
   }
-
-  saveProgress(); updateProgressBar(); renderMenu();
 }

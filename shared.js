@@ -1,5 +1,5 @@
 /**
- * shared.js — 太平國小資源班學習系統
+ * shared.js — 上學趣
  * 所有頁面共用：Firebase 初始化、主題切換、音效、Toast
  *
  * 使用方式：在每個 HTML 的 </body> 前加入

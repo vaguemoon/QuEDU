@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>練字趣｜太平國小</title>
+<meta name="theme-color" content="#4a90d9">
+<title>練字趣｜上學趣</title>
+<link rel="manifest" href="/taiping-special-ed/manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -25,6 +27,11 @@
   <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
   <button class="btn-back" id="topbar-back" onclick="goBack()">← 返回</button>
   <div id="topbar-title">✏️ <span>練字趣</span></div>
+  <div id="topbar-mode-info" class="hidden">
+    <span id="mode-icon" class="topbar-mode-icon">✏️</span>
+    <span id="mode-title" class="topbar-mode-title">筆順練習</span>
+    <span id="mode-sub" style="display:none"></span>
+  </div>
   <div id="topbar-breadcrumb" class="hidden">
     <span id="tb-crumb-1" class="tb-crumb">出版社</span>
     <span class="tb-sep">›</span>
@@ -49,10 +56,10 @@
     <div class="mode-choice-title">選擇課程</div>
     <div class="mode-choice-sub">從課本選課文</div>
   </button>
-  <button class="mode-choice" onclick="showPage('free')">
-    <div class="mode-choice-icon">✏️</div>
-    <div class="mode-choice-title">自由練習</div>
-    <div class="mode-choice-sub">老師指定生字</div>
+  <button class="mode-choice" onclick="openAssignedPage()">
+    <div class="mode-choice-icon">📋</div>
+    <div class="mode-choice-title">老師指派</div>
+    <div class="mode-choice-sub">今日指定生字</div>
   </button>
 </div>
 
@@ -80,14 +87,13 @@
 
 </div>
 
-<div id="page-free" class="page">
+<div id="page-assigned" class="page">
   <div class="setup-page">
-    <div class="setup-title">✏️ 輸入今天要練習的字</div>
-    <div class="setup-card">
-      <input class="char-input" id="char-input" type="text" placeholder="例如：山水火土木" maxlength="20" oninput="onCharInput()" value="">
-      <div style="font-size:.8rem;color:var(--muted);margin-top:8px;font-weight:600">最多 20 個字</div>
+    <div class="setup-title">📋 今日老師指派生字</div>
+    <div class="assigned-preview-card" id="assigned-preview">
+      <div class="assigned-empty">載入中…</div>
     </div>
-    <button class="btn-start" id="btn-start-free" disabled onclick="startLesson()">開始上課 →</button>
+    <button class="btn-start" id="btn-start-assigned" disabled onclick="startAssignedLesson()">開始上課 →</button>
   </div>
 </div>
 
@@ -123,14 +129,6 @@
 </div>
 
 <div id="page-learn" class="page">
-  <div class="mode-banner">
-    <button class="btn-back-list" onclick="showPage('menu')">← 生字列表</button>
-    <div class="mode-icon" id="mode-icon">✏️</div>
-    <div>
-      <div class="mode-info-title" id="mode-title">筆順練習</div>
-      <div class="mode-info-sub"  id="mode-sub">看左邊筆順，在右邊格子照著寫</div>
-    </div>
-  </div>
   <div class="learn-body" id="learn-body">
     <div id="panel-practice">
       <div class="practice-wrap">
@@ -191,40 +189,6 @@
             style="padding:13px 28px;border:none;border-radius:50px;background:linear-gradient(135deg,#c22,var(--red));color:white;font-size:1rem;font-weight:900;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;box-shadow:0 4px 16px rgba(0,0,0,.2)">
             <span>✓</span><span>交　卷</span>
           </button>
-        </div>
-        <div class="result-panel" id="result-panel">
-          <div style="font-size:1rem;font-weight:900;text-align:center">✏️ 對照結果</div>
-          <div class="compare-wrap">
-            <div class="compare-col">
-              <div class="compare-lbl">✍️ 你寫的</div>
-              <div class="compare-student-wrap"><canvas id="compare-student"></canvas></div>
-            </div>
-            <div class="compare-arrow">↔</div>
-            <div class="compare-col">
-              <div class="compare-lbl">📖 正確字形</div>
-              <div class="compare-ref-wrap"><div id="compare-ref"></div></div>
-            </div>
-          </div>
-          <div class="self-eval-title">你覺得寫得像嗎？</div>
-          <div class="self-eval-btns">
-            <button class="btn-eval btn-eval-great" onclick="selfEval('great')">
-              <span class="btn-eval-icon">⭕</span><span>像！</span>
-            </button>
-            <button class="btn-eval btn-eval-retry" onclick="selfEval('retry')">
-              <span class="btn-eval-icon">✖</span><span>不像</span>
-            </button>
-          </div>
-          <div id="after-eval" style="display:none;flex-direction:column;align-items:center;gap:12px;width:100%">
-            <div id="eval-verdict" style="border-radius:14px;padding:14px 20px;text-align:center;font-size:1.2rem;font-weight:900;width:100%"></div>
-            <button class="btn-big btn-big-primary" id="btn-dict-next" onclick="showPage('menu')" style="max-width:320px;font-size:1.1rem">
-              <span class="btn-big-icon">📋</span><span>回到列表</span>
-            </button>
-          </div>
-          <div id="retry-only-btn" style="display:none;width:100%">
-            <button class="btn-big btn-big-danger" onclick="switchToPractice()" style="font-size:1.1rem">
-              <span class="btn-big-icon">✏️</span><span>再練習一次</span>
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -287,6 +251,7 @@
 
 <div id="page-settings" class="page">
   <div class="settings-body">
+    <button class="btn-settings-back" onclick="goBack()">← 返回</button>
     <div class="settings-section-title">🎨 主題色系</div>
     <div id="theme-grid"></div>
     <div class="settings-section-title">🔊 音效</div>
@@ -310,6 +275,7 @@
 <script src="js/voice.js"></script>
 <script src="js/curriculum.js"></script>
 <script src="js/menu.js"></script>
+<script src="js/char-info.js"></script>
 <script src="js/practice.js"></script>
 <script src="js/dictation.js"></script>
 <script src="js/exam.js"></script>
