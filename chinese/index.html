@@ -27,6 +27,11 @@
   <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
   <button class="btn-back" id="topbar-back" onclick="goBack()">← 返回</button>
   <div id="topbar-title">✏️ <span>練字趣</span></div>
+  <div id="topbar-mode-info" class="hidden">
+    <span id="mode-icon" class="topbar-mode-icon">✏️</span>
+    <span id="mode-title" class="topbar-mode-title">筆順練習</span>
+    <span id="mode-sub" style="display:none"></span>
+  </div>
   <div id="topbar-breadcrumb" class="hidden">
     <span id="tb-crumb-1" class="tb-crumb">出版社</span>
     <span class="tb-sep">›</span>
@@ -125,14 +130,6 @@
 </div>
 
 <div id="page-learn" class="page">
-  <div class="mode-banner">
-    <button class="btn-back-list" onclick="showPage('menu')">← 生字列表</button>
-    <div class="mode-icon" id="mode-icon">✏️</div>
-    <div>
-      <div class="mode-info-title" id="mode-title">筆順練習</div>
-      <div class="mode-info-sub"  id="mode-sub">看左邊筆順，在右邊格子照著寫</div>
-    </div>
-  </div>
   <div class="learn-body" id="learn-body">
     <div id="panel-practice">
       <div class="practice-wrap">

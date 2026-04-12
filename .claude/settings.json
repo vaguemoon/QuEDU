@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls /d/githubdesk/taiping-special-ed/icon-*.png)"
+      "Bash(ls /d/githubdesk/taiping-special-ed/icon-*.png)",
+      "Bash(wc -l d:/githubdesk/taiping-special-ed/chinese/js/*.js)"
     ]
   }
 }

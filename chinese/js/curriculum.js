@@ -167,7 +167,12 @@ function selectVersion(verId, verName, cardEl, color) {
   document.getElementById('step2-title').textContent = verName + '　選擇冊次';
 
   var data  = curriculumData[verId] || {};
-  var books = Object.keys(data.books || {}).sort();
+  var GRADE_NUM = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};
+  var books = Object.keys(data.books || {}).sort(function(a, b) {
+    var ga = GRADE_NUM[a[0]] || 99, gb = GRADE_NUM[b[0]] || 99;
+    if (ga !== gb) return ga - gb;
+    return (a[1] === '上' ? 0 : 1) - (b[1] === '上' ? 0 : 1);
+  });
 
   if (!books.length) {
     bookCards.innerHTML = '<div class="curr-loading">此版本暫無資料</div>';

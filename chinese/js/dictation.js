@@ -168,7 +168,7 @@ function submitDictation() {
         '<div style="font-size:16px;color:#b0bec5;">↔</div>' +
         '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">' +
           '<div style="font-size:11px;color:#8da4b8;">正確字形</div>' +
-          '<div style="width:100%;aspect-ratio:1;border-radius:8px;border:1px solid #c8dff5;background:#f5f8fc;display:flex;align-items:center;justify-content:center;font-size:7rem;color:#2d6fa8;font-family:\'LXGW WenKai TC\',DFKai-SB,serif;">' + char + '</div>' +
+          '<div style="width:100%;aspect-ratio:1;border-radius:8px;border:1px solid #c8dff5;background:#f5f8fc;display:flex;align-items:center;justify-content:center;font-size:7rem;color:#2d6fa8;font-family:\'標楷體\',DFKai-SB,\'BiauKai\',serif;">' + char + '</div>' +
         '</div>' +
       '</div>' +
       '<div style="font-size:12px;color:#5a7080;text-align:center;">你覺得寫得像嗎？</div>' +
