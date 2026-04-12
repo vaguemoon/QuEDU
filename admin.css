@@ -426,6 +426,15 @@ body {
   font-family:inherit; color:var(--blue); flex-shrink:0; transition:all .15s;
 }
 .btn-copy-code:hover { background:#dbeafe; border-color:var(--blue); }
+.class-assign-section { border-top:1px solid var(--border); padding:12px 0 8px; margin-top:4px; }
+.class-assign-label { font-size:.72rem; font-weight:800; color:var(--muted); letter-spacing:.04em; margin-bottom:8px; }
+.class-assign-row { display:flex; gap:8px; align-items:center; }
+.class-assign-input { flex:1; border:1.5px solid var(--border); border-radius:8px; padding:8px 11px; font-size:.9rem; font-family:inherit; outline:none; background:var(--gray-lt); transition:border-color .15s; }
+.class-assign-input:focus { border-color:var(--blue); background:white; }
+.btn-assign-save { flex-shrink:0; padding:8px 16px; border:none; border-radius:8px; background:var(--blue); color:white; font-size:.82rem; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; transition:all .15s; }
+.btn-assign-save:hover { background:var(--blue-dk); }
+.btn-assign-save:active { transform:scale(.96); }
+.class-assign-preview { font-size:.75rem; font-weight:700; color:var(--muted); margin-top:6px; }
 .class-footer { font-size:.78rem; }
 .class-stat { font-weight:700; color:var(--gray); }
 .class-empty {

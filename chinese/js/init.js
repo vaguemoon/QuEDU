@@ -38,10 +38,9 @@ window.addEventListener('load', function() {
         var id = hubStudent.name + '_' + hubStudent.pin;
         Promise.all([
           db.collection('students').doc(id).get(),
-          db.collection('students').doc(id).collection('progress').doc('hanzi').get(),
-          db.collection('settings').doc('lesson').get()
+          db.collection('students').doc(id).collection('progress').doc('hanzi').get()
         ]).then(function(results) {
-          var sDoc = results[0], pDoc = results[1], lDoc = results[2];
+          var sDoc = results[0], pDoc = results[1];
           if (!sDoc.exists) return;
 
           var sData = sDoc.data();
@@ -65,9 +64,13 @@ window.addEventListener('load', function() {
           // 載入學習進度
           charStatus = pData.charStatus || {};
 
-          // 若老師已在後台設定今日生字，存入老師指派字組
-          if (lDoc.exists && lDoc.data().chars && lDoc.data().chars.length) {
-            teacherAssignedChars = lDoc.data().chars.slice();
+          // 非同步載入班級指派生字（不阻塞主流程）
+          if (sData.classId) {
+            db.collection('classes').doc(sData.classId).get().then(function(clsDoc) {
+              if (clsDoc.exists && clsDoc.data().assignedChars && clsDoc.data().assignedChars.length) {
+                teacherAssignedChars = clsDoc.data().assignedChars.slice();
+              }
+            }).catch(function() {});
           }
 
           // 載入課程選單
