@@ -170,12 +170,16 @@
     <!-- ④ Hub 主頁 -->
     <div class="panel right" id="panel-hub">
       <div class="hub-body">
-        <div class="hub-welcome">
-          <div class="hub-welcome-avatar" id="hub-avatar">🐣</div>
-          <div class="hub-welcome-name" id="hub-name">—</div>
-          <div class="hub-welcome-sub">歡迎回來</div>
-          <button class="btn-hub-settings" onclick="showProfile()">⚙ 個人設定</button>
-        </div>
+        <button class="hub-profile-card" onclick="showProfile()">
+          <div class="hub-profile-left">
+            <div class="hub-profile-avatar" id="hub-avatar">🐣</div>
+            <div>
+              <div class="hub-welcome-name" id="hub-name">—</div>
+              <div class="hub-welcome-sub">歡迎回來・點此編輯個人資料</div>
+            </div>
+          </div>
+          <span class="hub-profile-arrow">›</span>
+        </button>
         <div class="hub-section-label">📚 學習區</div>
         <div class="subjects-grid" id="subjects-grid"></div>
         <div class="hub-section-label">📊 近期記錄</div>

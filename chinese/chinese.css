@@ -96,6 +96,13 @@
 .lm-logout:active     { background: #fff0f0; }
 
 /* ── 設定頁 ── */
+.btn-settings-back {
+  align-self: flex-start; padding: 8px 18px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .88rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  transition: all .15s; margin-bottom: 4px;
+}
+.btn-settings-back:active { background: var(--blue); color: white; }
 .settings-body {
   max-width: 480px; margin: 0 auto; padding: 20px 16px; display: flex;
   flex-direction: column; gap: 8px;
@@ -237,10 +244,29 @@
 .mode-choice-title { font-size: 2rem; font-weight: 900; color: var(--text); }
 .mode-choice-sub   { font-size: 1rem; font-weight: 600; color: var(--muted); }
 
-/* ── 課程設定頁（自由練習用） ── */
+/* ── 課程設定頁 ── */
 .setup-page  { max-width: 680px; margin: 0 auto; padding: 28px 20px 80px; }
 .setup-title { font-size: .8rem; font-weight: 800; color: var(--muted); letter-spacing: 1px; margin-bottom: 18px; }
 .setup-card  { background: var(--white); border-radius: 18px; padding: 22px 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+
+/* ── 老師指派生字預覽 ── */
+.assigned-preview-card {
+  background: var(--white); border-radius: 18px; padding: 22px 20px;
+  box-shadow: var(--shadow); margin-bottom: 16px;
+  display: flex; flex-wrap: wrap; gap: 10px; min-height: 80px;
+  align-items: center;
+}
+.assigned-char-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px; border-radius: 12px;
+  background: var(--blue-lt); border: 1.5px solid var(--border);
+  font-size: 1.5rem; font-weight: 900; color: var(--blue-dk);
+  font-family: 'LXGW WenKai TC', serif;
+}
+.assigned-empty {
+  width: 100%; text-align: center; font-size: .88rem; font-weight: 700;
+  color: var(--muted); line-height: 1.7;
+}
 .lesson-chars-chip {
   display: inline-flex; align-items: center; gap: 4px;
   background: var(--blue-lt); border: 1.5px solid #bfdbfe; border-radius: 8px;

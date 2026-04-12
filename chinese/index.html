@@ -56,10 +56,10 @@
     <div class="mode-choice-title">選擇課程</div>
     <div class="mode-choice-sub">從課本選課文</div>
   </button>
-  <button class="mode-choice" onclick="showPage('free')">
-    <div class="mode-choice-icon">✏️</div>
-    <div class="mode-choice-title">自由練習</div>
-    <div class="mode-choice-sub">老師指定生字</div>
+  <button class="mode-choice" onclick="openAssignedPage()">
+    <div class="mode-choice-icon">📋</div>
+    <div class="mode-choice-title">老師指派</div>
+    <div class="mode-choice-sub">今日指定生字</div>
   </button>
 </div>
 
@@ -87,14 +87,13 @@
 
 </div>
 
-<div id="page-free" class="page">
+<div id="page-assigned" class="page">
   <div class="setup-page">
-    <div class="setup-title">✏️ 輸入今天要練習的字</div>
-    <div class="setup-card">
-      <input class="char-input" id="char-input" type="text" placeholder="例如：山水火土木" maxlength="20" oninput="onCharInput()" value="">
-      <div style="font-size:.8rem;color:var(--muted);margin-top:8px;font-weight:600">最多 20 個字</div>
+    <div class="setup-title">📋 今日老師指派生字</div>
+    <div class="assigned-preview-card" id="assigned-preview">
+      <div class="assigned-empty">載入中…</div>
     </div>
-    <button class="btn-start" id="btn-start-free" disabled onclick="startLesson()">開始上課 →</button>
+    <button class="btn-start" id="btn-start-assigned" disabled onclick="startAssignedLesson()">開始上課 →</button>
   </div>
 </div>
 
@@ -286,6 +285,7 @@
 
 <div id="page-settings" class="page">
   <div class="settings-body">
+    <button class="btn-settings-back" onclick="goBack()">← 返回</button>
     <div class="settings-section-title">🎨 主題色系</div>
     <div id="theme-grid"></div>
     <div class="settings-section-title">🔊 音效</div>

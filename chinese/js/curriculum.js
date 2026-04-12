@@ -5,12 +5,14 @@
  */
 'use strict';
 
-var curriculumData = {}; // { verId: { name, books: { grade: [lesson...] } } }
+var curriculumData       = {}; // { verId: { name, books: { grade: [lesson...] } } }
+var teacherAssignedChars = []; // 老師在後台指派的今日生字
 
 // ── 步驟狀態 ──
 var currSelectedVer    = null; // { verId, name }
 var currSelectedBook   = null; // grade string
 var currSelectedLesson = null; // lesson object
+var currStep           = 1;   // 目前課程選擇步驟（1-3）
 
 // 版本卡片色彩（依序套用）
 var CURR_COLORS = [
@@ -91,6 +93,7 @@ function goToCurrStep(step) {
   });
   if (step < 3) currSelectedLesson = null;
   if (step < 2) currSelectedBook = null;
+  currStep = step;
   updateTopbarBreadcrumb(step);
 }
 
@@ -257,22 +260,30 @@ function startCurriculumLesson() {
   updateTopbarBreadcrumb(4); // 進入生字列表後，麵包屑可點選返回課次
 }
 
-// ── 自由練習輸入 ──
+// ── 老師指派模式 ──
 
-function onCharInput() {
-  var val = document.getElementById('char-input').value.trim();
-  document.getElementById('btn-start-free').disabled = !val.length;
+function openAssignedPage() {
+  var preview  = document.getElementById('assigned-preview');
+  var startBtn = document.getElementById('btn-start-assigned');
+  if (preview) {
+    if (teacherAssignedChars.length) {
+      preview.innerHTML = teacherAssignedChars.map(function(c) {
+        return '<span class="assigned-char-chip">' + c + '</span>';
+      }).join('');
+      if (startBtn) startBtn.disabled = false;
+    } else {
+      preview.innerHTML = '<div class="assigned-empty">老師還沒有指派今日生字<br>請稍後再試，或詢問老師。</div>';
+      if (startBtn) startBtn.disabled = true;
+    }
+  }
+  showPage('assigned');
 }
 
-function startLesson() {
-  var raw  = document.getElementById('char-input').value.trim();
-  var list = Array.from(new Set(
-    raw.replace(/\s/g, '').split('').filter(function(c) { return c; })
-  ));
-  if (!list.length) return;
+function startAssignedLesson() {
+  if (!teacherAssignedChars.length) return;
   sfxTap();
-  currentLessonLabel = '自由練習';
-  chars = list;
+  currentLessonLabel = '老師指派';
+  chars = teacherAssignedChars.slice();
   chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
   renderMenu();
   showPage('menu');

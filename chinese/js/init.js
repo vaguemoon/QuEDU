@@ -65,13 +65,9 @@ window.addEventListener('load', function() {
           // 載入學習進度
           charStatus = pData.charStatus || {};
 
-          // 若老師已在後台設定今日生字，自動填入輸入框
+          // 若老師已在後台設定今日生字，存入老師指派字組
           if (lDoc.exists && lDoc.data().chars && lDoc.data().chars.length) {
-            var inp = document.getElementById('char-input');
-            if (inp) {
-              inp.value = lDoc.data().chars.join('');
-              inp.dispatchEvent(new Event('input'));
-            }
+            teacherAssignedChars = lDoc.data().chars.slice();
           }
 
           // 載入課程選單
