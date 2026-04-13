@@ -20,6 +20,20 @@ var SUBJECTS = [
           return m ? { sub: '通過測驗 ' + m + ' 字', score: m + ' 字' } : null;
         });
     }
+  },
+  {
+    id: 'multiply', file: 'multiply/index.html',
+    icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
+    theme: 'theme-orange', badge: '可以練習', badgeClass: 'green',
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('multiply').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var d = doc.data();
+          var c = d.totalCorrect || 0;
+          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
+        });
+    }
   }
 ];
 
@@ -242,8 +256,8 @@ function saveProfile() {
 
 window.addEventListener('message', function(e) {
   if (!e.data) return;
-  if (e.data.type === 'hanzi-back-to-hub') returnToHub();
-  else if (e.data.type === 'hanzi-logout') doLogout();
+  if (e.data.type === 'hanzi-back-to-hub'    || e.data.type === 'multiply-back-to-hub') returnToHub();
+  else if (e.data.type === 'hanzi-logout'   || e.data.type === 'multiply-logout')     doLogout();
 });
 
 // ── 管理者隱藏入口：連點學校名稱 5 次 ──
