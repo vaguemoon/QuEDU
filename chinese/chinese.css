@@ -154,6 +154,8 @@
 .ach-header-info { flex: 1; min-width: 0; }
 .ach-name { font-size: 1rem; font-weight: 900; color: var(--blue-dk); margin-bottom: 2px; }
 .ach-stars-count { font-size: 1.1rem; font-weight: 900; color: #e67e22; }
+.ach-stars-breakdown { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 4px 0 2px; }
+.ach-stars-breakdown span { font-size: .75rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
 .ach-next-hint { font-size: .78rem; font-weight: 700; color: var(--muted); margin: 4px 0 6px; }
 .ach-prog-bar {
   height: 8px; background: #dde; border-radius: 4px; overflow: hidden;

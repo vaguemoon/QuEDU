@@ -118,6 +118,29 @@ function addStars(n) {
   updateTopbarStars();
 }
 
+/** 計算各來源星星數 */
+function computeStarBreakdown() {
+  var loginStars = achStats.totalLoginDays;
+  var examStars  = achStats.masteredChars.length;
+  var achStars   = 0;
+  ACH_DEFS.forEach(function(def) {
+    def.thresholds.forEach(function(_, idx) {
+      var key = def.id + '_lv' + (idx + 1);
+      if (achStats.unlockedAchievements[key]) {
+        achStars += def.stars[idx];
+      }
+    });
+  });
+  return { login: loginStars, exam: examStars, achievement: achStars };
+}
+
+/** 根據各來源重新計算總星數並更新 achStats.stars */
+function recomputeStars() {
+  var b = computeStarBreakdown();
+  achStats.stars = b.login + b.exam + b.achievement;
+  achStats.title = computeTitle(achStats.stars);
+}
+
 /** 更新頂端列星星顯示（若元素存在） */
 function updateTopbarStars() {
   var el = document.getElementById('topbar-stars');
@@ -164,6 +187,7 @@ function loadAchStats(callback) {
         achStats.unlockedAchievements = d.unlockedAchievements || {};
       }
       resetDailyIfNeeded();
+      recomputeStars();
       updateTopbarStars();
       if (callback) callback();
     }).catch(function(e) {
@@ -194,8 +218,7 @@ function handleDailyLogin() {
   if (achStats.lastLoginDate !== today) {
     achStats.lastLoginDate = today;
     achStats.totalLoginDays += 1;
-    addStars(1);
-    checkAchievements(); // 含 saveAchStats
+    checkAchievements(); // 含 recomputeStars + saveAchStats
   }
 }
 
@@ -204,14 +227,13 @@ function handleDailyLogin() {
  * @param {string} char 通過的字
  */
 function onExamCharPassed(char) {
-  addStars(1);
   // 精熟字庫去重
   if (!achStats.masteredChars.includes(char)) {
     achStats.masteredChars.push(char);
   }
   // 今日練習字數
   achStats.todayPracticedChars += 1;
-  checkAchievements(); // 含 saveAchStats
+  checkAchievements(); // 含 recomputeStars + saveAchStats
 }
 
 // ═══════════════════════════════════════════
@@ -263,13 +285,14 @@ function checkAchievements() {
       var key = def.id + '_lv' + (idx + 1);
       if (!achStats.unlockedAchievements[key] && val >= threshold) {
         achStats.unlockedAchievements[key] = true;
-        addStars(def.stars[idx]);
         if (typeof showToast === 'function') {
           showToast('🏆 ' + def.label + ' Lv' + (idx + 1) + ' 達成！  +' + def.stars[idx] + ' ★');
         }
       }
     });
   });
+  recomputeStars();
+  updateTopbarStars();
   saveAchStats();
 }
 
@@ -291,6 +314,9 @@ function renderAchievementPage() {
   var starsLeft  = isMaxLv ? 0 : nextT - achStats.stars;
   var nextTitle  = isMaxLv ? '' : TITLE_NAMES[currentLvIdx + 1];
 
+  // ── 星星來源細分 ──
+  var breakdown = computeStarBreakdown();
+
   // ── Header ──
   var html = '<div class="ach-header">';
   html += '<div class="ach-avatar-wrap">';
@@ -300,6 +326,11 @@ function renderAchievementPage() {
   html += '<div class="ach-header-info">';
   html += '<div class="ach-name">' + (currentStudent ? (currentStudent.nickname || currentStudent.name) : '—') + '</div>';
   html += '<div class="ach-stars-count">⭐ ' + achStats.stars + ' 顆星</div>';
+  html += '<div class="ach-stars-breakdown">';
+  html += '<span>完成生字：' + breakdown.exam + '★</span>';
+  html += '<span>每日登入：' + breakdown.login + '★</span>';
+  html += '<span>獲得成就：' + breakdown.achievement + '★</span>';
+  html += '</div>';
   if (isMaxLv) {
     html += '<div class="ach-next-hint">已達最高等級！</div>';
   } else {
@@ -354,14 +385,6 @@ function renderAchievementPage() {
 
     html += '</div></div></div>';
   });
-  html += '</div>';
-
-  // ── 今日進度小結 ──
-  html += '<div class="ach-daily-summary">';
-  html += '<div class="ach-daily-title">📊 今日進度</div>';
-  html += '<div class="ach-daily-row"><span>測驗通過字數</span><span>' + achStats.todayPracticedChars + ' 字</span></div>';
-  html += '<div class="ach-daily-row"><span>累積精熟字數</span><span>' + achStats.masteredChars.length + ' 字</span></div>';
-  html += '<div class="ach-daily-row"><span>累積登入天數</span><span>' + achStats.totalLoginDays + ' 天</span></div>';
   html += '</div>';
 
   page.innerHTML = html;
