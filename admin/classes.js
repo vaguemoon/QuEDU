@@ -283,7 +283,7 @@ function _fallback(text, msg) {
 }
 
 function shareToLine() {
-  var msg = '上學趣 App：' + APP_URL + '\n班級邀請碼：' + _shareCode + '\n加入後就能開始練習！';
+  var msg = '上學趣 App 邀請您加入班級！\n班級邀請碼：' + _shareCode + '\n加入後就能開始練習！\n' + APP_URL;
   var lineUrl = 'https://line.me/R/msg/text/?' + encodeURIComponent(msg);
   window.open(lineUrl, '_blank');
 }
@@ -291,14 +291,14 @@ function shareToLine() {
 function nativeShare() {
   if (navigator.share) {
     navigator.share({
-      title: '練字趣 — 國字學習 App',
-      text:  '邀請碼：' + _shareCode + '　加入後就能開始練習！',
+      title: '上學趣 — 國字學習 App',
+      text:  '上學趣 App 邀請您加入班級！\n班級邀請碼：' + _shareCode + '\n加入後就能開始練習！',
       url:   APP_URL
     }).catch(function() {});
   } else {
     /* 桌面版瀏覽器：直接複製完整文字 */
     _copyText(
-      '練字趣 App：' + APP_URL + '\n班級邀請碼：' + _shareCode,
+      '上學趣 App 邀請您加入班級！\n班級邀請碼：' + _shareCode + '\n加入後就能開始練習！\n' + APP_URL,
       '分享文字已複製，貼到 LINE 或 Email 傳給家長！'
     );
   }
