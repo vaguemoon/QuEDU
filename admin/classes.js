@@ -282,6 +282,12 @@ function _fallback(text, msg) {
   document.body.removeChild(ta);
 }
 
+function shareToLine() {
+  var msg = '上學趣 App：' + APP_URL + '\n班級邀請碼：' + _shareCode + '\n加入後就能開始練習！';
+  var lineUrl = 'https://line.me/R/msg/text/?' + encodeURIComponent(msg);
+  window.open(lineUrl, '_blank');
+}
+
 function nativeShare() {
   if (navigator.share) {
     navigator.share({

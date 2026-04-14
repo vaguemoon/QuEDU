@@ -259,21 +259,6 @@
   </div>
 </div>
 
-<!-- PWA 安裝橫幅 -->
-<div id="pwa-install-banner" class="pwa-banner" style="display:none">
-  <div class="pwa-banner-left">
-    <div class="pwa-banner-icon">📱</div>
-    <div>
-      <div class="pwa-banner-title">安裝上學趣 App</div>
-      <div class="pwa-banner-sub">加入主畫面，隨時快速開啟</div>
-    </div>
-  </div>
-  <div class="pwa-banner-btns">
-    <button class="btn-pwa-install" onclick="doInstallPwa()">安裝</button>
-    <button class="btn-pwa-dismiss" onclick="dismissPwaBanner()">✕</button>
-  </div>
-</div>
-
 <div id="toast"></div>
 <script src="shared.js"></script>
 <script src="auth.js"></script>
@@ -285,42 +270,6 @@ if ('serviceWorker' in navigator) {
       .catch(function(err) { console.warn('SW 註冊失敗:', err); });
   });
 }
-
-/* ── PWA 安裝提示 ── */
-var _deferredInstallPrompt = null;
-
-window.addEventListener('beforeinstallprompt', function(e) {
-  e.preventDefault(); // 阻止瀏覽器自動顯示（含「Chrome 捷徑」選項的那個）
-  _deferredInstallPrompt = e;
-  // 若本次 session 未被關閉，延遲 2 秒後顯示我們的橫幅
-  if (!sessionStorage.getItem('pwa-banner-dismissed')) {
-    setTimeout(function() {
-      var banner = document.getElementById('pwa-install-banner');
-      if (banner) banner.style.display = 'flex';
-    }, 2000);
-  }
-});
-
-function doInstallPwa() {
-  if (!_deferredInstallPrompt) return;
-  _deferredInstallPrompt.prompt(); // 直接呼叫 → 只顯示「加入主畫面」對話框，無 Chrome 捷徑選項
-  _deferredInstallPrompt.userChoice.then(function() {
-    _deferredInstallPrompt = null;
-    var banner = document.getElementById('pwa-install-banner');
-    if (banner) banner.style.display = 'none';
-  });
-}
-
-function dismissPwaBanner() {
-  var banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'none';
-  sessionStorage.setItem('pwa-banner-dismissed', '1');
-}
-
-window.addEventListener('appinstalled', function() {
-  var banner = document.getElementById('pwa-install-banner');
-  if (banner) banner.style.display = 'none';
-});
 </script>
 </body>
 </html>

@@ -164,11 +164,15 @@
     </div>
 
     <!-- 按鈕列 -->
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+      <button onclick="shareToLine()"
+        style="flex:1;padding:11px;border:none;border-radius:10px;background:#06C755;color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">LINE 分享</button>
+      <button onclick="nativeShare()" id="btn-native-share"
+        style="flex:1;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">📤 分享連結</button>
+    </div>
+    <div style="display:flex">
       <button onclick="hideShareModal()"
         style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">關閉</button>
-      <button onclick="nativeShare()" id="btn-native-share"
-        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">📤 分享連結</button>
     </div>
   </div>
 </div>
