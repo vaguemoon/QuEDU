@@ -5,12 +5,25 @@
  */
 'use strict';
 
-/* 科目清單：新增科目只改這裡 */
+/* 科目清單：新增科目只改這裡
+ *
+ * 設計準則：每個科目必須實作 getLevel(sid) → Promise<string>
+ *   - 回傳顯示在卡片下方的等級標籤（例如「練字LV2」「乘法LV3」）
+ *   - 若尚無進度，回傳預設等級字串（例如「乘法LV1」）
+ *   - badgeClass 決定標籤顏色（'green' / 'orange' / 'blue' …）
+ */
 var SUBJECTS = [
   {
     id: 'chinese', file: 'chinese/index.html',
     icon: '國', name: '練字趣', desc: '國小國字筆順學習',
-    theme: 'theme-blue', badge: '可以練習', badgeClass: 'green',
+    theme: 'theme-blue', badge: '練字LV1', badgeClass: 'green',
+    // 等級：讀自練字趣成就系統寫入的 stats/profile.title
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('stats').doc('profile').get()
+        .then(function(doc) {
+          return (doc.exists && doc.data().title) ? doc.data().title : '練字LV1';
+        });
+    },
     activity: function(sid) {
       return db.collection('students').doc(sid).collection('progress').doc('hanzi').get()
         .then(function(doc) {
@@ -24,7 +37,14 @@ var SUBJECTS = [
   {
     id: 'multiply', file: 'multiply/index.html',
     icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
-    theme: 'theme-orange', badge: '可以練習', badgeClass: 'green',
+    theme: 'theme-orange', badge: '乘法LV1', badgeClass: 'green',
+    // 等級：讀自乘法趣成就系統寫入的 stats/multiplyProfile.title
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('stats').doc('multiplyProfile').get()
+        .then(function(doc) {
+          return (doc.exists && doc.data().title) ? doc.data().title : '乘法LV1';
+        });
+    },
     activity: function(sid) {
       return db.collection('students').doc(sid).collection('progress').doc('multiply').get()
         .then(function(doc) {
@@ -60,13 +80,13 @@ function renderHub() {
 
 function loadSubjectBadges() {
   if (!currentStudent || !db) return;
-  db.collection('students').doc(currentStudent.id)
-    .collection('stats').doc('profile')
-    .get().then(function(doc) {
-      var el = document.getElementById('badge-chinese');
-      if (!el) return;
-      if (doc.exists && doc.data().title) el.textContent = doc.data().title;
+  SUBJECTS.forEach(function(s) {
+    if (typeof s.getLevel !== 'function') return;
+    s.getLevel(currentStudent.id).then(function(label) {
+      var el = document.getElementById('badge-' + s.id);
+      if (el && label) el.textContent = label;
     }).catch(function() {});
+  });
 }
 
 // ── 子項目 iframe ──

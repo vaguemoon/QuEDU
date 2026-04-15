@@ -32,16 +32,31 @@ function generateChoiceOptions(a, b) {
   return shuffle([correct].concat(distractors.slice(0, 3)));
 }
 
-function generateReverseOptions(a, b) {
+function generateReverseOptions(a, b, fixA) {
   var product = a * b;
   var candidates = [];
-  for (var x = 0; x <= 10; x++) {
+
+  // In exam mode (fixA=true), restrict distractors to the same multiplier (a)
+  // so students can't cheat by spotting the exam table number.
+  // Fall back to all pairs when there aren't enough same-a candidates (e.g. a=0).
+  if (fixA) {
     for (var y = 0; y <= 10; y++) {
-      if (x * y !== product) {
-        candidates.push({ a: x, b: y, diff: Math.abs(x * y - product) });
+      if (a * y !== product) {
+        candidates.push({ a: a, b: y, diff: Math.abs(a * y - product) });
       }
     }
   }
+  if (candidates.length < 3) {
+    candidates = [];
+    for (var x = 0; x <= 10; x++) {
+      for (var y = 0; y <= 10; y++) {
+        if (x * y !== product) {
+          candidates.push({ a: x, b: y, diff: Math.abs(x * y - product) });
+        }
+      }
+    }
+  }
+
   candidates.sort(function(p, q) { return p.diff - q.diff; });
   var distractors = [];
   var usedProducts = [product];
@@ -71,7 +86,7 @@ function renderChoiceOptions(containerId, q, isExam) {
 }
 
 function renderReverseOptions(containerId, q, isExam) {
-  var opts = generateReverseOptions(q.a, q.b);
+  var opts = generateReverseOptions(q.a, q.b, isExam);
   var el   = document.getElementById(containerId);
   if (!el) return;
   var fn = isExam ? 'onExamReverseAnswer' : 'onPracticeReverseAnswer';
@@ -503,7 +518,7 @@ function startExamCountdown() {
   examCountdownId = setInterval(function() {
     examTimeLeft--;
     renderTimerDisplay();
-    if (examTimeLeft <= 0) { clearExamCountdown(); onExamTimeout(); }
+    if (examTimeLeft < 0) { clearExamCountdown(); onExamTimeout(); }
   }, 1000);
 }
 
