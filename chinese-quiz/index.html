@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<title>語文練習｜上學趣</title>
+<link rel="manifest" href="/QuEDU/manifest.json">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../shared/shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+<link rel="stylesheet" href="chinese-quiz.css">
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <div id="topbar-title">📖 <span>語文練習</span></div>
+  <div id="topbar-student">
+    <span id="topbar-avatar">🐣</span>
+    <span id="topbar-name">—</span>
+  </div>
+</div>
+
+<!-- ── Ghost drag element ── -->
+<div id="drag-ghost"></div>
+
+<!-- ══════════════════ SETUP PANEL ══════════════════ -->
+<div id="setup-panel">
+  <div class="setup-card">
+    <h2>📝 出題設定</h2>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>年級</label>
+        <select id="sel-grade">
+          <option value="">── 請選擇 ──</option>
+          <option value="康軒三上">康軒三上</option>
+          <option value="康軒三下">康軒三下</option>
+          <option value="康軒五上">康軒五上</option>
+          <option value="康軒五下">康軒五下</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>課次</label>
+        <select id="sel-lesson">
+          <option value="">── 請先選年級 ──</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="qty-row">
+      <div class="qty-item">
+        <label>詞語解釋</label>
+        <input type="number" id="qty-explain" min="0" max="30" value="5">
+      </div>
+      <div class="qty-item">
+        <label>詞語填空</label>
+        <input type="number" id="qty-fill" min="0" max="30" value="5">
+      </div>
+      <div class="qty-item">
+        <label>選擇題</label>
+        <input type="number" id="qty-mc" min="0" max="20" value="3">
+      </div>
+    </div>
+
+    <button class="btn-generate" onclick="generateQuiz()">產 生 試 卷</button>
+  </div>
+</div>
+
+<!-- ══════════════════ QUIZ PANEL ══════════════════ -->
+<div id="quiz-panel">
+  <div class="quiz-header">
+    <span style="font-size:1.4rem">📄</span>
+    <h2 id="quiz-title">試卷</h2>
+    <div class="quiz-meta" id="quiz-meta"></div>
+  </div>
+  <div id="quiz-content"></div>
+  <div style="height:80px"></div>
+</div>
+
+<!-- ══════════════════ SCORE PANEL ══════════════════ -->
+<div id="score-panel">
+  <div class="score-card">
+    <div class="score-emoji" id="score-emoji">🎉</div>
+    <div class="score-sub" id="score-name-display"></div>
+    <div class="score-big" id="score-display">0</div>
+    <div class="score-sub">分</div>
+    <div class="score-detail" id="score-detail"></div>
+    <button class="btn-retry" onclick="backToSetup()">再來一次</button>
+  </div>
+</div>
+
+<!-- ══════════════════ QUIZ FOOTER ══════════════════ -->
+<div class="quiz-footer" id="quiz-footer" style="display:none">
+  <button class="btn-back-setup" onclick="backToSetup()">← 重新設定</button>
+  <button class="btn-submit" onclick="submitQuiz()">批 改</button>
+</div>
+
+<!-- ══════════════════ SCRIPTS ══════════════════ -->
+<script src="../shared/shared.js"></script>
+<script src="js/fallback-questions.js"></script>
+<script src="js/state.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>

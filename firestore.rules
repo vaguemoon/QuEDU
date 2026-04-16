@@ -42,5 +42,11 @@ service cloud.firestore {
       allow read:  if request.auth != null;
       allow write: if request.auth != null;
     }
+
+    // 語文練習題庫 —— 教師可讀寫，學生（無 Auth）可讀
+    match /questions/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
   }
 }

@@ -54,6 +54,35 @@ var SUBJECTS = [
           return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
         });
     }
+  },
+  {
+    id: 'chinese-quiz', file: 'chinese-quiz/index.html',
+    icon: '📝', name: '語文練習', desc: '詞語填空與選擇題練習',
+    theme: 'theme-purple', badge: '語文練習', badgeClass: 'blue',
+    getLevel: function(sid) {
+      // 讀最近一次語文練習的分數當作標籤
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'chinese-quiz')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return '語文練習';
+          var d = snap.docs[0].data();
+          return '最近 ' + d.score + ' 分';
+        })
+        .catch(function() { return '語文練習'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'chinese-quiz')
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return null;
+          var total = snap.size;
+          return { sub: '已完成 ' + total + ' 次練習', score: total + ' 次' };
+        });
+    }
   }
 ];
 
@@ -276,8 +305,8 @@ function saveProfile() {
 
 window.addEventListener('message', function(e) {
   if (!e.data) return;
-  if (e.data.type === 'hanzi-back-to-hub'    || e.data.type === 'multiply-back-to-hub') returnToHub();
-  else if (e.data.type === 'hanzi-logout'   || e.data.type === 'multiply-logout')     doLogout();
+  if (e.data.type === 'hanzi-back-to-hub' || e.data.type === 'multiply-back-to-hub' || e.data.type === 'chinese-quiz-back-to-hub') returnToHub();
+  else if (e.data.type === 'hanzi-logout' || e.data.type === 'multiply-logout') doLogout();
 });
 
 // ── 管理者隱藏入口：連點學校名稱 5 次 ──

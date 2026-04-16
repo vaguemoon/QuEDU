@@ -8,8 +8,9 @@ var currentTeacher = null; // Firebase Auth User 物件
 
 /* ── 子 APP 登錄表（新增 APP 時只需在此加一筆）── */
 var APP_REGISTRY = [
-  { id: 'chinese',  label: '識字趣', icon: '📖', color: 'var(--blue)',  progress: 'hanzi'    },
-  { id: 'multiply', label: '乘法趣', icon: '✖️',  color: 'var(--green)', progress: 'multiply' }
+  { id: 'chinese',      label: '識字趣', icon: '📖', color: 'var(--blue)',   progress: 'hanzi'    },
+  { id: 'multiply',     label: '乘法趣', icon: '✖️',  color: 'var(--green)',  progress: 'multiply' },
+  { id: 'chinese-quiz', label: '語文練習', icon: '📝', color: 'var(--orange)', progress: null       }
 ];
 
 function onFirebaseReady() {
@@ -71,10 +72,11 @@ function doLogout() {
 }
 
 function switchTab(tab) {
-  ['classes'].forEach(function(t) {
+  ['classes', 'quiz-bank'].forEach(function(t) {
     document.getElementById('panel-'+t).style.display = t===tab ? '' : 'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
   });
   document.getElementById('panel-student').style.display = 'none';
-  if (tab === 'classes') { backToClasses(); loadClasses(); }
+  if (tab === 'classes')    { backToClasses(); loadClasses(); }
+  if (tab === 'quiz-bank')  { loadQuizBankStats(); }
 }
