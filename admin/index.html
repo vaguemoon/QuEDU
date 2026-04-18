@@ -179,7 +179,7 @@
         <div class="card">
           <div class="card-title" style="display:flex;align-items:center;gap:8px">
             📋 測驗列表
-            <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showCreateSessionModal()">＋ 新增測驗</button>
+            <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showModeSelectModal()">＋ 新增測驗</button>
             <button class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem" onclick="loadQuizSessions()">重新整理</button>
           </div>
           <div id="qs-list-wrap">
@@ -366,6 +366,56 @@
       <button id="btn-create-session" onclick="createQuizSession()"
         style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">建立</button>
     </div>
+  </div>
+</div>
+
+<!-- 出題方式選擇 Modal -->
+<div id="qs-mode-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:4px">📋 新增測驗</div>
+    <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:20px">選擇出題方式</div>
+
+    <button onclick="showCreateSessionModal()"
+      style="width:100%;display:flex;align-items:flex-start;gap:14px;padding:16px;
+             border:2px solid var(--border);border-radius:12px;background:white;
+             cursor:pointer;font-family:inherit;text-align:left;margin-bottom:10px"
+      onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt,#eef5fc)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+      <span style="font-size:1.6rem;flex-shrink:0;line-height:1.2">🎲</span>
+      <div>
+        <div style="font-size:.95rem;font-weight:900;color:var(--text,#1a1a1a)">隨機出題</div>
+        <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.5">系統從題庫隨機抽題，每次作答題目不同</div>
+      </div>
+    </button>
+
+    <button onclick="showCustomSessionModal()"
+      style="width:100%;display:flex;align-items:flex-start;gap:14px;padding:16px;
+             border:2px solid var(--border);border-radius:12px;background:white;
+             cursor:pointer;font-family:inherit;text-align:left;margin-bottom:20px"
+      onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--blue-lt,#eef5fc)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='white'">
+      <span style="font-size:1.6rem;flex-shrink:0;line-height:1.2">✅</span>
+      <div>
+        <div style="font-size:.95rem;font-weight:900;color:var(--text,#1a1a1a)">自選測驗</div>
+        <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-top:3px;line-height:1.5">手動勾選指定題目，每次作答固定題組</div>
+      </div>
+    </button>
+
+    <button onclick="hideModeSelectModal()"
+      style="width:100%;padding:11px;border:2px solid var(--border);border-radius:10px;
+             background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;
+             font-family:inherit;color:var(--gray)">取消</button>
+  </div>
+</div>
+
+<!-- 自選測驗 Modal -->
+<div id="qs-custom-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;max-width:820px;width:100%;max-height:94vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="padding:24px 24px 0;flex-shrink:0">
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:2px">✅ 自選測驗</div>
+      <div id="qs-custom-subtitle" style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:16px">步驟 1／2　設定基本資訊</div>
+    </div>
+    <div id="qs-custom-body" style="padding:0 24px 24px;overflow-y:auto;flex:1"></div>
   </div>
 </div>
 

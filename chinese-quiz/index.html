@@ -11,6 +11,8 @@
 <body>
 
 <div class="entry-page">
+<div class="entry-wrapper">
+
   <div class="entry-card">
     <div class="entry-logo">📝</div>
     <h1 class="entry-title">語文練習</h1>
@@ -31,8 +33,7 @@
         onkeydown="if(event.key==='Enter')lookupSession()">
       <div id="code-error" style="font-size:.82rem;font-weight:700;color:#d93025;min-height:20px;margin-bottom:8px;text-align:center"></div>
       <button class="btn-start" id="btn-join" onclick="lookupSession()">進入測驗</button>
-      <!-- 曾參加過且仍開放的測驗 -->
-      <div id="history-section" style="display:none;margin-top:20px"></div>
+      <!-- history moved to past-quiz side panel -->
     </div>
 
     <!-- Step: 確認資訊 -->
@@ -51,6 +52,14 @@
     <div class="entry-divider"></div>
     <button class="btn-entry-return" onclick="returnToHub()">← 返回主頁</button>
   </div>
+
+<!-- ─── Past-quiz side panel ─── -->
+<div class="past-quiz-panel" id="past-quiz-panel">
+  <div class="past-panel-title">過去的測驗</div>
+  <div id="past-panel-body"><div class="past-panel-empty">載入中…</div></div>
+</div>
+
+</div><!-- /.entry-wrapper -->
 </div>
 
 <script>
@@ -67,6 +76,7 @@ var FB_CONFIG = {
 
 var db            = null;
 var sessionData   = null;   /* loaded quizSession document data */
+var sessionDocId  = null;   /* Firestore doc ID of loaded quizSession */
 var HISTORY_KEY   = 'cq_session_history';
 
 /* ── Navigation ── */
@@ -114,7 +124,7 @@ function showStep(name) {
 
     if (!db) { showStep('offline'); return; }
     showStep('code');
-    renderHistorySection();
+    renderPastPanel();
   } catch(e) {
     /* Last-resort fallback: show the code input anyway */
     try { showStep('code'); } catch(e2) {}
@@ -147,6 +157,7 @@ function lookupSession() {
         return;
       }
 
+      sessionDocId    = snap.docs[0].id;
       sessionData     = snap.docs[0].data();
       var counts      = sessionData.counts || {};
       var total       = (counts.explain || 0) + (counts.fillIn || 0) + (counts.mc || 0);
@@ -178,24 +189,124 @@ function loadHistory() {
 
 function saveToHistory(data) {
   var list = loadHistory().filter(function(h) { return h.code !== data.code; });
-  list.unshift({
+  var entry = {
     code:       data.code       || '',
     name:       data.name       || '未命名',
     grade:      data.grade      || '',
     lesson:     data.lesson     || '',
     lessonName: data.lessonName || '',
     teacherUid: data.teacherUid || '',
-    counts:     data.counts     || {}
-  });
+    counts:     data.counts     || {},
+    type:       data.type       || 'random'
+  };
+  if (data.type === 'custom' && data.questionIds) {
+    entry.questionIds = data.questionIds;
+  }
+  list.unshift(entry);
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 10))); }
   catch(e) {}
 }
 
-function renderHistorySection() {
-  var histEl = document.getElementById('history-section');
-  if (!histEl || !db) return;
-  var list = loadHistory().filter(function(h) { return h.code; });
-  if (!list.length) return;
+/* ── 過去測驗側欄 ── */
+var PANEL_EMPTY_HTML = '<div class="past-panel-empty">完成測驗後，<br>做過的試卷會顯示在這裡</div>';
+
+function renderPastPanel() {
+  var panel   = document.getElementById('past-quiz-panel');
+  var bodyEl  = document.getElementById('past-panel-body');
+  if (!panel || !bodyEl) return;
+
+  /* 一律顯示側欄；無資料時顯示空白提示 */
+  panel.style.display = '';
+
+  if (!db) { bodyEl.innerHTML = PANEL_EMPTY_HTML; return; }
+
+  var student = null;
+  try { student = JSON.parse(sessionStorage.getItem('hub_student')); } catch(e) {}
+
+  if (student && student.id) {
+    /* ── 主路徑：Firestore quizResults ── */
+    db.collection('quizResults')
+      .where('studentId', '==', student.id)
+      .get()
+      .catch(function() { return { empty: true, docs: [] }; })
+      .then(function(resultSnap) {
+        if (resultSnap.empty) { _renderLocalPanel(bodyEl); return; }
+
+        /* 依 sessionCode 分組，保留最高分 */
+        var byCode = {};
+        resultSnap.docs.forEach(function(doc) {
+          var d = doc.data();
+          if (!d.sessionCode) return;
+          if (!byCode[d.sessionCode] || d.score > byCode[d.sessionCode].bestScore) {
+            byCode[d.sessionCode] = {
+              code:       d.sessionCode,
+              name:       d.sessionName  || '未命名',
+              grade:      d.grade        || '',
+              lesson:     d.lesson       || '',
+              lessonName: d.lessonName   || '',
+              bestScore:  d.score        || 0,
+              timestamp:  d.timestamp    || ''
+            };
+          }
+        });
+
+        var codes = Object.keys(byCode);
+        if (!codes.length) { _renderLocalPanel(bodyEl); return; }
+
+        /* 確認哪些仍在開放（active=true） */
+        db.collection('quizSessions')
+          .where('code', 'in', codes.slice(0, 30))
+          .where('active', '==', true)
+          .get()
+          .then(function(sessionSnap) {
+            var activeCodes = {};
+            sessionSnap.docs.forEach(function(d) { activeCodes[d.data().code] = true; });
+
+            var items = codes
+              .filter(function(c) { return activeCodes[c]; })
+              .map(function(c) { return byCode[c]; })
+              .sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
+
+            if (!items.length) { _renderLocalPanel(bodyEl); return; }
+            _showPanelItems(bodyEl, items, true);
+          })
+          .catch(function() { _renderLocalPanel(bodyEl); });
+      })
+      .catch(function() { _renderLocalPanel(bodyEl); });
+  } else {
+    /* ── 備援路徑：localStorage ── */
+    _renderLocalPanel(bodyEl);
+  }
+}
+
+/* 渲染清單項目 */
+function _showPanelItems(bodyEl, items, showScore) {
+  if (!items.length) { bodyEl.innerHTML = PANEL_EMPTY_HTML; return; }
+  var html = '';
+  items.forEach(function(h) {
+    var scoreHtml = showScore && h.bestScore != null
+      ? '<div class="past-panel-score">' + h.bestScore + '<span style="font-size:.65rem;font-weight:700;color:var(--ink-lt)"> 分</span></div>'
+      : '';
+    html +=
+      '<div class="past-panel-item">' +
+        '<div class="past-panel-info">' +
+          '<div class="past-panel-name">' + escHtml(h.name) + '</div>' +
+          '<div class="past-panel-meta">' +
+            escHtml(h.grade) + '　第 ' + escHtml(h.lesson) + ' 課' +
+            (h.lessonName && h.lessonName !== h.lesson ? '　' + escHtml(h.lessonName) : '') +
+          '</div>' +
+        '</div>' +
+        scoreHtml +
+        '<button class="btn-past-enter" onclick="enterFromHistory(\'' + escJs(h.code) + '\')">進入</button>' +
+      '</div>';
+  });
+  bodyEl.innerHTML = html;
+}
+
+/* localStorage 備援路徑 */
+function _renderLocalPanel(bodyEl) {
+  var list  = loadHistory().filter(function(h) { return h.code; });
+  if (!list.length) { bodyEl.innerHTML = PANEL_EMPTY_HTML; return; }
   var codes = list.map(function(h) { return h.code; }).slice(0, 10);
   db.collection('quizSessions')
     .where('code', 'in', codes)
@@ -205,28 +316,9 @@ function renderHistorySection() {
       var active = {};
       snap.docs.forEach(function(d) { active[d.data().code] = true; });
       var items = list.filter(function(h) { return active[h.code]; });
-      if (!items.length) return;
-      var html = '<div class="history-title">最近的測驗</div>';
-      items.forEach(function(h) {
-        var c = h.counts || {};
-        var total = (c.explain || 0) + (c.fillIn || 0) + (c.mc || 0);
-        html +=
-          '<div class="history-item">' +
-            '<div class="history-item-info">' +
-              '<div class="history-item-name">' + escHtml(h.name) + '</div>' +
-              '<div class="history-item-meta">' +
-                escHtml(h.grade) + '　第 ' + escHtml(h.lesson) + ' 課' +
-                (h.lessonName && h.lessonName !== h.lesson ? '　' + escHtml(h.lessonName) : '') +
-                (total ? '　共 ' + total + ' 題' : '') +
-              '</div>' +
-            '</div>' +
-            '<button class="btn-history-enter" onclick="enterFromHistory(\'' + escJs(h.code) + '\')">重新進入</button>' +
-          '</div>';
-      });
-      histEl.innerHTML = html;
-      histEl.style.display = '';
+      _showPanelItems(bodyEl, items, false);
     })
-    .catch(function() {});
+    .catch(function() { bodyEl.innerHTML = PANEL_EMPTY_HTML; });
 }
 
 function enterFromHistory(code) {
@@ -240,17 +332,25 @@ function goQuiz() {
   if (!sessionData) return;
   saveToHistory(sessionData);
   try {
-    sessionStorage.setItem('quiz_settings', JSON.stringify({
-      grade:      sessionData.grade,
-      lesson:     sessionData.lesson,
-      lessonName: sessionData.lessonName || sessionData.lesson,
-      teacherUid: sessionData.teacherUid || '',
+    var settings = {
+      type:        sessionData.type || 'random',
+      sessionId:   sessionDocId    || '',
+      sessionCode: sessionData.code || '',
+      sessionName: sessionData.name || '',
+      grade:       sessionData.grade,
+      lesson:      sessionData.lesson,
+      lessonName:  sessionData.lessonName || sessionData.lesson,
+      teacherUid:  sessionData.teacherUid || '',
       counts: {
-        '詞語解釋': sessionData.counts.explain || 0,
-        '詞語填空': sessionData.counts.fillIn  || 0,
-        '選擇題':   sessionData.counts.mc      || 0
+        '詞語解釋': (sessionData.counts || {}).explain || 0,
+        '詞語填空': (sessionData.counts || {}).fillIn  || 0,
+        '選擇題':   (sessionData.counts || {}).mc      || 0
       }
-    }));
+    };
+    if (sessionData.questionIds && sessionData.questionIds.length) {
+      settings.questionIds = sessionData.questionIds;
+    }
+    sessionStorage.setItem('quiz_settings', JSON.stringify(settings));
   } catch(e) {}
   window.location.href = 'quiz.html';
 }
@@ -259,6 +359,9 @@ function goQuiz() {
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                   .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escJs(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 </script>
 </body>

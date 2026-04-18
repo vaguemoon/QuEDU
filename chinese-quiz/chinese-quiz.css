@@ -795,6 +795,95 @@ body {
 }
 .btn-history-enter:hover { background: var(--accent); color: #fff; }
 
+/* ═══ Entry wrapper (card + past-quiz side panel) ═══ */
+.entry-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+  max-width: 780px;
+}
+
+/* Past-quiz side panel */
+.past-quiz-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 20px 18px 18px;
+  box-shadow: 0 4px 20px var(--shadow);
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.past-panel-title {
+  font-family: 'Noto Serif TC', serif;
+  font-size: .82rem;
+  font-weight: 900;
+  color: var(--ink-lt);
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule-lt);
+}
+.past-panel-empty {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--rule);
+  text-align: center;
+  padding: 20px 0;
+}
+.past-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--paper);
+  transition: border-color .15s;
+}
+.past-panel-item:hover { border-color: var(--accent); }
+.past-panel-info { flex: 1; min-width: 0; }
+.past-panel-name {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.past-panel-meta {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--ink-lt);
+  margin-top: 2px;
+}
+.past-panel-score {
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-past-enter {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+.btn-past-enter:hover { background: var(--accent); color: #fff; }
+
 /* ═══ Responsive ═══ */
 @media (max-width: 480px) {
   .quiz-sheet-title { font-size: 1.1rem; letter-spacing: 2px; }
@@ -803,4 +892,17 @@ body {
   .btn-submit       { padding: 13px 36px; font-size: .95rem; }
   .pool-word        { font-size: .85rem; padding: 5px 10px; }
   .q-text-wrap      { font-size: .9rem; }
+}
+
+/* ─── Narrow screens: stack entry card and past-panel vertically ─── */
+@media (max-width: 820px) {
+  .entry-wrapper {
+    flex-direction: column;
+    align-items: center;
+    max-width: 400px;
+  }
+  .past-quiz-panel {
+    width: 100%;
+    max-height: none;
+  }
 }

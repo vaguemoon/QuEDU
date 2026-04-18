@@ -97,6 +97,7 @@ var DRAG_THOLD   = 8;   /* px movement needed to start drag vs tap */
 var db              = null;
 var student         = null;
 var currentSettings = null; /* { grade, lesson, lessonName, counts } */
+var currentSession  = null; /* { sessionId, sessionCode, sessionName, teacherUid } */
 var quizData        = [];
 var poolOrder       = {};
 var blanks          = {};   /* { qIdx: word | undefined } */
@@ -170,7 +171,7 @@ function speakQuestion(qIdx) {
   if (!window.speechSynthesis) { showToast('此裝置不支援朗讀功能'); return; }
   window.speechSynthesis.cancel();
   var text  = quizData[qIdx].question;
-  var parts = text.split(/（[^）]*）/);   /* split at blank markers */
+  var parts = text.split(/[（(][^）)]*[）)]/);   /* split at blank markers（全形或半形括號） */
   parts.length === 1 ? _speak(text, null) : _speakParts(parts, 0);
 }
 
@@ -222,7 +223,39 @@ function loadQuestions() {
   try { settings = JSON.parse(sessionStorage.getItem('quiz_settings')); } catch(e) {}
 
   if (!settings || !settings.grade || !settings.lesson) {
+    currentSession = null;
     startQuiz(FALLBACK, null);
+    return;
+  }
+
+  /* 儲存 session 資訊，供 saveScore() 寫入 quizResults */
+  currentSession = {
+    sessionId:   settings.sessionId   || '',
+    sessionCode: settings.sessionCode || '',
+    sessionName: settings.sessionName || '',
+    teacherUid:  settings.teacherUid  || ''
+  };
+
+  /* ── 固定題組（隨機出題已鎖定 / 自選測驗）：依指定 ID 直接讀取題目 ── */
+  if (settings.questionIds && settings.questionIds.length) {
+    if (!db) { startQuiz(FALLBACK, null); return; }
+    Promise.all(settings.questionIds.map(function(id) {
+      return db.collection('questions').doc(id).get();
+    }))
+    .then(function(docs) {
+      var questions = [];
+      docs.forEach(function(doc) {
+        if (!doc.exists) return;
+        var d = doc.data();
+        if (d.type && d.question && d.answer) {
+          questions.push({ type: d.type, question: d.question, answer: d.answer,
+                           options: d.options || [], grade: d.grade, lesson: d.lesson });
+        }
+      });
+      startQuiz(questions.length ? questions : FALLBACK,
+                questions.length ? settings  : null);
+    })
+    .catch(function() { startQuiz(FALLBACK, null); });
     return;
   }
 
@@ -376,7 +409,7 @@ function renderQuestion(q, qIdx, num) {
 function renderFill(q, qIdx, num) {
   var blankSpan = '<span class="q-blank blank-placeholder" id="blank-' + qIdx +
     '" data-qidx="' + qIdx + '"></span>';
-  var textHtml = escHtml(q.question).replace(/（[^）]*）/, blankSpan);
+  var textHtml = escHtml(q.question).replace(/[（(][^）)]*[）)]/, blankSpan);
   return '<div class="q-row" id="qr-' + qIdx + '">' +
     '<span class="q-num">' + num + '.</span>' +
     '<div class="q-text-wrap q-speakable" onclick="speakQuestion(' + qIdx + ')">' +
@@ -795,12 +828,34 @@ function buildReviewHtml(wrongIndices) {
 /* ════════════ Save to Firestore ════════════ */
 function saveScore(score, correct, total) {
   if (!db || !student) return;
+  var now   = new Date().toISOString();
+  var grade  = (quizData[0] && quizData[0].grade)  || '練習卷';
+  var lesson = (quizData[0] && quizData[0].lesson) || '';
+
+  /* 原有：個人活動紀錄 */
   db.collection('students').doc(student.id).collection('activities').add({
     app: 'chinese-quiz', score: score, correct: correct, total: total,
-    grade:  (quizData[0] && quizData[0].grade)  || '練習卷',
-    lesson: (quizData[0] && quizData[0].lesson) || '',
-    timestamp: new Date().toISOString()
+    grade: grade, lesson: lesson, timestamp: now
   }).catch(function(){});
+
+  /* 新增：跨學生可查詢的測驗結果（教師看最高分、學生看歷史） */
+  if (currentSession && currentSession.sessionId) {
+    db.collection('quizResults').add({
+      sessionId:   currentSession.sessionId,
+      sessionCode: currentSession.sessionCode,
+      sessionName: currentSession.sessionName,
+      teacherUid:  currentSession.teacherUid,
+      studentId:   student.id,
+      studentName: student.nickname || student.name || '',
+      score:       score,
+      correct:     correct,
+      total:       total,
+      grade:       grade,
+      lesson:      lesson,
+      lessonName:  (currentSettings && currentSettings.lessonName) || '',
+      timestamp:   now
+    }).catch(function(){});
+  }
 }
 
 /* ════════════ Retry ════════════ */

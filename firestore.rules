@@ -48,5 +48,17 @@ service cloud.firestore {
       allow read:  if true;
       allow write: if request.auth != null;
     }
+
+    // 語文練習測驗代碼 —— 學生（無 Auth）可讀，教師可寫
+    match /quizSessions/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 語文練習作答結果 —— 學生（無 Auth）可讀寫，教師可讀
+    match /quizResults/{doc} {
+      allow read:  if true;
+      allow write: if true;
+    }
   }
 }
