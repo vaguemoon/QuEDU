@@ -27,7 +27,7 @@ var CURR_COLORS = [
 function loadCurriculumVersions() {
   if (!db) { setTimeout(loadCurriculumVersions, 300); return; }
   var container = document.getElementById('version-cards');
-  if (!container) return;
+  if (!container) { setTimeout(loadCurriculumVersions, 300); return; }
 
   db.collection('curriculum').get().then(function(snap) {
     container.innerHTML = '';
@@ -80,7 +80,9 @@ function loadCurriculumVersions() {
   }).catch(function(e) {
     console.warn('loadCurriculumVersions error:', e);
     var container = document.getElementById('version-cards');
-    if (container) container.innerHTML = '<div class="curr-loading">載入失敗，請重新整理</div>';
+    if (container) container.innerHTML =
+      '<div class="curr-loading">載入失敗</div>' +
+      '<button class="btn-retry-curr" onclick="loadCurriculumVersions()">🔄 重試</button>';
   });
 }
 
