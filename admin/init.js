@@ -6,6 +6,24 @@
 
 var currentTeacher = null; // Firebase Auth User 物件
 
+/* ── 暗色模式 ── */
+(function() {
+  if (localStorage.getItem('admin-dark') === '1') {
+    document.body.classList.add('dark');
+  }
+})();
+
+function toggleDarkMode() {
+  var isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('admin-dark', isDark ? '1' : '0');
+  var btn = document.getElementById('dark-mode-btn');
+  if (btn) btn.textContent = isDark ? '☀️ 亮色模式' : '🌙 暗色模式';
+  var frame = document.getElementById('tool-modal-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'admin-dark', dark: isDark }, '*');
+  }
+}
+
 /* ── 子 APP 登錄表（新增 APP 時只需在此加一筆）── */
 var APP_REGISTRY = [
   { id: 'chinese',      label: '識字趣', icon: '📖', color: 'var(--blue)',   progress: 'hanzi'    },
@@ -18,6 +36,9 @@ function onFirebaseReady() {
 }
 
 window.addEventListener('load', function() {
+  var btn = document.getElementById('dark-mode-btn');
+  if (btn && document.body.classList.contains('dark')) btn.textContent = '☀️ 亮色模式';
+
   initFirebase();
 
   // 等 auth 初始化後，監聽登入狀態

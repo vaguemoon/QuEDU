@@ -9,30 +9,68 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
-/* ══ CSS 變數 ══════════════════════════════════════════════ */
+/* ══ CSS 變數（對齊 QuEDU design tokens）══════════════════════ */
 :root {
+  /* ── Brand ── */
   --blue:       #4a90d9;
   --blue-dk:    #2d6fa8;
   --blue-lt:    #e8f4fd;
-  --blue-grad:  linear-gradient(135deg, #4a90d9, #2d6fa8);
+  --bg:         #eef5fc;
+
+  /* ── Semantic palette ── */
   --green:      #52c97a;
   --green-dk:   #389959;
   --orange:     #ff8c42;
   --orange-dk:  #e06a1a;
-  --red:        #e74c3c;
+  --red:        #e84444;
   --yellow:     #ffd54f;
-  --bg:         #eef5fc;
+
+  /* ── Foreground / surfaces ── */
+  --fg1:        #1e2d3d;
+  --fg2:        #7a99b5;
   --white:      #ffffff;
-  --text:       #1e2d3d;
-  --muted:      #7a99b5;
   --border:     #d4e8f8;
+
+  /* ── Radii ── */
   --radius:     22px;
+  --radius-sm:  13px;
+  --radius-pill: 9999px;
+
+  /* ── Shadows ── */
   --shadow:     0 6px 28px rgba(44,100,160,.13);
   --shadow-lg:  0 12px 48px rgba(44,100,160,.20);
+  --shadow-btn: 0 4px 14px rgba(45,111,168,.30);
+
+  /* ── Gradients ── */
+  --grad-btn:   linear-gradient(135deg, var(--blue), var(--blue-dk));
+
+  /* ── Typography ── */
+  --font-ui:    'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
+
+  /* ── Tool-specific (reading) ── */
   --reading-bg:     #fff9e6;
   --reading-border: #ffc107;
   --line-even:      #f4f9ff;
   --line-hover:     #dbeeff;
+}
+
+/* ── Dark mode（共用後台 admin-dark localStorage）── */
+body.dark {
+  --blue:           #58a6ff;
+  --blue-dk:        #79c0ff;
+  --blue-lt:        #1c2d3f;
+  --bg:             #0d1117;
+  --fg1:            #e6edf3;
+  --fg2:            #7d8590;
+  --white:          #161b22;
+  --border:         #30363d;
+  --shadow:         0 6px 28px rgba(0,0,0,.4);
+  --shadow-lg:      0 12px 48px rgba(0,0,0,.5);
+  --grad-btn:       linear-gradient(135deg, #3a7fd4, #2d6fa8);
+  --reading-bg:     #2a2010;
+  --reading-border: #d29922;
+  --line-even:      #161b22;
+  --line-hover:     #1c2d3f;
 }
 
 /* ══ Reset ══════════════════════════════════════════════════ */
@@ -41,9 +79,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 body {
-  font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  font-family: var(--font-ui);
   background: var(--bg);
-  color: var(--text);
+  color: var(--fg1);
   min-height: 100vh;
   transition: background .3s, color .3s;
 }
@@ -55,7 +93,7 @@ body {
 /* ══ Topbar ═════════════════════════════════════════════════ */
 #topbar {
   position: sticky; top: 0; z-index: 100;
-  background: var(--blue-grad);
+  background: var(--grad-btn);
   height: 52px;
   padding: 0 12px;
   display: flex; align-items: center; gap: 8px;
@@ -141,19 +179,19 @@ body {
 .drop-zone input[type="file"] { display: none; }
 .drop-zone label { cursor: pointer; display: block; }
 .drop-icon { font-size: 2.6rem; display: block; margin-bottom: 8px; }
-.drop-text { font-size: .87rem; font-weight: 700; color: var(--muted); line-height: 1.6; }
+.drop-text { font-size: .87rem; font-weight: 700; color: var(--fg2); line-height: 1.6; }
 .drop-text strong { color: var(--blue-dk); }
 
 .btn-main {
   width: 100%; height: 48px;
   border: none; border-radius: 14px;
-  background: var(--blue-grad); color: #fff;
+  background: var(--grad-btn); color: #fff;
   font-size: 1rem; font-weight: 900; cursor: pointer;
   transition: all .15s;
   box-shadow: 0 4px 14px rgba(45,111,168,.35);
 }
 .btn-main:active   { transform: scale(.97); }
-.btn-main:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; color: var(--muted); }
+.btn-main:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; color: var(--fg2); }
 .btn-main.orange   {
   background: linear-gradient(135deg, var(--orange), var(--orange-dk));
   box-shadow: 0 4px 14px rgba(224,106,26,.3);
@@ -171,7 +209,7 @@ body {
 .ctrl-group { display: flex; align-items: center; gap: 6px; }
 .ctrl-label {
   font-size: .76rem; font-weight: 800;
-  color: var(--muted); white-space: nowrap;
+  color: var(--fg2); white-space: nowrap;
 }
 .ctrl-select {
   font-size: .8rem; font-weight: 700;
@@ -189,7 +227,7 @@ body {
 .btn-ctrl {
   height: 36px; padding: 0 13px;
   border: 2px solid var(--border); border-radius: 11px;
-  background: var(--white); color: var(--text);
+  background: var(--white); color: var(--fg1);
   font-size: .85rem; font-weight: 800; cursor: pointer;
   transition: all .15s; white-space: nowrap;
   box-shadow: 0 2px 6px rgba(44,100,160,.06);
@@ -198,7 +236,7 @@ body {
 .btn-ctrl:active  { transform: scale(.95); }
 .btn-ctrl:disabled { opacity: .4; cursor: not-allowed; }
 .btn-ctrl.primary {
-  background: var(--blue-grad); color: #fff; border-color: transparent;
+  background: var(--grad-btn); color: #fff; border-color: transparent;
   box-shadow: 0 4px 12px rgba(45,111,168,.28);
 }
 .btn-ctrl.primary:hover { opacity: .88; }
@@ -222,14 +260,14 @@ body {
 }
 .edit-panel-label {
   font-size: .78rem; font-weight: 900;
-  color: var(--muted); margin-bottom: 8px;
+  color: var(--fg2); margin-bottom: 8px;
 }
 #edit-textarea {
   width: 100%; min-height: 180px; max-height: 48vh;
   border: 2px solid var(--border); border-radius: 14px;
   padding: 11px 14px;
   font-size: 15px; line-height: 1.8;
-  color: var(--text); background: var(--bg);
+  color: var(--fg1); background: var(--bg);
   resize: vertical; outline: none; transition: border-color .2s;
 }
 #edit-textarea:focus { border-color: var(--blue); }
@@ -271,7 +309,7 @@ body {
 .edit-drag-handle:active { cursor: grabbing; }
 #edit-panel.floating .edit-drag-handle { display: flex; }
 #edit-panel.floating .edit-panel-header { display: none; }
-.edit-drag-dots { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.edit-drag-dots { font-size: .8rem; font-weight: 700; color: var(--fg2); }
 .edit-format-bar {
   display: flex; gap: 5px; align-items: center;
   margin-bottom: 8px; flex-wrap: wrap;
@@ -279,7 +317,7 @@ body {
 .btn-fmt {
   height: 28px; padding: 0 9px;
   border: 1.5px solid var(--border); border-radius: 7px;
-  background: var(--white); color: var(--text);
+  background: var(--white); color: var(--fg1);
   font-size: .75rem; font-weight: 800; cursor: pointer;
   transition: all .12s; white-space: nowrap;
 }
@@ -295,7 +333,7 @@ body {
 .edit-search-input {
   height: 30px; padding: 0 9px; flex: 1; min-width: 80px;
   border: 2px solid var(--border); border-radius: 8px;
-  background: var(--bg); color: var(--text);
+  background: var(--bg); color: var(--fg1);
   font-size: .82rem; outline: none; transition: border-color .2s;
 }
 .edit-search-input:focus { border-color: var(--blue); }
@@ -303,7 +341,7 @@ body {
 
 .status-tip {
   padding: 8px 18px 4px;
-  font-size: .76rem; font-weight: 700; color: var(--muted);
+  font-size: .76rem; font-weight: 700; color: var(--fg2);
 }
 .doc-heading {
   padding: 14px 18px 4px;
@@ -331,7 +369,7 @@ body {
 }
 .title-main:hover { background: transparent; }
 .title-sub {
-  font-size: .94rem; font-weight: 800; color: var(--muted);
+  font-size: .94rem; font-weight: 800; color: var(--fg2);
   cursor: default;
 }
 .title-sub:hover { background: transparent; }
@@ -370,7 +408,7 @@ body {
 
 .group-section { margin-bottom: 32px; }
 .group-label {
-  font-size: .85rem; font-weight: 900; color: var(--muted);
+  font-size: .85rem; font-weight: 900; color: var(--fg2);
   letter-spacing: .5px; margin-bottom: 12px;
   padding-bottom: 6px; border-bottom: 2px solid var(--border);
 }
@@ -384,8 +422,8 @@ body {
 .lib-card {
   background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
   border: 1px solid var(--border); border-radius: 16px;
-  padding: 16px 158px 16px 18px;
-  cursor: pointer; text-decoration: none; color: var(--text);
+  padding: 16px 200px 16px 18px;
+  cursor: pointer; text-decoration: none; color: var(--fg1);
   display: block; position: relative;
   transition: all .15s;
 }
@@ -395,30 +433,75 @@ body {
   box-shadow: var(--shadow);
 }
 .lib-card-title { font-weight: 900; font-size: .98rem; margin-bottom: 4px; }
-.lib-card-meta  { font-size: .76rem; color: var(--muted); }
+.lib-card-meta  { font-size: .76rem; color: var(--fg2); }
 .lib-card-del,
 .lib-card-edit,
-.lib-card-dl {
+.lib-card-dl,
+.lib-card-edit-content {
   position: absolute; top: 50%;
   transform: translateY(-50%);
   width: 30px; height: 30px;
   background: none; border: none; border-radius: 8px;
-  color: var(--muted); font-size: .88rem;
+  color: var(--fg2); font-size: .88rem;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: all .15s;
 }
-.lib-card-del  { right: 12px; }
-.lib-card-edit { right: 48px; }
-.lib-card-dl   { right: 84px; }
+.lib-card-del          { right: 12px; }
+.lib-card-edit         { right: 48px; }
+.lib-card-dl           { right: 84px; }
+.lib-card-edit-content { right: 120px; }
+.lib-card-share        { right: 156px; }
 .lib-card:hover .lib-card-del,
 .lib-card:hover .lib-card-edit,
-.lib-card:hover .lib-card-dl   { opacity: 1; }
-.lib-card-del:hover  { background: var(--red);     color: #fff; }
-.lib-card-edit:hover { background: var(--blue-lt); color: var(--blue-dk); }
-.lib-card-dl:hover   { background: #e6f9ee;        color: #389959; }
+.lib-card:hover .lib-card-dl,
+.lib-card:hover .lib-card-edit-content,
+.lib-card:hover .lib-card-share { opacity: 1; }
+.lib-card-del:hover          { background: var(--red);     color: #fff; }
+.lib-card-edit:hover         { background: var(--blue-lt); color: var(--blue-dk); }
+.lib-card-dl:hover           { background: #e6f9ee;        color: #389959; }
+.lib-card-edit-content:hover { background: linear-gradient(135deg,var(--orange),var(--orange-dk)); color: #fff; }
+.lib-card-share:hover  { background: #e0f2fe; color: #0369a1; }
+
+/* 分享狀態標籤列 */
+.lib-card-share-status {
+  display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px;
+}
+.share-badge {
+  font-size: .7rem; font-weight: 700; padding: 2px 7px;
+  border-radius: 20px; background: #e0f2fe; color: #0369a1;
+  white-space: nowrap;
+}
+
+/* 分享 Modal 班級列表 */
+.share-class-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 4px; border-bottom: 1px solid var(--border);
+}
+.share-class-row:last-child { border-bottom: none; }
+.share-class-row label { font-weight: 700; font-size: .9rem; cursor: pointer; flex: 1; }
+.share-class-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+
+/* 學生模式 */
+.student-wrap { padding: 16px; }
+.student-heading {
+  font-size: 1.05rem; font-weight: 900; color: var(--blue-dk);
+  margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+}
+.student-doc-card {
+  background: var(--white); border-radius: 14px; padding: 16px;
+  margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  cursor: pointer; display: flex; align-items: center; gap: 12px;
+  transition: transform .15s, box-shadow .15s;
+}
+.student-doc-card:hover  { box-shadow: 0 4px 18px rgba(0,0,0,.14); }
+.student-doc-card:active { transform: scale(.97); }
+.student-doc-icon { font-size: 1.6rem; flex-shrink: 0; }
+.student-doc-title { font-weight: 900; font-size: .95rem; color: var(--fg1); }
+.student-doc-date  { font-size: .75rem; color: var(--fg2); margin-top: 3px; font-weight: 600; }
 
 .library-empty {
-  text-align: center; padding: 56px 24px; color: var(--muted);
+  text-align: center; padding: 56px 24px; color: var(--fg2);
 }
 .library-empty p     { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
 .library-empty small { font-size: .84rem; line-height: 1.6; }
@@ -447,14 +530,14 @@ body {
 .form-group  { margin-bottom: 14px; }
 .form-label  {
   display: block;
-  font-size: .78rem; font-weight: 800; color: var(--muted);
+  font-size: .78rem; font-weight: 800; color: var(--fg2);
   margin-bottom: 6px; letter-spacing: .3px;
 }
 .form-input {
   width: 100%; height: 44px;
   padding: 0 14px;
   border: 2px solid var(--border); border-radius: 12px;
-  background: var(--bg); color: var(--text);
+  background: var(--bg); color: var(--fg1);
   font-size: .95rem; outline: none; transition: border-color .2s;
 }
 .form-input:focus { border-color: var(--blue); }
@@ -462,14 +545,14 @@ body {
 .btn-modal-cancel {
   flex: 1; height: 46px;
   border: 2px solid var(--border); border-radius: 13px;
-  background: var(--white); color: var(--text);
+  background: var(--white); color: var(--fg1);
   font-size: .92rem; font-weight: 800; cursor: pointer; transition: all .15s;
 }
 .btn-modal-cancel:hover { background: var(--bg); }
 .btn-modal-ok {
   flex: 2; height: 46px;
   border: none; border-radius: 13px;
-  background: var(--blue-grad); color: #fff;
+  background: var(--grad-btn); color: #fff;
   font-size: .95rem; font-weight: 900; cursor: pointer;
   box-shadow: 0 4px 14px rgba(45,111,168,.32);
   transition: opacity .15s;
@@ -496,7 +579,7 @@ body {
   margin: 0 auto 14px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.proc-card p { font-size: .88rem; font-weight: 700; color: var(--muted); }
+.proc-card p { font-size: .88rem; font-weight: 700; color: var(--fg2); }
 
 /* ══ Toast ═══════════════════════════════════════════════════ */
 #toast {
@@ -615,6 +698,11 @@ body {
   <div id="reader-content"></div>
 </div>
 
+<!-- ── Page: Viewer ────────────────────────────────────────── -->
+<div id="page-viewer" class="page">
+  <iframe id="viewer-frame" style="width:100%;height:calc(100vh - 52px);border:none;display:block;"></iframe>
+</div>
+
 <!-- ── Page: Library ───────────────────────────────────────── -->
 <div id="page-library" class="page">
   <div class="library-wrap">
@@ -628,6 +716,30 @@ body {
         <p>報讀庫還沒有內容</p>
         <small>使用「轉換」功能後按「存到報讀庫」，或點「匯入 .html 檔」加入已有檔案</small>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Page: Student ───────────────────────────────────────── -->
+<div id="page-student" class="page">
+  <div class="student-wrap">
+    <div class="student-heading">🎧 老師分享的考卷</div>
+    <div id="student-doc-list"></div>
+    <div id="student-empty" style="display:none;text-align:center;padding:48px 24px;color:#999;font-weight:700;font-size:.9rem">目前老師還沒有分享文件</div>
+    <div id="student-loading" style="text-align:center;padding:48px 24px;color:#999;font-weight:700;font-size:.9rem">載入中…</div>
+  </div>
+</div>
+
+<!-- ── Share Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-share">
+  <div class="modal-card">
+    <h3>📤 分享給班級</h3>
+    <div id="share-doc-name" style="font-size:.82rem;color:#666;font-weight:600;margin-top:-12px;margin-bottom:16px;word-break:break-all"></div>
+    <div id="share-class-list" style="max-height:240px;overflow-y:auto"></div>
+    <div id="share-loading" style="text-align:center;padding:16px;font-size:.85rem;color:#999;display:none">載入班級中…</div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-modal-cancel" id="btn-cancel-share">取消</button>
+      <button class="btn-modal-ok"     id="btn-confirm-share">✅ 確認</button>
     </div>
   </div>
 </div>
@@ -687,6 +799,16 @@ body {
 <div id="toast"></div>
 
 <script>
+/* ── 共用後台暗色模式設定 ── */
+(function() {
+  if (localStorage.getItem('admin-dark') === '1') document.body.classList.add('dark');
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'admin-dark') {
+      document.body.classList.toggle('dark', e.data.dark);
+    }
+  });
+})();
+
 (function () {
 'use strict';
 
@@ -727,6 +849,14 @@ var btnConfirmEditItem = document.getElementById('btn-confirm-edit-item');
 var loginBtn           = document.getElementById('login-btn');
 var topbarBack      = document.getElementById('topbar-back');
 var toast           = document.getElementById('toast');
+var modalShare      = document.getElementById('modal-share');
+var shareClassList  = document.getElementById('share-class-list');
+var shareLoading    = document.getElementById('share-loading');
+var btnCancelShare  = document.getElementById('btn-cancel-share');
+var btnConfirmShare = document.getElementById('btn-confirm-share');
+var studentDocList  = document.getElementById('student-doc-list');
+var studentEmpty    = document.getElementById('student-empty');
+var studentLoading  = document.getElementById('student-loading');
 
 /* ══ Utils ══════════════════════════════════════════════════ */
 function escapeHtml(s) {
@@ -737,6 +867,11 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/* ══ Student Mode URL Params ════════════════════════════════ */
+var _urlParams      = new URLSearchParams(window.location.search);
+var studentMode     = _urlParams.get('mode') === 'student';
+var studentClassId  = _urlParams.get('classId') || '';
+
 /* ══ State ══════════════════════════════════════════════════ */
 var selectedFile    = null;
 var voices          = [];
@@ -745,7 +880,8 @@ var playAllIndex    = 0;
 var currentDocName  = '有聲教材';
 var currentPage     = 'upload';
 var synth           = window.speechSynthesis;
-var _editingFile    = null;  /* { name, title, group } */
+var _editingFile           = null;  /* { name, title, group } */
+var _editingLibraryEntry   = null;  /* entry being re-edited from library */
 var rateValue       = 0.9;   /* 語速 */
 var fontValue       = 17;    /* 字體 px */
 var editIsFloat     = false; /* 編輯面板是否浮動 */
@@ -850,6 +986,207 @@ async function cloudSyncDown(uid) {
 }
 
 
+/* ══ Share Functions ════════════════════════════════════════ */
+
+var _shareCurrentDoc = null; /* { name, title, html } */
+var _teacherClasses  = null; /* cached class list */
+
+async function loadTeacherClasses() {
+  if (!fbDb || !currentUser) return [];
+  if (_teacherClasses) return _teacherClasses;
+  var snap = await fbDb.collection('classes')
+    .where('teacherUid', '==', currentUser.uid).get();
+  _teacherClasses = snap.docs.map(function(d) {
+    return { id: d.id, name: d.data().name };
+  });
+  return _teacherClasses;
+}
+
+async function getDocSharedClasses(docName) {
+  var classes = await loadTeacherClasses();
+  if (!classes.length) return [];
+  var sharedIds = [];
+  await Promise.all(classes.map(async function(cls) {
+    var ref = fbDb.collection('classes').doc(cls.id)
+      .collection('sharedReaderDocs').doc(docName);
+    var doc = await ref.get();
+    if (doc.exists) sharedIds.push(cls.id);
+  }));
+  return sharedIds;
+}
+
+async function refreshCardShareStatus(docName, statusEl) {
+  if (!currentUser || !fbDb) return;
+  var classes = await loadTeacherClasses();
+  var sharedIds = await getDocSharedClasses(docName);
+  statusEl.innerHTML = '';
+  sharedIds.forEach(function(cid) {
+    var cls = classes.find(function(c) { return c.id === cid; });
+    if (!cls) return;
+    var badge = document.createElement('span');
+    badge.className   = 'share-badge';
+    badge.textContent = cls.name;
+    statusEl.appendChild(badge);
+  });
+}
+
+async function showShareModal(docName, title, html) {
+  if (!currentUser) { showToast('請先登入才能使用分享功能'); return; }
+  _shareCurrentDoc = { name: docName, title: title, html: html };
+  document.getElementById('share-doc-name').textContent = '《' + title + '》';
+  shareClassList.innerHTML = '';
+  shareLoading.style.display = 'block';
+  btnConfirmShare.disabled = true;
+  modalShare.classList.add('show');
+
+  try {
+    var classes = await loadTeacherClasses();
+    var sharedIds = await getDocSharedClasses(docName);
+    shareLoading.style.display = 'none';
+    btnConfirmShare.disabled = false;
+
+    if (classes.length === 0) {
+      shareClassList.innerHTML = '<div style="text-align:center;padding:16px;color:#999;font-size:.85rem;font-weight:600">尚未建立任何班級</div>';
+      return;
+    }
+
+    classes.forEach(function(cls) {
+      var row = document.createElement('div');
+      row.className = 'share-class-row';
+      var cb = document.createElement('input');
+      cb.type    = 'checkbox';
+      cb.id      = 'share-cls-' + cls.id;
+      cb.value   = cls.id;
+      cb.checked = sharedIds.indexOf(cls.id) !== -1;
+      var lbl = document.createElement('label');
+      lbl.htmlFor     = cb.id;
+      lbl.textContent = cls.name;
+      row.appendChild(cb);
+      row.appendChild(lbl);
+      shareClassList.appendChild(row);
+    });
+  } catch(e) {
+    shareLoading.style.display = 'none';
+    shareClassList.innerHTML = '<div style="color:red;font-size:.85rem;padding:8px">載入失敗：' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function closeShareModal() {
+  modalShare.classList.remove('show');
+  _shareCurrentDoc = null;
+}
+
+btnCancelShare.addEventListener('click', closeShareModal);
+modalShare.addEventListener('click', function(e) {
+  if (e.target === modalShare) closeShareModal();
+});
+
+btnConfirmShare.addEventListener('click', async function() {
+  if (!_shareCurrentDoc || !fbDb || !currentUser) return;
+  btnConfirmShare.disabled = true;
+  btnConfirmShare.textContent = '儲存中…';
+
+  var doc     = _shareCurrentDoc;
+  var checks  = shareClassList.querySelectorAll('input[type=checkbox]');
+  var classes = await loadTeacherClasses();
+
+  try {
+    var batch = fbDb.batch();
+    checks.forEach(function(cb) {
+      var classId = cb.value;
+      var ref = fbDb.collection('classes').doc(classId)
+        .collection('sharedReaderDocs').doc(doc.name);
+      if (cb.checked) {
+        batch.set(ref, {
+          title:      doc.title,
+          html:       doc.html,
+          teacherUid: currentUser.uid,
+          sharedAt:   firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        batch.delete(ref);
+      }
+    });
+    await batch.commit();
+
+    /* 更新卡片上的分享徽章 */
+    var statusEl = document.querySelector('.lib-card-share-status[data-doc="' + doc.name + '"]');
+    if (statusEl) refreshCardShareStatus(doc.name, statusEl);
+
+    showToast('✅ 分享設定已儲存');
+    closeShareModal();
+  } catch(e) {
+    showToast('⚠️ 儲存失敗：' + e.message);
+  } finally {
+    btnConfirmShare.disabled = false;
+    btnConfirmShare.textContent = '✅ 確認';
+  }
+});
+
+/* ══ Student Mode Functions ═════════════════════════════════ */
+
+async function initStudentMode() {
+  /* 隱藏教師功能 */
+  document.getElementById('tab-convert').style.display = 'none';
+  document.getElementById('tab-library').style.display = 'none';
+  document.getElementById('login-btn').style.display   = 'none';
+  showPage('student');
+
+  if (!studentClassId) {
+    studentLoading.style.display = 'none';
+    studentEmpty.style.display   = 'block';
+    return;
+  }
+
+  try {
+    var snap = await fbDb.collection('classes')
+      .doc(studentClassId).collection('sharedReaderDocs').get();
+    studentLoading.style.display = 'none';
+    var docs = snap.docs.map(function(d) { return d.data(); });
+    renderStudentDocList(docs);
+  } catch(e) {
+    studentLoading.style.display = 'none';
+    studentDocList.innerHTML = '<div style="text-align:center;padding:32px;color:#e00;font-size:.85rem">載入失敗，請重新整理</div>';
+  }
+}
+
+function renderStudentDocList(docs) {
+  if (!docs || docs.length === 0) {
+    studentEmpty.style.display = 'block';
+    return;
+  }
+  studentEmpty.style.display = 'none';
+  studentDocList.innerHTML = '';
+  docs.forEach(function(doc) {
+    var card = document.createElement('div');
+    card.className = 'student-doc-card';
+    card.innerHTML =
+      '<div class="student-doc-icon">📄</div>' +
+      '<div><div class="student-doc-title">' + escapeHtml(doc.title) + '</div>' +
+      (doc.sharedAt ? '' : '') + '</div>' +
+      '<div style="margin-left:auto;font-size:1.2rem;color:#aaa">›</div>';
+    card.addEventListener('click', function() {
+      openSharedDoc(doc.html, doc.title);
+    });
+    studentDocList.appendChild(card);
+  });
+}
+
+function openSharedDoc(html, title) {
+  try {
+    var blob  = new Blob([html], { type: 'text/html; charset=utf-8' });
+    var url   = URL.createObjectURL(blob);
+    var frame = document.getElementById('viewer-frame');
+    frame.src = url;
+    showPage('viewer');
+    document.getElementById('topbar-title').textContent = '🎧 ' + title;
+    topbarBack.classList.add('visible');
+    setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+  } catch(e) {
+    showToast('⚠️ 無法開啟：' + e.message);
+  }
+}
+
 /* ══ Navigation ═════════════════════════════════════════════ */
 var inIframe = window !== window.parent;
 
@@ -858,8 +1195,10 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   currentPage = name;
   topbarBack.classList.toggle('visible', name !== 'upload' || inIframe);
-  document.getElementById('tab-convert').classList.toggle('active', name === 'upload' || name === 'reader');
-  document.getElementById('tab-library').classList.toggle('active', name === 'library');
+  if (!studentMode) {
+    document.getElementById('tab-convert').classList.toggle('active', name === 'upload' || name === 'reader');
+    document.getElementById('tab-library').classList.toggle('active', name === 'library');
+  }
 }
 
 function switchTab(tab) {
@@ -873,8 +1212,47 @@ function switchTab(tab) {
 document.getElementById('tab-convert').addEventListener('click', function () { switchTab('convert'); });
 document.getElementById('tab-library').addEventListener('click', function () { switchTab('library'); });
 
+/* ── 從報讀庫載入並重新編輯內容 ─────────────────────────────── */
+function extractLinesFromHtml(html) {
+  var parser = new DOMParser();
+  var doc    = parser.parseFromString(html, 'text/html');
+  return Array.from(doc.querySelectorAll('.line')).map(function (el) {
+    var text = (el.querySelector('.lineText') || el).textContent.trim();
+    if (el.classList.contains('title-main')) return '## ' + text;
+    if (el.classList.contains('title-sub'))  return '# '  + text;
+    return text;
+  }).filter(function (l) { return l.length > 0; });
+}
+
+function openLibraryItemForEdit(entry) {
+  _editingLibraryEntry = entry;
+  var lines = extractLinesFromHtml(entry.html);
+  currentDocName = entry.title;
+  docTitle.textContent = entry.title;
+  stopSpeak();
+  renderLines(lines);
+  readerContent.style.fontSize = fontValue + 'px';
+  statusBar.textContent = '💡 點擊任意行朗讀，或按「連播」';
+  editTextarea.value = lines.join('\n');
+  editPanel.style.display = 'block';
+  editToggleBtn.textContent = '✖ 關閉編輯';
+  showPage('reader');
+  editTextarea.focus();
+}
+
 topbarBack.addEventListener('click', function () {
-  if (currentPage === 'reader')  { stopSpeak(); showPage('upload'); }
+  if (currentPage === 'viewer') {
+    document.getElementById('viewer-frame').src = '';
+    document.getElementById('topbar-title').textContent = '🎧 有聲教材';
+    if (studentMode) {
+      showPage('student');
+    } else {
+      showPage('library');
+      loadLibrary();
+    }
+  } else if (studentMode && currentPage === 'student') {
+    window.parent.postMessage('close-tool', '*');
+  } else if (currentPage === 'reader')  { stopSpeak(); _editingLibraryEntry = null; showPage('upload'); }
   else if (currentPage === 'library') {
     showPage(readerContent.children.length > 0 ? 'reader' : 'upload');
   } else if (currentPage === 'upload' && inIframe) {
@@ -1314,27 +1692,23 @@ function buildOutputHtml(docName, group) {
     + '<meta name="reader-date"  content="' + new Date().toISOString().slice(0,10) + '"/>\n'
     + '<title>' + escapeHtml(docName) + '</title>\n'
     + '<style>\n'
-    + ':root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--blue-grad:linear-gradient(135deg,#4a90d9,#2d6fa8);--yellow:#ffd54f;--bg:#eef5fc;--white:#ffffff;--text:#1e2d3d;--muted:#7a99b5;--border:#d4e8f8;--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}\n'
-    + 'body.dark{--bg:#12202e;--white:#1a2d3f;--text:#e8f2fc;--muted:#6a8faa;--border:#243a50;--blue-lt:#1a3050;--reading-bg:#2a2318;--line-even:#162636;--line-hover:#1e3448}\n'
+    + ':root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--fg1:#1e2d3d;--fg2:#7a99b5;--bg:#eef5fc;--white:#ffffff;--border:#d4e8f8;--grad-btn:linear-gradient(135deg,#4a90d9,#2d6fa8);--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}\n'
+    + 'body.dark{--blue:#58a6ff;--blue-dk:#79c0ff;--blue-lt:#1c2d3f;--fg1:#e6edf3;--fg2:#7d8590;--bg:#0d1117;--white:#161b22;--border:#30363d;--grad-btn:linear-gradient(135deg,#3a7fd4,#2d6fa8);--reading-bg:#2a2010;--reading-border:#d29922;--line-even:#161b22;--line-hover:#1c2d3f}\n'
     + '*{box-sizing:border-box;margin:0;padding:0}\n'
-    + 'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}\n'
-    + '.topbar{background:var(--blue-grad);color:#fff;height:52px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(44,100,160,.25);position:sticky;top:0;z-index:50}\n'
-    + '.topbar-title{font-size:.95rem;font-weight:900}\n'
-    + '.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:52px;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n'
+    + 'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--fg1);min-height:100vh;transition:background .3s,color .3s}\n'
+    + '.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:background .3s,border-color .3s}\n'
     + '.ctrl-group{display:flex;align-items:center;gap:6px}\n'
-    + '.ctrl-label{font-size:.76rem;font-weight:800;color:var(--muted);white-space:nowrap}\n'
+    + '.ctrl-label{font-size:.76rem;font-weight:800;color:var(--fg2);white-space:nowrap}\n'
     + '.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}\n'
     + '.ctrl-range{width:78px;accent-color:var(--blue)}\n'
     + '.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}\n'
     + '.spacer{flex:1}\n'
-    + '.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--text);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}\n'
+    + '.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--fg1);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}\n'
     + '.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}\n'
     + '.btn-ctrl:active{transform:scale(.95)}\n'
-    + '.btn-ctrl.primary{background:var(--blue-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}\n'
+    + '.btn-ctrl.primary{background:var(--grad-btn);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}\n'
     + '.btn-ctrl.primary:hover{opacity:.88}\n'
-    + '.btn-theme{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;height:36px;width:36px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}\n'
-    + '.btn-theme:hover{background:rgba(255,255,255,.3)}\n'
-    + '.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--muted)}\n'
+    + '.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--fg2)}\n'
     + '.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}\n'
     + '#content{padding:4px 14px 72px}\n'
     + '.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}\n'
@@ -1345,13 +1719,10 @@ function buildOutputHtml(docName, group) {
     + '.lineText{flex:1;line-height:1.85}\n'
     + '.title-main{font-size:1.05rem;font-weight:900;color:var(--blue-dk);padding:10px 12px 6px;margin-top:8px;cursor:default}\n'
     + '.title-main:hover{background:transparent}\n'
-    + '.title-sub{font-size:.94rem;font-weight:800;color:var(--muted);cursor:default}\n'
+    + '.title-sub{font-size:.94rem;font-weight:800;color:var(--fg2);cursor:default}\n'
     + '.title-sub:hover{background:transparent}\n'
     + '</style>\n</head>\n<body>\n'
-    + '<div class="topbar">\n'
-    + '  <span class="topbar-title">🎧 ' + escapeHtml(docName) + '</span>\n'
-    + '  <button class="btn-theme" id="theme-btn">🌙</button>\n'
-    + '</div>\n'
+    + '<script>(function(){if(localStorage.getItem("admin-dark")==="1")document.body.classList.add("dark");})()</s' + 'cript>\n'
     + '<div class="controls-bar">\n'
     + '  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>\n'
     + '  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>\n'
@@ -1379,7 +1750,6 @@ function buildOutputHtml(docName, group) {
     + 'document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});\n'
     + 'document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});\n'
     + 'document.getElementById("st").addEventListener("click",ss);\n'
-    + 'document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});\n'
     + 'rs.addEventListener("input",function(){rv.textContent=rs.value;});\n'
     + 'fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});\n'
     + '})();\n<\/script>\n<\/body>\n<\/html>';
@@ -1388,7 +1758,9 @@ function buildOutputHtml(docName, group) {
 /* ══ Save to Library ════════════════════════════════════════ */
 saveLibBtn.addEventListener('click', async function () {
   saveFilename.value = currentDocName;
-  saveGroup.value    = '';
+  saveGroup.value    = _editingLibraryEntry
+    ? (_editingLibraryEntry.group === '未分類' ? '' : _editingLibraryEntry.group)
+    : '';
   groupDatalist.innerHTML = '';
   try {
     var entries = await idbGetAll();
@@ -1413,7 +1785,9 @@ btnConfirmSave.addEventListener('click', async function () {
   var group = saveGroup.value.trim() || '未分類';
   if (!fname) { saveFilename.focus(); return; }
 
-  var filename    = fname.endsWith('.html') ? fname : fname + '.html';
+  var filename    = _editingLibraryEntry
+    ? _editingLibraryEntry.name
+    : (fname.endsWith('.html') ? fname : fname + '.html');
   var htmlContent = buildOutputHtml(fname, group);
 
   modalSave.classList.remove('show');
@@ -1436,6 +1810,7 @@ btnConfirmSave.addEventListener('click', async function () {
       });
     }
     procOverlay.classList.remove('show');
+    _editingLibraryEntry = null;
     showToast('✅ 已儲存「' + fname + '」' + (currentUser ? '（含雲端備份）' : ''));
     setTimeout(function () { showPage('library'); loadLibrary(); }, 1000);
   } catch (e) {
@@ -1600,9 +1975,32 @@ async function loadLibrary() {
       delBtn.textContent = '🗑';
       card.appendChild(delBtn);
 
+      var editContentBtn = document.createElement('button');
+      editContentBtn.className   = 'lib-card-edit-content';
+      editContentBtn.title       = '編輯內容';
+      editContentBtn.textContent = '📝';
+      card.appendChild(editContentBtn);
+
+      var shareBtn = document.createElement('button');
+      shareBtn.className   = 'lib-card-share';
+      shareBtn.title       = '分享給班級';
+      shareBtn.textContent = '📤';
+      card.appendChild(shareBtn);
+
+      var shareStatus = document.createElement('div');
+      shareStatus.className      = 'lib-card-share-status';
+      shareStatus.dataset.doc    = entry.name;
+      card.appendChild(shareStatus);
+      /* 非同步載入分享狀態徽章 */
+      refreshCardShareStatus(entry.name, shareStatus);
+
       card.addEventListener('click', function (e) {
-        if (e.target === delBtn || e.target === editBtn || e.target === dlBtn) return;
+        if (e.target === delBtn || e.target === editBtn || e.target === dlBtn || e.target === editContentBtn || e.target === shareBtn) return;
         openLibraryItem(entry.html, entry.title);
+      });
+      editContentBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openLibraryItemForEdit(entry);
       });
       dlBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -1611,6 +2009,10 @@ async function loadLibrary() {
       editBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         openEditItemModal(entry.name, entry.title, entry.group || '未分類');
+      });
+      shareBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        showShareModal(entry.name, entry.title, entry.html);
       });
       delBtn.addEventListener('click', async function (e) {
         e.stopPropagation();
@@ -1636,12 +2038,13 @@ async function loadLibrary() {
 
 function openLibraryItem(html, title) {
   try {
-    var blob = new Blob([html], { type: 'text/html; charset=utf-8' });
-    var url  = URL.createObjectURL(blob);
-    var opener = (window.top && window.top !== window) ? window.top : window;
-    var win  = opener.open(url, '_blank');
-    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
-    if (!win) showToast('⚠️ 請允許彈出視窗以開啟「' + title + '」');
+    var blob  = new Blob([html], { type: 'text/html; charset=utf-8' });
+    var url   = URL.createObjectURL(blob);
+    var frame = document.getElementById('viewer-frame');
+    frame.src = url;
+    showPage('viewer');
+    document.getElementById('topbar-title').textContent = '🎧 ' + title;
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
   } catch (e) {
     showToast('⚠️ 無法開啟：' + e.message);
   }
@@ -1659,7 +2062,13 @@ function downloadLibraryItem(name, html) {
 }
 
 /* ══ Init ═══════════════════════════════════════════════════ */
-if (window.location.hash === '#library') {
+if (studentMode) {
+  /* 學生模式：等 fbDb 初始化後載入分享文件 */
+  (function waitFbDb() {
+    if (!fbDb) { setTimeout(waitFbDb, 200); return; }
+    initStudentMode();
+  })();
+} else if (window.location.hash === '#library') {
   showPage('library');
   loadLibrary();
 }

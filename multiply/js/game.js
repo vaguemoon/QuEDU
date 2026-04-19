@@ -134,9 +134,7 @@ function handleFillKeydown(e) {
 
 function initPracticeSelect() {
   renderFactorChips('a-chips', practiceSelectedA_temp);
-  renderFactorChips('b-chips', practiceSelectedB_temp);
   updateToggleAllBtn('a-chips');
-  updateToggleAllBtn('b-chips');
   setPracticeType(practiceType);
   updatePracticePairCount();
 }
@@ -200,7 +198,7 @@ function setPracticeType(type) {
 function updatePracticePairCount() {
   var el = document.getElementById('practice-pair-count');
   if (el) {
-    var n = practiceSelectedA_temp.length * practiceSelectedB_temp.length;
+    var n = practiceSelectedA_temp.length * 11;
     el.textContent = '已選 ' + n + ' 組題目';
     el.style.color = n === 0 ? 'var(--red)' : 'var(--muted)';
   }
@@ -211,13 +209,13 @@ function updatePracticePairCount() {
 // ════════════════════════════════════════
 
 function startPractice() {
-  if (practiceSelectedA_temp.length === 0 || practiceSelectedB_temp.length === 0) {
-    showToast('請至少各選一個被乘數和乘數！');
+  if (practiceSelectedA_temp.length === 0) {
+    showToast('請至少選一個被乘數！');
     return;
   }
   practicePool = [];
   practiceSelectedA_temp.forEach(function(a) {
-    practiceSelectedB_temp.forEach(function(b) { practicePool.push({ a: a, b: b }); });
+    for (var b = 0; b <= 10; b++) { practicePool.push({ a: a, b: b }); }
   });
   practicePool    = shuffle(practicePool);
   practiceStreak  = 0;

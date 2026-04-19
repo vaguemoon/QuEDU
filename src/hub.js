@@ -58,6 +58,22 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'exam-reader', file: 'word-to-reader/index.html',
+    icon: '🎧', name: '考卷報讀', desc: '老師分享的有聲考卷',
+    type: 'quiz', studentMode: true,
+    theme: 'theme-teal', badge: '考卷報讀', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('考卷報讀'); },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'exam-reader')
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return null;
+          return { sub: '已使用 ' + snap.size + ' 次', score: snap.size + ' 次' };
+        });
+    }
+  },
+  {
     id: 'chinese-quiz', file: 'chinese-quiz/index.html',
     icon: '📝', name: '語文練習', desc: '詞語填空與選擇題練習',
     type: 'quiz',
@@ -145,6 +161,23 @@ function loadSubjectBadges() {
 function openSubject(id) {
   var s = SUBJECTS.find(function(x) { return x.id === id; });
   if (!s || !currentStudent) return;
+  if (s.studentMode && !currentStudent.classId) {
+    /* classId 可能因舊 session 未載入，先從 Firestore 補抓 */
+    if (db) {
+      db.collection('students').doc(currentStudent.id).get().then(function(doc) {
+        if (doc.exists && doc.data().classId) {
+          currentStudent.classId = doc.data().classId;
+          sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+          openSubject(id);
+        } else {
+          showToast('請先在個人設定中加入班級');
+        }
+      }).catch(function() { showToast('請先在個人設定中加入班級'); });
+    } else {
+      showToast('請先在個人設定中加入班級');
+    }
+    return;
+  }
   sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
   /* Load the iframe AFTER the panel slide animation finishes (370 ms).
      Loading it simultaneously caused the iframe layout to interrupt the
@@ -152,7 +185,11 @@ function openSubject(id) {
   document.getElementById('subject-frame').src = 'about:blank';
   showPanel('subject');
   setTimeout(function() {
-    document.getElementById('subject-frame').src = s.file;
+    var url = s.file;
+    if (s.studentMode && currentStudent.classId) {
+      url += '?mode=student&classId=' + encodeURIComponent(currentStudent.classId);
+    }
+    document.getElementById('subject-frame').src = url;
   }, 380);
 }
 function returnToHub() {

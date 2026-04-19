@@ -32,6 +32,12 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // 班級分享的報讀文件 —— 學生（無 Auth）可讀，教師可寫
+    match /classes/{classId}/sharedReaderDocs/{docId} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
     // 學生 —— PIN 登入不走 Firebase Auth，需要公開讀寫
     match /students/{studentId} {
       allow read:  if true;
