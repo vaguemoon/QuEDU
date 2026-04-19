@@ -239,15 +239,6 @@
       </div>
     </div>
 
-    <!-- 教學工具 Modal -->
-    <div id="tool-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);flex-direction:column">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:white;border-bottom:1px solid var(--border);flex-shrink:0">
-        <div style="font-size:1rem;font-weight:900;color:var(--text)" id="tool-modal-title"></div>
-        <button onclick="closeToolModal()" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--gray-lt);font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">✕ 關閉</button>
-      </div>
-      <iframe id="tool-modal-frame" src="" style="flex:1;border:none;width:100%;display:block" title="教學工具" allow="speech-synthesis; fullscreen"></iframe>
-    </div>
-
     <!-- 課程管理已移至管理者後台 (super-admin.html) -->
 
     <!-- 學生詳細頁 -->
@@ -310,6 +301,12 @@
   </div>
 
   </main>
+
+  <!-- 教學工具面板（報讀工具等，與 sidebar 並排） -->
+  <div id="tool-modal" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+    <iframe id="tool-modal-frame" src="" style="flex:1;border:none;width:100%;display:block;height:100%" title="教學工具" allow="speech-synthesis; fullscreen"></iframe>
+  </div>
+
 </div>
 
 <!-- 分享班級 Modal -->
@@ -497,16 +494,18 @@ var TOOL_CONFIG = {
 function openToolModal(id) {
   var cfg = TOOL_CONFIG[id];
   if (!cfg) return;
-  document.getElementById('tool-modal-title').textContent = cfg.title;
   document.getElementById('tool-modal-frame').src = cfg.src;
+  document.querySelector('.admin-content').style.display = 'none';
   document.getElementById('tool-modal').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
 }
 function closeToolModal() {
   document.getElementById('tool-modal').style.display = 'none';
   document.getElementById('tool-modal-frame').src = '';
-  document.body.style.overflow = '';
+  document.querySelector('.admin-content').style.display = '';
 }
+window.addEventListener('message', function(e) {
+  if (e.data === 'close-tool') closeToolModal();
+});
 </script>
 </body>
 </html>

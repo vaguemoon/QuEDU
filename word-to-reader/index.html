@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>有聲教材工具</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 /* ══ CSS 變數 ══════════════════════════════════════════════ */
 :root {
@@ -30,19 +33,6 @@
   --reading-border: #ffc107;
   --line-even:      #f4f9ff;
   --line-hover:     #dbeeff;
-}
-body.dark {
-  --bg:         #12202e;
-  --white:      #1a2d3f;
-  --text:       #e8f2fc;
-  --muted:      #6a8faa;
-  --border:     #243a50;
-  --blue-lt:    #1a3050;
-  --reading-bg: #2a2318;
-  --line-even:  #162636;
-  --line-hover: #1e3448;
-  --shadow:     0 6px 28px rgba(0,0,0,.3);
-  --shadow-lg:  0 12px 48px rgba(0,0,0,.4);
 }
 
 /* ══ Reset ══════════════════════════════════════════════════ */
@@ -105,16 +95,18 @@ body {
   border-color: transparent;
   box-shadow: 0 2px 8px rgba(0,0,0,.12);
 }
-#topbar-theme {
+#login-btn {
   background: rgba(255,255,255,.15);
   border: 2px solid rgba(255,255,255,.25);
-  border-radius: 10px;
-  color: #fff; font-size: .9rem;
-  height: 36px; width: 36px;
-  cursor: pointer; transition: background .15s;
-  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  color: #fff; font-size: .78rem; font-weight: 800;
+  padding: 0 12px; height: 36px;
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  transition: background .15s; flex-shrink: 0;
 }
-#topbar-theme:hover { background: rgba(255,255,255,.28); }
+#login-btn:hover { background: rgba(255,255,255,.28); }
+#login-btn img { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); }
 
 /* ══ Upload Page ════════════════════════════════════════════ */
 #page-upload.active {
@@ -368,32 +360,12 @@ body {
 .btn-pick:hover {
   background: var(--blue); color: #fff; border-style: solid; border-color: transparent;
 }
-.btn-sync {
-  border-color: var(--green-dk); color: var(--green-dk);
-  background: #edfaf3;
-}
-body.dark .btn-sync { background: #132d1e; }
-.btn-sync:hover { background: var(--green); border-color: transparent; color: #fff; }
-.btn-push {
-  border-color: #389959; color: #389959;
-  background: #edfaf3;
-}
-body.dark .btn-push { background: #132d1e; }
-.btn-push:hover { background: #389959; border-color: transparent; color: #fff; }
-.btn-gh-settings {
-  width: 44px; height: 44px; flex-shrink: 0;
-  border: 2px solid var(--border); border-radius: 14px;
-  background: var(--white); color: var(--muted);
-  font-size: 1rem; cursor: pointer; transition: all .15s;
-}
-.btn-gh-settings:hover { border-color: var(--blue); color: var(--blue-dk); background: var(--blue-lt); }
 .btn-modal-upload {
   display: block; width: 100%; height: 44px;
   margin-top: 8px; border: 2px dashed var(--green-dk); border-radius: 13px;
   background: #edfaf3; color: var(--green-dk);
   font-size: .9rem; font-weight: 800; cursor: pointer; transition: all .15s;
 }
-body.dark .btn-modal-upload { background: #132d1e; }
 .btn-modal-upload:hover { background: var(--green); border-style: solid; border-color: transparent; color: #fff; }
 
 .group-section { margin-bottom: 32px; }
@@ -426,8 +398,7 @@ body.dark .btn-modal-upload { background: #132d1e; }
 .lib-card-meta  { font-size: .76rem; color: var(--muted); }
 .lib-card-del,
 .lib-card-edit,
-.lib-card-dl,
-.lib-card-ul {
+.lib-card-dl {
   position: absolute; top: 50%;
   transform: translateY(-50%);
   width: 30px; height: 30px;
@@ -439,15 +410,12 @@ body.dark .btn-modal-upload { background: #132d1e; }
 .lib-card-del  { right: 12px; }
 .lib-card-edit { right: 48px; }
 .lib-card-dl   { right: 84px; }
-.lib-card-ul   { right: 120px; }
 .lib-card:hover .lib-card-del,
 .lib-card:hover .lib-card-edit,
-.lib-card:hover .lib-card-dl,
-.lib-card:hover .lib-card-ul   { opacity: 1; }
+.lib-card:hover .lib-card-dl   { opacity: 1; }
 .lib-card-del:hover  { background: var(--red);     color: #fff; }
 .lib-card-edit:hover { background: var(--blue-lt); color: var(--blue-dk); }
 .lib-card-dl:hover   { background: #e6f9ee;        color: #389959; }
-.lib-card-ul:hover   { background: #e6f9ee;        color: #389959; }
 
 .library-empty {
   text-align: center; padding: 56px 24px; color: var(--muted);
@@ -552,7 +520,7 @@ body.dark .btn-modal-upload { background: #132d1e; }
   <div id="topbar-title">🎧 有聲教材</div>
   <button class="topbar-tab active" id="tab-convert">📂 轉換</button>
   <button class="topbar-tab"        id="tab-library">📚 報讀庫</button>
-  <button id="topbar-theme">🌙</button>
+  <button id="login-btn">☁️ 登入</button>
 </div>
 
 <!-- ── Page: Upload ────────────────────────────────────────── -->
@@ -652,10 +620,7 @@ body.dark .btn-modal-upload { background: #132d1e; }
   <div class="library-wrap">
     <div class="library-toprow">
       <div class="library-heading">📚 報讀庫</div>
-      <button class="btn-pick btn-sync" id="btn-sync-github">☁️ 從 GitHub 同步</button>
-      <button class="btn-pick btn-push" id="btn-push-github">⬆️ 全部上傳到 GitHub</button>
       <label class="btn-pick" for="import-files-input">📥 匯入 .html 檔</label>
-      <button class="btn-gh-settings" id="btn-gh-settings" title="GitHub Token 設定">⚙️</button>
       <input type="file" id="import-files-input" accept=".html,.htm" multiple style="display:none"/>
     </div>
     <div id="library-content">
@@ -709,23 +674,6 @@ body.dark .btn-modal-upload { background: #132d1e; }
   </div>
 </div>
 
-<!-- ── GitHub Token Modal ───────────────────────────────────── -->
-<div class="modal-overlay" id="modal-gh-token">
-  <div class="modal-card">
-    <h3>⚙️ GitHub 設定</h3>
-    <div class="form-group">
-      <label class="form-label" for="gh-token-input">Personal Access Token（PAT）</label>
-      <input class="form-input" id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off"/>
-    </div>
-    <p style="font-size:.75rem;color:var(--muted);line-height:1.6;margin-bottom:4px">
-      需要PAT請聯繫管理者
-    </p>
-    <div class="modal-actions">
-      <button class="btn-modal-cancel" id="btn-cancel-gh-token">取消</button>
-      <button class="btn-modal-ok"     id="btn-save-gh-token">✅ 儲存 Token</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── Processing Overlay ──────────────────────────────────── -->
 <div id="proc-overlay">
@@ -764,7 +712,6 @@ var cancelEditBtn   = document.getElementById('cancel-edit-btn');
 var saveLibBtn      = document.getElementById('save-lib-btn');
 var libraryContent  = document.getElementById('library-content');
 var btnImportFiles  = document.getElementById('import-files-input');
-var btnSyncGitHub   = document.getElementById('btn-sync-github');
 var modalSave       = document.getElementById('modal-save');
 var saveFilename    = document.getElementById('save-filename');
 var saveGroup       = document.getElementById('save-group');
@@ -777,14 +724,8 @@ var editItemGroup   = document.getElementById('edit-item-group');
 var editItemGroups  = document.getElementById('edit-item-groups');
 var btnCancelEditItem  = document.getElementById('btn-cancel-edit-item');
 var btnConfirmEditItem = document.getElementById('btn-confirm-edit-item');
-var btnPushGitHub      = document.getElementById('btn-push-github');
-var btnGhSettings      = document.getElementById('btn-gh-settings');
-var modalGhToken       = document.getElementById('modal-gh-token');
-var ghTokenInput       = document.getElementById('gh-token-input');
-var btnCancelGhToken   = document.getElementById('btn-cancel-gh-token');
-var btnSaveGhToken     = document.getElementById('btn-save-gh-token');
+var loginBtn           = document.getElementById('login-btn');
 var topbarBack      = document.getElementById('topbar-back');
-var themeBtn        = document.getElementById('topbar-theme');
 var toast           = document.getElementById('toast');
 
 /* ══ Utils ══════════════════════════════════════════════════ */
@@ -810,12 +751,113 @@ var fontValue       = 17;    /* 字體 px */
 var editIsFloat     = false; /* 編輯面板是否浮動 */
 var _dragState      = null;  /* 浮動面板拖曳狀態 */
 
+/* ══ Firebase ═══════════════════════════════════════════════ */
+var fbApp  = null;
+var fbAuth = null;
+var fbDb   = null;
+var currentUser = null;
+
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
+  authDomain:        'tainping-hanzi-app.firebaseapp.com',
+  projectId:         'tainping-hanzi-app',
+  messagingSenderId: '158917910126',
+  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
+};
+
+(function initFB() {
+  if (typeof firebase === 'undefined') { setTimeout(initFB, 150); return; }
+  try {
+    fbApp  = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB_CONFIG);
+    fbAuth = firebase.auth();
+    fbDb   = firebase.firestore();
+    fbAuth.onAuthStateChanged(async function(user) {
+      var justLoggedIn = !currentUser && user;
+      currentUser = user;
+      updateLoginUI(user);
+      if (user && justLoggedIn) {
+        procMsg.textContent = '正在同步雲端報讀庫…';
+        procOverlay.classList.add('show');
+        try {
+          await cloudSyncDown(user.uid);
+        } catch(e) { /* silent */ }
+        procOverlay.classList.remove('show');
+      }
+      if (user && currentPage === 'library') loadLibrary();
+    });
+  } catch(e) { console.error('Firebase init:', e); }
+})();
+
+function updateLoginUI(user) {
+  if (user) {
+    if (user.photoURL) {
+      loginBtn.innerHTML = '<img src="' + user.photoURL + '"/> ' + (user.displayName || '老師').split(' ')[0];
+    } else {
+      loginBtn.textContent = '👤 ' + (user.displayName || '老師').split(' ')[0];
+    }
+    loginBtn.title = user.email + '\n點擊登出';
+  } else {
+    loginBtn.textContent = '☁️ 登入';
+    loginBtn.title = '以 Google 帳號登入，啟用雲端報讀庫';
+  }
+}
+
+loginBtn.addEventListener('click', function() {
+  if (!fbAuth) { showToast('⚠️ Firebase 尚未初始化'); return; }
+  if (currentUser) {
+    if (confirm('確定要登出？\n' + currentUser.email)) fbAuth.signOut();
+  } else {
+    fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e) {
+      showToast('⚠️ 登入失敗：' + e.message);
+    });
+  }
+});
+
+/* ── Cloud helpers（純 Firestore，不需要 Storage）── */
+function cloudRef(uid, filename) {
+  return fbDb.collection('teachers').doc(uid)
+    .collection('reader-library').doc(filename);
+}
+
+function cloudSave(uid, entry) {
+  return cloudRef(uid, entry.name).set({
+    name:  entry.name,
+    title: entry.title,
+    group: entry.group,
+    date:  entry.date,
+    html:  entry.html
+  });
+}
+
+function cloudDelete(uid, filename) {
+  return cloudRef(uid, filename).delete().catch(function() {});
+}
+
+async function cloudSyncDown(uid) {
+  var snap = await fbDb.collection('teachers').doc(uid)
+    .collection('reader-library').get();
+  var ok = 0, fail = 0;
+  var docs = snap.docs;
+  for (var i = 0; i < docs.length; i++) {
+    procMsg.textContent = '雲端同步中 (' + (i + 1) + '/' + docs.length + ')…';
+    try {
+      var d = docs[i].data();
+      await idbPut({ name: d.name, title: d.title, group: d.group, date: d.date, html: d.html });
+      ok++;
+    } catch(e) { fail++; }
+  }
+  return { ok: ok, fail: fail };
+}
+
+
 /* ══ Navigation ═════════════════════════════════════════════ */
+var inIframe = window !== window.parent;
+
 function showPage(name) {
   document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
   currentPage = name;
-  topbarBack.classList.toggle('visible', name !== 'upload');
+  topbarBack.classList.toggle('visible', name !== 'upload' || inIframe);
   document.getElementById('tab-convert').classList.toggle('active', name === 'upload' || name === 'reader');
   document.getElementById('tab-library').classList.toggle('active', name === 'library');
 }
@@ -835,18 +877,9 @@ topbarBack.addEventListener('click', function () {
   if (currentPage === 'reader')  { stopSpeak(); showPage('upload'); }
   else if (currentPage === 'library') {
     showPage(readerContent.children.length > 0 ? 'reader' : 'upload');
+  } else if (currentPage === 'upload' && inIframe) {
+    window.parent.postMessage('close-tool', '*');
   }
-});
-
-/* ══ Theme ══════════════════════════════════════════════════ */
-var isDark = localStorage.getItem('reader-dark') === '1';
-if (isDark) document.body.classList.add('dark');
-themeBtn.textContent = isDark ? '☀️' : '🌙';
-themeBtn.addEventListener('click', function () {
-  isDark = !isDark;
-  document.body.classList.toggle('dark', isDark);
-  themeBtn.textContent = isDark ? '☀️' : '🌙';
-  localStorage.setItem('reader-dark', isDark ? '1' : '0');
 });
 
 /* ══ Toast ══════════════════════════════════════════════════ */
@@ -1349,7 +1382,7 @@ function buildOutputHtml(docName, group) {
     + 'document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});\n'
     + 'rs.addEventListener("input",function(){rv.textContent=rs.value;});\n'
     + 'fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});\n'
-    + '})();\n<\/script>\n</body>\n</html>';
+    + '})();\n<\/script>\n<\/body>\n<\/html>';
 }
 
 /* ══ Save to Library ════════════════════════════════════════ */
@@ -1387,16 +1420,23 @@ btnConfirmSave.addEventListener('click', async function () {
   procMsg.textContent = '正在儲存到報讀庫…';
   procOverlay.classList.add('show');
 
+  var entry = {
+    name:  filename,
+    title: fname,
+    group: group,
+    date:  new Date().toISOString().slice(0, 10),
+    html:  htmlContent
+  };
   try {
-    await idbPut({
-      name:  filename,
-      title: fname,
-      group: group,
-      date:  new Date().toISOString().slice(0, 10),
-      html:  htmlContent
-    });
+    await idbPut(entry);
+    if (currentUser && fbDb) {
+      procMsg.textContent = '正在備份到雲端…';
+      await cloudSave(currentUser.uid, entry).catch(function(e) {
+        showToast('⚠️ 本機已儲存，雲端備份失敗：' + e.message);
+      });
+    }
     procOverlay.classList.remove('show');
-    showToast('✅ 已儲存「' + fname + '」');
+    showToast('✅ 已儲存「' + fname + '」' + (currentUser ? '（含雲端備份）' : ''));
     setTimeout(function () { showPage('library'); loadLibrary(); }, 1000);
   } catch (e) {
     procOverlay.classList.remove('show');
@@ -1432,118 +1472,6 @@ btnImportFiles.addEventListener('change', async function () {
   loadLibrary();
 });
 
-/* ══ GitHub Token 設定 ══════════════════════════════════════ */
-btnGhSettings.addEventListener('click', function () {
-  ghTokenInput.value = localStorage.getItem('gh-pat') || '';
-  modalGhToken.classList.add('show');
-  setTimeout(function () { ghTokenInput.focus(); }, 50);
-});
-btnCancelGhToken.addEventListener('click', function () { modalGhToken.classList.remove('show'); });
-modalGhToken.addEventListener('click', function (e) {
-  if (e.target === modalGhToken) modalGhToken.classList.remove('show');
-});
-btnSaveGhToken.addEventListener('click', function () {
-  var tok = ghTokenInput.value.trim();
-  if (tok) localStorage.setItem('gh-pat', tok);
-  else localStorage.removeItem('gh-pat');
-  modalGhToken.classList.remove('show');
-  showToast(tok ? '✅ Token 已儲存' : '🗑 Token 已清除');
-});
-
-/* ══ GitHub 上傳 ═════════════════════════════════════════════ */
-var GITHUB_PAT = '';  /* 請勿在此填入 token，改用報讀庫右上角 ⚙️ 按鈕設定 */
-var GITHUB_REPO     = 'https://api.github.com/repos/vaguemoon/word-to-reader/contents/';
-var GITHUB_CONTENTS = GITHUB_REPO; /* 向後相容 alias */
-
-async function uploadToGitHub(name, html) {
-  var token = GITHUB_PAT || localStorage.getItem('gh-pat');
-  if (!token) {
-    ghTokenInput.value = '';
-    modalGhToken.classList.add('show');
-    showToast('⚠️ 請先設定 GitHub Token');
-    return false;
-  }
-  var url = GITHUB_CONTENTS + encodeURIComponent('報讀') + '/' + encodeURIComponent(name);
-
-  /* 查是否已存在（取得 sha）*/
-  var sha = null;
-  try {
-    var chk = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
-    if (chk.ok) { var info = await chk.json(); sha = info.sha; }
-  } catch (e) { /* 新檔案，不需要 sha */ }
-
-  /* base64 編碼（支援中文） */
-  var b64 = btoa(unescape(encodeURIComponent(html)));
-
-  var body = { message: (sha ? '更新 ' : '新增 ') + name, content: b64 };
-  if (sha) body.sha = sha;
-
-  var res = await fetch(url, {
-    method:  'PUT',
-    headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body)
-  });
-  if (!res.ok) {
-    var err = await res.json().catch(function () { return {}; });
-    throw new Error(err.message || 'HTTP ' + res.status);
-  }
-  return true;
-}
-
-/* ══ GitHub 同步 ═════════════════════════════════════════════ */
-btnSyncGitHub.addEventListener('click', async function () {
-  procMsg.textContent = '正在連線 GitHub…';
-  procOverlay.classList.add('show');
-
-  var items;
-  try {
-    var res = await fetch(GITHUB_REPO + encodeURIComponent('報讀'));
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    items = await res.json();
-  } catch (e) {
-    procOverlay.classList.remove('show');
-    showToast('⚠️ 無法取得檔案清單：' + e.message);
-    return;
-  }
-
-  var htmlFiles = items.filter(function (item) {
-    return item.type === 'file' && /\.html?$/i.test(item.name) && item.name !== 'index.html';
-  });
-
-  if (htmlFiles.length === 0) {
-    procOverlay.classList.remove('show');
-    showToast('⚠️ 報讀/ 資料夾中沒有找到 .html 檔案');
-    return;
-  }
-
-  var ok = 0, fail = 0;
-  for (var i = 0; i < htmlFiles.length; i++) {
-    var item = htmlFiles[i];
-    procMsg.textContent = '同步中 (' + (i + 1) + ' / ' + htmlFiles.length + ')…';
-    try {
-      var htmlRes = await fetch(item.download_url);
-      if (!htmlRes.ok) throw new Error('HTTP ' + htmlRes.status);
-      var html = await htmlRes.text();
-
-      /* 從 HTML 的 <meta> / <title> 抽取 group / date / title */
-      var parser = new DOMParser();
-      var doc    = parser.parseFromString(html, 'text/html');
-      var titleEl = doc.querySelector('title');
-      var groupEl = doc.querySelector('meta[name="reader-group"]');
-      var dateEl  = doc.querySelector('meta[name="reader-date"]');
-      var title = (titleEl && titleEl.textContent.trim()) || item.name.replace(/\.html?$/i, '');
-      var group = (groupEl && groupEl.getAttribute('content')) || '未分類';
-      var date  = (dateEl  && dateEl.getAttribute('content'))  || new Date().toISOString().slice(0, 10);
-
-      await idbPut({ name: item.name, title: title, group: group, date: date, html: html });
-      ok++;
-    } catch (e) { fail++; }
-  }
-
-  procOverlay.classList.remove('show');
-  showToast('✅ 同步完成：' + ok + ' 個' + (fail ? '，' + fail + ' 個失敗' : ''));
-  loadLibrary();
-});
 
 /* ══ Edit Item Modal ════════════════════════════════════════ */
 async function openEditItemModal(filename, title, group) {
@@ -1592,32 +1520,6 @@ btnConfirmEditItem.addEventListener('click', async function () {
   loadLibrary();
 });
 
-/* 全部上傳到 GitHub */
-btnPushGitHub.addEventListener('click', async function () {
-  var token = GITHUB_PAT || localStorage.getItem('gh-pat');
-  if (!token) {
-    ghTokenInput.value = '';
-    modalGhToken.classList.add('show');
-    showToast('⚠️ 請先設定 GitHub Token');
-    return;
-  }
-  var entries;
-  try { entries = await idbGetAll(); } catch (e) { showToast('⚠️ 無法讀取報讀庫'); return; }
-  if (!entries.length) { showToast('⚠️ 報讀庫是空的'); return; }
-  procMsg.textContent = '正在上傳到 GitHub (0/' + entries.length + ')…';
-  procOverlay.classList.add('show');
-  var ok = 0, fail = 0;
-  for (var i = 0; i < entries.length; i++) {
-    var e = entries[i];
-    procMsg.textContent = '上傳到 GitHub (' + (i + 1) + '/' + entries.length + ')…';
-    try {
-      await uploadToGitHub(e.name, e.html);
-      ok++;
-    } catch (err) { fail++; }
-  }
-  procOverlay.classList.remove('show');
-  showToast('✅ 已上傳 ' + ok + ' 個' + (fail ? '，' + fail + ' 個失敗' : ''));
-});
 
 async function loadLibrary() {
   var entries;
@@ -1680,12 +1582,6 @@ async function loadLibrary() {
         card.appendChild(dateMeta);
       }
 
-      var ulBtn = document.createElement('button');
-      ulBtn.className   = 'lib-card-ul';
-      ulBtn.title       = '上傳到 GitHub';
-      ulBtn.textContent = '⬆️';
-      card.appendChild(ulBtn);
-
       var dlBtn = document.createElement('button');
       dlBtn.className   = 'lib-card-dl';
       dlBtn.title       = '下載 .html 檔案';
@@ -1705,22 +1601,8 @@ async function loadLibrary() {
       card.appendChild(delBtn);
 
       card.addEventListener('click', function (e) {
-        if (e.target === delBtn || e.target === editBtn || e.target === dlBtn || e.target === ulBtn) return;
+        if (e.target === delBtn || e.target === editBtn || e.target === dlBtn) return;
         openLibraryItem(entry.html, entry.title);
-      });
-      ulBtn.addEventListener('click', async function (e) {
-        e.stopPropagation();
-        ulBtn.disabled = true;
-        procMsg.textContent = '正在上傳「' + entry.title + '」…';
-        procOverlay.classList.add('show');
-        try {
-          var ok = await uploadToGitHub(entry.name, entry.html);
-          if (ok) showToast('✅ 已上傳「' + entry.title + '」到 GitHub');
-        } catch (err) {
-          showToast('⚠️ 上傳失敗：' + err.message);
-        }
-        procOverlay.classList.remove('show');
-        ulBtn.disabled = false;
       });
       dlBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -1732,9 +1614,12 @@ async function loadLibrary() {
       });
       delBtn.addEventListener('click', async function (e) {
         e.stopPropagation();
-        if (!confirm('確定要刪除「' + entry.title + '」？')) return;
+        if (!confirm('確定要刪除「' + entry.title + '」？\n（本機及雲端都會刪除）')) return;
         try {
           await idbDelete(entry.name);
+          if (currentUser && fbDb) {
+            await cloudDelete(currentUser.uid, entry.name).catch(function() {});
+          }
           showToast('🗑 已刪除「' + entry.title + '」');
           loadLibrary();
         } catch (err) {
