@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="reader-group" content="三年級"/>
+<meta name="reader-date"  content="2026-04-13"/>
+<title>114-2-1三年級社會測驗題目卷</title>
+<style>
+:root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--blue-grad:linear-gradient(135deg,#4a90d9,#2d6fa8);--yellow:#ffd54f;--bg:#eef5fc;--white:#ffffff;--text:#1e2d3d;--muted:#7a99b5;--border:#d4e8f8;--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}
+body.dark{--bg:#12202e;--white:#1a2d3f;--text:#e8f2fc;--muted:#6a8faa;--border:#243a50;--blue-lt:#1a3050;--reading-bg:#2a2318;--line-even:#162636;--line-hover:#1e3448}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+.topbar{background:var(--blue-grad);color:#fff;height:52px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(44,100,160,.25);position:sticky;top:0;z-index:50}
+.topbar-title{font-size:.95rem;font-weight:900}
+.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:52px;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-label{font-size:.76rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}
+.ctrl-range{width:78px;accent-color:var(--blue)}
+.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}
+.spacer{flex:1}
+.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--text);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}
+.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}
+.btn-ctrl:active{transform:scale(.95)}
+.btn-ctrl.primary{background:var(--blue-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}
+.btn-ctrl.primary:hover{opacity:.88}
+.btn-theme{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;height:36px;width:36px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.btn-theme:hover{background:rgba(255,255,255,.3)}
+.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--muted)}
+.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}
+#content{padding:4px 14px 72px}
+.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}
+.line:hover{background:var(--line-hover)}
+.line.even{background:var(--line-even)}
+.line.even:hover{background:var(--line-hover)}
+.line.reading{background:var(--reading-bg)!important;outline:2.5px solid var(--reading-border)}
+.lineText{flex:1;line-height:1.85}
+.title-main{font-size:1.05rem;font-weight:900;color:var(--blue-dk);padding:10px 12px 6px;margin-top:8px;cursor:default}
+.title-main:hover{background:transparent}
+.title-sub{font-size:.94rem;font-weight:800;color:var(--muted);cursor:default}
+.title-sub:hover{background:transparent}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-title">🎧 114-2-1三年級社會測驗題目卷</span>
+  <button class="btn-theme" id="theme-btn">🌙</button>
+</div>
+<div class="controls-bar">
+  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>
+  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>
+  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>
+  <div class="spacer"></div>
+  <button class="btn-ctrl primary" id="pa">▶ 連播</button>
+  <button class="btn-ctrl" id="pu">⏸</button>
+  <button class="btn-ctrl" id="re">⏯</button>
+  <button class="btn-ctrl" id="st">⏹</button>
+</div>
+<div class="status-tip" id="sb">💡 點擊任意行朗讀，或按「連播」</div>
+<div class="doc-heading">114-2-1三年級社會測驗題目卷</div>
+<div id="content">
+<div class="line title-main"><span class="lineText">一、是非題：每題2 分、共 20 分</span></div>
+<div class="line"><span class="lineText">當鄰居不會主動打招呼時，就沒有必要建立良好的關係。</span></div>
+<div class="line even"><span class="lineText">可以透過閱讀地圖和走讀的方法，讓我們對居住地方更了解。</span></div>
+<div class="line"><span class="lineText">石滬是早期居民用來捕魚的陷阱，目前已在生活中完全消失。</span></div>
+<div class="line even"><span class="lineText">鄉村地區的居民經常會遇到交通堵塞的情形。</span></div>
+<div class="line"><span class="lineText">身為社區居民，應該共同維護社區環境。</span></div>
+<div class="line even"><span class="lineText">每個人的身分證要保管好，避免透露居住訊息或被盜用。</span></div>
+<div class="line"><span class="lineText">如果發現社區中的道路出現坑洞，可以向村（里）長通報，請他協助處理。</span></div>
+<div class="line even"><span class="lineText">如果地圖的上方指向北方，那麼地圖的左方就是東方。</span></div>
+<div class="line"><span class="lineText">社區活動中心可以用來舉辦活動，提供居民聯誼、集會或學習用的場地。</span></div>
+<div class="line even"><span class="lineText">「圖例」是地圖上用來表示實際地點或事物的符號。</span></div>
+<div class="line title-main"><span class="lineText">二、選擇題：每題2 分、共 20 分</span></div>
+<div class="line"><span class="lineText">「指揮交通」通常是誰負責的工作？①消防員　②清潔隊員　③環保志工　④警察</span></div>
+<div class="line even"><span class="lineText">下列哪一種方式無法幫助小朋友更了解居住地方的環境？①閱讀居住地方地圖　②查閱班級課表　③進行實際觀察　④蒐集地方特色資料</span></div>
+<div class="line"><span class="lineText">下列哪一項是對平原地區的描述？①很常看到森林　②居民會種植小米　③道路平坦　④常看到茶園和果園</span></div>
+<div class="line even"><span class="lineText">下列哪一種行為較不會影響社區居民的生活？①舉辦中秋節聯歡晚會　②封閉大樓的安全門　③將家裡的鞋子堆放在樓梯　④寵物在社區走道上便溺</span></div>
+<div class="line"><span class="lineText">地圖的左方通常指向哪一邊？①南邊　②北邊　③東邊　④西邊</span></div>
+<div class="line even"><span class="lineText">關於「火炎山」的敘述，下列哪一項正確？①因為該處在陽光下看起來像紅色火焰而得名　②是臺北市 信義區的地方特色　③該地出產的紅茶非常知名　④在火炎山旁，有一座能欣賞山景的纜車</span></div>
+<div class="line"><span class="lineText">下列哪個是居住環境依人口密集度的分類？①平原　②都市　③山區　④海邊</span></div>
+<div class="line even"><span class="lineText">清運垃圾和維護環境整潔是哪個機構的主要工作？①消防隊　②警察局　③衛生所　④環保局</span></div>
+<div class="line"><span class="lineText">樂樂居住在漁村，下列哪一項可能是他們家的生活方式？①種植小米　②欣賞森林景觀　③大人出海捕撈魚蝦　④經營果園</span></div>
+<div class="line even"><span class="lineText">如何和他人成為好鄰居？①主動和鄰居打招呼　②走路橫衝直撞　③在社區亂丟垃圾　④製造噪音</span></div>
+<div class="line title-main"><span class="lineText">三、連連看：每線 1 分、共 11 分</span></div>
+<div class="line"><span class="lineText">下列居住地方的特色各是屬於哪一類？請畫線連起來：</span></div>
+<div class="line even"><span class="lineText">我們可以善用哪些資源來建立共好社區？將相對應的做法連起來：</span></div>
+<div class="line"><span class="lineText">請運用感官進行配對，將正確的連起來：</span></div>
+<div class="line title-main"><span class="lineText">四、圖表題：每格 1 分、共 24 分</span></div>
+<div class="line even"><span class="lineText">下列各種情形，容易引發哪一種問題？請填入代號：</span></div>
+<div class="line"><span class="lineText">下列人員分別負責哪一項工作？請填入適當代號：</span></div>
+<div class="line even"><span class="lineText">如何得知居住地址？請打ˇ</span></div>
+<div class="line"><span class="lineText">訪問前應準備什麼？請打ˇ</span></div>
+<div class="line even"><span class="lineText">請配對政府機構人員提供的服務，並填入適當的代號：</span></div>
+<div class="line"><span class="lineText">下列景象較可能出現在哪一個地方？將代號填入□裡：ㄅ.山區　ㄆ.海邊</span></div>
+<div class="line title-main"><span class="lineText">五、對的打ˇ：每格 1 分、共 13分</span></div>
+<div class="line even"><span class="lineText">哪些行為能幫助社區共好？</span></div>
+<div class="line"><span class="lineText">(　 )(１)與社區長者共學。</span></div>
+<div class="line even"><span class="lineText">(　 )(２)不和社區長輩交流。</span></div>
+<div class="line"><span class="lineText">(　 )(３)居民同心協力解決社區</span></div>
+<div class="line even"><span class="lineText">問題。</span></div>
+<div class="line"><span class="lineText">( 　)(４)霸佔社區活動中心。</span></div>
+<div class="line even"><span class="lineText">小志發現鄰居家的冷氣機排水管沒有處理好，因而導致積水的問題。他應該怎樣做比較適當？：</span></div>
+<div class="line"><span class="lineText">(　 )(１)禮貌的提醒鄰居改善</span></div>
+<div class="line even"><span class="lineText">( 　)(２)直接把鄰居排水管封住</span></div>
+<div class="line"><span class="lineText">( 　)(３)請村長幫忙處理。</span></div>
+<div class="line even"><span class="lineText">( 　)(４)透過住戶管理委員會協調</span></div>
+<div class="line"><span class="lineText">小明是社區小小導覽員，下列哪些居住地的環境和特色是他可以介紹的？</span></div>
+<div class="line even"><span class="lineText">(　 )(１)當地的特色美食。</span></div>
+<div class="line"><span class="lineText">(　 )(２)當地的傳統產業。</span></div>
+<div class="line even"><span class="lineText">( 　)(３)自己數學段考的分數</span></div>
+<div class="line"><span class="lineText">(　 )(４)當地特有的自然生態</span></div>
+<div class="line even"><span class="lineText">(　 )(５)鄰居家裡客廳的擺設</span></div>
+<div class="line title-main"><span class="lineText">六、閱讀題：每格 1 分、共 10 分</span></div>
+<div class="line"><span class="lineText">鄰居家住三合院，下午我跟朋友一起在門口玩，大人們跟平常一樣聚在一起聊天，後來爸爸耕種回來就帶我一起回家吃飯，真是美好的一天呀！</span></div>
+<div class="line even"><span class="lineText">1.上面是平平的日記內容，請判斷平平居住地方的景觀？在□裡打ˇ</span></div>
+<div class="line"><span class="lineText">2.「我一出家門就可以看到許多商店，買東西非常方便。放學後想找鄰居玩，但是不大認識他們。」上文是小心的生活情形。請依題目回答問題，並在(　)裡打ˇ</span></div>
+<div class="line even"><span class="lineText">(１)小心可能住在哪裡？( 　)①都市　  ( 　)②鄉村</span></div>
+<div class="line"><span class="lineText">(２)小心居住地方的特色？ ( 　)①稻田遍布。(　 )②大樓林立。</span></div>
+<div class="line even"><span class="lineText">3.小華住在公寓，總會在半夜聽到樓上住戶製造的噪音，讓她無法安心入睡。請依題目回答問題，並在(　)裡打ˇ</span></div>
+<div class="line"><span class="lineText">(１)小華應該採取下列何種做法？</span></div>
+<div class="line even"><span class="lineText">( 　)①直接登門打人。</span></div>
+<div class="line"><span class="lineText">(　 )②製造噪音吵回去。</span></div>
+<div class="line even"><span class="lineText">( 　)③婉轉並且禮貌地告知。</span></div>
+<div class="line"><span class="lineText">( 　)④在鄰居門口大聲尖叫。</span></div>
+<div class="line title-main"><span class="lineText">七、題組：每格 1 分、共 2 分</span></div>
+<div class="line even"><span class="lineText">小東住在位於偏遠地區的太平村，這裡的地勢較低，每次只要下大雨都會淹水，所以他很關心中央氣象局發布的豪雨特報。請依題目回答問題，並在(　)裡打ˇ</span></div>
+<div class="line"><span class="lineText">( 　)(１)「豪雨特報發布時，</span></div>
+<div class="line even"><span class="lineText">誰有疏散太平村居民保護居民安全的職責</span></div>
+<div class="line"><span class="lineText">村長　②校長</span></div>
+<div class="line even"><span class="lineText">③志工　④商店老闆</span></div>
+<div class="line"><span class="lineText">( 　)(２)承上題，如果小東家的農田淹水，村長應該怎麼做比較好？</span></div>
+<div class="line even"><span class="lineText">把自己所有的財產捐給小東</span></div>
+<div class="line"><span class="lineText">②向政府單位反映災情</span></div>
+<div class="line even"><span class="lineText">③請小東自己處理</span></div>
+<div class="line"><span class="lineText">④要求小東搬離太平村</span></div>
+</div>
+<script>
+(function(){
+var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;
+var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");
+function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=vc.findIndex(function(v){return /zh/i.test(v.lang);});if(z>=0)vs.value=z;}
+lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;
+function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}
+function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}
+function pa(){var ls=Array.from(ct.querySelectorAll(".line")).filter(function(el){return!el.classList.contains("title-main")&&!el.classList.contains("title-sub");});if(!ls.length)return;ipa=true;pai=0;function step(){if(!ipa||pai>=ls.length){ipa=false;sb.textContent="✅ 播放完畢";return;}var el=ls[pai++];var t=el.querySelector(".lineText");var tx=(t?t.textContent:el.textContent).trim();if(!tx){step();return;}sp(tx,el,step);}step();}
+ct.addEventListener("click",function(e){var nd=e.target.closest(".line");if(!nd)return;if(nd.classList.contains("title-main")||nd.classList.contains("title-sub"))return;ipa=false;var t=nd.querySelector(".lineText");sp((t?t.textContent:nd.textContent).trim(),nd);});
+ct.addEventListener("mouseup",function(){var sel=window.getSelection();var tx=sel?sel.toString().trim():"";if(tx)sp(tx);});
+document.getElementById("pa").addEventListener("click",function(){ss();setTimeout(pa,100);});
+document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});
+document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});
+document.getElementById("st").addEventListener("click",ss);
+document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});
+rs.addEventListener("input",function(){rv.textContent=rs.value;});
+fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});
+})();
+</script>
+</body>
+</html>

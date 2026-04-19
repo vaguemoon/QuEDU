@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>有聲教材工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+/* ══ CSS 變數 ══════════════════════════════════════════════ */
+:root {
+  --blue:       #4a90d9;
+  --blue-dk:    #2d6fa8;
+  --blue-lt:    #e8f4fd;
+  --blue-grad:  linear-gradient(135deg, #4a90d9, #2d6fa8);
+  --green:      #52c97a;
+  --green-dk:   #389959;
+  --orange:     #ff8c42;
+  --orange-dk:  #e06a1a;
+  --red:        #e74c3c;
+  --yellow:     #ffd54f;
+  --bg:         #eef5fc;
+  --white:      #ffffff;
+  --text:       #1e2d3d;
+  --muted:      #7a99b5;
+  --border:     #d4e8f8;
+  --radius:     22px;
+  --shadow:     0 6px 28px rgba(44,100,160,.13);
+  --shadow-lg:  0 12px 48px rgba(44,100,160,.20);
+  --reading-bg:     #fff9e6;
+  --reading-border: #ffc107;
+  --line-even:      #f4f9ff;
+  --line-hover:     #dbeeff;
+}
+body.dark {
+  --bg:         #12202e;
+  --white:      #1a2d3f;
+  --text:       #e8f2fc;
+  --muted:      #6a8faa;
+  --border:     #243a50;
+  --blue-lt:    #1a3050;
+  --reading-bg: #2a2318;
+  --line-even:  #162636;
+  --line-hover: #1e3448;
+  --shadow:     0 6px 28px rgba(0,0,0,.3);
+  --shadow-lg:  0 12px 48px rgba(0,0,0,.4);
+}
+
+/* ══ Reset ══════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  transition: background .3s, color .3s;
+}
+
+/* ══ Pages ══════════════════════════════════════════════════ */
+.page         { display: none; }
+.page.active  { display: block; }
+
+/* ══ Topbar ═════════════════════════════════════════════════ */
+#topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--blue-grad);
+  height: 52px;
+  padding: 0 12px;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 2px 12px rgba(44,100,160,.3);
+}
+#topbar-back {
+  display: none;
+  align-items: center;
+  background: rgba(255,255,255,.18);
+  border: none; border-radius: 12px;
+  color: #fff; font-size: .85rem; font-weight: 800;
+  padding: 0 14px; height: 36px; min-width: 44px;
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+}
+#topbar-back.visible { display: flex; }
+#topbar-back:hover { background: rgba(255,255,255,.3); }
+
+#topbar-title {
+  font-size: .95rem; font-weight: 900;
+  color: #fff; flex: 1;
+  text-shadow: 0 1px 4px rgba(0,0,0,.15);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-tab {
+  background: rgba(255,255,255,.15);
+  border: 2px solid rgba(255,255,255,.25);
+  border-radius: 12px;
+  color: #fff; font-size: .82rem; font-weight: 800;
+  padding: 0 14px; height: 36px; min-width: 44px;
+  cursor: pointer; white-space: nowrap;
+  transition: all .15s;
+}
+.topbar-tab:hover  { background: rgba(255,255,255,.28); }
+.topbar-tab.active {
+  background: #fff; color: var(--blue-dk);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+#topbar-theme {
+  background: rgba(255,255,255,.15);
+  border: 2px solid rgba(255,255,255,.25);
+  border-radius: 10px;
+  color: #fff; font-size: .9rem;
+  height: 36px; width: 36px;
+  cursor: pointer; transition: background .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+#topbar-theme:hover { background: rgba(255,255,255,.28); }
+
+/* ══ Upload Page ════════════════════════════════════════════ */
+#page-upload.active {
+  display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  min-height: calc(100vh - 52px);
+  padding: 32px 24px;
+  background: linear-gradient(160deg, #1a3a5c 0%, #2d6fa8 55%, #4a90d9 100%);
+}
+.upload-hero {
+  text-align: center; color: #fff;
+  margin-bottom: 28px;
+}
+.upload-hero-icon { font-size: 3.2rem; display: block; margin-bottom: 8px; }
+.upload-hero-title { font-size: 1.7rem; font-weight: 900; }
+.upload-hero-title span { color: var(--yellow); }
+.upload-hero-sub { font-size: .82rem; opacity: .7; margin-top: 6px; letter-spacing: 1px; }
+
+.upload-card {
+  background: var(--white); border-radius: var(--radius);
+  padding: 26px 22px; width: 100%; max-width: 420px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.3);
+}
+.drop-zone {
+  border: 2.5px dashed var(--border); border-radius: 16px;
+  padding: 30px 16px; cursor: pointer; text-align: center;
+  background: var(--bg); transition: all .2s; margin-bottom: 14px;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--blue); background: var(--blue-lt);
+}
+.drop-zone input[type="file"] { display: none; }
+.drop-zone label { cursor: pointer; display: block; }
+.drop-icon { font-size: 2.6rem; display: block; margin-bottom: 8px; }
+.drop-text { font-size: .87rem; font-weight: 700; color: var(--muted); line-height: 1.6; }
+.drop-text strong { color: var(--blue-dk); }
+
+.btn-main {
+  width: 100%; height: 48px;
+  border: none; border-radius: 14px;
+  background: var(--blue-grad); color: #fff;
+  font-size: 1rem; font-weight: 900; cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 4px 14px rgba(45,111,168,.35);
+}
+.btn-main:active   { transform: scale(.97); }
+.btn-main:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; color: var(--muted); }
+.btn-main.orange   {
+  background: linear-gradient(135deg, var(--orange), var(--orange-dk));
+  box-shadow: 0 4px 14px rgba(224,106,26,.3);
+  margin-top: 10px;
+}
+
+/* ══ Reader Page ════════════════════════════════════════════ */
+.controls-bar {
+  background: var(--white); border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  position: sticky; top: 52px; z-index: 80;
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.ctrl-group { display: flex; align-items: center; gap: 6px; }
+.ctrl-label {
+  font-size: .76rem; font-weight: 800;
+  color: var(--muted); white-space: nowrap;
+}
+.ctrl-select {
+  font-size: .8rem; font-weight: 700;
+  background: var(--blue-lt); color: var(--blue-dk);
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 5px 8px; max-width: 145px; outline: none; cursor: pointer;
+}
+.ctrl-range  { width: 78px; accent-color: var(--blue); }
+.ctrl-val    {
+  font-size: .76rem; font-weight: 800;
+  color: var(--blue-dk); min-width: 24px; text-align: center;
+}
+.spacer { flex: 1; }
+
+.btn-ctrl {
+  height: 36px; padding: 0 13px;
+  border: 2px solid var(--border); border-radius: 11px;
+  background: var(--white); color: var(--text);
+  font-size: .85rem; font-weight: 800; cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(44,100,160,.06);
+}
+.btn-ctrl:hover   { background: var(--blue-lt); border-color: var(--blue); color: var(--blue-dk); }
+.btn-ctrl:active  { transform: scale(.95); }
+.btn-ctrl:disabled { opacity: .4; cursor: not-allowed; }
+.btn-ctrl.primary {
+  background: var(--blue-grad); color: #fff; border-color: transparent;
+  box-shadow: 0 4px 12px rgba(45,111,168,.28);
+}
+.btn-ctrl.primary:hover { opacity: .88; }
+.btn-ctrl.green {
+  background: linear-gradient(135deg, var(--green), var(--green-dk));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 12px rgba(56,153,89,.22);
+}
+.btn-ctrl.green:hover   { opacity: .88; }
+.btn-ctrl.orange {
+  background: linear-gradient(135deg, var(--orange), var(--orange-dk));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 4px 12px rgba(224,106,26,.22);
+}
+.btn-ctrl.orange:hover  { opacity: .88; }
+
+#edit-panel {
+  display: none; padding: 12px 16px;
+  border-bottom: 2px solid var(--border);
+  background: var(--white);
+}
+.edit-panel-label {
+  font-size: .78rem; font-weight: 900;
+  color: var(--muted); margin-bottom: 8px;
+}
+#edit-textarea {
+  width: 100%; min-height: 180px; max-height: 48vh;
+  border: 2px solid var(--border); border-radius: 14px;
+  padding: 11px 14px;
+  font-size: 15px; line-height: 1.8;
+  color: var(--text); background: var(--bg);
+  resize: vertical; outline: none; transition: border-color .2s;
+}
+#edit-textarea:focus { border-color: var(--blue); }
+.edit-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+/* ══ Controls +/- buttons ════════════════════════════════════ */
+.ctrl-pm { display: flex; align-items: center; gap: 4px; }
+.btn-pm {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border); border-radius: 8px;
+  background: var(--white); color: var(--blue-dk);
+  font-size: 1rem; font-weight: 900; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .12s; line-height: 1; user-select: none;
+}
+.btn-pm:hover  { background: var(--blue-lt); border-color: var(--blue); }
+.btn-pm:active { transform: scale(.88); }
+
+/* ══ Edit Panel — Float / Format / Search ════════════════════ */
+.edit-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+#edit-panel.floating {
+  position: fixed; z-index: 150;
+  width: min(560px, 94vw);
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-lg);
+}
+.edit-drag-handle {
+  display: none; align-items: center; justify-content: space-between;
+  padding: 8px 14px; margin: -12px -16px 12px;
+  background: var(--blue-lt);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  cursor: grab; user-select: none;
+}
+.edit-drag-handle:active { cursor: grabbing; }
+#edit-panel.floating .edit-drag-handle { display: flex; }
+#edit-panel.floating .edit-panel-header { display: none; }
+.edit-drag-dots { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.edit-format-bar {
+  display: flex; gap: 5px; align-items: center;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.btn-fmt {
+  height: 28px; padding: 0 9px;
+  border: 1.5px solid var(--border); border-radius: 7px;
+  background: var(--white); color: var(--text);
+  font-size: .75rem; font-weight: 800; cursor: pointer;
+  transition: all .12s; white-space: nowrap;
+}
+.btn-fmt:hover  { background: var(--blue-lt); border-color: var(--blue); color: var(--blue-dk); }
+.btn-fmt:active { transform: scale(.93); }
+.btn-fmt.active { background: var(--blue-lt); border-color: var(--blue); color: var(--blue-dk); }
+.fmt-divider { width: 1px; height: 18px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+.edit-search-bar {
+  display: none; gap: 6px; align-items: center;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.edit-search-bar.show { display: flex; }
+.edit-search-input {
+  height: 30px; padding: 0 9px; flex: 1; min-width: 80px;
+  border: 2px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text);
+  font-size: .82rem; outline: none; transition: border-color .2s;
+}
+.edit-search-input:focus { border-color: var(--blue); }
+#replace-input { flex: 0 0 110px; }
+
+.status-tip {
+  padding: 8px 18px 4px;
+  font-size: .76rem; font-weight: 700; color: var(--muted);
+}
+.doc-heading {
+  padding: 14px 18px 4px;
+  font-size: 1.1rem; font-weight: 900; color: var(--blue-dk);
+}
+#reader-content { padding: 4px 14px 72px; }
+
+.line {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 9px 12px; border-radius: 13px; margin: 2px 0;
+  cursor: pointer; transition: background .12s;
+}
+.line:hover      { background: var(--line-hover); }
+.line.even       { background: var(--line-even); }
+.line.even:hover { background: var(--line-hover); }
+.line.reading    {
+  background: var(--reading-bg) !important;
+  outline: 2.5px solid var(--reading-border);
+}
+.lineText { flex: 1; line-height: 1.85; }
+
+.title-main {
+  font-size: 1.05rem; font-weight: 900; color: var(--blue-dk);
+  padding: 10px 12px 6px; margin-top: 8px; cursor: default;
+}
+.title-main:hover { background: transparent; }
+.title-sub {
+  font-size: .94rem; font-weight: 800; color: var(--muted);
+  cursor: default;
+}
+.title-sub:hover { background: transparent; }
+
+/* ══ Library Page ════════════════════════════════════════════ */
+#page-library { padding: 0; }
+.library-wrap {
+  max-width: 960px; margin: 0 auto;
+  padding: 24px 20px 72px;
+}
+.library-toprow {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 28px; flex-wrap: wrap;
+}
+.library-heading {
+  font-size: 1.3rem; font-weight: 900; flex: 1;
+}
+.btn-pick {
+  display: flex; align-items: center; gap: 8px;
+  height: 44px; padding: 0 18px;
+  border: 2px dashed var(--blue); border-radius: 14px;
+  background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .88rem; font-weight: 800; cursor: pointer;
+  transition: all .15s;
+}
+.btn-pick:hover {
+  background: var(--blue); color: #fff; border-style: solid; border-color: transparent;
+}
+.btn-sync {
+  border-color: var(--green-dk); color: var(--green-dk);
+  background: #edfaf3;
+}
+body.dark .btn-sync { background: #132d1e; }
+.btn-sync:hover { background: var(--green); border-color: transparent; color: #fff; }
+.btn-push {
+  border-color: #389959; color: #389959;
+  background: #edfaf3;
+}
+body.dark .btn-push { background: #132d1e; }
+.btn-push:hover { background: #389959; border-color: transparent; color: #fff; }
+.btn-gh-settings {
+  width: 44px; height: 44px; flex-shrink: 0;
+  border: 2px solid var(--border); border-radius: 14px;
+  background: var(--white); color: var(--muted);
+  font-size: 1rem; cursor: pointer; transition: all .15s;
+}
+.btn-gh-settings:hover { border-color: var(--blue); color: var(--blue-dk); background: var(--blue-lt); }
+.btn-modal-upload {
+  display: block; width: 100%; height: 44px;
+  margin-top: 8px; border: 2px dashed var(--green-dk); border-radius: 13px;
+  background: #edfaf3; color: var(--green-dk);
+  font-size: .9rem; font-weight: 800; cursor: pointer; transition: all .15s;
+}
+body.dark .btn-modal-upload { background: #132d1e; }
+.btn-modal-upload:hover { background: var(--green); border-style: solid; border-color: transparent; color: #fff; }
+
+.group-section { margin-bottom: 32px; }
+.group-label {
+  font-size: .85rem; font-weight: 900; color: var(--muted);
+  letter-spacing: .5px; margin-bottom: 12px;
+  padding-bottom: 6px; border-bottom: 2px solid var(--border);
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 13px;
+}
+@media (max-width: 480px) { .card-grid { grid-template-columns: 1fr; } }
+
+.lib-card {
+  background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.01));
+  border: 1px solid var(--border); border-radius: 16px;
+  padding: 16px 158px 16px 18px;
+  cursor: pointer; text-decoration: none; color: var(--text);
+  display: block; position: relative;
+  transition: all .15s;
+}
+.lib-card:hover {
+  outline: 2px solid rgba(74,144,217,.4);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+.lib-card-title { font-weight: 900; font-size: .98rem; margin-bottom: 4px; }
+.lib-card-meta  { font-size: .76rem; color: var(--muted); }
+.lib-card-del,
+.lib-card-edit,
+.lib-card-dl,
+.lib-card-ul {
+  position: absolute; top: 50%;
+  transform: translateY(-50%);
+  width: 30px; height: 30px;
+  background: none; border: none; border-radius: 8px;
+  color: var(--muted); font-size: .88rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: all .15s;
+}
+.lib-card-del  { right: 12px; }
+.lib-card-edit { right: 48px; }
+.lib-card-dl   { right: 84px; }
+.lib-card-ul   { right: 120px; }
+.lib-card:hover .lib-card-del,
+.lib-card:hover .lib-card-edit,
+.lib-card:hover .lib-card-dl,
+.lib-card:hover .lib-card-ul   { opacity: 1; }
+.lib-card-del:hover  { background: var(--red);     color: #fff; }
+.lib-card-edit:hover { background: var(--blue-lt); color: var(--blue-dk); }
+.lib-card-dl:hover   { background: #e6f9ee;        color: #389959; }
+.lib-card-ul:hover   { background: #e6f9ee;        color: #389959; }
+
+.library-empty {
+  text-align: center; padding: 56px 24px; color: var(--muted);
+}
+.library-empty p     { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+.library-empty small { font-size: .84rem; line-height: 1.6; }
+.library-empty code  {
+  background: var(--blue-lt); color: var(--blue-dk);
+  padding: 1px 6px; border-radius: 6px; font-size: .82rem;
+}
+
+/* ══ Save Modal ══════════════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(20,44,68,.6);
+  z-index: 200;
+  align-items: center; justify-content: center; padding: 24px;
+}
+.modal-overlay.show { display: flex; }
+.modal-card {
+  background: var(--white); border-radius: var(--radius);
+  padding: 26px 22px; width: 100%; max-width: 370px;
+  box-shadow: var(--shadow-lg);
+}
+.modal-card h3 {
+  font-size: 1.1rem; font-weight: 900;
+  color: var(--blue-dk); margin-bottom: 20px;
+}
+.form-group  { margin-bottom: 14px; }
+.form-label  {
+  display: block;
+  font-size: .78rem; font-weight: 800; color: var(--muted);
+  margin-bottom: 6px; letter-spacing: .3px;
+}
+.form-input {
+  width: 100%; height: 44px;
+  padding: 0 14px;
+  border: 2px solid var(--border); border-radius: 12px;
+  background: var(--bg); color: var(--text);
+  font-size: .95rem; outline: none; transition: border-color .2s;
+}
+.form-input:focus { border-color: var(--blue); }
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.btn-modal-cancel {
+  flex: 1; height: 46px;
+  border: 2px solid var(--border); border-radius: 13px;
+  background: var(--white); color: var(--text);
+  font-size: .92rem; font-weight: 800; cursor: pointer; transition: all .15s;
+}
+.btn-modal-cancel:hover { background: var(--bg); }
+.btn-modal-ok {
+  flex: 2; height: 46px;
+  border: none; border-radius: 13px;
+  background: var(--blue-grad); color: #fff;
+  font-size: .95rem; font-weight: 900; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(45,111,168,.32);
+  transition: opacity .15s;
+}
+.btn-modal-ok:hover { opacity: .88; }
+
+/* ══ Processing Overlay ══════════════════════════════════════ */
+#proc-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(20,44,68,.55);
+  z-index: 180; align-items: center; justify-content: center;
+}
+#proc-overlay.show { display: flex; }
+.proc-card {
+  background: var(--white); border-radius: var(--radius);
+  padding: 32px 40px; text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.spinner {
+  width: 42px; height: 42px;
+  border: 3.5px solid var(--border); border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin: 0 auto 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.proc-card p { font-size: .88rem; font-weight: 700; color: var(--muted); }
+
+/* ══ Toast ═══════════════════════════════════════════════════ */
+#toast {
+  position: fixed; bottom: 24px;
+  left: 50%; transform: translateX(-50%) translateY(16px);
+  background: #1e2d3d; color: #fff;
+  padding: 10px 22px; border-radius: 999px;
+  font-size: .86rem; font-weight: 700;
+  opacity: 0; pointer-events: none; z-index: 300;
+  transition: all .28s; white-space: nowrap;
+  max-width: 88vw; overflow: hidden; text-overflow: ellipsis;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────────────────────── -->
+<div id="topbar">
+  <button id="topbar-back">← 返回</button>
+  <div id="topbar-title">🎧 有聲教材</div>
+  <button class="topbar-tab active" id="tab-convert">📂 轉換</button>
+  <button class="topbar-tab"        id="tab-library">📚 報讀庫</button>
+  <button id="topbar-theme">🌙</button>
+</div>
+
+<!-- ── Page: Upload ────────────────────────────────────────── -->
+<div id="page-upload" class="page active">
+  <div class="upload-hero">
+    <span class="upload-hero-icon">🎧</span>
+    <div class="upload-hero-title">文字轉<span>有聲教材</span></div>
+  </div>
+  <div class="upload-card">
+    <div class="drop-zone" id="drop-zone">
+      <label for="file-input">
+        <span class="drop-icon">📂</span>
+        <span class="drop-text"><strong>點此選擇 .docx 檔案</strong><br>或直接拖曳到這裡</span>
+      </label>
+      <input type="file" id="file-input" accept=".docx,.doc"/>
+    </div>
+    <button class="btn-main" id="convert-btn" disabled>請先選擇檔案</button>
+    <button class="btn-main orange" id="manual-btn">✏️ 直接輸入文字</button>
+  </div>
+</div>
+
+<!-- ── Page: Reader ────────────────────────────────────────── -->
+<div id="page-reader" class="page">
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <span class="ctrl-label">聲音</span>
+      <select id="voice-select" class="ctrl-select"></select>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">語速</span>
+      <div class="ctrl-pm">
+        <button class="btn-pm" id="rate-minus">−</button>
+        <span class="ctrl-val" id="rate-val">0.9</span>
+        <button class="btn-pm" id="rate-plus">+</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">字體</span>
+      <div class="ctrl-pm">
+        <button class="btn-pm" id="font-minus">−</button>
+        <span class="ctrl-val" id="font-val">17px</span>
+        <button class="btn-pm" id="font-plus">+</button>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-ctrl orange" id="edit-toggle-btn">✏️ 編輯</button>
+    <button class="btn-ctrl green"  id="save-lib-btn">💾 存到報讀庫</button>
+    <button class="btn-ctrl primary" id="play-all-btn">▶ 連播</button>
+    <button class="btn-ctrl" id="pause-btn">⏸</button>
+    <button class="btn-ctrl" id="resume-btn">⏯</button>
+    <button class="btn-ctrl" id="stop-btn">⏹</button>
+  </div>
+
+  <div id="edit-panel">
+    <!-- 拖曳把手（浮動模式才顯示） -->
+    <div class="edit-drag-handle" id="edit-drag-handle">
+      <span class="edit-drag-dots">⠿ 拖曳移動</span>
+      <button class="btn-fmt" id="edit-pin-btn" title="釘回頂部">📌 釘回頂部</button>
+    </div>
+    <!-- 一般模式標題列 -->
+    <div class="edit-panel-header">
+      <div class="edit-panel-label">✏️ 手動編輯 — 每行獨立朗讀，空行自動略過</div>
+      <button class="btn-fmt" id="edit-float-btn" title="切換浮動視窗">⛶ 浮動</button>
+    </div>
+    <!-- 格式工具列 -->
+    <div class="edit-format-bar">
+      <button class="btn-fmt" id="fmt-t1">T1 大標</button>
+      <button class="btn-fmt" id="fmt-t2">T2 小標</button>
+      <button class="btn-fmt" id="fmt-clear">— 一般</button>
+      <div class="fmt-divider"></div>
+      <button class="btn-fmt" id="fmt-merge">⊕ 合併短行</button>
+      <div class="fmt-divider"></div>
+      <button class="btn-fmt" id="fmt-search-toggle">🔍 搜尋取代</button>
+    </div>
+    <!-- 搜尋取代列 -->
+    <div class="edit-search-bar" id="edit-search-bar">
+      <input class="edit-search-input" id="search-input" placeholder="搜尋…"/>
+      <input class="edit-search-input" id="replace-input" placeholder="取代為…"/>
+      <button class="btn-fmt" id="btn-replace">取代</button>
+      <button class="btn-fmt" id="btn-replace-all">全部</button>
+    </div>
+    <textarea id="edit-textarea"
+      placeholder="在此輸入或貼上文字，每一行會成為一個朗讀單位。&#10;&#10;例如：&#10;一、選擇題&#10;下列哪一項是正確的？&#10;①答案甲　②答案乙　③答案丙&#10;&#10;用工具列的 T1/T2 可手動設定標題格式"></textarea>
+    <div class="edit-actions">
+      <button class="btn-ctrl primary" id="apply-edit-btn">✅ 套用預覽</button>
+      <button class="btn-ctrl"         id="cancel-edit-btn">✖ 取消</button>
+    </div>
+  </div>
+
+  <div class="status-tip" id="status-bar">💡 點擊任意行朗讀，或按「連播」</div>
+  <div class="doc-heading"  id="doc-title"></div>
+  <div id="reader-content"></div>
+</div>
+
+<!-- ── Page: Library ───────────────────────────────────────── -->
+<div id="page-library" class="page">
+  <div class="library-wrap">
+    <div class="library-toprow">
+      <div class="library-heading">📚 報讀庫</div>
+      <button class="btn-pick btn-sync" id="btn-sync-github">☁️ 從 GitHub 同步</button>
+      <button class="btn-pick btn-push" id="btn-push-github">⬆️ 全部上傳到 GitHub</button>
+      <label class="btn-pick" for="import-files-input">📥 匯入 .html 檔</label>
+      <button class="btn-gh-settings" id="btn-gh-settings" title="GitHub Token 設定">⚙️</button>
+      <input type="file" id="import-files-input" accept=".html,.htm" multiple style="display:none"/>
+    </div>
+    <div id="library-content">
+      <div class="library-empty">
+        <p>報讀庫還沒有內容</p>
+        <small>使用「轉換」功能後按「存到報讀庫」，或點「匯入 .html 檔」加入已有檔案</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Save Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-save">
+  <div class="modal-card">
+    <h3>💾 存到報讀庫</h3>
+    <div class="form-group">
+      <label class="form-label" for="save-filename">檔名</label>
+      <input class="form-input" id="save-filename" type="text" placeholder="三年級社會期末卷"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="save-group">群組</label>
+      <input class="form-input" id="save-group" type="text"
+             placeholder="三年級" list="group-datalist" autocomplete="off"/>
+      <datalist id="group-datalist"></datalist>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-cancel-save">取消</button>
+      <button class="btn-modal-ok"     id="btn-confirm-save">💾 確認儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Item Modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-edit-item">
+  <div class="modal-card">
+    <h3>✏️ 編輯項目</h3>
+    <div class="form-group">
+      <label class="form-label" for="edit-item-title">標題</label>
+      <input class="form-input" id="edit-item-title" type="text" placeholder="檔案標題"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="edit-item-group">群組</label>
+      <input class="form-input" id="edit-item-group" type="text"
+             placeholder="未分類" list="edit-item-groups" autocomplete="off"/>
+      <datalist id="edit-item-groups"></datalist>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-cancel-edit-item">取消</button>
+      <button class="btn-modal-ok"     id="btn-confirm-edit-item">✅ 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── GitHub Token Modal ───────────────────────────────────── -->
+<div class="modal-overlay" id="modal-gh-token">
+  <div class="modal-card">
+    <h3>⚙️ GitHub 設定</h3>
+    <div class="form-group">
+      <label class="form-label" for="gh-token-input">Personal Access Token（PAT）</label>
+      <input class="form-input" id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off"/>
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);line-height:1.6;margin-bottom:4px">
+      需要PAT請聯繫管理者
+    </p>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-cancel-gh-token">取消</button>
+      <button class="btn-modal-ok"     id="btn-save-gh-token">✅ 儲存 Token</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Processing Overlay ──────────────────────────────────── -->
+<div id="proc-overlay">
+  <div class="proc-card">
+    <div class="spinner"></div>
+    <p id="proc-msg">正在解析 Word 檔案…</p>
+  </div>
+</div>
+
+<!-- ── Toast ───────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+(function () {
+'use strict';
+
+/* ══ DOM ════════════════════════════════════════════════════ */
+var fileInput       = document.getElementById('file-input');
+var dropZone        = document.getElementById('drop-zone');
+var convertBtn      = document.getElementById('convert-btn');
+var manualBtn       = document.getElementById('manual-btn');
+var procOverlay     = document.getElementById('proc-overlay');
+var procMsg         = document.getElementById('proc-msg');
+var readerContent   = document.getElementById('reader-content');
+var docTitle        = document.getElementById('doc-title');
+var statusBar       = document.getElementById('status-bar');
+var voiceSelect     = document.getElementById('voice-select');
+var rateVal         = document.getElementById('rate-val');
+var fontVal         = document.getElementById('font-val');
+var editDragHandle  = document.getElementById('edit-drag-handle');
+var editPanel       = document.getElementById('edit-panel');
+var editTextarea    = document.getElementById('edit-textarea');
+var editToggleBtn   = document.getElementById('edit-toggle-btn');
+var applyEditBtn    = document.getElementById('apply-edit-btn');
+var cancelEditBtn   = document.getElementById('cancel-edit-btn');
+var saveLibBtn      = document.getElementById('save-lib-btn');
+var libraryContent  = document.getElementById('library-content');
+var btnImportFiles  = document.getElementById('import-files-input');
+var btnSyncGitHub   = document.getElementById('btn-sync-github');
+var modalSave       = document.getElementById('modal-save');
+var saveFilename    = document.getElementById('save-filename');
+var saveGroup       = document.getElementById('save-group');
+var groupDatalist   = document.getElementById('group-datalist');
+var btnCancelSave   = document.getElementById('btn-cancel-save');
+var btnConfirmSave  = document.getElementById('btn-confirm-save');
+var modalEditItem   = document.getElementById('modal-edit-item');
+var editItemTitle   = document.getElementById('edit-item-title');
+var editItemGroup   = document.getElementById('edit-item-group');
+var editItemGroups  = document.getElementById('edit-item-groups');
+var btnCancelEditItem  = document.getElementById('btn-cancel-edit-item');
+var btnConfirmEditItem = document.getElementById('btn-confirm-edit-item');
+var btnPushGitHub      = document.getElementById('btn-push-github');
+var btnGhSettings      = document.getElementById('btn-gh-settings');
+var modalGhToken       = document.getElementById('modal-gh-token');
+var ghTokenInput       = document.getElementById('gh-token-input');
+var btnCancelGhToken   = document.getElementById('btn-cancel-gh-token');
+var btnSaveGhToken     = document.getElementById('btn-save-gh-token');
+var topbarBack      = document.getElementById('topbar-back');
+var themeBtn        = document.getElementById('topbar-theme');
+var toast           = document.getElementById('toast');
+
+/* ══ Utils ══════════════════════════════════════════════════ */
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ══ State ══════════════════════════════════════════════════ */
+var selectedFile    = null;
+var voices          = [];
+var isPlayingAll    = false;
+var playAllIndex    = 0;
+var currentDocName  = '有聲教材';
+var currentPage     = 'upload';
+var synth           = window.speechSynthesis;
+var _editingFile    = null;  /* { name, title, group } */
+var rateValue       = 0.9;   /* 語速 */
+var fontValue       = 17;    /* 字體 px */
+var editIsFloat     = false; /* 編輯面板是否浮動 */
+var _dragState      = null;  /* 浮動面板拖曳狀態 */
+
+/* ══ Navigation ═════════════════════════════════════════════ */
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+  document.getElementById('page-' + name).classList.add('active');
+  currentPage = name;
+  topbarBack.classList.toggle('visible', name !== 'upload');
+  document.getElementById('tab-convert').classList.toggle('active', name === 'upload' || name === 'reader');
+  document.getElementById('tab-library').classList.toggle('active', name === 'library');
+}
+
+function switchTab(tab) {
+  if (tab === 'library') {
+    showPage('library');
+    loadLibrary();
+  } else {
+    showPage(readerContent.children.length > 0 ? 'reader' : 'upload');
+  }
+}
+document.getElementById('tab-convert').addEventListener('click', function () { switchTab('convert'); });
+document.getElementById('tab-library').addEventListener('click', function () { switchTab('library'); });
+
+topbarBack.addEventListener('click', function () {
+  if (currentPage === 'reader')  { stopSpeak(); showPage('upload'); }
+  else if (currentPage === 'library') {
+    showPage(readerContent.children.length > 0 ? 'reader' : 'upload');
+  }
+});
+
+/* ══ Theme ══════════════════════════════════════════════════ */
+var isDark = localStorage.getItem('reader-dark') === '1';
+if (isDark) document.body.classList.add('dark');
+themeBtn.textContent = isDark ? '☀️' : '🌙';
+themeBtn.addEventListener('click', function () {
+  isDark = !isDark;
+  document.body.classList.toggle('dark', isDark);
+  themeBtn.textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('reader-dark', isDark ? '1' : '0');
+});
+
+/* ══ Toast ══════════════════════════════════════════════════ */
+var toastTimer = null;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2800);
+}
+
+/* ══ File Upload ════════════════════════════════════════════ */
+fileInput.addEventListener('change', function () {
+  selectedFile = fileInput.files[0] || null;
+  convertBtn.disabled = !selectedFile;
+  convertBtn.textContent = selectedFile
+    ? '▶ 開始轉換「' + selectedFile.name + '」'
+    : '請先選擇檔案';
+});
+dropZone.addEventListener('dragover',  function (e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', function ()  { dropZone.classList.remove('drag-over'); });
+dropZone.addEventListener('drop', function (e) {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  var f = e.dataTransfer.files[0];
+  if (f && /\.(docx?|doc)$/i.test(f.name)) {
+    selectedFile = f;
+    convertBtn.disabled = false;
+    convertBtn.textContent = '▶ 開始轉換「' + f.name + '」';
+  }
+});
+
+convertBtn.addEventListener('click', function () {
+  if (!selectedFile) return;
+  procMsg.textContent = '正在解析 Word 檔案…';
+  procOverlay.classList.add('show');
+  var fr = new FileReader();
+  fr.onload = function (e) {
+    mammoth.extractRawText({ arrayBuffer: e.target.result })
+      .then(function (result) {
+        var name = selectedFile.name.replace(/\.(docx?|doc)$/i, '');
+        buildReader(result.value, name);
+        procOverlay.classList.remove('show');
+        showPage('reader');
+      })
+      .catch(function (err) {
+        procOverlay.classList.remove('show');
+        showToast('⚠️ 解析失敗：' + err.message);
+      });
+  };
+  fr.readAsArrayBuffer(selectedFile);
+});
+
+manualBtn.addEventListener('click', function () {
+  buildReader('', '未命名文件');
+  editPanel.style.display = 'block';
+  editToggleBtn.textContent = '✖ 關閉編輯';
+  showPage('reader');
+  editTextarea.focus();
+});
+
+/* ══ Build Reader ═══════════════════════════════════════════ */
+function buildReader(rawText, name) {
+  currentDocName = name;
+  docTitle.textContent = name;
+  stopSpeak();
+  var lines = rawText.split('\n')
+    .map(function (l) { return l.trim(); })
+    .filter(function (l) { return l.length > 0; });
+  renderLines(lines);
+  readerContent.style.fontSize = fontValue + 'px';
+  statusBar.textContent = '💡 點擊任意行朗讀，或按「連播」';
+}
+
+function renderLines(lines) {
+  readerContent.innerHTML = '';
+  var even = 0;
+  lines.forEach(function (line) {
+    var div  = document.createElement('div');
+    var span = document.createElement('span');
+    span.className = 'lineText';
+    div.dataset.raw = line; /* 保留原始行（含前綴），供 openEdit 還原 */
+
+    /* 手動前綴優先判斷 */
+    if (/^## /.test(line)) {
+      span.textContent = line.slice(3);
+      div.className = 'line title-main';
+    } else if (/^# /.test(line)) {
+      span.textContent = line.slice(2);
+      div.className = 'line title-sub';
+    /* 自動偵測 */
+    } else if (/^[一二三四五六七八九十百千]+[、.．：:]/.test(line)) {
+      span.textContent = line;
+      div.className = 'line title-main';
+    } else if (/^[（(]?[\d]+[）)、.．]\s/.test(line) && line.length < 60) {
+      span.textContent = line;
+      div.className = 'line title-sub';
+    } else {
+      span.textContent = line;
+      div.className = 'line' + (even % 2 === 1 ? ' even' : '');
+      even++;
+    }
+    div.appendChild(span);
+    readerContent.appendChild(div);
+  });
+}
+
+/* ══ Voice / TTS ════════════════════════════════════════════ */
+function loadVoices() {
+  voices = synth.getVoices();
+  voiceSelect.innerHTML = '';
+  voices.forEach(function (v, i) {
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = v.name + ' (' + v.lang + ')';
+    voiceSelect.appendChild(opt);
+  });
+  var zh = voices.findIndex(function (v) { return /zh/i.test(v.lang); });
+  if (zh >= 0) voiceSelect.value = zh;
+}
+loadVoices();
+if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+
+function stopSpeak() {
+  if (synth.speaking || synth.pending) synth.cancel();
+  document.querySelectorAll('.line.reading').forEach(function (el) { el.classList.remove('reading'); });
+  isPlayingAll = false; playAllIndex = 0;
+  statusBar.textContent = '💡 點擊任意行朗讀，或按「連播」';
+}
+
+function speak(text, node, onend) {
+  if (synth.speaking || synth.pending) synth.cancel();
+  document.querySelectorAll('.line.reading').forEach(function (el) { el.classList.remove('reading'); });
+  if (!text) return;
+  var u = new SpeechSynthesisUtterance(text);
+  var idx = Number(voiceSelect.value);
+  if (voices[idx]) u.voice = voices[idx];
+  u.rate = rateValue;
+  u.onstart = function () {
+    if (node) { node.classList.add('reading'); node.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    statusBar.textContent = '🔊 ' + text.slice(0, 36) + (text.length > 36 ? '…' : '');
+  };
+  u.onend  = function () { if (node) node.classList.remove('reading'); if (onend) onend(); };
+  u.onerror= function () { if (node) node.classList.remove('reading'); if (onend) onend(); };
+  synth.speak(u);
+}
+
+function playAll() {
+  var lines = Array.from(readerContent.querySelectorAll('.line')).filter(function (el) {
+    return !el.classList.contains('title-main') && !el.classList.contains('title-sub');
+  });
+  if (!lines.length) return;
+  isPlayingAll = true; playAllIndex = 0;
+  function step() {
+    if (!isPlayingAll || playAllIndex >= lines.length) {
+      isPlayingAll = false; statusBar.textContent = '✅ 播放完畢'; return;
+    }
+    var el = lines[playAllIndex++];
+    var t  = el.querySelector('.lineText');
+    var tx = (t ? t.textContent : el.textContent).trim();
+    if (!tx) { step(); return; }
+    speak(tx, el, step);
+  }
+  step();
+}
+
+readerContent.addEventListener('click', function (e) {
+  var sel = window.getSelection();
+  if (sel && sel.toString().trim()) return; // 有選取文字時交給 mouseup 處理
+  var node = e.target.closest('.line');
+  if (!node) return;
+  if (node.classList.contains('title-main') || node.classList.contains('title-sub')) return;
+  isPlayingAll = false;
+  var t = node.querySelector('.lineText');
+  speak((t ? t.textContent : node.textContent).trim(), node);
+});
+readerContent.addEventListener('mouseup', function () {
+  var sel  = window.getSelection();
+  var text = sel ? sel.toString().trim() : '';
+  if (text) speak(text);
+});
+
+document.getElementById('play-all-btn').addEventListener('click', function () { stopSpeak(); setTimeout(playAll, 100); });
+document.getElementById('pause-btn').addEventListener('click',  function () { if (synth.speaking && !synth.paused) synth.pause(); });
+document.getElementById('resume-btn').addEventListener('click', function () { if (synth.paused) synth.resume(); });
+document.getElementById('stop-btn').addEventListener('click',   stopSpeak);
+
+/* ══ Rate / Font +/- ════════════════════════════════════════ */
+document.getElementById('rate-minus').addEventListener('click', function () {
+  rateValue = Math.max(0.3, Math.round((rateValue - 0.1) * 10) / 10);
+  rateVal.textContent = rateValue;
+});
+document.getElementById('rate-plus').addEventListener('click', function () {
+  rateValue = Math.min(1.5, Math.round((rateValue + 0.1) * 10) / 10);
+  rateVal.textContent = rateValue;
+});
+document.getElementById('font-minus').addEventListener('click', function () {
+  fontValue = Math.max(13, fontValue - 1);
+  fontVal.textContent = fontValue + 'px';
+  readerContent.style.fontSize = fontValue + 'px';
+});
+document.getElementById('font-plus').addEventListener('click', function () {
+  fontValue = Math.min(36, fontValue + 1);
+  fontVal.textContent = fontValue + 'px';
+  readerContent.style.fontSize = fontValue + 'px';
+});
+
+/* ══ Edit Panel ═════════════════════════════════════════════ */
+function openEdit() {
+  /* 優先讀 data-raw（保留 ## / # 前綴），fallback 讀顯示文字 */
+  editTextarea.value = Array.from(readerContent.querySelectorAll('.line'))
+    .map(function (el) {
+      return el.dataset.raw !== undefined
+        ? el.dataset.raw
+        : (el.querySelector('.lineText') || el).textContent;
+    }).join('\n');
+  editPanel.style.display = 'block';
+  editToggleBtn.textContent = '✖ 關閉編輯';
+}
+function closeEdit() {
+  editPanel.style.display = 'none';
+  editToggleBtn.textContent = '✏️ 編輯';
+}
+editToggleBtn.addEventListener('click', function () {
+  editPanel.style.display === 'none' ? openEdit() : closeEdit();
+});
+applyEditBtn.addEventListener('click', function () {
+  var lines = editTextarea.value.split('\n')
+    .map(function (l) { return l.trim(); })
+    .filter(function (l) { return l.length > 0; });
+  renderLines(lines);
+  readerContent.style.fontSize = fontValue + 'px';
+  closeEdit();
+  showToast('✅ 已套用編輯內容');
+});
+cancelEditBtn.addEventListener('click', closeEdit);
+
+/* ══ Edit Panel — Float / Drag ══════════════════════════════ */
+function setEditFloat(isFloat) {
+  editIsFloat = isFloat;
+  var panel = editPanel;
+  if (isFloat) {
+    panel.classList.add('floating');
+    /* 初始位置：畫面中央偏上 */
+    if (!panel.style.left) {
+      panel.style.left = Math.max(0, (window.innerWidth  - panel.offsetWidth)  / 2) + 'px';
+      panel.style.top  = Math.max(52, (window.innerHeight - panel.offsetHeight) / 3) + 'px';
+    }
+  } else {
+    panel.classList.remove('floating');
+    panel.style.left = '';
+    panel.style.top  = '';
+  }
+}
+document.getElementById('edit-float-btn').addEventListener('click', function () { setEditFloat(true);  });
+document.getElementById('edit-pin-btn').addEventListener('click',   function () { setEditFloat(false); });
+
+/* 拖曳 — mouse */
+editDragHandle.addEventListener('mousedown', function (e) {
+  if (!editIsFloat) return;
+  var r = editPanel.getBoundingClientRect();
+  _dragState = { ox: e.clientX - r.left, oy: e.clientY - r.top };
+  e.preventDefault();
+});
+document.addEventListener('mousemove', function (e) {
+  if (!_dragState) return;
+  var x = Math.max(0, Math.min(window.innerWidth  - editPanel.offsetWidth,  e.clientX - _dragState.ox));
+  var y = Math.max(0, Math.min(window.innerHeight - editPanel.offsetHeight, e.clientY - _dragState.oy));
+  editPanel.style.left = x + 'px';
+  editPanel.style.top  = y + 'px';
+});
+document.addEventListener('mouseup', function () { _dragState = null; });
+
+/* 拖曳 — touch */
+editDragHandle.addEventListener('touchstart', function (e) {
+  if (!editIsFloat) return;
+  var r = editPanel.getBoundingClientRect();
+  var t = e.touches[0];
+  _dragState = { ox: t.clientX - r.left, oy: t.clientY - r.top };
+  e.preventDefault();
+}, { passive: false });
+editDragHandle.addEventListener('touchmove', function (e) {
+  if (!_dragState) return;
+  var t = e.touches[0];
+  var x = Math.max(0, Math.min(window.innerWidth  - editPanel.offsetWidth,  t.clientX - _dragState.ox));
+  var y = Math.max(0, Math.min(window.innerHeight - editPanel.offsetHeight, t.clientY - _dragState.oy));
+  editPanel.style.left = x + 'px';
+  editPanel.style.top  = y + 'px';
+  e.preventDefault();
+}, { passive: false });
+editDragHandle.addEventListener('touchend', function () { _dragState = null; });
+
+/* ══ Edit Panel — Format Toolbar ════════════════════════════ */
+function getEditCursorLine() {
+  var ta    = editTextarea;
+  var start = ta.selectionStart;
+  var text  = ta.value;
+  var ls    = text.lastIndexOf('\n', start - 1) + 1;
+  var le    = text.indexOf('\n', start);
+  if (le === -1) le = text.length;
+  return { ls: ls, le: le, line: text.slice(ls, le) };
+}
+function applyLinePrefix(prefix) {
+  var ta   = editTextarea;
+  var info = getEditCursorLine();
+  /* 移除已有前綴 */
+  var bare = info.line.replace(/^(## |# )/, '');
+  var newLine = prefix + bare;
+  var before  = ta.value.slice(0, info.ls);
+  var after   = ta.value.slice(info.le);
+  var cur     = info.ls + newLine.length;
+  ta.value    = before + newLine + after;
+  ta.setSelectionRange(cur, cur);
+  ta.focus();
+}
+document.getElementById('fmt-t1').addEventListener('click',    function () { applyLinePrefix('## '); });
+document.getElementById('fmt-t2').addEventListener('click',    function () { applyLinePrefix('# '); });
+document.getElementById('fmt-clear').addEventListener('click', function () { applyLinePrefix(''); });
+
+/* ══ Edit Panel — Merge Short Lines ════════════════════════ */
+document.getElementById('fmt-merge').addEventListener('click', function () {
+  var lines  = editTextarea.value.split('\n');
+  var merged = [];
+  lines.forEach(function (line) {
+    var trimmed = line.trim();
+    /* 短行（< 5 字且非空行）附加到上一行 */
+    if (trimmed.length > 0 && trimmed.length < 5 && merged.length > 0 && merged[merged.length - 1].trim().length > 0) {
+      merged[merged.length - 1] += trimmed;
+    } else {
+      merged.push(line);
+    }
+  });
+  editTextarea.value = merged.join('\n');
+  showToast('✅ 已合併短行');
+});
+
+/* ══ Edit Panel — Search / Replace ═════════════════════════ */
+document.getElementById('fmt-search-toggle').addEventListener('click', function () {
+  var bar = document.getElementById('edit-search-bar');
+  var isShow = bar.classList.toggle('show');
+  document.getElementById('fmt-search-toggle').classList.toggle('active', isShow);
+  if (isShow) document.getElementById('search-input').focus();
+});
+document.getElementById('btn-replace').addEventListener('click', function () {
+  var needle  = document.getElementById('search-input').value;
+  var replace = document.getElementById('replace-input').value;
+  if (!needle) return;
+  var idx = editTextarea.value.indexOf(needle);
+  if (idx === -1) { showToast('⚠️ 找不到「' + needle + '」'); return; }
+  editTextarea.value =
+    editTextarea.value.slice(0, idx) + replace + editTextarea.value.slice(idx + needle.length);
+  var pos = idx + replace.length;
+  editTextarea.setSelectionRange(pos, pos);
+  editTextarea.focus();
+});
+document.getElementById('btn-replace-all').addEventListener('click', function () {
+  var needle  = document.getElementById('search-input').value;
+  var replace = document.getElementById('replace-input').value;
+  if (!needle) return;
+  var count = editTextarea.value.split(needle).length - 1;
+  if (count === 0) { showToast('⚠️ 找不到「' + needle + '」'); return; }
+  editTextarea.value = editTextarea.value.split(needle).join(replace);
+  showToast('✅ 已取代 ' + count + ' 處');
+  editTextarea.focus();
+});
+
+/* ══ IndexedDB — library store ══════════════════════════════ */
+var _idb = null;
+function openIDB() {
+  return new Promise(function (resolve, reject) {
+    if (_idb) { resolve(_idb); return; }
+    var req = indexedDB.open('reader-tool-v2', 1);
+    req.onupgradeneeded = function (e) {
+      e.target.result.createObjectStore('library', { keyPath: 'name' });
+    };
+    req.onsuccess = function (e) { _idb = e.target.result; resolve(_idb); };
+    req.onerror   = reject;
+  });
+}
+function idbPut(entry) {
+  return openIDB().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction('library', 'readwrite');
+      tx.objectStore('library').put(entry);
+      tx.oncomplete = resolve; tx.onerror = reject;
+    });
+  });
+}
+function idbGetAll() {
+  return openIDB().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx  = db.transaction('library', 'readonly');
+      var req = tx.objectStore('library').getAll();
+      req.onsuccess = function () { resolve(req.result || []); };
+      req.onerror   = reject;
+    });
+  });
+}
+function idbGet(name) {
+  return openIDB().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx  = db.transaction('library', 'readonly');
+      var req = tx.objectStore('library').get(name);
+      req.onsuccess = function () { resolve(req.result || null); };
+      req.onerror   = reject;
+    });
+  });
+}
+function idbDelete(name) {
+  return openIDB().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      var tx = db.transaction('library', 'readwrite');
+      tx.objectStore('library').delete(name);
+      tx.oncomplete = resolve; tx.onerror = reject;
+    });
+  });
+}
+
+/* ══ Generate Output HTML ═══════════════════════════════════ */
+function buildOutputHtml(docName, group) {
+  var linesHtml = Array.from(readerContent.querySelectorAll('.line')).map(function (el) {
+    var t   = (el.querySelector('.lineText') || el).textContent;
+    var cls = el.className.replace(/\breading\b/g, '').trim();
+    return '<div class="' + cls + '"><span class="lineText">'
+         + t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+         + '</span></div>';
+  }).join('\n');
+
+  return '<!DOCTYPE html>\n<html lang="zh-Hant">\n<head>\n'
+    + '<meta charset="utf-8"/>\n'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1"/>\n'
+    + '<meta name="reader-group" content="' + escapeHtml(group) + '"/>\n'
+    + '<meta name="reader-date"  content="' + new Date().toISOString().slice(0,10) + '"/>\n'
+    + '<title>' + escapeHtml(docName) + '</title>\n'
+    + '<style>\n'
+    + ':root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--blue-grad:linear-gradient(135deg,#4a90d9,#2d6fa8);--yellow:#ffd54f;--bg:#eef5fc;--white:#ffffff;--text:#1e2d3d;--muted:#7a99b5;--border:#d4e8f8;--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}\n'
+    + 'body.dark{--bg:#12202e;--white:#1a2d3f;--text:#e8f2fc;--muted:#6a8faa;--border:#243a50;--blue-lt:#1a3050;--reading-bg:#2a2318;--line-even:#162636;--line-hover:#1e3448}\n'
+    + '*{box-sizing:border-box;margin:0;padding:0}\n'
+    + 'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}\n'
+    + '.topbar{background:var(--blue-grad);color:#fff;height:52px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(44,100,160,.25);position:sticky;top:0;z-index:50}\n'
+    + '.topbar-title{font-size:.95rem;font-weight:900}\n'
+    + '.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:52px;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04)}\n'
+    + '.ctrl-group{display:flex;align-items:center;gap:6px}\n'
+    + '.ctrl-label{font-size:.76rem;font-weight:800;color:var(--muted);white-space:nowrap}\n'
+    + '.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}\n'
+    + '.ctrl-range{width:78px;accent-color:var(--blue)}\n'
+    + '.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}\n'
+    + '.spacer{flex:1}\n'
+    + '.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--text);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}\n'
+    + '.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}\n'
+    + '.btn-ctrl:active{transform:scale(.95)}\n'
+    + '.btn-ctrl.primary{background:var(--blue-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}\n'
+    + '.btn-ctrl.primary:hover{opacity:.88}\n'
+    + '.btn-theme{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;height:36px;width:36px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}\n'
+    + '.btn-theme:hover{background:rgba(255,255,255,.3)}\n'
+    + '.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--muted)}\n'
+    + '.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}\n'
+    + '#content{padding:4px 14px 72px}\n'
+    + '.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}\n'
+    + '.line:hover{background:var(--line-hover)}\n'
+    + '.line.even{background:var(--line-even)}\n'
+    + '.line.even:hover{background:var(--line-hover)}\n'
+    + '.line.reading{background:var(--reading-bg)!important;outline:2.5px solid var(--reading-border)}\n'
+    + '.lineText{flex:1;line-height:1.85}\n'
+    + '.title-main{font-size:1.05rem;font-weight:900;color:var(--blue-dk);padding:10px 12px 6px;margin-top:8px;cursor:default}\n'
+    + '.title-main:hover{background:transparent}\n'
+    + '.title-sub{font-size:.94rem;font-weight:800;color:var(--muted);cursor:default}\n'
+    + '.title-sub:hover{background:transparent}\n'
+    + '</style>\n</head>\n<body>\n'
+    + '<div class="topbar">\n'
+    + '  <span class="topbar-title">🎧 ' + escapeHtml(docName) + '</span>\n'
+    + '  <button class="btn-theme" id="theme-btn">🌙</button>\n'
+    + '</div>\n'
+    + '<div class="controls-bar">\n'
+    + '  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>\n'
+    + '  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>\n'
+    + '  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>\n'
+    + '  <div class="spacer"></div>\n'
+    + '  <button class="btn-ctrl primary" id="pa">▶ 連播</button>\n'
+    + '  <button class="btn-ctrl" id="pu">⏸</button>\n'
+    + '  <button class="btn-ctrl" id="re">⏯</button>\n'
+    + '  <button class="btn-ctrl" id="st">⏹</button>\n'
+    + '</div>\n'
+    + '<div class="status-tip" id="sb">💡 點擊任意行朗讀，或按「連播」</div>\n'
+    + '<div class="doc-heading">' + escapeHtml(docName) + '</div>\n'
+    + '<div id="content">\n' + linesHtml + '\n</div>\n'
+    + '<script>\n(function(){\n'
+    + 'var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;\n'
+    + 'var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");\n'
+    + 'function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=vc.findIndex(function(v){return /zh/i.test(v.lang);});if(z>=0)vs.value=z;}\n'
+    + 'lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;\n'
+    + 'function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}\n'
+    + 'function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}\n'
+    + 'function pa(){var ls=Array.from(ct.querySelectorAll(".line")).filter(function(el){return!el.classList.contains("title-main")&&!el.classList.contains("title-sub");});if(!ls.length)return;ipa=true;pai=0;function step(){if(!ipa||pai>=ls.length){ipa=false;sb.textContent="✅ 播放完畢";return;}var el=ls[pai++];var t=el.querySelector(".lineText");var tx=(t?t.textContent:el.textContent).trim();if(!tx){step();return;}sp(tx,el,step);}step();}\n'
+    + 'ct.addEventListener("click",function(e){var nd=e.target.closest(".line");if(!nd)return;if(nd.classList.contains("title-main")||nd.classList.contains("title-sub"))return;ipa=false;var t=nd.querySelector(".lineText");sp((t?t.textContent:nd.textContent).trim(),nd);});\n'
+    + 'ct.addEventListener("mouseup",function(){var sel=window.getSelection();var tx=sel?sel.toString().trim():"";if(tx)sp(tx);});\n'
+    + 'document.getElementById("pa").addEventListener("click",function(){ss();setTimeout(pa,100);});\n'
+    + 'document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});\n'
+    + 'document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});\n'
+    + 'document.getElementById("st").addEventListener("click",ss);\n'
+    + 'document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});\n'
+    + 'rs.addEventListener("input",function(){rv.textContent=rs.value;});\n'
+    + 'fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});\n'
+    + '})();\n<\/script>\n</body>\n</html>';
+}
+
+/* ══ Save to Library ════════════════════════════════════════ */
+saveLibBtn.addEventListener('click', async function () {
+  saveFilename.value = currentDocName;
+  saveGroup.value    = '';
+  groupDatalist.innerHTML = '';
+  try {
+    var entries = await idbGetAll();
+    var gs = new Set(entries.map(function (e) { return e.group; }).filter(Boolean));
+    gs.forEach(function (g) {
+      var opt = document.createElement('option');
+      opt.value = g;
+      groupDatalist.appendChild(opt);
+    });
+  } catch (e) { /* ignore */ }
+  modalSave.classList.add('show');
+  setTimeout(function () { saveFilename.select(); }, 50);
+});
+
+btnCancelSave.addEventListener('click', function () { modalSave.classList.remove('show'); });
+modalSave.addEventListener('click', function (e) {
+  if (e.target === modalSave) modalSave.classList.remove('show');
+});
+
+btnConfirmSave.addEventListener('click', async function () {
+  var fname = saveFilename.value.trim();
+  var group = saveGroup.value.trim() || '未分類';
+  if (!fname) { saveFilename.focus(); return; }
+
+  var filename    = fname.endsWith('.html') ? fname : fname + '.html';
+  var htmlContent = buildOutputHtml(fname, group);
+
+  modalSave.classList.remove('show');
+  procMsg.textContent = '正在儲存到報讀庫…';
+  procOverlay.classList.add('show');
+
+  try {
+    await idbPut({
+      name:  filename,
+      title: fname,
+      group: group,
+      date:  new Date().toISOString().slice(0, 10),
+      html:  htmlContent
+    });
+    procOverlay.classList.remove('show');
+    showToast('✅ 已儲存「' + fname + '」');
+    setTimeout(function () { showPage('library'); loadLibrary(); }, 1000);
+  } catch (e) {
+    procOverlay.classList.remove('show');
+    showToast('⚠️ 儲存失敗：' + e.message);
+  }
+});
+
+/* ══ Library — import ═══════════════════════════════════════ */
+btnImportFiles.addEventListener('change', async function () {
+  var files = Array.from(btnImportFiles.files);
+  if (!files.length) return;
+  procMsg.textContent = '正在匯入 ' + files.length + ' 個檔案…';
+  procOverlay.classList.add('show');
+  var ok = 0, fail = 0;
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    try {
+      var html  = await f.text();
+      var title = f.name.replace(/\.html?$/i, '');
+      await idbPut({
+        name:  f.name,
+        title: title,
+        group: '未分類',
+        date:  new Date().toISOString().slice(0, 10),
+        html:  html
+      });
+      ok++;
+    } catch (e) { fail++; }
+  }
+  btnImportFiles.value = '';
+  procOverlay.classList.remove('show');
+  showToast('✅ 已匯入 ' + ok + ' 個' + (fail ? '，' + fail + ' 個失敗' : ''));
+  loadLibrary();
+});
+
+/* ══ GitHub Token 設定 ══════════════════════════════════════ */
+btnGhSettings.addEventListener('click', function () {
+  ghTokenInput.value = localStorage.getItem('gh-pat') || '';
+  modalGhToken.classList.add('show');
+  setTimeout(function () { ghTokenInput.focus(); }, 50);
+});
+btnCancelGhToken.addEventListener('click', function () { modalGhToken.classList.remove('show'); });
+modalGhToken.addEventListener('click', function (e) {
+  if (e.target === modalGhToken) modalGhToken.classList.remove('show');
+});
+btnSaveGhToken.addEventListener('click', function () {
+  var tok = ghTokenInput.value.trim();
+  if (tok) localStorage.setItem('gh-pat', tok);
+  else localStorage.removeItem('gh-pat');
+  modalGhToken.classList.remove('show');
+  showToast(tok ? '✅ Token 已儲存' : '🗑 Token 已清除');
+});
+
+/* ══ GitHub 上傳 ═════════════════════════════════════════════ */
+var GITHUB_PAT = '';  /* 請勿在此填入 token，改用報讀庫右上角 ⚙️ 按鈕設定 */
+var GITHUB_REPO     = 'https://api.github.com/repos/vaguemoon/word-to-reader/contents/';
+var GITHUB_CONTENTS = GITHUB_REPO; /* 向後相容 alias */
+
+async function uploadToGitHub(name, html) {
+  var token = GITHUB_PAT || localStorage.getItem('gh-pat');
+  if (!token) {
+    ghTokenInput.value = '';
+    modalGhToken.classList.add('show');
+    showToast('⚠️ 請先設定 GitHub Token');
+    return false;
+  }
+  var url = GITHUB_CONTENTS + encodeURIComponent('報讀') + '/' + encodeURIComponent(name);
+
+  /* 查是否已存在（取得 sha）*/
+  var sha = null;
+  try {
+    var chk = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
+    if (chk.ok) { var info = await chk.json(); sha = info.sha; }
+  } catch (e) { /* 新檔案，不需要 sha */ }
+
+  /* base64 編碼（支援中文） */
+  var b64 = btoa(unescape(encodeURIComponent(html)));
+
+  var body = { message: (sha ? '更新 ' : '新增 ') + name, content: b64 };
+  if (sha) body.sha = sha;
+
+  var res = await fetch(url, {
+    method:  'PUT',
+    headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body)
+  });
+  if (!res.ok) {
+    var err = await res.json().catch(function () { return {}; });
+    throw new Error(err.message || 'HTTP ' + res.status);
+  }
+  return true;
+}
+
+/* ══ GitHub 同步 ═════════════════════════════════════════════ */
+btnSyncGitHub.addEventListener('click', async function () {
+  procMsg.textContent = '正在連線 GitHub…';
+  procOverlay.classList.add('show');
+
+  var items;
+  try {
+    var res = await fetch(GITHUB_REPO + encodeURIComponent('報讀'));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    items = await res.json();
+  } catch (e) {
+    procOverlay.classList.remove('show');
+    showToast('⚠️ 無法取得檔案清單：' + e.message);
+    return;
+  }
+
+  var htmlFiles = items.filter(function (item) {
+    return item.type === 'file' && /\.html?$/i.test(item.name) && item.name !== 'index.html';
+  });
+
+  if (htmlFiles.length === 0) {
+    procOverlay.classList.remove('show');
+    showToast('⚠️ 報讀/ 資料夾中沒有找到 .html 檔案');
+    return;
+  }
+
+  var ok = 0, fail = 0;
+  for (var i = 0; i < htmlFiles.length; i++) {
+    var item = htmlFiles[i];
+    procMsg.textContent = '同步中 (' + (i + 1) + ' / ' + htmlFiles.length + ')…';
+    try {
+      var htmlRes = await fetch(item.download_url);
+      if (!htmlRes.ok) throw new Error('HTTP ' + htmlRes.status);
+      var html = await htmlRes.text();
+
+      /* 從 HTML 的 <meta> / <title> 抽取 group / date / title */
+      var parser = new DOMParser();
+      var doc    = parser.parseFromString(html, 'text/html');
+      var titleEl = doc.querySelector('title');
+      var groupEl = doc.querySelector('meta[name="reader-group"]');
+      var dateEl  = doc.querySelector('meta[name="reader-date"]');
+      var title = (titleEl && titleEl.textContent.trim()) || item.name.replace(/\.html?$/i, '');
+      var group = (groupEl && groupEl.getAttribute('content')) || '未分類';
+      var date  = (dateEl  && dateEl.getAttribute('content'))  || new Date().toISOString().slice(0, 10);
+
+      await idbPut({ name: item.name, title: title, group: group, date: date, html: html });
+      ok++;
+    } catch (e) { fail++; }
+  }
+
+  procOverlay.classList.remove('show');
+  showToast('✅ 同步完成：' + ok + ' 個' + (fail ? '，' + fail + ' 個失敗' : ''));
+  loadLibrary();
+});
+
+/* ══ Edit Item Modal ════════════════════════════════════════ */
+async function openEditItemModal(filename, title, group) {
+  _editingFile = { name: filename, title: title, group: group };
+  editItemTitle.value = title;
+  editItemGroup.value = group === '未分類' ? '' : group;
+  editItemGroups.innerHTML = '';
+  try {
+    var entries = await idbGetAll();
+    var gs = new Set(entries.map(function (e) { return e.group; }).filter(Boolean));
+    gs.forEach(function (g) {
+      var opt = document.createElement('option');
+      opt.value = g;
+      editItemGroups.appendChild(opt);
+    });
+  } catch (e) { /* ignore */ }
+  modalEditItem.classList.add('show');
+  setTimeout(function () { editItemTitle.select(); }, 50);
+}
+
+btnCancelEditItem.addEventListener('click', function () {
+  modalEditItem.classList.remove('show');
+});
+modalEditItem.addEventListener('click', function (e) {
+  if (e.target === modalEditItem) modalEditItem.classList.remove('show');
+});
+btnConfirmEditItem.addEventListener('click', async function () {
+  if (!_editingFile) return;
+  var newTitle = editItemTitle.value.trim();
+  var newGroup = editItemGroup.value.trim() || '未分類';
+  if (!newTitle) { editItemTitle.focus(); return; }
+  try {
+    var entry = await idbGet(_editingFile.name);
+    if (entry) {
+      entry.title = newTitle;
+      entry.group = newGroup;
+      await idbPut(entry);
+    }
+  } catch (e) {
+    showToast('⚠️ 更新失敗：' + e.message);
+    return;
+  }
+  modalEditItem.classList.remove('show');
+  _editingFile = null;
+  showToast('✅ 已更新項目');
+  loadLibrary();
+});
+
+/* 全部上傳到 GitHub */
+btnPushGitHub.addEventListener('click', async function () {
+  var token = GITHUB_PAT || localStorage.getItem('gh-pat');
+  if (!token) {
+    ghTokenInput.value = '';
+    modalGhToken.classList.add('show');
+    showToast('⚠️ 請先設定 GitHub Token');
+    return;
+  }
+  var entries;
+  try { entries = await idbGetAll(); } catch (e) { showToast('⚠️ 無法讀取報讀庫'); return; }
+  if (!entries.length) { showToast('⚠️ 報讀庫是空的'); return; }
+  procMsg.textContent = '正在上傳到 GitHub (0/' + entries.length + ')…';
+  procOverlay.classList.add('show');
+  var ok = 0, fail = 0;
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i];
+    procMsg.textContent = '上傳到 GitHub (' + (i + 1) + '/' + entries.length + ')…';
+    try {
+      await uploadToGitHub(e.name, e.html);
+      ok++;
+    } catch (err) { fail++; }
+  }
+  procOverlay.classList.remove('show');
+  showToast('✅ 已上傳 ' + ok + ' 個' + (fail ? '，' + fail + ' 個失敗' : ''));
+});
+
+async function loadLibrary() {
+  var entries;
+  try {
+    entries = await idbGetAll();
+  } catch (e) {
+    libraryContent.innerHTML =
+      '<div class="library-empty"><p>⚠️ 無法讀取報讀庫</p><small>' + escapeHtml(e.message) + '</small></div>';
+    return;
+  }
+
+  if (entries.length === 0) {
+    libraryContent.innerHTML =
+      '<div class="library-empty"><p>報讀庫還沒有內容</p>' +
+      '<small>使用「轉換」功能後按「存到報讀庫」，或點「匯入 .html 檔」加入已有檔案</small></div>';
+    return;
+  }
+
+  /* 分組 */
+  var groups = {};
+  entries.forEach(function (entry) {
+    var g = entry.group || '未分類';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(entry);
+  });
+
+  var groupNames = Object.keys(groups).sort(function (a, b) {
+    if (a === '未分類') return 1;
+    if (b === '未分類') return -1;
+    return a.localeCompare(b, 'zh');
+  });
+
+  libraryContent.innerHTML = '';
+  groupNames.forEach(function (gname) {
+    var section = document.createElement('div');
+    section.className = 'group-section';
+
+    var label = document.createElement('div');
+    label.className   = 'group-label';
+    label.textContent = gname;
+    section.appendChild(label);
+
+    var grid = document.createElement('div');
+    grid.className = 'card-grid';
+    section.appendChild(grid);
+
+    groups[gname].forEach(function (entry) {
+      var card = document.createElement('div');
+      card.className = 'lib-card';
+
+      var titleEl = document.createElement('div');
+      titleEl.className   = 'lib-card-title';
+      titleEl.textContent = entry.title;
+      card.appendChild(titleEl);
+
+      if (entry.date) {
+        var dateMeta = document.createElement('div');
+        dateMeta.className   = 'lib-card-meta';
+        dateMeta.textContent = entry.date;
+        card.appendChild(dateMeta);
+      }
+
+      var ulBtn = document.createElement('button');
+      ulBtn.className   = 'lib-card-ul';
+      ulBtn.title       = '上傳到 GitHub';
+      ulBtn.textContent = '⬆️';
+      card.appendChild(ulBtn);
+
+      var dlBtn = document.createElement('button');
+      dlBtn.className   = 'lib-card-dl';
+      dlBtn.title       = '下載 .html 檔案';
+      dlBtn.textContent = '⬇️';
+      card.appendChild(dlBtn);
+
+      var editBtn = document.createElement('button');
+      editBtn.className   = 'lib-card-edit';
+      editBtn.title       = '重新命名 / 更改群組';
+      editBtn.textContent = '✏️';
+      card.appendChild(editBtn);
+
+      var delBtn = document.createElement('button');
+      delBtn.className   = 'lib-card-del';
+      delBtn.title       = '從報讀庫刪除';
+      delBtn.textContent = '🗑';
+      card.appendChild(delBtn);
+
+      card.addEventListener('click', function (e) {
+        if (e.target === delBtn || e.target === editBtn || e.target === dlBtn || e.target === ulBtn) return;
+        openLibraryItem(entry.html, entry.title);
+      });
+      ulBtn.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        ulBtn.disabled = true;
+        procMsg.textContent = '正在上傳「' + entry.title + '」…';
+        procOverlay.classList.add('show');
+        try {
+          var ok = await uploadToGitHub(entry.name, entry.html);
+          if (ok) showToast('✅ 已上傳「' + entry.title + '」到 GitHub');
+        } catch (err) {
+          showToast('⚠️ 上傳失敗：' + err.message);
+        }
+        procOverlay.classList.remove('show');
+        ulBtn.disabled = false;
+      });
+      dlBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        downloadLibraryItem(entry.name, entry.html);
+      });
+      editBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        openEditItemModal(entry.name, entry.title, entry.group || '未分類');
+      });
+      delBtn.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        if (!confirm('確定要刪除「' + entry.title + '」？')) return;
+        try {
+          await idbDelete(entry.name);
+          showToast('🗑 已刪除「' + entry.title + '」');
+          loadLibrary();
+        } catch (err) {
+          showToast('⚠️ 刪除失敗：' + err.message);
+        }
+      });
+
+      grid.appendChild(card);
+    });
+
+    libraryContent.appendChild(section);
+  });
+}
+
+function openLibraryItem(html, title) {
+  try {
+    var blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var opener = (window.top && window.top !== window) ? window.top : window;
+    var win  = opener.open(url, '_blank');
+    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+    if (!win) showToast('⚠️ 請允許彈出視窗以開啟「' + title + '」');
+  } catch (e) {
+    showToast('⚠️ 無法開啟：' + e.message);
+  }
+}
+
+function downloadLibraryItem(name, html) {
+  var blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+}
+
+/* ══ Init ═══════════════════════════════════════════════════ */
+if (window.location.hash === '#library') {
+  showPage('library');
+  loadLibrary();
+}
+
+})();
+</script>
+</body>
+</html>

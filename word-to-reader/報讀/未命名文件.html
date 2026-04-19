@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="reader-group" content="未分類"/>
+<meta name="reader-date"  content="2026-04-13"/>
+<title>未命名文件</title>
+<style>
+:root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--blue-grad:linear-gradient(135deg,#4a90d9,#2d6fa8);--yellow:#ffd54f;--bg:#eef5fc;--white:#ffffff;--text:#1e2d3d;--muted:#7a99b5;--border:#d4e8f8;--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}
+body.dark{--bg:#12202e;--white:#1a2d3f;--text:#e8f2fc;--muted:#6a8faa;--border:#243a50;--blue-lt:#1a3050;--reading-bg:#2a2318;--line-even:#162636;--line-hover:#1e3448}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+.topbar{background:var(--blue-grad);color:#fff;height:52px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(44,100,160,.25);position:sticky;top:0;z-index:50}
+.topbar-title{font-size:.95rem;font-weight:900}
+.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:52px;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-label{font-size:.76rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}
+.ctrl-range{width:78px;accent-color:var(--blue)}
+.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}
+.spacer{flex:1}
+.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--text);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}
+.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}
+.btn-ctrl:active{transform:scale(.95)}
+.btn-ctrl.primary{background:var(--blue-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}
+.btn-ctrl.primary:hover{opacity:.88}
+.btn-theme{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;height:36px;width:36px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.btn-theme:hover{background:rgba(255,255,255,.3)}
+.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--muted)}
+.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}
+#content{padding:4px 14px 72px}
+.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}
+.line:hover{background:var(--line-hover)}
+.line.even{background:var(--line-even)}
+.line.even:hover{background:var(--line-hover)}
+.line.reading{background:var(--reading-bg)!important;outline:2.5px solid var(--reading-border)}
+.lineText{flex:1;line-height:1.85}
+.title-main{font-size:1.05rem;font-weight:900;color:var(--blue-dk);padding:10px 12px 6px;margin-top:8px;cursor:default}
+.title-main:hover{background:transparent}
+.title-sub{font-size:.94rem;font-weight:800;color:var(--muted);cursor:default}
+.title-sub:hover{background:transparent}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-title">🎧 未命名文件</span>
+  <button class="btn-theme" id="theme-btn">🌙</button>
+</div>
+<div class="controls-bar">
+  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>
+  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>
+  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>
+  <div class="spacer"></div>
+  <button class="btn-ctrl primary" id="pa">▶ 連播</button>
+  <button class="btn-ctrl" id="pu">⏸</button>
+  <button class="btn-ctrl" id="re">⏯</button>
+  <button class="btn-ctrl" id="st">⏹</button>
+</div>
+<div class="status-tip" id="sb">💡 點擊任意行朗讀，或按「連播」</div>
+<div class="doc-heading">未命名文件</div>
+<div id="content">
+<div class="line"><span class="lineText">123</span></div>
+</div>
+<script>
+(function(){
+var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;
+var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");
+function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=vc.findIndex(function(v){return /zh/i.test(v.lang);});if(z>=0)vs.value=z;}
+lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;
+function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}
+function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}
+function pa(){var ls=Array.from(ct.querySelectorAll(".line")).filter(function(el){return!el.classList.contains("title-main")&&!el.classList.contains("title-sub");});if(!ls.length)return;ipa=true;pai=0;function step(){if(!ipa||pai>=ls.length){ipa=false;sb.textContent="✅ 播放完畢";return;}var el=ls[pai++];var t=el.querySelector(".lineText");var tx=(t?t.textContent:el.textContent).trim();if(!tx){step();return;}sp(tx,el,step);}step();}
+ct.addEventListener("click",function(e){var nd=e.target.closest(".line");if(!nd)return;if(nd.classList.contains("title-main")||nd.classList.contains("title-sub"))return;ipa=false;var t=nd.querySelector(".lineText");sp((t?t.textContent:nd.textContent).trim(),nd);});
+ct.addEventListener("mouseup",function(){var sel=window.getSelection();var tx=sel?sel.toString().trim():"";if(tx)sp(tx);});
+document.getElementById("pa").addEventListener("click",function(){ss();setTimeout(pa,100);});
+document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});
+document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});
+document.getElementById("st").addEventListener("click",ss);
+document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});
+rs.addEventListener("input",function(){rv.textContent=rs.value;});
+fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});
+})();
+</script>
+</body>
+</html>

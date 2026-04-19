@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="reader-group" content="五年級"/>
+<meta name="reader-date"  content="2026-04-13"/>
+<title>114-2期中考-五年級自然評量卷</title>
+<style>
+:root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--blue-grad:linear-gradient(135deg,#4a90d9,#2d6fa8);--yellow:#ffd54f;--bg:#eef5fc;--white:#ffffff;--text:#1e2d3d;--muted:#7a99b5;--border:#d4e8f8;--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}
+body.dark{--bg:#12202e;--white:#1a2d3f;--text:#e8f2fc;--muted:#6a8faa;--border:#243a50;--blue-lt:#1a3050;--reading-bg:#2a2318;--line-even:#162636;--line-hover:#1e3448}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+.topbar{background:var(--blue-grad);color:#fff;height:52px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(44,100,160,.25);position:sticky;top:0;z-index:50}
+.topbar-title{font-size:.95rem;font-weight:900}
+.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:52px;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-label{font-size:.76rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}
+.ctrl-range{width:78px;accent-color:var(--blue)}
+.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}
+.spacer{flex:1}
+.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--text);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}
+.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}
+.btn-ctrl:active{transform:scale(.95)}
+.btn-ctrl.primary{background:var(--blue-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}
+.btn-ctrl.primary:hover{opacity:.88}
+.btn-theme{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;height:36px;width:36px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.btn-theme:hover{background:rgba(255,255,255,.3)}
+.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--muted)}
+.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}
+#content{padding:4px 14px 72px}
+.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}
+.line:hover{background:var(--line-hover)}
+.line.even{background:var(--line-even)}
+.line.even:hover{background:var(--line-hover)}
+.line.reading{background:var(--reading-bg)!important;outline:2.5px solid var(--reading-border)}
+.lineText{flex:1;line-height:1.85}
+.title-main{font-size:1.05rem;font-weight:900;color:var(--blue-dk);padding:10px 12px 6px;margin-top:8px;cursor:default}
+.title-main:hover{background:transparent}
+.title-sub{font-size:.94rem;font-weight:800;color:var(--muted);cursor:default}
+.title-sub:hover{background:transparent}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-title">🎧 114-2期中考-五年級自然評量卷</span>
+  <button class="btn-theme" id="theme-btn">🌙</button>
+</div>
+<div class="controls-bar">
+  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>
+  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>
+  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>
+  <div class="spacer"></div>
+  <button class="btn-ctrl primary" id="pa">▶ 連播</button>
+  <button class="btn-ctrl" id="pu">⏸</button>
+  <button class="btn-ctrl" id="re">⏯</button>
+  <button class="btn-ctrl" id="st">⏹</button>
+</div>
+<div class="status-tip" id="sb">💡 點擊任意行朗讀，或按「連播」</div>
+<div class="doc-heading">114-2期中考-五年級自然評量卷</div>
+<div id="content">
+<div class="line title-main"><span class="lineText">一、是非題：每格1分、共 10分</span></div>
+<div class="line"><span class="lineText">把星星的亮度用電燈泡數量來代替，如果六等星的亮度約一顆燈泡，那一等星的亮度大約是一百顆燈泡。</span></div>
+<div class="line even"><span class="lineText">光年是一種天文單位，主要用來計算從地球搭乘太空船到不同星星分別需要多長的時間。</span></div>
+<div class="line"><span class="lineText">利用星座盤核對天空的星星時，要依照國曆的日期轉動星座盤的底盤。</span></div>
+<div class="line even"><span class="lineText">阿阮在網頁中找到資料並記下，物質要燃燒，必須達到一定的溫度，此溫度稱為該物質的「冰點」。</span></div>
+<div class="line"><span class="lineText">在戶外觀測整晚的星星，發現除了北極星以外，其他的星星會由南方往北方移動。</span></div>
+<div class="line even"><span class="lineText">為了維持食物的品質，有時會在食品包裝中填入氮氣。</span></div>
+<div class="line"><span class="lineText">乾冰是由無色無味的二氧化碳製成的。</span></div>
+<div class="line even"><span class="lineText">烤肉時，對爐門搧風可以增加空氣的流通，讓爐火燃燒更旺盛。</span></div>
+<div class="line"><span class="lineText">點燃的酒精燈中，酒精是助燃物，氧氣是可燃物。</span></div>
+<div class="line even"><span class="lineText">若想觀測鋼棉生鏽時會不會用掉氧氣，進行實驗時，鋼棉在放入廣口瓶前可以先在上面滴醋或滴水。</span></div>
+<div class="line title-main"><span class="lineText">二、選擇題：每格2分、共 20分</span></div>
+<div class="line"><span class="lineText">苹安將燃燒中的線香插入裝有小蘇打粉與食用醋的燒瓶內，線香會發生什麼變化？①燃燒旺盛 　②發生爆炸</span></div>
+<div class="line even"><span class="lineText">③熄滅 　④發出綠色的光芒</span></div>
+<div class="line"><span class="lineText">地球的衛星是什麼？①木星 　②太陽 　③月球 　④天王星</span></div>
+<div class="line even"><span class="lineText">下表為不同星星的資訊，哪一顆星星的亮度最暗？ ①北極星 　②織女星</span></div>
+<div class="line"><span class="lineText">③大角星 　④天狼星</span></div>
+<div class="line even"><span class="lineText">星座盤上的透明視窗，上面有許多虛線，這些虛線有什麼功能？①辨認星星的大小</span></div>
+<div class="line"><span class="lineText">②辨認星等</span></div>
+<div class="line even"><span class="lineText">③辨認星星的方位與高度角 　④辨認星星與地球之間的距離</span></div>
+<div class="line"><span class="lineText">星座盤的用法，哪一項是錯誤？①調整星座盤到當天的農曆日期 　②利用指北針找出實際的方位 　③向上高舉星座盤，盤面朝自己 　④星座盤上的「北」字對準北方</span></div>
+<div class="line even"><span class="lineText">關於氧氣的敘述，哪一個錯誤？ ①沒有顏色、氣味 　②具有助燃性 　③是可燃物 　④是生物呼吸時需要的氣體</span></div>
+<div class="line"><span class="lineText">麵團中的酵母菌發酵後會產生什麼氣體，使麵包蓬鬆？ ①氧氣 　②一氧化碳 　③二氧化碳 　④水蒸氣</span></div>
+<div class="line even"><span class="lineText">「地球、月球、金星、太陽、木星、海王星」以上共有幾個星體屬於行星？①4個  ②3個  ③2個  ④1個</span></div>
+<div class="line"><span class="lineText">鐵製品生鏽會造成什麼影響？①完全沒有影響  ②質地變脆弱 　③外觀更閃閃發亮 　④使器具更堅固</span></div>
+<div class="line even"><span class="lineText">生活中有許多防鏽的方法，這些方法的共同目的是什麼？①阻隔微生物 ②阻隔空氣和水　③阻隔陽光　④保持鐵製品溼潤</span></div>
+<div class="line title-main"><span class="lineText">三、圈圈看：每格 1 分、共 2 分</span></div>
+<div class="line"><span class="lineText">地球是位於太陽系中的（　行星　╱　衛星　），而月球則是地球的（　行星　╱　衛星　）。</span></div>
+<div class="line title-main"><span class="lineText">四、填填看：每格 1 分、共 9 分</span></div>
+<div class="line even"><span class="lineText">自然課中製造氧氣與二氧化碳的實驗中，應該要準備哪些材料？請將代號填入(　)裡：</span></div>
+<div class="line"><span class="lineText">A小蘇打粉</span></div>
+<div class="line even"><span class="lineText">B 雙氧水</span></div>
+<div class="line"><span class="lineText">C熄滅</span></div>
+<div class="line even"><span class="lineText">D 金針菇</span></div>
+<div class="line"><span class="lineText">E醋</span></div>
+<div class="line even"><span class="lineText">F燃燒更旺盛</span></div>
+<div class="line"><span class="lineText">(1)製造氧氣的材料：將（　　）、(　　）混合，產生氧氣後，放入線香，線香會(     )。(2) 製造二氧化碳的材料：將（　　）、(　　）混合，產生二氧化碳後，放入線香，線香會(     )。</span></div>
+<div class="line even"><span class="lineText">2.小伊將實驗用剩的鋼棉，分別放在ㄅ、ㄆ、ㄇ三個地方，請問一段時間後，她看到鋼棉的生鏽程度為何？請依鋼棉生鏽由多到少依序排列：答：(１)（　　　　）→(２)（　　　　）→(３)（　　　　）</span></div>
+<div class="line title-main"><span class="lineText">五、勾選題，請在（　）裡打ˇ：每格 1 分、共 8分</span></div>
+<div class="line"><span class="lineText">有關星空，請問下列何者正確？ (　)(１)北斗七星是大熊座的一部分(　)(２) 有一顆星位置幾乎不會改變，應該是北極星(　)(３)每顆星星的位置都一樣高(　)(４)我們看到的星星是過去發出的光</span></div>
+<div class="line even"><span class="lineText">關於太陽系中的行星，下列哪些敘述正確？ (　)(１)太陽系共有九大行星(　)(２) 和天王星相比，水星距離太陽的距離比較遠(　)(３)木星是太陽系中體積最大的行星(　)(４) 太陽系中的行星都會自行發光</span></div>
+<div class="line title-main"><span class="lineText">六、填充題：每格2分、共 16 分</span></div>
+<div class="line"><span class="lineText">請根據照片判斷各自所對應的季節，並在□中填入適當的季節（春、夏、秋、冬）：2.請將星星的顏色(分別有:紅、黃、白、藍) 由高溫到低溫依序排列：</span></div>
+<div class="line title-main"><span class="lineText">七、是的打ˇ．不是的打╳：每格 1 分、共 12 分</span></div>
+<div class="line even"><span class="lineText">1.在戶外觀測天頂的星空時，哪些做法是正確的？</span></div>
+<div class="line"><span class="lineText">2.生活中，有哪些是氧氣的應用？</span></div>
+<div class="line even"><span class="lineText">3.哪些行為與做法容易引起火災？</span></div>
+<div class="line title-main"><span class="lineText">八、連連看：每格 1 分、共 5 分</span></div>
+<div class="line"><span class="lineText">請將正確的連起來？</span></div>
+<div class="line even"><span class="lineText">不同的季節，要利用哪一種星群或星座尋找北極星比較適合？</span></div>
+<div class="line"><span class="lineText">北斗七星</span></div>
+<div class="line even"><span class="lineText">仙后座</span></div>
+<div class="line"><span class="lineText">春季、夏季</span></div>
+<div class="line even"><span class="lineText">秋季、冬季</span></div>
+<div class="line title-main"><span class="lineText">九、配合題：每答 1 分、共 6 分</span></div>
+<div class="line"><span class="lineText">燃燒三要素：可燃物、助燃物和達到燃點，若缺少其中一種就無法繼續燃燒。下列分別是移除哪一項條件來滅火的例子？</span></div>
+<div class="line even"><span class="lineText">(１)移除可燃物：（　　　　　　　　）。(２)隔絕助燃物：（　　　　　　　　）。(３)使物質未達到燃點：（　　　　　　　　）。</span></div>
+<div class="line title-main"><span class="lineText">十、畫畫看(取整數畫畫看)：每格 2 分、共 4 分</span></div>
+<div class="line"><span class="lineText">請利用北斗七星找到北極星的位置</span></div>
+<div class="line even"><span class="lineText">請利用仙后座找到北極星的位置</span></div>
+<div class="line title-main"><span class="lineText">十一、科學閱讀：每格 2 分、共 8 分</span></div>
+<div class="line"><span class="lineText">1. 一氧化碳是一種無色無味的氣體，中毒後的症狀不易被察覺，因而成為潛藏於居家環境中的隱形殺手。瓦斯在氧氣不足時，燃燒便會不完全而產生一氧化碳（CO）。一氧化碳對血液中的血紅素的結合力，為氧氣的200倍～250倍，因此會取代氧氣搶先與血紅素結合，降低血紅素的帶氧能力，這時體內組織無充足含氧，因而產生各種一氧化碳中毒的症狀。一般人在吸入過多一氧化碳後，經常只有疲倦、昏眩等輕微不適的症狀，往往中毒而不自覺，因而在昏睡中死亡。發現一氧化碳中毒時，態度應保持冷靜、迅速急救，並立即打開窗戶使空氣流通。</span></div>
+<div class="line even"><span class="lineText">(　　)(１) 關於一氧化碳（CO）的敘述，下列何者正確？  ①有明顯氣味，容易察覺  ②與血紅素的結合能力比氧氣強  ③ 對人體無害。(　　)(２) 當發現一氧化碳中毒時，最適當的處理方式為何？  ① 關閉門窗，避免外界空氣進入  ②保持冷靜並立即開窗通風</span></div>
+<div class="line"><span class="lineText">③ 點燃火源增加氧氣。</span></div>
+<div class="line even"><span class="lineText">2. 傳說向流星許願、願望就會成真。「流星雨」通常在每年固定時間，由某個星座作為輻射點，向外輻射而出。觀測流星很容易，不用望遠鏡，只要耐性和肉眼就能觀測。當彗星回歸後，在它的軌道上散布許多塵埃，當地球通過時，這些散落的塵埃就會被地球吸引形成流星雨，當地球上看到流星不斷由某星座射出，就稱為某某流星雨。臺灣年度三大流星群，包含1月的象限儀座流星雨、8月的英仙座流星雨、12月雙子座流星雨。而雙子座流星雨被認為是一年中最穩定的流星雨，一小時最大量為120顆呢！</span></div>
+<div class="line"><span class="lineText">(　　)(１)哪個地點比較適合觀察「流星雨」呢？</span></div>
+<div class="line even"><span class="lineText">①熱鬧的夜市</span></div>
+<div class="line"><span class="lineText">②光害少的地點</span></div>
+<div class="line even"><span class="lineText">③高樓林立的城市</span></div>
+<div class="line"><span class="lineText">(　　)(２)關於「流星雨」的敘述，哪一項正確？</span></div>
+<div class="line even"><span class="lineText">①流星雨就是宇宙的恆星隕落</span></div>
+<div class="line"><span class="lineText">②要用專業的天文望遠鏡才能觀察    ③在少光害處用肉眼即可以看見</span></div>
+</div>
+<script>
+(function(){
+var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;
+var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");
+function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=vc.findIndex(function(v){return /zh/i.test(v.lang);});if(z>=0)vs.value=z;}
+lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;
+function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}
+function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}
+function pa(){var ls=Array.from(ct.querySelectorAll(".line")).filter(function(el){return!el.classList.contains("title-main")&&!el.classList.contains("title-sub");});if(!ls.length)return;ipa=true;pai=0;function step(){if(!ipa||pai>=ls.length){ipa=false;sb.textContent="✅ 播放完畢";return;}var el=ls[pai++];var t=el.querySelector(".lineText");var tx=(t?t.textContent:el.textContent).trim();if(!tx){step();return;}sp(tx,el,step);}step();}
+ct.addEventListener("click",function(e){var nd=e.target.closest(".line");if(!nd)return;if(nd.classList.contains("title-main")||nd.classList.contains("title-sub"))return;ipa=false;var t=nd.querySelector(".lineText");sp((t?t.textContent:nd.textContent).trim(),nd);});
+ct.addEventListener("mouseup",function(){var sel=window.getSelection();var tx=sel?sel.toString().trim():"";if(tx)sp(tx);});
+document.getElementById("pa").addEventListener("click",function(){ss();setTimeout(pa,100);});
+document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});
+document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});
+document.getElementById("st").addEventListener("click",ss);
+document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});
+rs.addEventListener("input",function(){rv.textContent=rs.value;});
+fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});
+})();
+</script>
+</body>
+</html>

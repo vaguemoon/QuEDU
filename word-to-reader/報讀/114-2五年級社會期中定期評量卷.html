@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="reader-group" content="五年級"/>
+<meta name="reader-date"  content="2026-04-13"/>
+<title>114-2五年級社會期中定期評量卷</title>
+<style>
+:root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--blue-grad:linear-gradient(135deg,#4a90d9,#2d6fa8);--yellow:#ffd54f;--bg:#eef5fc;--white:#ffffff;--text:#1e2d3d;--muted:#7a99b5;--border:#d4e8f8;--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}
+body.dark{--bg:#12202e;--white:#1a2d3f;--text:#e8f2fc;--muted:#6a8faa;--border:#243a50;--blue-lt:#1a3050;--reading-bg:#2a2318;--line-even:#162636;--line-hover:#1e3448}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+.topbar{background:var(--blue-grad);color:#fff;height:52px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(44,100,160,.25);position:sticky;top:0;z-index:50}
+.topbar-title{font-size:.95rem;font-weight:900}
+.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:52px;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-label{font-size:.76rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}
+.ctrl-range{width:78px;accent-color:var(--blue)}
+.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}
+.spacer{flex:1}
+.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--text);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}
+.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}
+.btn-ctrl:active{transform:scale(.95)}
+.btn-ctrl.primary{background:var(--blue-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}
+.btn-ctrl.primary:hover{opacity:.88}
+.btn-theme{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;height:36px;width:36px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.btn-theme:hover{background:rgba(255,255,255,.3)}
+.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--muted)}
+.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}
+#content{padding:4px 14px 72px}
+.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}
+.line:hover{background:var(--line-hover)}
+.line.even{background:var(--line-even)}
+.line.even:hover{background:var(--line-hover)}
+.line.reading{background:var(--reading-bg)!important;outline:2.5px solid var(--reading-border)}
+.lineText{flex:1;line-height:1.85}
+.title-main{font-size:1.05rem;font-weight:900;color:var(--blue-dk);padding:10px 12px 6px;margin-top:8px;cursor:default}
+.title-main:hover{background:transparent}
+.title-sub{font-size:.94rem;font-weight:800;color:var(--muted);cursor:default}
+.title-sub:hover{background:transparent}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-title">🎧 114-2五年級社會期中定期評量卷</span>
+  <button class="btn-theme" id="theme-btn">🌙</button>
+</div>
+<div class="controls-bar">
+  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>
+  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>
+  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>
+  <div class="spacer"></div>
+  <button class="btn-ctrl primary" id="pa">▶ 連播</button>
+  <button class="btn-ctrl" id="pu">⏸</button>
+  <button class="btn-ctrl" id="re">⏯</button>
+  <button class="btn-ctrl" id="st">⏹</button>
+</div>
+<div class="status-tip" id="sb">💡 點擊任意行朗讀，或按「連播」</div>
+<div class="doc-heading">114-2五年級社會期中定期評量卷</div>
+<div id="content">
+<div class="line title-main"><span class="lineText">一、是非題 （每題1分，共8分）</span></div>
+<div class="line"><span class="lineText">(   ) 在甲午戰爭後，劉銘傳被推舉為臺灣的總統。</span></div>
+<div class="line even"><span class="lineText">(   ) 臺灣的小吃「豬血糕」可以說是不同飲食文化創新與結合下的產物。</span></div>
+<div class="line"><span class="lineText">(   ) 日治時期的學生放學後會到咖啡廳喝咖啡討論時事。</span></div>
+<div class="line even"><span class="lineText">(   ) 在日治時期，身為臺灣人小禎需要定期參加派出所舉辦的衛生講習，是因為警察有預防傳染病的工作。</span></div>
+<div class="line"><span class="lineText">(   ) 日治時期，總督府舉辦議員選舉，只要是年滿　20　歲的臺灣人，無論性別、納稅與否，都可以投票。</span></div>
+<div class="line even"><span class="lineText">(   ) 高鐵是日治時期的重要建設，加速了南北來往的速度。</span></div>
+<div class="line"><span class="lineText">(   ) 日治時期的臺灣人小維，若想購買鹽、樟腦等商品，只能到政府指定的場所購買。</span></div>
+<div class="line even"><span class="lineText">(   ) 漢人移民會在四合院的牆上留槍孔，槍孔被設計成內窄外寬，用來觀察外面或防禦敵人。</span></div>
+<div class="line title-main"><span class="lineText">二、選擇題 （每題2分，共20分）</span></div>
+<div class="line"><span class="lineText">(   ) 臺灣在日本統治時期被稱為糖業王國，主要是因為哪一項農作物的種植面積擴大跟製糖效率高？　稻米　小麥　甘蔗　高粱。</span></div>
+<div class="line even"><span class="lineText">(   ) 日治時期，許多建築會設計窗戶，其功能主要為何？　耐震　防火　防潮　採光。</span></div>
+<div class="line"><span class="lineText">(   ) 現在臺灣農民主要耕種的稻米品種，多數為以下哪一品種？　在來米　芋香米　蓬萊米　蒟蒻米。</span></div>
+<div class="line even"><span class="lineText">(   ) 蔣渭水與林獻堂等人成立了臺灣文化協會，請問這個協會的主要目標是什麼？　為了讓民眾了解自己的權利與提升文化水準　為了傳播日本文化與協助政府推動政策　為了讓所有臺灣人都有機會到日本留學　為了提供民眾更多元的休閒娛樂選擇。</span></div>
+<div class="line"><span class="lineText">(   ) 學校推動食米教育，教導烹煮各種米食料理的主要目的是什麼？　培養料理達人　製作米食料理節目　扶植米食廠商企業營利　促進米食文化傳承。</span></div>
+<div class="line even"><span class="lineText">(   ) 西元十九世紀末，清帝國由於被哪個國家打敗而將土地割讓給對方？　美國　日本　臺灣　英國。</span></div>
+<div class="line"><span class="lineText">(   ) 「□出生於臺灣的中部地區著名家族，因為不滿日治時期的殖民政策，因此透過報紙、演講及戲劇方式來批評殖民政策與傳播現代知識。□後來和蔣渭水一起創立臺灣文化協會。」以上是小旬社會課筆記的內容，□是他來不及抄寫到的內容，請問□指的是誰？　黃土水　陳澄波　鄧雨賢　林獻堂。</span></div>
+<div class="line even"><span class="lineText">(   ) 阿君在臺北　迪化街逛街時發現，當地的舊建築與日本在西元　1900　年代公共建築樣式類似。請問這是什麼原因造成的？　臺北的日本人較多　臺北的建築師是從日本留學回來的　過去臺灣曾被日本殖民過　臺北人較喜歡日本文化。</span></div>
+<div class="line"><span class="lineText">(   ) 日治時期，小柏若要從臺北前往臺中，他可以搭乘什麼交通工具？　火車　高鐵　捷運　輕軌。</span></div>
+<div class="line even"><span class="lineText">(   ) 日治時期的民間建築有些融合在地文化、日式與西式風格，像是一德洋樓的哪一項設計屬於日式風格？　拱廊　西式圓柱　榻榻米　油畫。</span></div>
+<div class="line title-main"><span class="lineText">三、填充題 （每格1分，共4分）</span></div>
+<div class="line"><span class="lineText">（　　　　）時期的（　　　　）就地取材，運用木頭、竹子和茅草將房屋架高，以適應自然環境。</span></div>
+<div class="line even"><span class="lineText">日治時期，總督府展開各項基礎交通建設，例如：擴建（　　　　）獲取山林資源；整建（　　　　）和高雄港發展航運。</span></div>
+<div class="line title-main"><span class="lineText">四、改錯題 （每答1分，共2分）</span></div>
+<div class="line"><span class="lineText">小安複習社會課程的時候，發現自己當初寫的筆記有兩個錯誤，請你幫忙圈出錯誤的地方並訂正成對的答案。</span></div>
+<div class="line even"><span class="lineText">為了賺取更多的資源與利益，總督府在臺灣東部興建縱貫鐵路，並且擴建基隆港與高雄港，將臺灣種植的小麥與蔗糖輸往日本滿足市場需求。</span></div>
+<div class="line"><span class="lineText">答：</span></div>
+<div class="line even"><span class="lineText">請翻頁繼續作答，看清楚題目再回答</span></div>
+<div class="line title-main"><span class="lineText">五、勾選題 （每格1分，共15分）</span></div>
+<div class="line"><span class="lineText">1.以下關於日治時期興建的交通建設，正確的敘述請打勾。</span></div>
+<div class="line even"><span class="lineText">（　）(１)當時展開的各項交通基礎建設，成為後來臺灣經濟發展的基礎。</span></div>
+<div class="line"><span class="lineText">（　）(２)總督府擴建高雄港與基隆港發展航運。</span></div>
+<div class="line even"><span class="lineText">（　）(３)開闢阿里山森林鐵路的主要目的是為了運送煤礦。</span></div>
+<div class="line"><span class="lineText">（　）(４)臺中火車站是當時縱貫鐵路的中心。</span></div>
+<div class="line title-sub"><span class="lineText">2. 以下關於日治時期的警察制度，敘述正確的敘述請打勾。</span></div>
+<div class="line even"><span class="lineText">（　）(１)警察的權力很大。</span></div>
+<div class="line"><span class="lineText">（　）(２)全臺各地有許多派出所。</span></div>
+<div class="line even"><span class="lineText">（　）(３)是由臺灣民主國建立的制度。</span></div>
+<div class="line"><span class="lineText">3. 阿潔聽社會老師說到這間學校是在日治時期時興建的，於是到學校網站搜尋詳細資訊。下列符合日治時期建築特色的正確的敘述請打勾</span></div>
+<div class="line even"><span class="lineText">（　）(１)設計窗戶，以加強通風。</span></div>
+<div class="line"><span class="lineText">（　）(２)為了環保，不使用水泥。</span></div>
+<div class="line even"><span class="lineText">（　）(３)使用鋼筋是為了提升耐震。</span></div>
+<div class="line"><span class="lineText">（　）(４)以機器統一製磚，提升紅磚的耐震與防火。</span></div>
+<div class="line even"><span class="lineText">4.小恩趁著暑假空檔仔細研究臺灣稻米生長的各種條件，下列是她歸納出的資料正確的敘述請打勾</span></div>
+<div class="line"><span class="lineText">（　）(１)臺灣因為地震多，所以適合稻米生長。</span></div>
+<div class="line even"><span class="lineText">（　）(２)臺灣的平原有河流貫穿，提供稻米生長水源。</span></div>
+<div class="line"><span class="lineText">（　）(３)臺灣在地的稻米品種已經絕跡。</span></div>
+<div class="line even"><span class="lineText">（　）(４)臺灣溼熱的氣候有利水稻生長。</span></div>
+<div class="line title-main"><span class="lineText">六、連連看 （每格1分，共5分，未用尺扣1分）</span></div>
+<div class="line"><span class="lineText">下列事蹟分別跟哪個人有關？請配對連連看。</span></div>
+<div class="line even"><span class="lineText">(１)林獻堂</span></div>
+<div class="line"><span class="lineText">A　臺灣第一位飛行員，駕機散發請願宣傳單</span></div>
+<div class="line even"><span class="lineText">(２)蔣渭水</span></div>
+<div class="line"><span class="lineText">‧B　臺灣首位原住民族西醫，在臺東開設醫院</span></div>
+<div class="line even"><span class="lineText">(３)謝文達</span></div>
+<div class="line"><span class="lineText">‧C　著名音樂家，皇民化期間改名東田曉雨</span></div>
+<div class="line even"><span class="lineText">(４)南志信</span></div>
+<div class="line"><span class="lineText">‧D　發動臺灣議會設置請願運動的重要領袖</span></div>
+<div class="line even"><span class="lineText">(５)鄧雨賢</span></div>
+<div class="line"><span class="lineText">‧E　成立臺灣文化協會，傳播現代知識</span></div>
+<div class="line title-main"><span class="lineText">七、圖表題 （每格1分，共10分）</span></div>
+<div class="line even"><span class="lineText">上課時，老師在黑板上揭示下方資料要大家判讀，老師說這和稻米生長的條件息息相關，請將下列敘述正確的打ˇ。</span></div>
+<div class="line"><span class="lineText">（　）(１)育鵪：「這是一張宜蘭和臺南兩地的全年月平均氣溫雨量圖，可以看出兩地的氣候暖和，雨量也較多。」</span></div>
+<div class="line even"><span class="lineText">（　）(２)呈瑞：「這兩地全年月平均最低溫都在一月，但幾乎都在　15℃以上。」</span></div>
+<div class="line"><span class="lineText">（　）(３)文新：「臺南全年雨量豐沛，而宜蘭雨量集中在夏季。」</span></div>
+<div class="line even"><span class="lineText">（　）(４)豔文：「我的看法是，多雨高溫是稻米停止生長的因素，所以這樣的氣候應該會導致稻米產量減少。」</span></div>
+<div class="line"><span class="lineText">（　）(５)研漪：「我倒覺得溼熱的氣候才是稻米生長的好環境。」</span></div>
+<div class="line even"><span class="lineText">這是一份關於日治時期醫療相關建設的圖表。請根據圖表以及你對日治時期歷史的理解，判斷下面的敘述是否正確。對的敘述請畫「○」，錯的敘述請打「╳」。</span></div>
+<div class="line"><span class="lineText">建設項目</span></div>
+<div class="line even"><span class="lineText">主要功能</span></div>
+<div class="line"><span class="lineText">受益對象</span></div>
+<div class="line even"><span class="lineText">臺南水道</span></div>
+<div class="line"><span class="lineText">提供潔淨自來水</span></div>
+<div class="line even"><span class="lineText">臺南市區居民</span></div>
+<div class="line"><span class="lineText">臺北醫院</span></div>
+<div class="line even"><span class="lineText">現代化醫療服務</span></div>
+<div class="line"><span class="lineText">主要為日本人</span></div>
+<div class="line even"><span class="lineText">南醫院</span></div>
+<div class="line"><span class="lineText">山地醫療服務</span></div>
+<div class="line even"><span class="lineText">臺東原住民族</span></div>
+<div class="line"><span class="lineText">（　）(１)總督府興建臺南水道，主要是為了讓當地居民有乾淨的水源，避免傳染病的傳播。</span></div>
+<div class="line even"><span class="lineText">（　）(２)臺北醫院作為當時最現代化的醫院，主要服務對象是日本統治階層，顯示醫療資源分配的不平等。</span></div>
+<div class="line"><span class="lineText">（　）(３)南志信醫師在臺東開設南醫院，顯示了有志人士致力於提升原住民族的健康。</span></div>
+<div class="line even"><span class="lineText">（　）(４)圖表顯示，日治時期總督府的醫療建設成功讓所有臺灣人民都獲得了平等的醫療照護。</span></div>
+<div class="line"><span class="lineText">（　）(５)從這份圖表可以推斷，日治時期的公共衛生建設提升了臺灣人民的健康水準。</span></div>
+<div class="line title-main"><span class="lineText">八、閱讀理解題 （共16分）</span></div>
+<div class="line even"><span class="lineText">請閱讀以下文章，並回答問題。</span></div>
+<div class="line"><span class="lineText">小芮和小晶為了完成社會課的專題報告，開始研究日治時期臺灣的抗日事件。兩人翻閱歷史資料後，發現當時的社會並不穩定。小晶發現，當時的最高治理單位為了加強掌控地方治安，推行了新的制度，在全臺各地設立據點，負責巡查居民、進行衛生檢查、維持秩序。這些執行者的權力十分龐大，民眾若稍有不滿便可能被拘禁或處罰，地方壓力因此逐漸升高。</span></div>
+<div class="line even"><span class="lineText">小芮則查到，社會的不安也反映在民生狀況上，有些地區因糧食價格上漲、生活困苦，加上平日受到嚴格管理，終於讓民眾情緒累積到臨界點。為了對抗不公，一些領袖人物運用民間信仰或族群團結的力量，號召群眾組織武裝反抗。小晶找到的事件中，反抗者認為傳統文化與生活方式遭到嚴重壓迫，獵場也受到限制，於是由部落首領帶領族人行動，引發總督府派遣大量軍警以武力鎮壓。而小芮查到的事件，則是由領袖藉由民間信仰召集信眾集結，抗議制度不公與民生困難。</span></div>
+<div class="line"><span class="lineText">雖然兩起事件都以失敗告終，但兩位同學都認為這些反抗行動反映了當時人民追求公平待遇與文化尊嚴的心聲，是理解臺灣歷史非常重要的一部分。</span></div>
+<div class="line even"><span class="lineText">（　）(１)根據文章內容，我們可以知道小芮查詢的事件是什麼？　甲午戰爭　西來庵事件　臺灣民主國成立　霧社事件。</span></div>
+<div class="line"><span class="lineText">（　）(２)根據文章內容，小晶查詢的反抗事件領袖是下列何者？　莫那．魯道　唐景崧　余清芳　李鴻章。</span></div>
+<div class="line even"><span class="lineText">（　）(３)文章中所說，日治時期為了維護地方治安所推行的新制度指的是下列何者？　警察制度　臺灣民主國　割讓制度　原住民族制度。</span></div>
+<div class="line"><span class="lineText">（　）(４)小芮和小晶查詢到的事件起因雖然不同，但共有的背景因素是什麼？　高壓統治與對社會的不滿　農產品產量不足　國際戰爭影響臺灣　宗教衝突擴大。</span></div>
+<div class="line even"><span class="lineText">(５)根據文章內容，請寫出小晶查詢的反抗事件名稱。2分</span></div>
+<div class="line"><span class="lineText">答：</span></div>
+<div class="line even"><span class="lineText">請閱讀以下文章，並回答問題。</span></div>
+<div class="line"><span class="lineText">小蜥最近投入研究臺灣各地的特色建築，為了讓同學更加了解不同地區的建築如何因應環境，他特地安排上週末到各地實地拍攝照片，並整理成報告在社會課分享。他首先介紹照片　A，資料顯示這類建築在設計時特別講究房屋方位與季風的影響，屋頂也採斜坡形狀，方便讓雨水迅速排出。接著他分享照片　B，這種建築多位於潮溼地帶，當時的住民利用從自然環境取得的木頭、竹子和茅草等天然材料搭建，並架高地板避免潮溼，但遇到颱風等劇烈天氣時較容易受損。照片　C　則是許多老街與傳統聚落常見的紅磚建築，溫暖的磚色透出歲月痕跡，在當時屬於相對耐火、耐震的新建材，因此逐漸取代傳統的建材。最後，小昭展示照片　D，他說這是最特別的一種建築形式，因為它結合漢人的傳統房屋設計、日式的榻榻米裝潢，還融入西式建築的風格，例如圓柱、拱廊，是地方發展時中西合璧的代表。分享完後，小蜥信心滿滿，希望同學能透過這些建築認識臺灣的多元文化與環境智慧。</span></div>
+<div class="line even"><span class="lineText">（　）(１)文章中照片　B　的建築遇到什麼劇烈天氣時容易損壞？　颱風　沙塵暴　高溫　旱災。</span></div>
+<div class="line"><span class="lineText">（　）(２)照片　A　的屋頂以斜坡設計是為了哪種作用？　避免積雪　減少日照　減緩強風　排除雨水。</span></div>
+<div class="line even"><span class="lineText">（　）(３)從小蜥整理的四種建築特色，可以得到什麼結論？　臺灣早期建築普遍以紅磚為主要材料　臺灣的建築形式常因地理與氣候而有所不同　臺灣所有的建築都以美觀為主要目的　臺灣建築的演變與外來文化無關。</span></div>
+<div class="line"><span class="lineText">(４)文章中的照片　B，最初主要是哪一個族群的傳統建築形式？2分</span></div>
+<div class="line even"><span class="lineText">答：</span></div>
+<div class="line"><span class="lineText">請閱讀以下文章，並回答問題。</span></div>
+<div class="line even"><span class="lineText">清帝國光緒二十一年，日本在甲午戰爭中擊敗清帝國，雙方簽訂馬關條約，將臺灣與澎湖割讓給日本。消息一傳出，街頭巷尾議論紛紛，許多臺灣人對未來充滿擔憂。</span></div>
+<div class="line"><span class="lineText">「聽說朝廷那邊打了敗仗，把我們和澎湖都賣給外國，這下要亡國了！」大希氣憤的說。</span></div>
+<div class="line even"><span class="lineText">「官府和幾個員外可不想就這樣把我們交出去，他們說要準備建立自己的國家。」怪盜壓低聲音說。</span></div>
+<div class="line"><span class="lineText">「改朝換代？那不是造反嗎？真的行得通嗎？」翔婷擔憂的問。</span></div>
+<div class="line even"><span class="lineText">不久後，街上貼滿了招募士兵的告示。許多百姓自願加入軍隊，希望守護家園，正式宣布成立「臺灣民主國」，並發誓要抵抗日本的占領。然而，日軍裝備精良、戰力強大，臺灣民主國的軍隊節節敗退。數月之後，這場抵抗行動最終以失敗收場。</span></div>
+<div class="line"><span class="lineText">雖然臺灣民主國存在的時間很短，但它代表當時人民不願輕易屈服、努力守護家園的精神，也成為臺灣歷史上重要的一頁。</span></div>
+<div class="line even"><span class="lineText">（　）(１)促使清帝國割讓臺灣及澎湖的是哪一場戰役？　霧社事件　中　法戰爭　甲午戰爭　西來庵事件。</span></div>
+<div class="line"><span class="lineText">（　）(２)根據上文所述，臺灣民主國成立的最大意義是下列哪一項？　人民對外國文化的好奇　人民不願被外國統治、守護家園的決心　政府想獨立發展貿易　官員想獲得更多權力。</span></div>
+<div class="line even"><span class="lineText">（　）(３)清帝國與臺灣民主國面對外國入侵的態度及做法，下列哪一個敘述最合理？　兩者都只選擇和平談判　清帝國因戰敗選擇割讓土地，臺灣民主國決定起兵抵抗　兩者都裝備精良，足以抵抗當時的日軍　清帝國與臺灣民主國都希望加入日軍。</span></div>
+<div class="line"><span class="lineText">(４)清帝國在甲午戰爭戰敗後，哪個國家接管了臺灣及澎湖？2分</span></div>
+<div class="line even"><span class="lineText">答：</span></div>
+<div class="line title-main"><span class="lineText">九.題組 （每格1分，共16分）</span></div>
+<div class="line"><span class="lineText">這是日本統治臺灣時期的一張圖片，回答以下問題。</span></div>
+<div class="line even"><span class="lineText">（　）(１)圖片中所出現的是什麼職業？　警察　醫師　菩薩　教師。</span></div>
+<div class="line"><span class="lineText">（　）(２)關於圖片中職業在當時的敘述，何者正確？　工作內容單一　對人民親切友善　是總統所建立的制度　負責推行地方行政事務。</span></div>
+<div class="line even"><span class="lineText">◎以下哪些是圖片中人物的工作？請打ˇ。</span></div>
+<div class="line"><span class="lineText">（　）(３)到校教課。</span></div>
+<div class="line even"><span class="lineText">（　）(４)逮捕犯人。</span></div>
+<div class="line"><span class="lineText">（　）(５)栽種農作。</span></div>
+<div class="line even"><span class="lineText">（　）(６)思想取締。</span></div>
+<div class="line"><span class="lineText">（　）(７)預防疾病。</span></div>
+<div class="line even"><span class="lineText">西元　1895　年一列穿著筆挺軍裝，騎乘軍馬的軍隊進入臺北城，象徵自此時起臺灣開啟新的歷史篇章，請問：</span></div>
+<div class="line"><span class="lineText">（　）(１)請問騎乘軍馬進入臺北城的是哪一個國家的軍隊？　清帝國　日本　英國　美國。</span></div>
+<div class="line even"><span class="lineText">（　）(２)這個場景可能在哪一場戰爭之後看到呢？　甲午戰爭　中　法戰爭　霧社事件　西來庵事件。</span></div>
+<div class="line"><span class="lineText">（　）(３)除了臺灣之外，還有哪一個地區也同樣被佔領殖民？　澎湖　馬祖　金門　蘭嶼。</span></div>
+<div class="line even"><span class="lineText">烹飪節目中的主持人正在介紹臺灣稻米的品種。請根據節目的對話回答問題。</span></div>
+<div class="line"><span class="lineText">（　）(１)主持人：「這是現在市面上最廣泛，也是臺灣民眾最熟悉的品種。」請問主持人說的是下列哪一個品種呢？　在來米　香米　糯米　蓬萊米。</span></div>
+<div class="line even"><span class="lineText">（　）(２)承上題，來賓接著說：「這好像是哪個時期改良的品種？我不是很確定。」請你告訴來賓正確答案是？　日治時期　清帝國時期　史前時代　大航海時代。</span></div>
+<div class="line"><span class="lineText">（　）(３)承(１)題，主持人說：「改良後的品種除了口感深受臺灣民眾喜愛，重要的是可以適應臺灣的特別環境。」請問主持人所說的環境是什麼？　高溫　乾燥　強風　嚴寒。</span></div>
+<div class="line even"><span class="lineText">嗑拳社會課的分組研究是有關於臺灣的食米文化，下列是他們研究過程中發現的問題。請問：</span></div>
+<div class="line"><span class="lineText">（　）(１)嗑拳一組想要先到北部的稻米產區進行實地考察，他們應該到哪裡去？　陽明山　大肚臺地　蘭陽平原　基隆港。</span></div>
+<div class="line even"><span class="lineText">（　）(２)嗑拳一組實地考察稻田後發現附近有許多水圳，這是為了滿足種植稻米需要的哪一個條件？　灌溉水源　低溫乾燥　強風吹拂　大量農藥。</span></div>
+<div class="line"><span class="lineText">（　）(３)嗑拳一組決定等報告結束後，大家一起出發去享用創新的米食，下列哪一項食物可能會出現在這場聚會上？　豬血糕　冬粉　米漢堡　海鮮粥。</span></div>
+<div class="line title-main"><span class="lineText">十、問答題 （一題1分，共4分）</span></div>
+<div class="line even"><span class="lineText">日治時期總督府實施什麼制度，規定樟腦、菸、酒等物品只能由政府指定的機關販售呢？請寫出來。</span></div>
+<div class="line"><span class="lineText">答：</span></div>
+<div class="line even"><span class="lineText">請寫出一項干欄式住屋的特色。</span></div>
+<div class="line"><span class="lineText">答：</span></div>
+<div class="line even"><span class="lineText">臺灣的稻米品種之一「在來米」，其名稱在日文中有什麼特殊意涵？</span></div>
+<div class="line"><span class="lineText">答：</span></div>
+<div class="line even"><span class="lineText">日治時期引進了哪些現代時間制度？請寫出一項。</span></div>
+<div class="line"><span class="lineText">作答結束，請從第一頁開始檢查!</span></div>
+<div class="line even"><span class="lineText">每一題都要寫，不要留空白。</span></div>
+</div>
+<script>
+(function(){
+var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;
+var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");
+function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=vc.findIndex(function(v){return /zh/i.test(v.lang);});if(z>=0)vs.value=z;}
+lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;
+function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}
+function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}
+function pa(){var ls=Array.from(ct.querySelectorAll(".line")).filter(function(el){return!el.classList.contains("title-main")&&!el.classList.contains("title-sub");});if(!ls.length)return;ipa=true;pai=0;function step(){if(!ipa||pai>=ls.length){ipa=false;sb.textContent="✅ 播放完畢";return;}var el=ls[pai++];var t=el.querySelector(".lineText");var tx=(t?t.textContent:el.textContent).trim();if(!tx){step();return;}sp(tx,el,step);}step();}
+ct.addEventListener("click",function(e){var nd=e.target.closest(".line");if(!nd)return;if(nd.classList.contains("title-main")||nd.classList.contains("title-sub"))return;ipa=false;var t=nd.querySelector(".lineText");sp((t?t.textContent:nd.textContent).trim(),nd);});
+ct.addEventListener("mouseup",function(){var sel=window.getSelection();var tx=sel?sel.toString().trim():"";if(tx)sp(tx);});
+document.getElementById("pa").addEventListener("click",function(){ss();setTimeout(pa,100);});
+document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});
+document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});
+document.getElementById("st").addEventListener("click",ss);
+document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});
+rs.addEventListener("input",function(){rv.textContent=rs.value;});
+fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});
+})();
+</script>
+</body>
+</html>

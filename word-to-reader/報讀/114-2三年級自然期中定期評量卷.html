@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="reader-group" content="未分類"/>
+<meta name="reader-date"  content="2026-04-13"/>
+<title>114-2三年級自然期中定期評量卷</title>
+<style>
+:root{--blue:#4a90d9;--blue-dk:#2d6fa8;--blue-lt:#e8f4fd;--blue-grad:linear-gradient(135deg,#4a90d9,#2d6fa8);--yellow:#ffd54f;--bg:#eef5fc;--white:#ffffff;--text:#1e2d3d;--muted:#7a99b5;--border:#d4e8f8;--reading-bg:#fff9e6;--reading-border:#ffc107;--line-even:#f4f9ff;--line-hover:#dbeeff}
+body.dark{--bg:#12202e;--white:#1a2d3f;--text:#e8f2fc;--muted:#6a8faa;--border:#243a50;--blue-lt:#1a3050;--reading-bg:#2a2318;--line-even:#162636;--line-hover:#1e3448}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+.topbar{background:var(--blue-grad);color:#fff;height:52px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(44,100,160,.25);position:sticky;top:0;z-index:50}
+.topbar-title{font-size:.95rem;font-weight:900}
+.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:52px;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-label{font-size:.76rem;font-weight:800;color:var(--muted);white-space:nowrap}
+.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}
+.ctrl-range{width:78px;accent-color:var(--blue)}
+.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}
+.spacer{flex:1}
+.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--text);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}
+.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}
+.btn-ctrl:active{transform:scale(.95)}
+.btn-ctrl.primary{background:var(--blue-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(45,111,168,.28)}
+.btn-ctrl.primary:hover{opacity:.88}
+.btn-theme{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;height:36px;width:36px;font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.btn-theme:hover{background:rgba(255,255,255,.3)}
+.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--muted)}
+.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}
+#content{padding:4px 14px 72px}
+.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}
+.line:hover{background:var(--line-hover)}
+.line.even{background:var(--line-even)}
+.line.even:hover{background:var(--line-hover)}
+.line.reading{background:var(--reading-bg)!important;outline:2.5px solid var(--reading-border)}
+.lineText{flex:1;line-height:1.85}
+.title-main{font-size:1.05rem;font-weight:900;color:var(--blue-dk);padding:10px 12px 6px;margin-top:8px;cursor:default}
+.title-main:hover{background:transparent}
+.title-sub{font-size:.94rem;font-weight:800;color:var(--muted);cursor:default}
+.title-sub:hover{background:transparent}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="topbar-title">🎧 114-2三年級自然期中定期評量卷</span>
+  <button class="btn-theme" id="theme-btn">🌙</button>
+</div>
+<div class="controls-bar">
+  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>
+  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>
+  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>
+  <div class="spacer"></div>
+  <button class="btn-ctrl primary" id="pa">▶ 連播</button>
+  <button class="btn-ctrl" id="pu">⏸</button>
+  <button class="btn-ctrl" id="re">⏯</button>
+  <button class="btn-ctrl" id="st">⏹</button>
+</div>
+<div class="status-tip" id="sb">💡 點擊任意行朗讀，或按「連播」</div>
+<div class="doc-heading">114-2三年級自然期中定期評量卷</div>
+<div id="content">
+<div class="line title-main"><span class="lineText">一、選擇題：每格 2 分、共 20 分</span></div>
+<div class="line"><span class="lineText">記錄蔬菜的成長時，不必記錄下列哪一項？①蔬菜名稱　②播種日期　③觀察日期　④蔬菜的價錢</span></div>
+<div class="line even"><span class="lineText">大部分蔬菜適合生長的地方有什麼特色？①沒有陽光　②空氣流通　③水分不足　④缺乏養分</span></div>
+<div class="line"><span class="lineText">為什麼農夫要在田裡撒肥料？①提供足夠的養分　②避免蚯蚓聚集　③使水分消失　④幫助植物呼吸</span></div>
+<div class="line even"><span class="lineText">茉莉查完資料，認為小白菜在下列哪一種環境可以健康長大？①寒冷且乾燥　②寒冷且空氣稀薄　③炎熱且乾燥　④通風且陽光充足</span></div>
+<div class="line"><span class="lineText">播種時，種子和種子間的距離應該為何？①保持適當的距離　②愈密集愈好　③中間密集，周圍稀疏　④不管花盆大小，一個花盆只能播種一顆種子</span></div>
+<div class="line even"><span class="lineText">在麵團中加入酵母菌，使麵團變大、變蓬鬆的過程稱為什麼？①蒸發　②發酵　③燃燒　④生鏽</span></div>
+<div class="line"><span class="lineText">下列哪一項不是生活中水蒸發為水蒸氣的例子？①溼溼的抹布被晒乾了　②柿子晒成柿餅　③冰的飲料瓶外有小水滴　④雨後籃球場的積水不見</span></div>
+<div class="line even"><span class="lineText">小音喝熱水時，發現杯蓋上面都是小水滴，表示水蒸氣遇到杯蓋時發生了什麼現象？①溶解　②凝結　③蒸發　④消失</span></div>
+<div class="line"><span class="lineText">新鮮果汁製成冰棒、冰棒沒吃完變液狀的過程，分別經過了哪兩種變化？①融化、蒸發　②融化、凝結　③凝結、凝固　④凝固、融化</span></div>
+<div class="line even"><span class="lineText">日常生活中，哪一個例子是透過高溫來達成目的？①把海鮮放在冰塊上　②用平底鍋把牛排煎熟　③把水餃放進冷凍庫　④用冷敷墊舒緩疼痛</span></div>
+<div class="line title-main"><span class="lineText">二、是非題：每格 1 分、共 10 分</span></div>
+<div class="line"><span class="lineText">生活中，水變成水蒸氣的過程，我們稱為「凝結」。</span></div>
+<div class="line even"><span class="lineText">蚯蚓的糞便含有養分，對蔬菜來說是很好的肥料。</span></div>
+<div class="line"><span class="lineText">番茄的莖很堅硬，可以自行站立生長。</span></div>
+<div class="line even"><span class="lineText">種植蔬菜時，要考慮蔬菜生長期的長短、生長季節和生長環境等因素。</span></div>
+<div class="line"><span class="lineText">如果種植蔬菜的容器底部沒有洞，這樣土壤中多餘的水分就不能流出去，蔬菜的根可能會爛掉。</span></div>
+<div class="line even"><span class="lineText">幼苗長大後，葉子數量會變多，但是每一片葉子的大小會和剛萌芽時長出的葉子一樣。</span></div>
+<div class="line"><span class="lineText">在室溫下，當冰塊放在桌上後可能會慢慢融化。</span></div>
+<div class="line even"><span class="lineText">蝦子受熱後，顏色會逐漸變得透明。</span></div>
+<div class="line"><span class="lineText">使用溫度計測量杯中的液體溫度時，溫度計應放在液體中央，且液囊不可以碰到容器。</span></div>
+<div class="line even"><span class="lineText">要讓水蒸氣變成小水滴，必須降低溫度。</span></div>
+<div class="line title-main"><span class="lineText">三、勾選題：每格 1 分、共 14 分</span></div>
+<div class="line"><span class="lineText">多琳這一組在記錄小白菜的生長過程時，要記錄哪些事情？請在（　）裡打ˇ：</span></div>
+<div class="line even"><span class="lineText">(　　)(１)播種的日期。</span></div>
+<div class="line"><span class="lineText">(　　)(２)蔬菜的名稱。</span></div>
+<div class="line even"><span class="lineText">(　　)(３)幼苗的高度。</span></div>
+<div class="line"><span class="lineText">(　　)(４)果實的情況。</span></div>
+<div class="line even"><span class="lineText">(　　)(５)觀察記錄的日期。</span></div>
+<div class="line"><span class="lineText">(　　)(６)月亮的位置。</span></div>
+<div class="line even"><span class="lineText">(　　)(７)太陽的高度。</span></div>
+<div class="line"><span class="lineText">(　　)(８)觀察的心得。</span></div>
+<div class="line even"><span class="lineText">下列哪些是水蒸發的現象？請在○中打ˇ。</span></div>
+<div class="line title-main"><span class="lineText">四、連連看：每格 1 分、共 13 分</span></div>
+<div class="line"><span class="lineText">下列日常會吃到的蔬菜，通常是食用哪一個部位？請畫線連起來：</span></div>
+<div class="line even"><span class="lineText">下列兩種播種的方式，哪一種是撒播？哪一種是點播？請畫線連起來：</span></div>
+<div class="line"><span class="lineText">下列生活中的各種的情形，分別是水的蒸發還是凝結？請畫線連起來：</span></div>
+<div class="line even"><span class="lineText">曉萱利用製冰盒製作冰塊，再將冰塊拿出，這個過程中發現下列圖片中的各種情況，請問它們分別屬於水哪一種現象？請畫線連起來：</span></div>
+<div class="line title-main"><span class="lineText">五、是的打ˇ．不是的打╳：每格 1 分、共 13 分</span></div>
+<div class="line"><span class="lineText">播種時，須準備哪些東西？請在□中打ˇ，不須準備的打×：</span></div>
+<div class="line even"><span class="lineText">下列哪些現象和凝固有關？請在□中打ˇ，無關的打×：</span></div>
+<div class="line"><span class="lineText">裝熱水的杯子產生水蒸氣後，怎麼做可以收集到水蒸氣凝結的小水滴？請在（　）裡打ˇ，不可以的打╳：</span></div>
+<div class="line even"><span class="lineText">(　　)(１)將玻璃杯置於杯子的杯口。</span></div>
+<div class="line"><span class="lineText">(　　)(２)用塑膠袋罩著杯子的杯口。</span></div>
+<div class="line even"><span class="lineText">(　　)(３)用鐵盤蓋著杯子的杯口。</span></div>
+<div class="line title-main"><span class="lineText">六、圈圈看：每格 1 分、共 16 分</span></div>
+<div class="line"><span class="lineText">種菜前，須準備哪些器具？請把它圈起來：</span></div>
+<div class="line even"><span class="lineText">下列哪些例子運用了「降低溫度」的方式來使生活更便利？請圈起來：</span></div>
+<div class="line"><span class="lineText">讀取溫度計的刻度時，怎樣做比較適當？請圈起來：</span></div>
+<div class="line even"><span class="lineText">哪些條件會影響植物的生長？請圈起來：</span></div>
+<div class="line title-main"><span class="lineText">七、科學閱讀：每格 2 分、共 14 分</span></div>
+<div class="line"><span class="lineText">請依據題意回答下列問題：將整顆雞蛋放進滾水中一段時間，剝掉蛋殼時，會發現蛋變成了固態，這是因為溫度改變了蛋的成分，而當蛋白變成白色後，就無法再變回原本透明的狀態了。蛋在不同溫度下會出現階段性的變化，一般來說，蛋白加熱到60℃會開始變白，70℃就完全變成固態；蛋黃則是加熱到67℃會變成固態，若是將蛋加熱到超過70℃的話，蛋黃和蛋白就會變得又乾又硬。因此，在烹煮的過程中，我們需要掌握適當的溫度，才能獲得好吃的水煮蛋。</span></div>
+<div class="line even"><span class="lineText">(１)將蛋加熱到多少度，才會獲得固態的蛋白和蛋黃？請在（　）裡打ˇ，錯誤的打╳：(　　)①50℃(　　)②60℃(　　)③70℃</span></div>
+<div class="line"><span class="lineText">(３)下列哪些食物和蛋一樣，受熱後就算冷卻，也無法恢復原狀？請圈出適當的答案：</span></div>
+</div>
+<script>
+(function(){
+var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;
+var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");
+function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=vc.findIndex(function(v){return /zh/i.test(v.lang);});if(z>=0)vs.value=z;}
+lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;
+function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}
+function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}
+function pa(){var ls=Array.from(ct.querySelectorAll(".line")).filter(function(el){return!el.classList.contains("title-main")&&!el.classList.contains("title-sub");});if(!ls.length)return;ipa=true;pai=0;function step(){if(!ipa||pai>=ls.length){ipa=false;sb.textContent="✅ 播放完畢";return;}var el=ls[pai++];var t=el.querySelector(".lineText");var tx=(t?t.textContent:el.textContent).trim();if(!tx){step();return;}sp(tx,el,step);}step();}
+ct.addEventListener("click",function(e){var nd=e.target.closest(".line");if(!nd)return;if(nd.classList.contains("title-main")||nd.classList.contains("title-sub"))return;ipa=false;var t=nd.querySelector(".lineText");sp((t?t.textContent:nd.textContent).trim(),nd);});
+ct.addEventListener("mouseup",function(){var sel=window.getSelection();var tx=sel?sel.toString().trim():"";if(tx)sp(tx);});
+document.getElementById("pa").addEventListener("click",function(){ss();setTimeout(pa,100);});
+document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});
+document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});
+document.getElementById("st").addEventListener("click",ss);
+document.getElementById("theme-btn").addEventListener("click",function(){document.body.classList.toggle("dark");document.getElementById("theme-btn").textContent=document.body.classList.contains("dark")?"☀️":"🌙";});
+rs.addEventListener("input",function(){rv.textContent=rs.value;});
+fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});
+})();
+</script>
+</body>
+</html>
