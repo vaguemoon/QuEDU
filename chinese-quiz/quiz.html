@@ -815,12 +815,16 @@ function buildReviewHtml(wrongIndices) {
         ansHtml = '<div class="review-answers">' +
           '<span class="review-wrong-ans">'   + escHtml(uo) + '</span>' +
           '<span class="review-arrow">→</span>' +
-          '<span class="review-correct-ans">' + escHtml(co) + '</span></div>';
+          '<span class="review-correct-ans q-speakable" onclick="speakText(\'' + escJs(co) + '\')">' + escHtml(co) + '</span></div>';
       } else {
+        /* 詞語填空：唸完整句（答案嵌入空格）；詞語解釋：唸答案本身 */
+        var fullSentence = q.type === '詞語填空'
+          ? q.question.replace(/[（(][^）)]*[）)]/, q.answer)
+          : q.answer;
         ansHtml = '<div class="review-answers">' +
           '<span class="review-wrong-ans">你填：'  + escHtml(ua || '未作答') + '</span>' +
           '<span class="review-arrow">→</span>' +
-          '<span class="review-correct-ans">正確：' + escHtml(q.answer) + '</span></div>';
+          '<span class="review-correct-ans q-speakable" onclick="speakText(\'' + escJs(fullSentence) + '\')" title="點擊聆聽">正確：' + escHtml(q.answer) + '</span></div>';
       }
       return '<div class="review-item">' +
         '<div class="review-item-label">' + escHtml(label)       + '</div>' +
