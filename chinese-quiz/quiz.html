@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>語文練習 — 作答</title>
+<link rel="stylesheet" href="chinese-quiz.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="quiz-topbar">
+  <button class="btn-quiz-back" onclick="confirmBack()">← 返回</button>
+  <div class="quiz-topbar-title" id="topbar-title">語文練習</div>
+</div>
+
+<div class="quiz-body">
+  <div class="quiz-loading" id="loading-msg">載入試卷中…</div>
+
+  <!-- 作答畫面 -->
+  <div id="quiz-screen" style="display:none">
+    <div class="quiz-sheet-header">
+      <div class="quiz-sheet-title">語 文 練 習 卷</div>
+      <div class="quiz-sheet-lesson" id="sheet-lesson"></div>
+      <div class="quiz-sheet-meta"   id="sheet-meta">作答者：—</div>
+    </div>
+    <div id="sections-container"></div>
+    <div class="quiz-submit-bar">
+      <button class="btn-submit" id="btn-submit" onclick="submitQuiz()">批　改</button>
+    </div>
+  </div>
+
+  <!-- 批改畫面 -->
+  <div id="result-screen" class="result-screen">
+    <div class="result-top">
+      <div class="result-score-circle">
+        <div class="result-score-num" id="result-score">—</div>
+        <div class="result-score-unit">分</div>
+      </div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-sub"   id="result-sub"></div>
+    </div>
+    <div id="review-container"></div>
+    <div class="result-btns">
+      <button class="btn-retry"      onclick="retryQuiz()">再練一次</button>
+      <button class="btn-return-hub" onclick="returnToHub()">返回主頁</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ════════════ Firebase ════════════ */
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
+  authDomain:        'tainping-hanzi-app.firebaseapp.com',
+  projectId:         'tainping-hanzi-app',
+  storageBucket:     'tainping-hanzi-app.firebasestorage.app',
+  messagingSenderId: '158917910126',
+  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
+};
+
+/* ════════════ Fallback questions ════════════ */
+var FALLBACK = [
+  { type: '詞語填空', question: '他非常努力，不論遇到多少挫折，都不輕易（　）。',
+    answer: '放棄' },
+  { type: '詞語填空', question: '春天到了，公園裡的花朵（　）地盛開，引來許多蝴蝶。',
+    answer: '爭相' },
+  { type: '詞語填空', question: '下課後，同學們（　）地跑到操場玩耍。',
+    answer: '迫不及待' },
+  { type: '詞語解釋', question: '形容人做事非常認真仔細，毫不馬虎、疏忽。',
+    answer: '一絲不苟' },
+  { type: '詞語解釋', question: '比喻事情做起來非常輕鬆容易，毫不費力。',
+    answer: '易如反掌' },
+  { type: '詞語解釋', question: '形容景色或事物非常美好，令人心曠神怡。',
+    answer: '賞心悅目' },
+  { type: '選擇題', question: '「那棵大樹像一位守護者，靜靜地站在村口。」這句話使用了哪種修辭法？',
+    answer: 'A', options: ['A. 比喻', 'B. 誇飾', 'C. 排比'] },
+  { type: '選擇題', question: '下列哪個句子的標點符號使用正確？',
+    answer: 'B', options: ['A. 他問我，你去哪裡？', 'B. 他問我：「你去哪裡？」', 'C. 他問我「你去哪裡」。'] },
+  { type: '選擇題', question: '「他哭了整整一千年，眼淚染紅了整片大海。」主要使用了哪種修辭？',
+    answer: 'B', options: ['A. 比喻', 'B. 誇飾', 'C. 擬人'] }
+];
+
+/* ════════════ Constants ════════════ */
+var TYPE_ORDER   = ['詞語填空', '詞語解釋', '選擇題'];
+var SECTION_NUMS = ['一', '二', '三', '四', '五'];
+var POOL_KEY     = { '詞語填空': 'fill', '詞語解釋': 'explain' };
+var DROP_TOL     = 44;  /* px expanded hit area around each blank */
+var DRAG_THOLD   = 8;   /* px movement needed to start drag vs tap */
+
+/* ════════════ State ════════════ */
+var db              = null;
+var student         = null;
+var currentSettings = null; /* { grade, lesson, lessonName, counts } */
+var currentSession  = null; /* { sessionId, sessionCode, sessionName, teacherUid } */
+var quizData        = [];
+var poolOrder       = {};
+var blanks          = {};   /* { qIdx: word | undefined } */
+var mcAnswers       = {};   /* { qIdx: 'A'|'B'|'C' } */
+var graded          = false;
+var dragging        = null; /* active drag: { word, poolKey, fromQIdx, ghost } */
+var pendingDrag     = null; /* pre-threshold: { word, poolKey, fromQIdx, sx, sy } */
+var _dragY          = 0;    /* last known drag clientY — used by auto-scroll loop */
+var _scrollRAF      = null; /* rAF id for drag auto-scroll */
+var _countUpRAF     = null; /* rAF id for score count-up animation */
+
+/* ════════════ Utilities ════════════ */
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escJs(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+function returnToHub() {
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  window.parent.postMessage({ type: 'chinese-quiz-back-to-hub' }, '*');
+}
+
+function confirmBack() {
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  var hasInput = Object.keys(blanks).some(function(k){ return blanks[k]; }) ||
+                 Object.keys(mcAnswers).length > 0;
+  if (!graded && hasInput && !confirm('作答尚未完成，確定要離開嗎？')) return;
+  returnToHub();
+}
+
+function getAnswer(i) {
+  return quizData[i].type === '選擇題' ? mcAnswers[i] : blanks[i];
+}
+
+/* ════════════════════════════════════════
+   Text-to-Speech
+   ════════════════════════════════════════
+   speakText(text)      — single string, no pause
+   speakQuestion(qIdx)  — full sentence; fill-type splits at blanks
+                          with 500ms silence at each gap
+   ════════════════════════════════════════ */
+function speakText(text) {
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  var utt  = new SpeechSynthesisUtterance(String(text).trim());
+  utt.lang = 'zh-TW';
+  utt.rate = 0.82;
+  window.speechSynthesis.speak(utt);
+}
+
+function speakQuestion(qIdx) {
+  if (!window.speechSynthesis) { showToast('此裝置不支援朗讀功能'); return; }
+  window.speechSynthesis.cancel();
+  var q    = quizData[qIdx];
+  var text = q.question;
+  /* 詞語填空：有填入答案時，把空格替換成答案後整句朗讀 */
+  if (q.type === '詞語填空' && blanks[qIdx]) {
+    _speak(text.replace(/[（(][^）)]*[）)]/, blanks[qIdx]), null);
+    return;
+  }
+  var parts = text.split(/[（(][^）)]*[）)]/);   /* split at blank markers（全形或半形括號） */
+  parts.length === 1 ? _speak(text, null) : _speakParts(parts, 0);
+}
+
+function _speak(text, onEnd) {
+  var utt  = new SpeechSynthesisUtterance(text.trim());
+  utt.lang = 'zh-TW';
+  utt.rate = 0.82;
+  if (onEnd) utt.onend = onEnd;
+  window.speechSynthesis.speak(utt);
+}
+
+function _speakParts(parts, idx) {
+  if (idx >= parts.length) return;
+  var part   = parts[idx].trim();
+  var isLast = idx === parts.length - 1;
+  var next   = function() {
+    if (!isLast) setTimeout(function(){ _speakParts(parts, idx + 1); }, 500);
+  };
+  part ? _speak(part, next) : next();
+}
+
+/* ════════════ Init ════════════ */
+window.addEventListener('load', function() {
+  try { student = JSON.parse(sessionStorage.getItem('hub_student')); } catch(e) {}
+
+  if (!student) {
+    document.getElementById('loading-msg').innerHTML =
+      '請從「上學趣」主頁的測驗區進入。<br>' +
+      '<button class="btn-quiz-back" style="margin-top:16px" onclick="returnToHub()">← 返回</button>';
+    return;
+  }
+
+  var name = student.nickname || student.name;
+  document.getElementById('topbar-title').textContent = name + ' 的語文練習';
+  document.getElementById('sheet-meta').textContent   = '作答者：' + name;
+
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+    db = firebase.firestore();
+  } catch(e) { db = null; }
+
+  loadQuestions();
+  document.addEventListener('pointerdown', onDelegatedPointerDown);
+});
+
+/* ════════════ Question loading ════════════ */
+function loadQuestions() {
+  var settings;
+  try { settings = JSON.parse(sessionStorage.getItem('quiz_settings')); } catch(e) {}
+
+  if (!settings || !settings.grade || !settings.lesson) {
+    currentSession = null;
+    startQuiz(FALLBACK, null);
+    return;
+  }
+
+  /* 儲存 session 資訊，供 saveScore() 寫入 quizResults */
+  currentSession = {
+    sessionId:   settings.sessionId   || '',
+    sessionCode: settings.sessionCode || '',
+    sessionName: settings.sessionName || '',
+    teacherUid:  settings.teacherUid  || ''
+  };
+
+  /* ── 固定題組（隨機出題已鎖定 / 自選測驗）：依指定 ID 直接讀取題目 ── */
+  if (settings.questionIds && settings.questionIds.length) {
+    if (!db) { startQuiz(FALLBACK, null); return; }
+    Promise.all(settings.questionIds.map(function(id) {
+      return db.collection('questions').doc(id).get();
+    }))
+    .then(function(docs) {
+      var questions = [];
+      docs.forEach(function(doc) {
+        if (!doc.exists) return;
+        var d = doc.data();
+        if (d.type && d.question && d.answer) {
+          questions.push({ type: d.type, question: d.question, answer: d.answer,
+                           options: d.options || [], grade: d.grade, lesson: d.lesson });
+        }
+      });
+      startQuiz(questions.length ? questions : FALLBACK,
+                questions.length ? settings  : null);
+    })
+    .catch(function() { startQuiz(FALLBACK, null); });
+    return;
+  }
+
+  if (!db) { startQuiz(FALLBACK, null); return; }
+
+  var grade      = settings.grade;
+  var lesson     = settings.lesson;
+  var teacherUid = settings.teacherUid || '';
+
+  /* Two queries: teacher's own bank + shared bank.
+     Each uses (teacherUid, grade) which maps to the composite index.
+     Lesson is filtered client-side to avoid a third index field. */
+  var queries = [
+    db.collection('questions').where('teacherUid', '==', 'shared').where('grade', '==', grade).get()
+  ];
+  if (teacherUid && teacherUid !== 'shared') {
+    queries.push(
+      db.collection('questions').where('teacherUid', '==', teacherUid).where('grade', '==', grade).get()
+    );
+  }
+
+  Promise.all(queries)
+    .then(function(results) {
+      var seen = {};
+      var all  = [];
+      results.forEach(function(snap) {
+        snap.docs.forEach(function(d) {
+          if (seen[d.id]) return;
+          seen[d.id] = true;
+          var v = d.data();
+          if (v.type && v.question && v.answer && v.lesson === lesson) {
+            all.push({ type: v.type, question: v.question, answer: v.answer,
+                       options: v.options || [], grade: v.grade, lesson: v.lesson });
+          }
+        });
+      });
+
+      if (!all.length) { startQuiz(FALLBACK, null); return; }
+
+      var sampled = [];
+      TYPE_ORDER.forEach(function(type) {
+        var n = ((settings.counts || {})[type]) || 0;
+        if (!n) return;
+        var pool = shuffle(all.filter(function(q){ return q.type === type; }));
+        sampled = sampled.concat(pool.slice(0, n));
+      });
+
+      startQuiz(sampled.length ? sampled : FALLBACK,
+                sampled.length ? settings : null);
+    })
+    .catch(function() { startQuiz(FALLBACK, null); });
+}
+
+/* ════════════════════════════════════════
+   MC normalisation
+   Old Firestore docs store options as ['A. text', ...] and answer as 'A'.
+   New docs store options as plain text and answer as the correct option text.
+   _normMCQuestion converts old → new so the renderer only needs one path.
+   ════════════════════════════════════════ */
+function _normMCQuestion(q) {
+  if (q.type !== '選擇題') return q;
+  var opts = (q.options || []).slice();
+  var ans  = String(q.answer || '');
+  /* Detect old format: answer is a single letter AND options start with 'A.'/'B.'/'C.' */
+  var isOld = /^[A-C]$/i.test(ans) && opts.length > 0 && /^[A-C][.．、]/.test(opts[0] || '');
+  if (!isOld) return q;
+  var clean  = opts.map(function(o) { return o.replace(/^[A-C][.．、]\s*/, '').trim(); });
+  var ansIdx = ans.toUpperCase().charCodeAt(0) - 65;
+  return { type: q.type, question: q.question, answer: clean[ansIdx] || ans,
+           options: clean, grade: q.grade, lesson: q.lesson };
+}
+
+function startQuiz(qs, settings) {
+  quizData        = qs.map(_normMCQuestion);
+  blanks          = {};
+  mcAnswers       = {};
+  graded          = false;
+  pendingDrag     = null;
+  currentSettings = settings || null;
+  if (_countUpRAF) { cancelAnimationFrame(_countUpRAF); _countUpRAF = null; }
+
+  /* Update lesson info in sheet header */
+  var lessonEl = document.getElementById('sheet-lesson');
+  if (lessonEl) {
+    if (settings && settings.grade && settings.lesson) {
+      var label = settings.grade + '　第' + settings.lesson + '課';
+      if (settings.lessonName && settings.lessonName !== settings.lesson)
+        label += '　' + settings.lessonName;
+      lessonEl.textContent = label;
+    } else {
+      lessonEl.textContent = '';
+    }
+  }
+
+  ['fill', 'explain'].forEach(function(pk) {
+    var typeKey = pk === 'fill' ? '詞語填空' : '詞語解釋';
+    poolOrder[pk] = shuffle(
+      quizData.filter(function(q){ return q.type === typeKey; })
+              .map(function(q){ return q.answer; })
+    );
+  });
+
+  document.getElementById('loading-msg').style.display = 'none';
+  document.getElementById('result-screen').classList.remove('show');
+  document.getElementById('btn-submit').disabled = false;
+  document.getElementById('quiz-screen').style.display = '';
+
+  renderSections();
+  renderAll();
+}
+
+/* ════════════ Rendering — sections ════════════ */
+function renderSections() {
+  var html = '';
+  var sn   = 0;
+
+  TYPE_ORDER.forEach(function(type) {
+    var qs = quizData.filter(function(q){ return q.type === type; });
+    if (!qs.length) return;
+    var pk = POOL_KEY[type];
+
+    html += '<div class="q-section">' +
+      '<div class="section-header">' +
+        '<span class="section-num">'  + SECTION_NUMS[sn] + '、</span>' +
+        '<span class="section-type">' + escHtml(type)    + '</span>' +
+      '</div>';
+
+    if (pk) {
+      html += '<div class="pool-area">' +
+        '<div class="pool-label">答案池　請將詞卡拖曳至各題空格中</div>' +
+        '<div class="pool-words" id="pool-' + pk + '"></div>' +
+      '</div>';
+    }
+
+    html += '<div class="q-list">';
+    qs.forEach(function(q, j) { html += renderQuestion(q, quizData.indexOf(q), j + 1); });
+    html += '</div></div>';
+    sn++;
+  });
+
+  document.getElementById('sections-container').innerHTML = html;
+}
+
+function renderQuestion(q, qIdx, num) {
+  if (q.type === '選擇題')  return renderMC(q, qIdx, num);
+  if (q.type === '詞語填空') return renderFill(q, qIdx, num);
+  return renderExplain(q, qIdx, num);
+}
+
+/* Click anywhere on the question text → speaks the full sentence */
+function renderFill(q, qIdx, num) {
+  var blankSpan = '<span class="q-blank blank-placeholder" id="blank-' + qIdx +
+    '" data-qidx="' + qIdx + '"></span>';
+  var textHtml = escHtml(q.question).replace(/[（(][^）)]*[）)]/, blankSpan);
+  return '<div class="q-row" id="qr-' + qIdx + '">' +
+    '<span class="q-num">' + num + '.</span>' +
+    '<div class="q-text-wrap q-speakable" onclick="speakQuestion(' + qIdx + ')">' +
+      textHtml +
+    '</div>' +
+  '</div>';
+}
+
+function renderExplain(q, qIdx, num) {
+  return '<div class="q-row" id="qr-' + qIdx + '">' +
+    '<span class="q-num">' + num + '.</span>' +
+    '<div class="q-text-wrap q-speakable" onclick="speakQuestion(' + qIdx + ')">' +
+      '<span class="q-def-text">' + escHtml(q.question) + '</span>' +
+      '<span class="q-blank blank-placeholder" id="blank-' + qIdx +
+        '" data-qidx="' + qIdx + '"></span>' +
+    '</div>' +
+  '</div>';
+}
+
+/* Click question text → speaks question; click option → selects + speaks option text only */
+function renderMC(q, qIdx, num) {
+  var LABELS  = ['A', 'B', 'C', 'D'];  /* positions after shuffle */
+  var shuffled = shuffle((q.options || []).slice());
+  var opts = shuffled.map(function(text, pos) {
+    var label = LABELS[pos] || String(pos + 1);
+    return '<button class="opt-btn" id="opt-' + qIdx + '-' + label + '"' +
+      ' data-opt-text="' + escHtml(text) + '"' +
+      ' onclick="selectOption(' + qIdx + ',\'' + escJs(text) + '\')">' +
+      escHtml(label + '. ' + text) +
+      '</button>';
+  }).join('');
+  return '<div class="q-block" id="qb-' + qIdx + '">' +
+    '<div class="q-header">' +
+      '<div class="q-num">' + num + '</div>' +
+      '<div class="q-result-icon" id="icon-' + qIdx + '"></div>' +
+    '</div>' +
+    '<div class="q-text q-speakable" onclick="speakQuestion(' + qIdx + ')">' +
+      escHtml(q.question) +
+    '</div>' +
+    '<div class="q-options">' + opts + '</div>' +
+    '<div class="q-answer-hint" id="hint-' + qIdx + '"></div>' +
+  '</div>';
+}
+
+/* ════════════ Live rendering ════════════ */
+function renderAll() {
+  if (graded) return;
+  renderPools();
+  renderBlanks();
+}
+
+function renderPools() {
+  ['fill', 'explain'].forEach(function(pk) {
+    var el = document.getElementById('pool-' + pk);
+    if (!el) return;
+    var typeKey = pk === 'fill' ? '詞語填空' : '詞語解釋';
+    var placed  = {};
+    quizData.forEach(function(q, i) {
+      if (q.type === typeKey && blanks[i]) placed[blanks[i]] = true;
+    });
+    var fromPool = (dragging && dragging.poolKey === pk && dragging.fromQIdx === null)
+      ? dragging.word : null;
+    var visible = (poolOrder[pk] || []).filter(function(w) {
+      return !placed[w] && w !== fromPool;
+    });
+    el.innerHTML = visible.length
+      ? visible.map(function(w) {
+          return '<div class="pool-word" data-word="' + escHtml(w) +
+            '" data-pool="' + pk + '">' + escHtml(w) + '</div>';
+        }).join('')
+      : '<span class="pool-empty">（詞卡已全部填入）</span>';
+  });
+}
+
+function renderBlanks() {
+  quizData.forEach(function(q, i) {
+    if (q.type === '選擇題') return;
+    var el = document.getElementById('blank-' + i);
+    if (!el) return;
+    var isDraggingFrom = dragging && dragging.fromQIdx === i;
+    var word = isDraggingFrom ? null : blanks[i];
+    if (word) {
+      el.innerHTML = escHtml(word) +
+        '<button class="blank-remove" ' +
+          'onpointerdown="event.stopPropagation()" ' +
+          'onclick="event.stopPropagation();removeBlankWord(' + i + ')" ' +
+          'title="移除">×</button>';
+      el.classList.add('filled');
+      el.classList.remove('blank-placeholder', 'drag-over');
+    } else {
+      el.innerHTML = '';
+      el.classList.remove('filled', 'drag-over');
+      el.classList.add('blank-placeholder');
+    }
+  });
+}
+
+/* ════════════ Remove word from blank ════════════ */
+function removeBlankWord(qIdx) {
+  if (graded) return;
+  blanks[qIdx] = undefined;
+  renderAll();
+}
+
+/* ════════════ MC interaction ════════════
+   Clicking an option: selects it + speaks its text.
+   Works even after grading (speaks, but doesn't change selection).
+   ════════════════════════════════════════ */
+function selectOption(qIdx, text) {
+  /* Speak only the option text — no label prefix */
+  speakText(text);
+  if (graded) return;
+  /* Toggle selected class: mark only the button whose data-opt-text matches */
+  document.querySelectorAll('#qb-' + qIdx + ' .opt-btn').forEach(function(b) {
+    b.classList.toggle('selected', b.dataset.optText === text);
+  });
+  mcAnswers[qIdx] = text;
+}
+
+/* ════════════════════════════════════════
+   Pointer interaction — tap vs drag
+   ════════════════════════════════════════
+   Pool words and filled blanks use a movement threshold:
+   • Small movement (< DRAG_THOLD px) → tap → speakText(word)
+   • Large movement (≥ DRAG_THOLD px) → drag → startDrag()
+
+   Question text areas use plain onclick (no conflict because
+   e.preventDefault() on the blank/pool pointerdown suppresses
+   the synthetic click event on ancestor elements).
+   ════════════════════════════════════════ */
+function onDelegatedPointerDown(e) {
+  if (dragging) return;
+
+  /* Pool word */
+  var card = e.target.closest('.pool-word');
+  if (card) {
+    e.preventDefault(); /* suppress click on ancestors */
+    pendingDrag = { word: card.dataset.word, poolKey: card.dataset.pool, fromQIdx: null,
+                    sx: e.clientX, sy: e.clientY };
+    _addPendingListeners();
+    return;
+  }
+
+  /* Filled blank (drag or tap to hear) */
+  var blank = e.target.closest('.q-blank');
+  if (blank && blank.classList.contains('filled') && !graded) {
+    var qIdx = parseInt(blank.dataset.qidx);
+    var word = blanks[qIdx];
+    if (!word) return;
+    e.preventDefault();
+    pendingDrag = { word: word, poolKey: POOL_KEY[quizData[qIdx].type], fromQIdx: qIdx,
+                    sx: e.clientX, sy: e.clientY };
+    _addPendingListeners();
+  }
+}
+
+function _addPendingListeners() {
+  document.addEventListener('pointermove',   _onPendingMove,   { passive: false });
+  document.addEventListener('pointerup',     _onPendingUp);
+  document.addEventListener('pointercancel', _onPendingCancel);
+}
+
+function _removePendingListeners() {
+  document.removeEventListener('pointermove',   _onPendingMove);
+  document.removeEventListener('pointerup',     _onPendingUp);
+  document.removeEventListener('pointercancel', _onPendingCancel);
+}
+
+function _onPendingMove(e) {
+  if (!pendingDrag) return;
+  e.preventDefault();
+  var dx = e.clientX - pendingDrag.sx;
+  var dy = e.clientY - pendingDrag.sy;
+  if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THOLD) {
+    var p = pendingDrag;
+    pendingDrag = null;
+    _removePendingListeners();
+    startDrag(e, p.word, p.poolKey, p.fromQIdx);
+  }
+}
+
+function _onPendingUp() {
+  if (!pendingDrag) return;
+  var p = pendingDrag;
+  pendingDrag = null;
+  _removePendingListeners();
+  /* Tap (small movement) → speak the word */
+  speakText(p.word);
+}
+
+function _onPendingCancel() {
+  pendingDrag = null;
+  _removePendingListeners();
+}
+
+/* ════════════ Drag — core ════════════ */
+function startDrag(e, word, poolKey, fromQIdx) {
+  var ghost = document.createElement('div');
+  ghost.className = 'drag-ghost';
+  ghost.textContent = word;
+  document.body.appendChild(ghost);
+  posGhost(ghost, e.clientX, e.clientY);
+
+  _dragY   = e.clientY;
+  dragging = { word: word, poolKey: poolKey, fromQIdx: fromQIdx, ghost: ghost };
+  renderAll();
+
+  document.addEventListener('pointermove',   onDragMove,   { passive: false });
+  document.addEventListener('pointerup',     onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
+  _scrollRAF = requestAnimationFrame(_scrollLoop);
+}
+
+function posGhost(g, x, y) {
+  g.style.left = (x - 32) + 'px';
+  g.style.top  = (y - 38) + 'px';
+}
+
+/* Auto-scroll: runs every animation frame while dragging.
+   Scrolls the page when the ghost is within ZONE px of the viewport edge. */
+function _scrollLoop() {
+  if (!dragging) { _scrollRAF = null; return; }
+  var vh   = window.innerHeight;
+  var ZONE = 80, MAX_SPD = 14;
+  var spd  = 0;
+  if      (_dragY < ZONE)       spd = -Math.ceil(MAX_SPD * (1 - _dragY / ZONE));
+  else if (_dragY > vh - ZONE)  spd =  Math.ceil(MAX_SPD * (1 - (vh - _dragY) / ZONE));
+  if (spd) window.scrollBy(0, spd);
+  _scrollRAF = requestAnimationFrame(_scrollLoop);
+}
+
+function onDragMove(e) {
+  e.preventDefault();
+  if (!dragging) return;
+  _dragY = e.clientY;
+  posGhost(dragging.ghost, e.clientX, e.clientY);
+  document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
+  var target = findDropBlank(e.clientX, e.clientY, dragging);
+  if (target) target.classList.add('drag-over');
+}
+
+function onDragEnd(e) {
+  document.removeEventListener('pointermove',   onDragMove);
+  document.removeEventListener('pointerup',     onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
+  if (_scrollRAF) { cancelAnimationFrame(_scrollRAF); _scrollRAF = null; }
+  if (!dragging) return;
+  var info = dragging;
+  dragging = null;
+  document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
+  info.ghost.remove();
+  var target = findDropBlank(e.clientX, e.clientY, info);
+  target ? doPlace(info.word, info.fromQIdx, parseInt(target.dataset.qidx))
+         : renderAll();
+}
+
+/* ════════════ Drop detection (expanded hit area) ════════════ */
+function findDropBlank(x, y, info) {
+  var best = null, bestDist = Infinity;
+  document.querySelectorAll('.q-blank').forEach(function(el) {
+    var qIdx = parseInt(el.dataset.qidx);
+    var q    = quizData[qIdx];
+    if (!q || POOL_KEY[q.type] !== info.poolKey) return;
+    if (info.fromQIdx === qIdx) return;
+    var r  = el.getBoundingClientRect();
+    if (x < r.left - DROP_TOL || x > r.right  + DROP_TOL ||
+        y < r.top  - DROP_TOL || y > r.bottom + DROP_TOL) return;
+    var dist = Math.sqrt(Math.pow(x - (r.left + r.width/2), 2) +
+                         Math.pow(y - (r.top  + r.height/2), 2));
+    if (dist < bestDist) { bestDist = dist; best = el; }
+  });
+  return best;
+}
+
+/* ════════════ Place word ════════════ */
+function doPlace(word, fromQIdx, toQIdx) {
+  if (fromQIdx !== null) blanks[fromQIdx] = undefined;
+  blanks[toQIdx] = word;
+  renderAll();
+}
+
+/* ════════════ Submit / Grade ════════════ */
+function submitQuiz() {
+  if (graded) return;
+  var unanswered = quizData.filter(function(q, i){ return getAnswer(i) === undefined; }).length;
+  if (unanswered > 0 && !confirm('還有 ' + unanswered + ' 題未作答，確定要送出嗎？')) return;
+
+  graded = true;
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  document.getElementById('btn-submit').disabled = true;
+
+  document.querySelectorAll('.pool-word').forEach(function(el){
+    el.style.pointerEvents = 'none';
+    el.style.cursor        = 'default';
+    el.style.opacity       = '.4';
+  });
+
+  /* Pre-calculate totals so showResult has them ready */
+  var correct = 0, wrongIndices = [];
+  quizData.forEach(function(q, i) {
+    var ua      = getAnswer(i);
+    var isRight = ua !== undefined && ua === q.answer;
+    if (isRight) correct++; else wrongIndices.push(i);
+  });
+
+  /* Staggered per-question reveal: 120 ms between each */
+  var STAGGER = 120;
+  quizData.forEach(function(q, i) {
+    var ua      = getAnswer(i);
+    var isRight = ua !== undefined && ua === q.answer;
+    setTimeout(function() { _applyGradeVisual(q, i, ua, isRight); }, i * STAGGER + 160);
+  });
+
+  /* Show result after all animations complete */
+  var totalDelay = quizData.length * STAGGER + 480;
+  var snapCorrect = correct, snapWrong = wrongIndices.slice();
+  setTimeout(function() {
+    if (!graded) return; /* guard: user retried before animation completed */
+    saveScore(Math.round((snapCorrect / quizData.length) * 100), snapCorrect, quizData.length);
+    showResult(snapCorrect, quizData.length, snapWrong);
+  }, totalDelay);
+}
+
+function _applyGradeVisual(q, i, ua, isRight) {
+  if (!graded) return; /* guard: quiz was reset before this callback fired */
+  if (q.type === '選擇題') {
+    var block = document.getElementById('qb-' + i);
+    var icon  = document.getElementById('icon-' + i);
+    if (block) block.classList.add(isRight ? 'graded-correct' : 'graded-wrong');
+    if (icon)  icon.textContent = isRight ? '✓' : '✗';
+    /* Match buttons by data-opt-text (position-independent) */
+    document.querySelectorAll('#qb-' + i + ' .opt-btn').forEach(function(btn) {
+      btn.disabled = true;
+      if (btn.dataset.optText === q.answer)          btn.classList.add('correct');
+      else if (btn.dataset.optText === ua && !isRight) btn.classList.add('wrong');
+    });
+    if (!isRight) {
+      var hint = document.getElementById('hint-' + i);
+      if (hint) hint.textContent = '正確答案：' + q.answer;
+    }
+  } else {
+    var row     = document.getElementById('qr-' + i);
+    var blankEl = document.getElementById('blank-' + i);
+    if (row) row.classList.add(isRight ? 'graded-correct' : 'graded-wrong');
+    if (blankEl) {
+      blankEl.innerHTML = ua ? escHtml(ua) : '';
+      if (ua) { blankEl.classList.add('filled'); blankEl.classList.remove('blank-placeholder'); }
+    }
+  }
+}
+
+/* ════════════ Score count-up ════════════ */
+function _countUp(el, target, duration) {
+  if (_countUpRAF) { cancelAnimationFrame(_countUpRAF); _countUpRAF = null; }
+  var start = null;
+  function step(ts) {
+    if (!start) start = ts;
+    var t = Math.min((ts - start) / duration, 1);
+    var eased = 1 - Math.pow(1 - t, 3); /* ease-out cubic */
+    el.textContent = Math.round(eased * target);
+    if (t < 1) _countUpRAF = requestAnimationFrame(step);
+    else _countUpRAF = null;
+  }
+  _countUpRAF = requestAnimationFrame(step);
+}
+
+/* ════════════ Result screen ════════════ */
+function showResult(correct, total, wrongIndices) {
+  var score = Math.round((correct / total) * 100);
+  document.getElementById('quiz-screen').style.display = 'none';
+  document.getElementById('result-screen').classList.add('show');
+  var scoreEl = document.getElementById('result-score');
+  scoreEl.textContent = '0';
+  _countUp(scoreEl, score, 900);
+  document.getElementById('result-title').textContent =
+    score >= 90 ? '太厲害了！🎉' : score >= 70 ? '做得很好！👍' :
+    score >= 50 ? '繼續加油！💪' : '多多練習吧！📖';
+  document.getElementById('result-sub').textContent =
+    '共答對 ' + correct + ' 題，答錯 ' + (total - correct) + ' 題';
+  document.getElementById('review-container').innerHTML =
+    wrongIndices.length ? buildReviewHtml(wrongIndices) : '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildReviewHtml(wrongIndices) {
+  return '<div class="review-section">' +
+    '<div class="review-header">錯誤題目解析</div>' +
+    wrongIndices.map(function(i) {
+      var q      = quizData[i];
+      var ua     = getAnswer(i);
+      var before = quizData.slice(0, i).filter(function(qq){ return qq.type === q.type; }).length;
+      var label  = q.type + '　第 ' + (before + 1) + ' 題';
+      var ansHtml;
+      if (q.type === '選擇題') {
+        var co = q.answer;           /* correct option plain text */
+        var uo = ua || '未作答';     /* selected option plain text */
+        ansHtml = '<div class="review-answers">' +
+          '<span class="review-wrong-ans">'   + escHtml(uo) + '</span>' +
+          '<span class="review-arrow">→</span>' +
+          '<span class="review-correct-ans q-speakable" onclick="speakText(\'' + escJs(co) + '\')">' + escHtml(co) + '</span></div>';
+      } else {
+        /* 詞語填空：唸完整句（答案嵌入空格）；詞語解釋：唸答案本身 */
+        var fullSentence = q.type === '詞語填空'
+          ? q.question.replace(/[（(][^）)]*[）)]/, q.answer)
+          : q.answer;
+        ansHtml = '<div class="review-answers">' +
+          '<span class="review-wrong-ans">你填：'  + escHtml(ua || '未作答') + '</span>' +
+          '<span class="review-arrow">→</span>' +
+          '<span class="review-correct-ans q-speakable" onclick="speakText(\'' + escJs(fullSentence) + '\')" title="點擊聆聽">正確：' + escHtml(q.answer) + '</span></div>';
+      }
+      return '<div class="review-item">' +
+        '<div class="review-item-label">' + escHtml(label)       + '</div>' +
+        '<div class="review-item-q q-speakable" onclick="speakText(\'' +
+          escJs(q.question) + '\')">'     + escHtml(q.question)  + '</div>' +
+        ansHtml + '</div>';
+    }).join('') +
+  '</div>';
+}
+
+/* ════════════ Save to Firestore ════════════ */
+function saveScore(score, correct, total) {
+  if (!db || !student) return;
+  var now   = new Date().toISOString();
+  var grade  = (quizData[0] && quizData[0].grade)  || '練習卷';
+  var lesson = (quizData[0] && quizData[0].lesson) || '';
+
+  /* 原有：個人活動紀錄 */
+  db.collection('students').doc(student.id).collection('activities').add({
+    app: 'chinese-quiz', score: score, correct: correct, total: total,
+    grade: grade, lesson: lesson, timestamp: now
+  }).catch(function(){});
+
+  /* 新增：跨學生可查詢的測驗結果（教師看最高分、學生看歷史） */
+  if (currentSession && currentSession.sessionId) {
+    db.collection('quizResults').add({
+      sessionId:   currentSession.sessionId,
+      sessionCode: currentSession.sessionCode,
+      sessionName: currentSession.sessionName,
+      teacherUid:  currentSession.teacherUid,
+      studentId:   student.id,
+      studentName: student.nickname || student.name || '',
+      score:       score,
+      correct:     correct,
+      total:       total,
+      grade:       grade,
+      lesson:      lesson,
+      lessonName:  (currentSettings && currentSettings.lessonName) || '',
+      timestamp:   now
+    }).catch(function(){});
+  }
+}
+
+/* ════════════ Retry ════════════ */
+function retryQuiz() {
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  loadQuestions(); /* re-reads quiz_settings → fresh random sample from same lesson */
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

@@ -6,10 +6,29 @@
 
 var currentTeacher = null; // Firebase Auth User 物件
 
+/* ── 暗色模式 ── */
+(function() {
+  if (localStorage.getItem('admin-dark') === '1') {
+    document.body.classList.add('dark');
+  }
+})();
+
+function toggleDarkMode() {
+  var isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('admin-dark', isDark ? '1' : '0');
+  var btn = document.getElementById('dark-mode-btn');
+  if (btn) btn.textContent = isDark ? '☀️ 亮色模式' : '🌙 暗色模式';
+  var frame = document.getElementById('tool-modal-frame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'admin-dark', dark: isDark }, '*');
+  }
+}
+
 /* ── 子 APP 登錄表（新增 APP 時只需在此加一筆）── */
 var APP_REGISTRY = [
-  { id: 'chinese',  label: '識字趣', icon: '📖', color: 'var(--blue)',  progress: 'hanzi'    },
-  { id: 'multiply', label: '乘法趣', icon: '✖️',  color: 'var(--green)', progress: 'multiply' }
+  { id: 'chinese',      label: '識字趣', icon: '📖', color: 'var(--blue)',   progress: 'hanzi'    },
+  { id: 'multiply',     label: '乘法趣', icon: '✖️',  color: 'var(--green)',  progress: 'multiply' },
+  { id: 'chinese-quiz', label: '語文練習', icon: '📝', color: 'var(--orange)', progress: null       }
 ];
 
 function onFirebaseReady() {
@@ -17,6 +36,9 @@ function onFirebaseReady() {
 }
 
 window.addEventListener('load', function() {
+  var btn = document.getElementById('dark-mode-btn');
+  if (btn && document.body.classList.contains('dark')) btn.textContent = '☀️ 亮色模式';
+
   initFirebase();
 
   // 等 auth 初始化後，監聽登入狀態
@@ -71,10 +93,30 @@ function doLogout() {
 }
 
 function switchTab(tab) {
-  ['classes'].forEach(function(t) {
+  if (document.getElementById('tool-modal').style.display === 'flex') closeToolModal();
+  ['classes', 'quiz', 'tools'].forEach(function(t) {
     document.getElementById('panel-'+t).style.display = t===tab ? '' : 'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
   });
   document.getElementById('panel-student').style.display = 'none';
   if (tab === 'classes') { backToClasses(); loadClasses(); }
+  if (tab === 'quiz')    { loadQuizBankStats(); loadQuizSessions(); }
+}
+
+/* ── 題庫年級組合 ── */
+function updateQbGrade() {
+  var v = document.getElementById('qb-version').value;
+  var s = document.getElementById('qb-volume').value;
+  document.getElementById('qb-grade').value = (v && s) ? v + s : '';
+}
+
+/* ── 語文練習內子頁籤 ── */
+function switchQuizTab(subId, btn) {
+  ['bank', 'sessions'].forEach(function(id) {
+    var el = document.getElementById('qpanel-' + id);
+    if (el) el.style.display = id === subId ? '' : 'none';
+  });
+  var tabs = document.querySelectorAll('#panel-quiz .app-tab-mini');
+  tabs.forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
 }

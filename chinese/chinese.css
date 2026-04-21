@@ -353,6 +353,7 @@
 .curr-back-btn:active { transform: scale(.95); }
 .curr-loading { text-align: center; color: var(--muted); font-size: .9rem; padding: 32px 0; }
 .curr-loading-inline { font-size: .75rem; color: var(--muted); }
+.btn-retry-curr { display: block; margin: 8px auto 0; padding: 8px 20px; border-radius: 10px; border: none; background: var(--blue); color: #fff; font-size: .9rem; font-family: inherit; cursor: pointer; }
 
 /* 版本卡片 */
 .curr-ver-cards { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }

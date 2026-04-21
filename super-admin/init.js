@@ -72,3 +72,15 @@ function switchTab(tab) {
   if (tab === 'invites')    loadInvites();
   if (tab === 'settings')   loadSettings();
 }
+
+/* ── 課程管理內 App 子頁籤 ── */
+function switchCurrTab(appId, btn) {
+  ['chinese', 'quiz'].forEach(function(id) {
+    var el = document.getElementById('cpanel-' + id);
+    if (el) el.style.display = id === appId ? '' : 'none';
+  });
+  var tabs = document.querySelectorAll('#panel-curriculum .app-tab-mini');
+  tabs.forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  if (appId === 'quiz') loadQuizBankStats();
+}

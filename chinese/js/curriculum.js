@@ -27,7 +27,7 @@ var CURR_COLORS = [
 function loadCurriculumVersions() {
   if (!db) { setTimeout(loadCurriculumVersions, 300); return; }
   var container = document.getElementById('version-cards');
-  if (!container) return;
+  if (!container) { setTimeout(loadCurriculumVersions, 300); return; }
 
   db.collection('curriculum').get().then(function(snap) {
     container.innerHTML = '';
@@ -80,7 +80,9 @@ function loadCurriculumVersions() {
   }).catch(function(e) {
     console.warn('loadCurriculumVersions error:', e);
     var container = document.getElementById('version-cards');
-    if (container) container.innerHTML = '<div class="curr-loading">載入失敗，請重新整理</div>';
+    if (container) container.innerHTML =
+      '<div class="curr-loading">載入失敗</div>' +
+      '<button class="btn-retry-curr" onclick="loadCurriculumVersions()">🔄 重試</button>';
   });
 }
 
@@ -255,6 +257,8 @@ function startCurriculumLesson() {
     '・第 ' + (lesson.lessonNum || '') + ' 課　' + (lesson.name || '');
   chars = lesson.chars.slice();
   chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
+  // 背景預載萌典資料，讓 speakChar 能以造詞語境正確發破音字
+  if (typeof preloadCharInfoAll === 'function') preloadCharInfoAll(chars);
   renderMenu();
   showPage('menu');
   updateTopbarBreadcrumb(4); // 進入生字列表後，麵包屑可點選返回課次
@@ -285,6 +289,7 @@ function startAssignedLesson() {
   currentLessonLabel = '老師指派';
   chars = teacherAssignedChars.slice();
   chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
+  if (typeof preloadCharInfoAll === 'function') preloadCharInfoAll(chars);
   renderMenu();
   showPage('menu');
 }
@@ -370,6 +375,7 @@ function startCustomLesson() {
   currentLessonLabel = '自行輸入';
   chars = unique;
   chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
+  if (typeof preloadCharInfoAll === 'function') preloadCharInfoAll(chars);
   renderMenu();
   showPage('menu');
 }

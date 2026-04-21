@@ -8,7 +8,7 @@
 var currentStudent = null;
 
 // ── 練習模式狀態 ──
-var practiceType    = 'choice';  // 'choice' | 'fill' | 'reverse'
+var practiceType    = 'fill';    // 'fill' | 'reverse'
 var practicePool    = [];        // [{a,b}] 本次題目池
 var practiceQ       = null;      // 當前題目 {a, b}
 var practiceStreak  = 0;
@@ -20,7 +20,6 @@ var practiceSelectedA_temp = [];  // 被乘數選擇 [0..10 子集]
 var practiceSelectedB_temp = [];  // 乘數選擇
 
 // ── 測驗模式狀態 ──
-var examType            = 'fill'; // 'fill' | 'reverse'
 var examTimerSec        = 8;      // 每題秒數：5 / 8 / 10
 var examRound           = 1;
 var examPool            = [];     // 本輪待答題目 [{a,b}]
@@ -37,10 +36,13 @@ var examSelectedTables_temp = []; // 設定頁暫存
 var fillInputStr = '';
 
 // ── Firestore 進度（從 progress/multiply 載入） ──
-var masteredFill    = [];  // 已完成填空測驗的乘數 ['0','3','5'...]
-var masteredReverse = [];  // 已完成拆解測驗的乘數
+var masteredFill    = [];  // 已完成填空測驗的乘數（保留供舊資料相容）
+var masteredReverse = [];  // 已完成拆解測驗的乘數（保留供舊資料相容）
+var masteredMixed   = [];  // 已完成混合測驗的乘數 ['0','3','5'...]
 var totalCorrect    = 0;
 var totalAttempts   = 0;
+var maxStreak       = 0;   // 練習模式歷史最高連勝
+var examCompletedCount = 0; // 累計完成測驗次數
 
 // ════════════════════════════════════════
 //  Firestore 寫入
@@ -51,11 +53,14 @@ function saveProgress() {
   db.collection('students').doc(currentStudent.id)
     .collection('progress').doc('multiply')
     .set({
-      masteredFill:    masteredFill,
-      masteredReverse: masteredReverse,
-      totalCorrect:    totalCorrect,
-      totalAttempts:   totalAttempts,
-      lastStudied:     new Date().toISOString()
+      masteredFill:        masteredFill,
+      masteredReverse:     masteredReverse,
+      masteredMixed:       masteredMixed,
+      totalCorrect:        totalCorrect,
+      totalAttempts:       totalAttempts,
+      maxStreak:           maxStreak,
+      examCompletedCount:  examCompletedCount,
+      lastStudied:         new Date().toISOString()
     }, { merge: true })
     .catch(function(e) { console.warn('saveProgress error:', e); });
 }

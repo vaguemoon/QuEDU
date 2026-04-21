@@ -40,6 +40,20 @@ var ACH_DEFS = [
     stars:      [3, 5, 8, 10, 13, 16, 19, 22, 25, 30],
     getValue:   function() { return achStats.totalLoginDays; },
     unit: '天'
+  },
+  {
+    id: 'streak', icon: '🔥', label: '最高連勝',
+    thresholds: [5, 10, 20, 30, 50, 80, 100, 150, 200, 300],
+    stars:      [3,  5,  8, 10, 13, 16,  19,  22,  25,  30],
+    getValue:   function() { return maxStreak; },
+    unit: '連勝'
+  },
+  {
+    id: 'exam', icon: '🎯', label: '測驗完成',
+    thresholds: [1, 3, 5, 10, 15, 20, 30, 50, 75, 100],
+    stars:      [3, 5, 8, 10, 13, 16, 19, 22, 25,  30],
+    getValue:   function() { return examCompletedCount; },
+    unit: '次'
   }
 ];
 
@@ -87,11 +101,9 @@ function recomputeStars() {
     });
   });
 
-  // 乘法表成就星數（fill +5、reverse +5、both +10）
+  // 乘法表成就星數（混合精熟 +10）
   for (var i = 0; i <= 10; i++) {
-    if (achStats.unlockedAchievements['fill_table_'    + i]) total += 5;
-    if (achStats.unlockedAchievements['rev_table_'     + i]) total += 5;
-    if (achStats.unlockedAchievements['both_table_'    + i]) total += 10;
+    if (achStats.unlockedAchievements['mix_table_' + i]) total += 10;
   }
 
   achStats.stars = total;
@@ -153,27 +165,14 @@ function handleDailyLogin() {
 //  成就檢查
 // ════════════════════════════════════════
 
-/** 檢查並解鎖乘法表相關成就（fill / reverse / both） */
+/** 檢查並解鎖乘法表相關成就（混合精熟） */
 function checkTableAchievements() {
   for (var i = 0; i <= 10; i++) {
-    var fillKey = 'fill_table_' + i;
-    var revKey  = 'rev_table_'  + i;
-    var bothKey = 'both_table_' + i;
-
-    var fillDone = masteredFill    && masteredFill.indexOf(String(i))    !== -1;
-    var revDone  = masteredReverse && masteredReverse.indexOf(String(i)) !== -1;
-
-    if (fillDone && !achStats.unlockedAchievements[fillKey]) {
-      achStats.unlockedAchievements[fillKey] = true;
-      showToast('✏️ ' + i + ' 的乘法填空精熟！  +5 ★');
-    }
-    if (revDone && !achStats.unlockedAchievements[revKey]) {
-      achStats.unlockedAchievements[revKey] = true;
-      showToast('🔍 ' + i + ' 的積拆解精熟！  +5 ★');
-    }
-    if (fillDone && revDone && !achStats.unlockedAchievements[bothKey]) {
-      achStats.unlockedAchievements[bothKey] = true;
-      showToast('🏅 ' + i + ' 的乘法完全精熟！  +10 ★');
+    var mixKey  = 'mix_table_' + i;
+    var mixDone = masteredMixed && masteredMixed.indexOf(String(i)) !== -1;
+    if (mixDone && !achStats.unlockedAchievements[mixKey]) {
+      achStats.unlockedAchievements[mixKey] = true;
+      showToast('🏅 ' + i + ' 的混合精熟！  +10 ★');
     }
   }
 }
@@ -274,25 +273,12 @@ function renderAchievementPage() {
   });
   html += '</div>';
 
-  // ── 乘法表成就（線段軌道 × 3 類） ──
+  // ── 乘法表成就（混合精熟） ──
   var tableGroups = [
     {
-      keyPrefix: 'fill_table_', icon: '✏️', label: '精熟乘法填空',
-      starPer: 5,
-      isDone: function(i) { return masteredFill    && masteredFill.indexOf(String(i))    !== -1; }
-    },
-    {
-      keyPrefix: 'rev_table_',  icon: '🔍', label: '精熟積的拆解',
-      starPer: 5,
-      isDone: function(i) { return masteredReverse && masteredReverse.indexOf(String(i)) !== -1; }
-    },
-    {
-      keyPrefix: 'both_table_', icon: '🏅', label: '完全精熟（填空＋拆解）',
+      keyPrefix: 'mix_table_', icon: '🏅', label: '混合精熟',
       starPer: 10,
-      isDone: function(i) {
-        return masteredFill    && masteredFill.indexOf(String(i))    !== -1 &&
-               masteredReverse && masteredReverse.indexOf(String(i)) !== -1;
-      }
+      isDone: function(i) { return masteredMixed && masteredMixed.indexOf(String(i)) !== -1; }
     }
   ];
 

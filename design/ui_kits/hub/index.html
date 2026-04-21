@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>學生 Hub · UI Kit</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="../../../shared/shared.css">
+<link rel="stylesheet" href="../../../src/index.css">
+<style>
+  /* ── Kit 頁面框架 ── */
+  html, body { height: 100%; margin: 0; background: #e2e8f0; }
+  .kit-page {
+    display: flex; gap: 32px; padding: 32px;
+    align-items: flex-start; flex-wrap: wrap;
+    font-family: 'Nunito', 'Noto Sans TC', sans-serif;
+  }
+  .kit-section { display: flex; flex-direction: column; gap: 12px; }
+  .kit-label {
+    font-size: .78rem; font-weight: 900; color: #64748b;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* ── 手機外框 ── */
+  .kit-frame {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 40px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.22), 0 0 0 8px #1e2d3d;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .kit-frame-inner {
+    width: 100%; height: 100%; overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .kit-frame-inner::-webkit-scrollbar { display: none; }
+
+  /* ── 覆寫：讓 panel 在 kit 裡直接可見 ── */
+  .kit-frame .panel { position: static; transform: none; opacity: 1; pointer-events: all; }
+  .kit-frame #panel-hub { background: var(--bg); }
+  .kit-frame #panel-profile { background: var(--bg); }
+</style>
+</head>
+<body data-screen-label="01 Hub — 學生主頁">
+<div class="kit-page">
+
+  <!-- ══ Screen 0: 選擇身分 ══ -->
+  <div class="kit-section">
+    <div class="kit-label">選擇身分（入口頁）</div>
+    <div class="kit-frame">
+      <div class="kit-frame-inner">
+        <div class="panel" style="display:flex;align-items:center;justify-content:center;min-height:100%;padding:24px;background:linear-gradient(160deg,#dbeeff 0%,var(--bg) 60%)">
+          <div class="role-wrap">
+            <div class="role-header">
+              <img src="../../../assets/登入icon.png" class="role-logo-img" alt="上學趣"
+                style="width:220px;height:auto;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto">
+              <div class="role-subtitle">請選擇你的身份</div>
+            </div>
+            <div class="role-cards">
+              <button class="role-card role-teacher">
+                <div class="role-icon">👩‍🏫</div>
+                <div class="role-name">教　師</div>
+                <div class="role-sub">管理課程與班級</div>
+              </button>
+              <button class="role-card role-student">
+                <div class="role-icon">🧒</div>
+                <div class="role-name">學　生</div>
+                <div class="role-sub">開始今天的學習</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Screen 0b: 選擇身分（有公告橫幅）══ -->
+  <div class="kit-section">
+    <div class="kit-label">選擇身分（有公告）</div>
+    <div class="kit-frame">
+      <div class="kit-frame-inner">
+        <div class="panel" style="display:flex;align-items:center;justify-content:center;min-height:100%;padding:24px;background:linear-gradient(160deg,#dbeeff 0%,var(--bg) 60%)">
+          <div class="role-wrap">
+            <div class="role-header">
+              <img src="../../../assets/登入icon.png" alt="上學趣"
+                style="width:220px;height:auto;margin-bottom:10px;display:block;margin-left:auto;margin-right:auto">
+              <div class="role-subtitle">請選擇你的身份</div>
+            </div>
+            <!-- 公告橫幅 -->
+            <div style="display:flex;background:#fffbeb;border:1.5px solid #fbbf24;border-radius:10px;padding:11px 14px;font-size:.88rem;font-weight:700;color:#92400e;gap:8px;align-items:flex-start;width:100%">
+              <span>📢</span>
+              <span>下週三校慶活動，課程暫停一天，請同學留意通知。</span>
+            </div>
+            <div class="role-cards">
+              <button class="role-card role-teacher">
+                <div class="role-icon">👩‍🏫</div>
+                <div class="role-name">教　師</div>
+                <div class="role-sub">管理課程與班級</div>
+              </button>
+              <button class="role-card role-student">
+                <div class="role-icon">🧒</div>
+                <div class="role-name">學　生</div>
+                <div class="role-sub">開始今天的學習</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Screen 1: Hub 主頁 ══ -->
+  <div class="kit-section">
+    <div class="kit-label">Hub 主頁（登入後首頁）</div>
+    <div class="kit-frame">
+      <div class="kit-frame-inner">
+        <div id="panel-hub" class="panel">
+          <div class="hub-body">
+
+            <!-- 個人資料卡 -->
+            <button class="hub-profile-card">
+              <div class="hub-profile-left">
+                <div class="hub-profile-avatar">🐶</div>
+                <div>
+                  <div class="hub-welcome-name">王小明</div>
+                  <div class="hub-welcome-sub">歡迎回來・點此編輯個人資料</div>
+                </div>
+              </div>
+              <span class="hub-profile-arrow">›</span>
+            </button>
+
+            <!-- 學習區 -->
+            <div class="hub-section-label">📚 學習區</div>
+            <div class="subjects-grid" style="grid-template-columns:1fr 1fr">
+
+              <!-- 練字趣 -->
+              <div class="subject-card theme-blue">
+                <span class="subject-icon">國</span>
+                <div class="subject-name">練字趣</div>
+                <div class="subject-desc">國小國字筆順學習</div>
+                <div class="subject-badge green">練字LV3</div>
+              </div>
+
+              <!-- 乘法趣 -->
+              <div class="subject-card theme-orange">
+                <span class="subject-icon">✖️</span>
+                <div class="subject-name">乘法趣</div>
+                <div class="subject-desc">0 到 10 的乘法練習</div>
+                <div class="subject-badge green">乘法LV2</div>
+              </div>
+
+            </div>
+
+            <!-- 測驗區 -->
+            <div id="quiz-section">
+              <div class="hub-section-label">📝 測驗區</div>
+              <div class="subjects-grid" style="grid-template-columns:1fr">
+
+                <!-- 語文練習 -->
+                <div class="subject-card theme-purple">
+                  <span class="subject-icon">📝</span>
+                  <div class="subject-name">語文練習</div>
+                  <div class="subject-desc">詞語填空與選擇題練習</div>
+                  <div class="subject-badge blue">最近 85 分</div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 近期記錄 -->
+            <div class="hub-section-label">📊 近期記錄</div>
+            <div class="activity-card">
+              <div id="activity-list">
+
+                <div class="activity-row">
+                  <div class="activity-icon">國</div>
+                  <div class="activity-info">
+                    <div class="activity-title">練字趣</div>
+                    <div class="activity-sub">通過測驗 42 字</div>
+                  </div>
+                  <div class="activity-score">42 字</div>
+                </div>
+
+                <div class="activity-row">
+                  <div class="activity-icon">✖️</div>
+                  <div class="activity-info">
+                    <div class="activity-title">乘法趣</div>
+                    <div class="activity-sub">累計答對 156 題</div>
+                  </div>
+                  <div class="activity-score">156 題</div>
+                </div>
+
+                <div class="activity-row">
+                  <div class="activity-icon">📝</div>
+                  <div class="activity-info">
+                    <div class="activity-title">語文練習</div>
+                    <div class="activity-sub">已完成 3 次練習</div>
+                  </div>
+                  <div class="activity-score">3 次</div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Screen 2: 個人設定 ══ -->
+  <div class="kit-section">
+    <div class="kit-label">個人設定</div>
+    <div class="kit-frame">
+      <div class="kit-frame-inner">
+        <div id="panel-profile" class="panel">
+
+          <!-- 返回按鈕列 -->
+          <div class="profile-nav-row">
+            <button class="btn-back-role">← 返回</button>
+          </div>
+
+          <!-- Header -->
+          <div class="profile-header">
+            <div class="profile-avatar-big">🐶</div>
+            <div>
+              <div class="profile-header-name">王小明</div>
+              <div class="profile-header-sub">個人設定</div>
+            </div>
+          </div>
+
+          <div class="profile-body">
+
+            <!-- 暱稱 -->
+            <div class="profile-section">
+              <div class="profile-section-title">暱稱</div>
+              <input class="profile-input" type="text" value="小明" placeholder="輸入暱稱（選填）" maxlength="10">
+            </div>
+
+            <!-- 頭像 -->
+            <div class="profile-section">
+              <div class="profile-section-title">頭像</div>
+              <div class="avatar-grid">
+                <button class="avatar-btn">🐣</button>
+                <button class="avatar-btn">🐱</button>
+                <button class="avatar-btn selected">🐶</button>
+                <button class="avatar-btn">🐻</button>
+                <button class="avatar-btn">🐼</button>
+                <button class="avatar-btn">🦊</button>
+                <button class="avatar-btn">🐸</button>
+                <button class="avatar-btn">🐧</button>
+                <button class="avatar-btn">🦁</button>
+                <button class="avatar-btn">🐯</button>
+                <button class="avatar-btn">🐨</button>
+                <button class="avatar-btn">🐮</button>
+                <button class="avatar-btn">🐷</button>
+                <button class="avatar-btn">🐙</button>
+                <button class="avatar-btn">🦋</button>
+                <button class="avatar-btn">🌟</button>
+                <button class="avatar-btn">🌈</button>
+                <button class="avatar-btn">🎈</button>
+                <button class="avatar-btn">🚀</button>
+                <button class="avatar-btn">🎯</button>
+              </div>
+            </div>
+
+            <!-- 主題色系 -->
+            <div class="profile-section">
+              <div class="profile-section-title">主題色系</div>
+              <div class="theme-grid">
+                <button class="theme-btn selected" style="background:#eef5fc;color:#2d6fa8">藍天</button>
+                <button class="theme-btn" style="background:#edfbf4;color:#1e8449">森林</button>
+                <button class="theme-btn" style="background:#f3f0fc;color:#6c3483">薰衣草</button>
+                <button class="theme-btn" style="background:#fff8f0;color:#ca6f1e">夕陽</button>
+                <button class="theme-btn" style="background:#f0fafa;color:#0e6655">湖水</button>
+                <button class="theme-btn" style="background:#fff0f8;color:#a0255e">玫瑰</button>
+              </div>
+            </div>
+
+            <!-- 音效 -->
+            <div class="profile-section">
+              <div class="profile-section-title">音效</div>
+              <div class="sound-row">
+                <span style="font-size:.9rem;font-weight:700">練習音效</span>
+                <button class="sound-toggle" style="background:var(--blue)">
+                  <div class="sound-knob" style="left:27px"></div>
+                </button>
+              </div>
+            </div>
+
+            <!-- 班級 -->
+            <div class="profile-section">
+              <div class="profile-section-title">班級</div>
+              <div class="class-joined-row">
+                <div>
+                  <div class="class-joined-name">🏫 三年甲班</div>
+                  <div class="class-joined-code">邀請碼：AB12CD</div>
+                </div>
+                <button class="btn-leave-class">離開班級</button>
+              </div>
+            </div>
+
+            <button class="btn-save-profile">💾 儲存設定</button>
+            <button class="btn-logout">登出</button>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Screen 3: Hub 主頁（新學生，未有紀錄）══ -->
+  <div class="kit-section">
+    <div class="kit-label">Hub 主頁（新學生）</div>
+    <div class="kit-frame">
+      <div class="kit-frame-inner">
+        <div class="panel" style="background:var(--bg)">
+          <div class="hub-body">
+
+            <button class="hub-profile-card">
+              <div class="hub-profile-left">
+                <div class="hub-profile-avatar">🐣</div>
+                <div>
+                  <div class="hub-welcome-name">新同學</div>
+                  <div class="hub-welcome-sub">歡迎回來・點此編輯個人資料</div>
+                </div>
+              </div>
+              <span class="hub-profile-arrow">›</span>
+            </button>
+
+            <div class="hub-section-label">📚 學習區</div>
+            <div class="subjects-grid" style="grid-template-columns:1fr 1fr">
+              <div class="subject-card theme-blue">
+                <span class="subject-icon">國</span>
+                <div class="subject-name">練字趣</div>
+                <div class="subject-desc">國小國字筆順學習</div>
+                <div class="subject-badge green">練字LV1</div>
+              </div>
+              <div class="subject-card theme-orange">
+                <span class="subject-icon">✖️</span>
+                <div class="subject-name">乘法趣</div>
+                <div class="subject-desc">0 到 10 的乘法練習</div>
+                <div class="subject-badge green">乘法LV1</div>
+              </div>
+            </div>
+
+            <div id="quiz-section-2">
+              <div class="hub-section-label">📝 測驗區</div>
+              <div class="subjects-grid" style="grid-template-columns:1fr">
+                <div class="subject-card theme-purple">
+                  <span class="subject-icon">📝</span>
+                  <div class="subject-name">語文練習</div>
+                  <div class="subject-desc">詞語填空與選擇題練習</div>
+                  <div class="subject-badge blue">語文練習</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hub-section-label">📊 近期記錄</div>
+            <div class="activity-card">
+              <div class="activity-empty">還沒有學習記錄，快去練習吧！🚀</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const XLSX = require\\('C:/Users/user/AppData/Roaming/npm/node_modules/xlsx'\\); const wb = XLSX.readFile\\('d:/github/QuEDU/chinese-quiz/題庫上傳範例.xlsx'\\); const ws = wb.Sheets[wb.SheetNames[0]]; const rows = XLSX.utils.sheet_to_json\\(ws, {defval:''}\\); console.log\\('sheets:',wb.SheetNames\\); console.log\\(JSON.stringify\\(rows,null,2\\)\\);\")",
+      "Bash(xargs ls *)",
+      "Bash(firebase --version)",
+      "Bash(python -c ' *)",
+      "Bash(awk '{print $1}')",
+      "Bash(ls -la /d/github/QuEDU/chinese-quiz/*.html)",
+      "Bash(xargs grep *)",
+      "Bash(find /d/github/QuEDU -type f \\\\\\( -name \"*.js\" -o -name \"*.html\" \\\\\\) -exec grep -l \"deleteQuizSession\\\\|sharedQuizSessions.*delete\\\\|cascade\" {} \\\\;)"
+    ]
+  }
+}

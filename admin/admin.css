@@ -29,44 +29,61 @@ body {
 }
 
 /* ══ 後台主畫面 ══ */
-#admin-screen { display:block; min-height:100vh; }
+#admin-screen { display:flex; min-height:100vh; }
 
-/* 頂部導覽列 */
-.admin-topbar {
-  background:white; border-bottom:1px solid var(--border);
-  padding:0 24px; height:60px;
-  display:flex; align-items:center; justify-content:space-between;
-  position:sticky; top:0; z-index:100;
-  box-shadow:var(--shadow);
+/* ══ 側邊欄 ══ */
+.admin-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: white;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+  z-index: 100;
 }
-.topbar-brand { display:flex; align-items:center; gap:10px; }
-.topbar-brand-icon { font-size:1.4rem; }
-.topbar-brand-name { font-size:1rem; font-weight:900; color:var(--blue-dk); }
-.topbar-brand-sub  { font-size:.72rem; color:var(--muted); font-weight:600; }
-.topbar-right { display:flex; align-items:center; gap:10px; }
+.sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 28px; padding: 0 6px;
+}
+.sidebar-brand-icon { font-size: 1.5rem; }
+.sidebar-brand-name { font-size: 1rem; font-weight: 900; color: var(--blue-dk); line-height: 1; }
+.sidebar-brand-sub  { font-size: .7rem; color: var(--muted); font-weight: 700; margin-top: 2px; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.sidebar-footer { padding-top: 14px; border-top: 1px solid var(--border); }
+.sidebar-user-info {
+  background: var(--gray-lt); border-radius: 12px;
+  padding: 10px 12px; margin-bottom: 10px;
+}
+.sidebar-user-label  { font-size: .72rem; color: var(--muted); font-weight: 700; margin-bottom: 3px; }
+.sidebar-user-email  { font-size: .82rem; font-weight: 800; color: var(--blue-dk); word-break: break-all; }
+.sidebar-last-update { font-size: .7rem; font-weight: 600; color: var(--muted); margin-top: 2px; }
 .btn-logout {
-  padding:7px 14px; border:1.5px solid var(--border); border-radius:8px;
-  background:white; font-size:.82rem; font-weight:700; cursor:pointer;
-  color:var(--gray); font-family:inherit; transition:all .15s;
+  width: 100%; padding: 10px; border: none; border-radius: 10px;
+  background: #fff0f0; color: var(--red); font-family: inherit;
+  font-weight: 800; cursor: pointer; font-size: .85rem; transition: all .15s;
 }
-.btn-logout:hover { border-color:var(--red); color:var(--red); }
+.btn-logout:hover { background: #fee2e2; }
 
 /* 主內容區 */
-.admin-main { padding:24px; max-width:1100px; margin:0 auto; }
+.admin-content { flex: 1; overflow-y: auto; background: #f1f5f9; min-height: 100vh; }
+.admin-main { padding: 24px; max-width: 1100px; margin: 0 auto; }
 
-/* 分頁 Tab */
-.admin-tabs {
-  display:flex; gap:4px; background:white; padding:4px;
-  border-radius:12px; border:1px solid var(--border);
-  margin-bottom:20px; width:fit-content;
-}
+/* Sidebar 分頁按鈕 */
 .admin-tab {
-  padding:9px 20px; border-radius:9px; border:none;
-  font-family:inherit; font-size:.88rem; font-weight:800;
-  cursor:pointer; transition:all .15s; color:var(--gray);
-  background:transparent;
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border: none; border-radius: 12px;
+  background: transparent; color: var(--text);
+  font-family: inherit; font-weight: 800; font-size: .92rem;
+  cursor: pointer; transition: all .15s; text-align: left; width: 100%;
 }
-.admin-tab.active { background:var(--blue); color:white; }
+.admin-tab:hover { background: var(--gray-lt); }
+.admin-tab.active { background: var(--blue-lt); color: var(--blue-dk); }
 
 /* 卡片 */
 .card {
@@ -499,27 +516,153 @@ body {
 .loading-wrap { padding:40px; text-align:center; color:var(--muted); font-weight:700; }
 
 /* ══════════════════════════════════════
+   暗色模式切換按鈕
+   ══════════════════════════════════════ */
+.btn-dark-toggle {
+  width: 100%; padding: 8px 10px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  background: var(--gray-lt); color: var(--text);
+  font-family: inherit; font-weight: 800; font-size: .82rem;
+  cursor: pointer; transition: all .15s; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-dark-toggle:hover { background: var(--border); }
+
+/* ══════════════════════════════════════
+   暗色模式 (body.dark) — 純深灰系
+   ══════════════════════════════════════ */
+body.dark {
+  --blue:      #58a6ff;
+  --blue-lt:   #1c2d3f;
+  --blue-dk:   #79c0ff;
+  --green:     #3fb950;
+  --green-lt:  #0f2a1a;
+  --yellow:    #d29922;
+  --yel-lt:    #272012;
+  --red:       #f85149;
+  --red-lt:    #2c1515;
+  --gray:      #8b949e;
+  --gray-lt:   #1c2128;
+  --border:    #30363d;
+  --text:      #e6edf3;
+  --muted:     #7d8590;
+  --white:     #21262d;
+  --shadow:    0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.4);
+  background: #0d1117;
+}
+
+body.dark .admin-sidebar   { background: #161b22; }
+body.dark .admin-content   { background: #0d1117; }
+
+/* 卡片 */
+body.dark .card            { background: #21262d; }
+body.dark .stat-card       { background: #21262d; }
+
+/* 側邊欄底部 */
+body.dark .sidebar-user-info { background: #1c2128; }
+body.dark .btn-logout        { background: #2c1515; }
+body.dark .btn-logout:hover  { background: #3d1f1f; }
+
+/* 輸入框 */
+body.dark .lesson-input-area        { background: #1c2128; color: var(--text); }
+body.dark .lesson-input-area:focus  { background: #21262d; }
+body.dark .class-assign-input       { background: #1c2128; color: var(--text); }
+body.dark .class-assign-input:focus { background: #21262d; }
+
+/* 學生表格 */
+body.dark .student-table tr:hover td { background: #1c2128; }
+body.dark .progress-mini              { background: #30363d; }
+
+/* 課程手風琴 */
+body.dark .version-item              { background: #21262d; }
+body.dark .version-item:hover,
+body.dark .version-item.active       { background: var(--blue-lt); }
+body.dark .version-accordion         { background: #21262d; }
+body.dark .version-accordion-header:hover { background: var(--blue-lt); }
+body.dark .lesson-item               { background: #21262d; }
+body.dark .lesson-row                { background: #21262d; }
+body.dark .lesson-row-header:hover   { background: #2d333b; }
+body.dark .lesson-row-body           { background: #161b22; }
+body.dark .course-item               { background: #21262d; }
+body.dark .course-item:hover         { background: var(--blue-lt); }
+body.dark .book-title                { background: var(--blue-lt); color: var(--blue-dk); }
+body.dark .book-title:hover          { background: #1c3a5f; }
+body.dark .grade-header              { background: var(--blue-lt); color: var(--blue-dk); border-color: #1a4a7a; }
+body.dark .grade-header:hover        { background: #1c3a5f; }
+
+/* 字跡 Modal */
+body.dark .stroke-modal        { background: #21262d; }
+body.dark .stroke-canvas-wrap  {
+  background: #21262d;
+  background-image: linear-gradient(to right, #30363d 1px, transparent 1px),
+                    linear-gradient(to bottom, #30363d 1px, transparent 1px);
+  background-size: 33.333% 33.333%, 33.333% 33.333%;
+}
+
+/* 班級卡片 */
+body.dark .class-card           { background: #21262d; }
+body.dark .class-link-row       { background: #1c2128; }
+body.dark .btn-share-class      { background: #1c2d3f; color: var(--blue-dk); border-color: #1a4a7a; }
+body.dark .btn-share-class:hover{ background: var(--blue-lt); }
+body.dark .btn-cls-toggle       { background: #21262d; }
+body.dark .btn-cls-delete       { background: #2c1515; }
+body.dark .btn-copy-code        { background: var(--blue-lt); }
+
+/* 按鈕 */
+body.dark .btn-edit             { background: #21262d; }
+body.dark .btn-danger           { background: #2c1515; }
+body.dark .btn-danger:hover     { background: #3d1f1f; }
+body.dark .btn-tiny             { background: #21262d; }
+
+/* 內層頁籤 */
+body.dark .app-tabs-mini        { background: #1c2128; }
+body.dark .app-tab-mini         { color: var(--muted); }
+body.dark .app-tab-mini.active  { background: #21262d; color: var(--text); }
+
+/* 學習格 */
+body.dark .char-status-item.new   { background: #1c2128; border-color: #30363d; }
+body.dark .multiply-table-cell    { background: #1c2128; }
+body.dark .badge-gray             { background: #1c2128; }
+body.dark .current-lesson-banner  { background: #0f2a1a; border-color: #238636; }
+body.dark .version-header         { background: #1a3a6a; }
+body.dark .version-header:hover   { background: var(--blue); }
+
+/* 手機卡片模式 */
+@media (max-width: 480px) {
+  body.dark .student-table tr { background: #21262d; }
+}
+
+/* ══════════════════════════════════════
    響應式斷點（admin.html）
    教師後台以平板/桌機為主，補強手機支援
    ══════════════════════════════════════ */
 
-/* 平板（≤ 768px） */
+/* 平板（≤ 768px）— sidebar 折疊為頂列 */
 @media (max-width: 768px) {
-  .admin-topbar   { padding: 0 14px; height: 52px; }
+  #admin-screen   { flex-direction: column; }
+  .admin-sidebar  {
+    width: 100%; height: auto; position: static;
+    flex-direction: row; flex-wrap: wrap; align-items: center;
+    padding: 10px 14px; gap: 0;
+    border-right: none; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-brand  { margin-bottom: 0; padding: 4px 6px; flex: 1; }
+  .sidebar-nav    { flex-direction: row; gap: 4px; flex: none; align-items: center; }
+  .sidebar-footer { display: none; }
+  .admin-tab      { padding: 8px 12px; font-size: .82rem; border-radius: 9px; width: auto; }
   .admin-main     { padding: 16px 14px; }
-  .admin-tabs     { flex-wrap: wrap; width: 100%; }
-  .admin-tab      { flex: 1; text-align: center; padding: 8px 12px; font-size: .82rem; }
   .stats-row      { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   .stat-num       { font-size: 1.6rem; }
 }
 
 /* 手機（≤ 480px） */
 @media (max-width: 480px) {
-  .admin-topbar          { padding: 0 10px; }
-  .topbar-brand-sub      { display: none; }
+  .sidebar-brand-sub     { display: none; }
   .admin-main            { padding: 12px 10px; }
   .stats-row             { grid-template-columns: 1fr 1fr; }
   .stat-num              { font-size: 1.5rem; }
+  .sidebar-nav           { flex-wrap: wrap; }
   .lesson-grid           { grid-template-columns: 1fr; }
 
   /* 學生表格在手機改成卡片式 */

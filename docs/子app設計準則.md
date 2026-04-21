@@ -371,7 +371,32 @@ students/{id}/progress/achievements
 
 ---
 
-## 附錄：常見錯誤
+## 附錄甲：App 分類設計準則
+
+子 App 依學習形式分為兩類，各有不同的設計重點：
+
+### 遊戲類（練字趣、乘法趣）
+
+- **成就系統**：實作星星、稱號、成就解鎖機制，激勵長期練習
+- **視覺風格**：使用 CSS 主題變數系統，支援六色主題切換（blue / green / purple / orange / teal / pink）
+- **進度追蹤**：儲存學習進度至 `students/{id}/progress/{appId}`，支援每日登入獎勵 (`handleDailyLogin()`)
+- **成就路徑**：`students/{id}/progress/achievements`（與 App 進度文件分開）
+
+### 測驗類（測驗趣）
+
+- **不提供成就系統**：聚焦當次練習的即時批改與分數回饋，不設勳章或累積機制
+- **視覺風格**：以「紙本練習卷數位化」為概念，米白底色（`#faf8f3`）搭配深墨色（`#1a1a2e`），模擬印刷質感，輔以細邊框與柔和陰影
+- **字型**：標題與題號使用 **Noto Serif TC**，內文與介面使用 **Noto Sans TC**
+- **成績寫入**：批改後寫入 `students/{sid}/activities`，格式：`{ app, score, correct, total, grade, lesson, timestamp }`
+
+### 工具類（有聲教材）
+
+- **無帳號依賴**：工具類 App 可在不登入的情況下使用核心功能
+- **成就系統**：依 App 性質決定是否實作，通常不設
+
+---
+
+## 附錄乙：常見錯誤
 
 | 錯誤 | 正確做法 |
 |------|---------|

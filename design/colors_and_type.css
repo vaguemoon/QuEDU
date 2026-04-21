@@ -1,0 +1,96 @@
+/* ─────────────────────────────────────────────
+   QUEDU 上學趣 — Colors + Type tokens
+   Source of truth for all design-system files.
+   Mirrors QuEDU/shared/shared.css with cleaned naming.
+   ───────────────────────────────────────────── */
+
+/* Webfonts (Google Fonts CDN). For offline use, replace with @font-face local files. */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;700;900&family=LXGW+WenKai+TC&display=swap');
+
+:root {
+  /* ── Brand color (themeable; default = 藍天 Blue Sky) ── */
+  --blue:     #4a90d9;
+  --blue-dk:  #2d6fa8;
+  --blue-lt:  #e8f4fd;
+  --bg:       #eef5fc;
+
+  /* ── Fixed semantic palette (never themed) ── */
+  --green:    #52c97a;
+  --green-dk: #389959;
+  --orange:   #ff8c42;
+  --red:      #e84444;
+  --yellow:   #ffd54f;
+
+  /* ── Foreground / surfaces ── */
+  --fg1:      #1e2d3d;   /* primary text — deep navy */
+  --fg2:      #7a99b5;   /* muted / secondary */
+  --text:     var(--fg1);
+  --muted:    var(--fg2);
+  --white:    #ffffff;
+  --border:   #d4e8f8;
+
+  /* ── Radii ── */
+  --radius:    22px;     /* cards, panels */
+  --radius-sm: 13px;     /* buttons, inputs */
+  --radius-pill: 9999px;
+
+  /* ── Shadows (cool blue-tinted) ── */
+  --shadow:     0 6px 28px rgba(44,100,160,.13);
+  --shadow-lg:  0 12px 48px rgba(44,100,160,.20);
+  --shadow-btn: 0 4px 14px rgba(45,111,168,.30);
+
+  /* ── Gradients ── */
+  --grad-btn:   linear-gradient(135deg, var(--blue), var(--blue-dk));
+  --grad-login: linear-gradient(160deg, #dbeeff 0%, var(--bg) 60%);
+  --grad-student-login: linear-gradient(160deg, #fff4e6 0%, var(--bg) 60%);
+
+  /* ── Spacing scale (px) ── */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  10px;
+  --sp-4:  14px;
+  --sp-5:  16px;
+  --sp-6:  20px;
+  --sp-7:  24px;
+  --sp-8:  28px;
+
+  /* ── Easing tokens ── */
+  --ease-panel: cubic-bezier(.77, 0, .175, 1);     /* 350ms slide between panels */
+  --ease-pop:   cubic-bezier(.34, 1.56, .64, 1);   /* slight overshoot for popIn */
+
+  /* ── Type families ── */
+  --font-ui:        'Nunito', 'Noto Sans TC', sans-serif;
+  --font-display:   'Nunito', 'Noto Sans TC', sans-serif;
+  --font-serif-tc:  'Noto Serif TC', serif;        /* big practice glyphs */
+  --font-handwrit:  'LXGW WenKai TC', serif;       /* stroke reference */
+}
+
+/* ── Theme variants — set on <html data-theme="..."> ── */
+[data-theme="green"]  { --bg:#edfbf4; --blue:#27ae60; --blue-dk:#1e8449; --blue-lt:#d5f5e3; }
+[data-theme="purple"] { --bg:#f3f0fc; --blue:#8e44ad; --blue-dk:#6c3483; --blue-lt:#e8daef; }
+[data-theme="orange"] { --bg:#fff8f0; --blue:#e67e22; --blue-dk:#ca6f1e; --blue-lt:#fdebd0; }
+[data-theme="teal"]   { --bg:#f0fafa; --blue:#16a085; --blue-dk:#0e6655; --blue-lt:#d1f2eb; }
+[data-theme="pink"]   { --bg:#fff0f8; --blue:#d63384; --blue-dk:#a0255e; --blue-lt:#fce4ec; }
+[data-theme="ink"]    { --bg:#f4f1ea; --blue:#3d3a35; --blue-dk:#1a1814; --blue-lt:#e2dcc9; }
+[data-theme="mono"]   { --bg:#f5f5f5; --blue:#2a2a2a; --blue-dk:#000000; --blue-lt:#e8e8e8; }
+
+/* ── Base / reset ── */
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent; }
+body { font-family: var(--font-ui); background: var(--bg); color: var(--text); }
+
+/* ─────────────────────────────────────────────
+   Semantic type styles — apply directly via class
+   ───────────────────────────────────────────── */
+.qd-display     { font-family: var(--font-display); font-weight: 900; font-size: 2rem;   color: var(--blue-dk); letter-spacing:.01em; line-height:1.15; }
+.qd-h1          { font-family: var(--font-display); font-weight: 900; font-size: 1.6rem; color: var(--blue-dk); line-height:1.2; }
+.qd-h2          { font-family: var(--font-display); font-weight: 900; font-size: 1.3rem; color: var(--blue-dk); line-height:1.25; }
+.qd-h3          { font-family: var(--font-display); font-weight: 900; font-size: 1.1rem; color: var(--blue-dk); line-height:1.3; }
+.qd-title-card  { font-family: var(--font-ui);      font-weight: 900; font-size: 1rem;   color: var(--blue-dk); }
+.qd-body        { font-family: var(--font-ui);      font-weight: 600; font-size: .95rem; color: var(--text); line-height:1.6; }
+.qd-body-bold   { font-family: var(--font-ui);      font-weight: 800; font-size: .95rem; color: var(--text); }
+.qd-small       { font-family: var(--font-ui);      font-weight: 700; font-size: .82rem; color: var(--text); }
+.qd-caption     { font-family: var(--font-ui);      font-weight: 600; font-size: .78rem; color: var(--muted); }
+.qd-section-lbl { font-family: var(--font-ui);      font-weight: 900; font-size: .78rem; color: var(--muted); letter-spacing: 1px; text-transform: none; }
+.qd-glyph       { font-family: var(--font-serif-tc); font-weight: 900; font-size: 3.6rem; color: var(--text); line-height:1; }
+.qd-glyph-sm    { font-family: var(--font-serif-tc); font-weight: 900; font-size: 2rem;   color: var(--text); line-height:1; }
+.qd-mono        { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-weight: 700; font-size: .9rem; color: var(--text); }

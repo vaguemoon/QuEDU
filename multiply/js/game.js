@@ -32,16 +32,31 @@ function generateChoiceOptions(a, b) {
   return shuffle([correct].concat(distractors.slice(0, 3)));
 }
 
-function generateReverseOptions(a, b) {
+function generateReverseOptions(a, b, fixA) {
   var product = a * b;
   var candidates = [];
-  for (var x = 0; x <= 10; x++) {
+
+  // In exam mode (fixA=true), restrict distractors to the same multiplier (a)
+  // so students can't cheat by spotting the exam table number.
+  // Fall back to all pairs when there aren't enough same-a candidates (e.g. a=0).
+  if (fixA) {
     for (var y = 0; y <= 10; y++) {
-      if (x * y !== product) {
-        candidates.push({ a: x, b: y, diff: Math.abs(x * y - product) });
+      if (a * y !== product) {
+        candidates.push({ a: a, b: y, diff: Math.abs(a * y - product) });
       }
     }
   }
+  if (candidates.length < 3) {
+    candidates = [];
+    for (var x = 0; x <= 10; x++) {
+      for (var y = 0; y <= 10; y++) {
+        if (x * y !== product) {
+          candidates.push({ a: x, b: y, diff: Math.abs(x * y - product) });
+        }
+      }
+    }
+  }
+
   candidates.sort(function(p, q) { return p.diff - q.diff; });
   var distractors = [];
   var usedProducts = [product];
@@ -71,7 +86,7 @@ function renderChoiceOptions(containerId, q, isExam) {
 }
 
 function renderReverseOptions(containerId, q, isExam) {
-  var opts = generateReverseOptions(q.a, q.b);
+  var opts = generateReverseOptions(q.a, q.b, isExam);
   var el   = document.getElementById(containerId);
   if (!el) return;
   var fn = isExam ? 'onExamReverseAnswer' : 'onPracticeReverseAnswer';
@@ -119,9 +134,7 @@ function handleFillKeydown(e) {
 
 function initPracticeSelect() {
   renderFactorChips('a-chips', practiceSelectedA_temp);
-  renderFactorChips('b-chips', practiceSelectedB_temp);
   updateToggleAllBtn('a-chips');
-  updateToggleAllBtn('b-chips');
   setPracticeType(practiceType);
   updatePracticePairCount();
 }
@@ -176,7 +189,7 @@ function updateToggleAllBtn(containerId) {
 
 function setPracticeType(type) {
   practiceType = type;
-  ['choice', 'fill', 'reverse'].forEach(function(t) {
+  ['fill', 'reverse'].forEach(function(t) {
     var btn = document.getElementById('ptype-' + t);
     if (btn) btn.classList.toggle('active', t === type);
   });
@@ -185,7 +198,7 @@ function setPracticeType(type) {
 function updatePracticePairCount() {
   var el = document.getElementById('practice-pair-count');
   if (el) {
-    var n = practiceSelectedA_temp.length * practiceSelectedB_temp.length;
+    var n = practiceSelectedA_temp.length * 11;
     el.textContent = '已選 ' + n + ' 組題目';
     el.style.color = n === 0 ? 'var(--red)' : 'var(--muted)';
   }
@@ -196,13 +209,13 @@ function updatePracticePairCount() {
 // ════════════════════════════════════════
 
 function startPractice() {
-  if (practiceSelectedA_temp.length === 0 || practiceSelectedB_temp.length === 0) {
-    showToast('請至少各選一個被乘數和乘數！');
+  if (practiceSelectedA_temp.length === 0) {
+    showToast('請至少選一個被乘數！');
     return;
   }
   practicePool = [];
   practiceSelectedA_temp.forEach(function(a) {
-    practiceSelectedB_temp.forEach(function(b) { practicePool.push({ a: a, b: b }); });
+    for (var b = 0; b <= 10; b++) { practicePool.push({ a: a, b: b }); }
   });
   practicePool    = shuffle(practicePool);
   practiceStreak  = 0;
@@ -238,15 +251,14 @@ function renderPracticeQuestion() {
     if (qEl) qEl.innerHTML =
       '<span class="q-blank">?</span> × <span class="q-blank">?</span> = <span class="q-product">' + (q.a * q.b) + '</span>';
     if (optsEl) { optsEl.style.display = ''; renderReverseOptions('practice-options', q, false); }
-  } else if (practiceType === 'fill') {
+  } else {
     if (qEl) qEl.innerHTML =
       '<span class="q-num">' + q.a + '</span> × <span class="q-num">' + q.b + '</span> = <span class="q-blank" id="fill-display">＿</span>';
     fillInputStr = '';
-    if (fillPad) fillPad.style.display = '';
-  } else {
-    if (qEl) qEl.innerHTML =
-      '<span class="q-num">' + q.a + '</span> × <span class="q-num">' + q.b + '</span> = <span class="q-blank">?</span>';
-    if (optsEl) { optsEl.style.display = ''; renderChoiceOptions('practice-options', q, false); }
+    if (fillPad) {
+      fillPad.style.display = '';
+      fillPad.querySelectorAll('button').forEach(function(btn) { btn.disabled = false; });
+    }
   }
 }
 
@@ -271,6 +283,7 @@ function onPracticeResult(correct) {
 
   if (correct) {
     practiceStreak++;
+    if (practiceStreak > maxStreak) maxStreak = practiceStreak;
     practiceCorrect++;
     totalCorrect++;
     sfxCorrect();
@@ -352,7 +365,6 @@ function onPracticeFillSubmit() {
 function initExamSelect() {
   renderExamTableChips();
   updateToggleExamBtn();
-  setExamType(examType);
   setExamTimer(examTimerSec);
 }
 
@@ -397,14 +409,6 @@ function updateToggleExamBtn() {
   var allSelected = examSelectedTables_temp.length === 11;
   btn.textContent = allSelected ? '全不選' : '全選';
   btn.classList.toggle('toggle-all-on', allSelected);
-}
-
-function setExamType(type) {
-  examType = type;
-  ['fill', 'reverse'].forEach(function(t) {
-    var btn = document.getElementById('etype-' + t);
-    if (btn) btn.classList.toggle('active', t === type);
-  });
 }
 
 function setExamTimer(sec) {
@@ -455,6 +459,7 @@ function loadExamQuestion() {
   if (nextBtn) nextBtn.classList.add('hidden');
   if (examPool.length === 0) { showRoundSummary(); return; }
   examQ = examPool[0];
+  examQ.type = Math.random() < 0.5 ? 'fill' : 'reverse';
   enableExamInput();
   renderExamQuestion();
   startExamCountdown();
@@ -482,7 +487,7 @@ function renderExamQuestion() {
   if (optsEl)  { optsEl.innerHTML = ''; optsEl.style.display = 'none'; }
   if (fillPad) fillPad.style.display = 'none';
 
-  if (examType === 'reverse') {
+  if (q.type === 'reverse') {
     if (qEl) qEl.innerHTML =
       '<span class="q-blank">?</span> × <span class="q-blank">?</span> = <span class="q-product">' + (q.a * q.b) + '</span>';
     if (optsEl) { optsEl.style.display = ''; renderReverseOptions('exam-options', q, true); }
@@ -503,7 +508,7 @@ function startExamCountdown() {
   examCountdownId = setInterval(function() {
     examTimeLeft--;
     renderTimerDisplay();
-    if (examTimeLeft <= 0) { clearExamCountdown(); onExamTimeout(); }
+    if (examTimeLeft < 0) { clearExamCountdown(); onExamTimeout(); }
   }, 1000);
 }
 
@@ -578,7 +583,7 @@ function showExamAnswer() {
   var q   = examQ;
   var qEl = document.getElementById('exam-question');
   if (!qEl) return;
-  if (examType === 'reverse') {
+  if (q.type === 'reverse') {
     qEl.innerHTML = '<span class="q-correct-pair">' + q.a + ' × ' + q.b + '</span>' +
       ' = <span class="q-product">' + (q.a * q.b) + '</span>';
   } else {
@@ -696,10 +701,10 @@ function onExamComplete() {
     }
     if (allDone) {
       var tStr = String(t);
-      if (examType === 'fill'    && masteredFill.indexOf(tStr)    === -1) masteredFill.push(tStr);
-      if (examType === 'reverse' && masteredReverse.indexOf(tStr) === -1) masteredReverse.push(tStr);
+      if (masteredMixed.indexOf(tStr) === -1) masteredMixed.push(tStr);
     }
   });
+  examCompletedCount++;
   saveProgress();
   if (typeof checkAchievements === 'function') checkAchievements();
 }
@@ -713,12 +718,11 @@ function showExamFinalResult() {
   if (titleEl) titleEl.textContent = '全部完成！🎉';
   if (subEl)   subEl.textContent   = '共 ' + total + ' 題，歷經 ' + examRound + ' 輪全數答對！';
   if (badgeEl) {
-    var arr = examType === 'fill' ? masteredFill : masteredReverse;
     var newTables = examSelectedTables.filter(function(t) {
-      return arr.indexOf(String(t)) !== -1;
+      return masteredMixed.indexOf(String(t)) !== -1;
     });
     badgeEl.innerHTML = newTables.length
-      ? '<div class="result-badge">' + (examType === 'fill' ? '✏️ 填空精熟：' : '🔍 拆解精熟：') +
+      ? '<div class="result-badge">🏅 混合精熟：' +
         newTables.map(function(t){ return t + ' 的乘法'; }).join('、') + '</div>'
       : '';
   }

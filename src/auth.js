@@ -79,7 +79,8 @@ function doLogin() {
     }
     var d = doc.data();
     onLoginSuccess({ id: name + '_' + loginPin, name: name, pin: loginPin,
-                     nickname: d.nickname || '', avatar: d.avatar || '🐣' });
+                     nickname: d.nickname || '', avatar: d.avatar || '🐣',
+                     classId: d.classId || '' });
   }).catch(function() {
     showToast('連線失敗，請重試');
     document.getElementById('btn-login-ok').disabled = false;

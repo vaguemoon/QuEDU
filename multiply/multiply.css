@@ -181,13 +181,13 @@
 
 /* 題目顯示 */
 .q-display {
-  font-size: 3.2rem; font-weight: 900; text-align: center;
+  font-size: 3.8rem; font-weight: 900; text-align: center;
   letter-spacing: 4px; line-height: 1.1; padding: 24px 20px;
   background: white; border-radius: var(--radius); width: 100%;
   border: 2.5px solid var(--border); box-shadow: var(--shadow);
-  min-height: 120px; display: flex; align-items: center; justify-content: center;
+  min-height: 130px; display: flex; align-items: center; justify-content: center;
 }
-.q-display-exam { font-size: 3.6rem; min-height: 140px; }
+.q-display-exam { font-size: 4.2rem; min-height: 150px; }
 
 .q-num      { color: var(--blue-dk); }
 .q-blank    { color: var(--muted); border-bottom: 4px solid var(--blue); min-width: 60px; display: inline-block; text-align: center; }
@@ -202,11 +202,11 @@
 }
 .option-btn {
   padding: 18px 8px; border: 2.5px solid var(--border); border-radius: 16px;
-  background: white; color: var(--text); font-size: 1.6rem; font-weight: 900;
+  background: white; color: var(--text); font-size: 1.9rem; font-weight: 900;
   cursor: pointer; font-family: inherit; transition: all .15s;
-  min-height: 70px; line-height: 1.1;
+  min-height: 80px; line-height: 1.1;
 }
-.option-pair-btn { font-size: 1.2rem; }
+.option-pair-btn { font-size: 1.4rem; }
 .option-btn:active:not(:disabled) { transform: scale(.95); background: var(--blue-lt); }
 .option-btn:disabled { cursor: default; opacity: .85; }
 .btn-correct { background: var(--green) !important; border-color: var(--green-dk) !important; color: white !important; }
@@ -216,18 +216,18 @@
    填空數字鍵盤
    ══════════════════════════════════════ */
 .fill-pad {
-  display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 300px;
+  display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 340px;
 }
 .fill-pad-row { display: flex; gap: 8px; }
 .fill-btn {
-  flex: 1; padding: 16px; border: 2px solid var(--border); border-radius: 14px;
-  background: white; color: var(--text); font-size: 1.5rem; font-weight: 900;
-  cursor: pointer; font-family: inherit; transition: all .15s; min-height: 56px;
+  flex: 1; padding: 18px; border: 2px solid var(--border); border-radius: 14px;
+  background: white; color: var(--text); font-size: 1.8rem; font-weight: 900;
+  cursor: pointer; font-family: inherit; transition: all .15s; min-height: 66px;
 }
 .fill-btn:active:not(:disabled) { background: var(--blue-lt); transform: scale(.93); }
 .fill-btn:disabled { opacity: .5; cursor: default; }
-.fill-del { font-size: 1.2rem; background: #fff8f0; color: var(--orange); border-color: #f5d7b0; }
-.fill-ok  { background: linear-gradient(135deg, var(--green), var(--green-dk)); color: white; border: none; font-size: 1.4rem; }
+.fill-del { font-size: 1.4rem; background: #fff8f0; color: var(--orange); border-color: #f5d7b0; }
+.fill-ok  { background: linear-gradient(135deg, var(--green), var(--green-dk)); color: white; border: none; font-size: 1.7rem; }
 .fill-ok:active:not(:disabled) { transform: scale(.93); }
 
 /* ══════════════════════════════════════
@@ -240,8 +240,8 @@
   flex: 1; max-width: 100px; background: white; border: 1.5px solid var(--border);
   border-radius: 12px; padding: 8px; text-align: center; box-shadow: var(--shadow);
 }
-.stat-label { display: block; font-size: .7rem; font-weight: 800; color: var(--muted); margin-bottom: 2px; }
-.stat-val   { display: block; font-size: 1.5rem; font-weight: 900; color: var(--blue-dk); }
+.stat-label { display: block; font-size: .82rem; font-weight: 800; color: var(--muted); margin-bottom: 2px; }
+.stat-val   { display: block; font-size: 1.8rem; font-weight: 900; color: var(--blue-dk); }
 .stat-val.streak { color: var(--orange); }
 
 .btn-end-practice {
@@ -253,9 +253,9 @@
 .btn-end-practice:active { background: var(--red); color: white; border-color: var(--red); }
 
 .btn-next-q {
-  width: 100%; padding: 18px; border: none; border-radius: var(--radius);
+  width: 100%; padding: 20px; border: none; border-radius: var(--radius);
   background: linear-gradient(135deg, var(--orange), #ca6f1e);
-  color: white; font-size: 1.2rem; font-weight: 900;
+  color: white; font-size: 1.4rem; font-weight: 900;
   cursor: pointer; font-family: inherit; transition: all .18s;
   box-shadow: 0 6px 20px rgba(230,126,34,.35); letter-spacing: .5px;
   animation: popIn .2s both;
@@ -438,8 +438,9 @@
    響應式
    ══════════════════════════════════════ */
 @media (min-width: 480px) {
-  .q-display     { font-size: 4rem; }
-  .q-display-exam{ font-size: 4.5rem; }
-  .option-btn    { font-size: 2rem; min-height: 80px; }
-  .option-pair-btn { font-size: 1.4rem; }
+  .q-display     { font-size: 4.5rem; }
+  .q-display-exam{ font-size: 5rem; }
+  .option-btn    { font-size: 2.3rem; min-height: 90px; }
+  .option-pair-btn { font-size: 1.6rem; }
+  .fill-btn      { font-size: 2rem; min-height: 72px; }
 }

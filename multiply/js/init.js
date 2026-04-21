@@ -65,10 +65,13 @@ window.addEventListener('load', function() {
           if (nmEl) nmEl.textContent = currentStudent.nickname || currentStudent.name;
 
           // 載入進度
-          masteredFill    = pData.masteredFill    || [];
-          masteredReverse = pData.masteredReverse || [];
-          totalCorrect    = pData.totalCorrect    || 0;
-          totalAttempts   = pData.totalAttempts   || 0;
+          masteredFill       = pData.masteredFill       || [];
+          masteredReverse    = pData.masteredReverse    || [];
+          masteredMixed      = pData.masteredMixed      || [];
+          totalCorrect       = pData.totalCorrect       || 0;
+          totalAttempts      = pData.totalAttempts      || 0;
+          maxStreak          = pData.maxStreak          || 0;
+          examCompletedCount = pData.examCompletedCount || 0;
 
           showToast('👋 歡迎 ' + (currentStudent.nickname || currentStudent.name) + '！');
 

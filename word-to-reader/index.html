@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>有聲教材工具</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&family=Noto+Sans+TC:wght@400;600;700;900&display=swap">
+<link rel="stylesheet" href="reader.css">
+</head>
+<body>
+
+<!-- ── Topbar ──────────────────────────────────────────────── -->
+<div id="topbar">
+  <button id="topbar-back">← 返回</button>
+  <div id="topbar-title">🎧 有聲教材</div>
+  <button class="topbar-tab active" id="tab-convert">📂 轉換</button>
+  <button class="topbar-tab"        id="tab-library">📚 報讀庫</button>
+  <button id="login-btn">☁️ 登入</button>
+</div>
+
+<!-- ── Page: Upload ────────────────────────────────────────── -->
+<div id="page-upload" class="page active">
+  <div class="upload-hero">
+    <span class="upload-hero-icon">🎧</span>
+    <div class="upload-hero-title">文字轉<span>有聲教材</span></div>
+  </div>
+  <div class="upload-card">
+    <div class="drop-zone" id="drop-zone">
+      <label for="file-input">
+        <span class="drop-icon">📂</span>
+        <span class="drop-text"><strong>點此選擇 .docx 檔案</strong><br>或直接拖曳到這裡</span>
+      </label>
+      <input type="file" id="file-input" accept=".docx,.doc"/>
+    </div>
+    <button class="btn-main" id="convert-btn" disabled>請先選擇檔案</button>
+    <button class="btn-main orange" id="manual-btn">✏️ 直接輸入文字</button>
+  </div>
+</div>
+
+<!-- ── Page: Reader ────────────────────────────────────────── -->
+<div id="page-reader" class="page">
+  <div class="controls-bar">
+    <div class="ctrl-group">
+      <span class="ctrl-label">聲音</span>
+      <select id="voice-select" class="ctrl-select"></select>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">語速</span>
+      <div class="ctrl-pm">
+        <button class="btn-pm" id="rate-minus">−</button>
+        <span class="ctrl-val" id="rate-val">0.9</span>
+        <button class="btn-pm" id="rate-plus">+</button>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">字體</span>
+      <div class="ctrl-pm">
+        <button class="btn-pm" id="font-minus">−</button>
+        <span class="ctrl-val" id="font-val">17px</span>
+        <button class="btn-pm" id="font-plus">+</button>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-ctrl orange" id="edit-toggle-btn">✏️ 編輯</button>
+    <button class="btn-ctrl green"  id="save-lib-btn">💾 存到報讀庫</button>
+    <button class="btn-ctrl primary" id="play-all-btn">▶ 連播</button>
+    <button class="btn-ctrl" id="pause-btn">⏸</button>
+    <button class="btn-ctrl" id="resume-btn">⏯</button>
+    <button class="btn-ctrl" id="stop-btn">⏹</button>
+  </div>
+
+  <div id="edit-panel">
+    <!-- 拖曳把手（浮動模式才顯示） -->
+    <div class="edit-drag-handle" id="edit-drag-handle">
+      <span class="edit-drag-dots">⠿ 拖曳移動</span>
+      <button class="btn-fmt" id="edit-pin-btn" title="釘回頂部">📌 釘回頂部</button>
+    </div>
+    <!-- 一般模式標題列 -->
+    <div class="edit-panel-header">
+      <div class="edit-panel-label">✏️ 手動編輯 — 每行獨立朗讀，空行自動略過</div>
+      <button class="btn-fmt" id="edit-float-btn" title="切換浮動視窗">⛶ 浮動</button>
+    </div>
+    <!-- 格式工具列 -->
+    <div class="edit-format-bar">
+      <button class="btn-fmt" id="fmt-t1">T1 大標</button>
+      <button class="btn-fmt" id="fmt-t2">T2 小標</button>
+      <button class="btn-fmt" id="fmt-clear">— 一般</button>
+      <div class="fmt-divider"></div>
+      <button class="btn-fmt" id="fmt-merge">⊕ 合併短行</button>
+      <div class="fmt-divider"></div>
+      <button class="btn-fmt" id="fmt-search-toggle">🔍 搜尋取代</button>
+    </div>
+    <!-- 搜尋取代列 -->
+    <div class="edit-search-bar" id="edit-search-bar">
+      <input class="edit-search-input" id="search-input" placeholder="搜尋…"/>
+      <input class="edit-search-input" id="replace-input" placeholder="取代為…"/>
+      <button class="btn-fmt" id="btn-replace">取代</button>
+      <button class="btn-fmt" id="btn-replace-all">全部</button>
+    </div>
+    <textarea id="edit-textarea"
+      placeholder="在此輸入或貼上文字，每一行會成為一個朗讀單位。&#10;&#10;例如：&#10;一、選擇題&#10;下列哪一項是正確的？&#10;①答案甲　②答案乙　③答案丙&#10;&#10;用工具列的 T1/T2 可手動設定標題格式"></textarea>
+    <div class="edit-actions">
+      <button class="btn-ctrl primary" id="apply-edit-btn">✅ 套用預覽</button>
+      <button class="btn-ctrl"         id="cancel-edit-btn">✖ 取消</button>
+    </div>
+  </div>
+
+  <div class="status-tip" id="status-bar">💡 點擊任意行朗讀，或按「連播」</div>
+  <div class="doc-heading"  id="doc-title"></div>
+  <div id="reader-content"></div>
+</div>
+
+<!-- ── Page: Viewer ────────────────────────────────────────── -->
+<div id="page-viewer" class="page">
+  <iframe id="viewer-frame" style="width:100%;height:calc(100vh - 52px);border:none;display:block;"></iframe>
+</div>
+
+<!-- ── Page: Library ───────────────────────────────────────── -->
+<div id="page-library" class="page">
+  <div class="library-wrap">
+    <div class="library-toprow">
+      <div class="library-heading">📚 報讀庫</div>
+      <label class="btn-pick" for="import-files-input">📥 匯入 .html 檔</label>
+      <input type="file" id="import-files-input" accept=".html,.htm" multiple style="display:none"/>
+    </div>
+    <div id="library-content">
+      <div class="library-empty">
+        <p>報讀庫還沒有內容</p>
+        <small>使用「轉換」功能後按「存到報讀庫」，或點「匯入 .html 檔」加入已有檔案</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Page: Student ───────────────────────────────────────── -->
+<div id="page-student" class="page">
+  <div class="student-wrap">
+    <div class="student-heading">老師分享的考卷</div>
+    <div id="student-doc-list"></div>
+    <div id="student-empty" style="display:none;text-align:center;padding:48px 24px;color:#3d3d5c;font-weight:700;font-size:.9rem;font-family:'Noto Serif TC',serif">老師尚未分享考卷</div>
+    <div id="student-loading" style="text-align:center;padding:48px 24px;color:#3d3d5c;font-weight:700;font-size:.9rem">載入中…</div>
+  </div>
+</div>
+
+<!-- ── Share Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-share">
+  <div class="modal-card">
+    <h3>📤 分享給班級</h3>
+    <div id="share-doc-name" style="font-size:.82rem;color:#666;font-weight:600;margin-top:-12px;margin-bottom:16px;word-break:break-all"></div>
+    <div id="share-class-list" style="max-height:240px;overflow-y:auto"></div>
+    <div id="share-loading" style="text-align:center;padding:16px;font-size:.85rem;color:#999;display:none">載入班級中…</div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-modal-cancel" id="btn-cancel-share">取消</button>
+      <button class="btn-modal-ok"     id="btn-confirm-share">✅ 確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Save Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-save">
+  <div class="modal-card">
+    <h3>💾 存到報讀庫</h3>
+    <div class="form-group">
+      <label class="form-label" for="save-filename">檔名</label>
+      <input class="form-input" id="save-filename" type="text" placeholder="三年級社會期末卷"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="save-group">群組</label>
+      <input class="form-input" id="save-group" type="text"
+             placeholder="三年級" list="group-datalist" autocomplete="off"/>
+      <datalist id="group-datalist"></datalist>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-cancel-save">取消</button>
+      <button class="btn-modal-ok"     id="btn-confirm-save">💾 確認儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit Item Modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-edit-item">
+  <div class="modal-card">
+    <h3>✏️ 編輯項目</h3>
+    <div class="form-group">
+      <label class="form-label" for="edit-item-title">標題</label>
+      <input class="form-input" id="edit-item-title" type="text" placeholder="檔案標題"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="edit-item-group">群組</label>
+      <input class="form-input" id="edit-item-group" type="text"
+             placeholder="未分類" list="edit-item-groups" autocomplete="off"/>
+      <datalist id="edit-item-groups"></datalist>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-cancel-edit-item">取消</button>
+      <button class="btn-modal-ok"     id="btn-confirm-edit-item">✅ 儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Processing Overlay ──────────────────────────────────── -->
+<div id="proc-overlay">
+  <div class="proc-card">
+    <div class="spinner"></div>
+    <p id="proc-msg">正在解析 Word 檔案…</p>
+  </div>
+</div>
+
+<!-- ── Toast ───────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script src="reader.js"></script>
+</body>
+</html>

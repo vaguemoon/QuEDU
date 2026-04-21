@@ -96,6 +96,13 @@ function applyCharInfo(info) {
   var heteronyms = info.heteronyms || [];
   if (!heteronyms.length) { elT.textContent = '－'; return; }
 
+  var char = (typeof chars !== 'undefined' && typeof currentIdx !== 'undefined') ? chars[currentIdx] : null;
+
+  // 初始語境詞：使用第一個讀音的第一個造詞，讓 speakChar 能正確發破音字
+  if (char && heteronyms[0] && heteronyms[0].wordDefPairs && heteronyms[0].wordDefPairs.length > 0) {
+    setCharSpeakContext(char, heteronyms[0].wordDefPairs[0].word);
+  }
+
   heteronyms.forEach(function(h, idx) {
     var tab = document.createElement('button');
     tab.className = 'zhuyin-tab' + (idx === 0 ? ' active' : '');
@@ -103,6 +110,10 @@ function applyCharInfo(info) {
     tab.onclick = function() {
       elT.querySelectorAll('.zhuyin-tab').forEach(function(t) { t.classList.remove('active'); });
       tab.classList.add('active');
+      // 切換讀音時更新語境詞，使後續 speakChar 使用正確讀音
+      if (char && h.wordDefPairs && h.wordDefPairs.length > 0) {
+        setCharSpeakContext(char, h.wordDefPairs[0].word);
+      }
       renderWordDef(h, elW, elD);
     };
     elT.appendChild(tab);
@@ -152,4 +163,63 @@ function showCharInfoError() {
   if (elT) elT.textContent = '－';
   if (elW) elW.textContent = '－';
   if (elD) elD.textContent = '無法取得資料';
+}
+
+/**
+ * 背景預載所有生字的萌典資料，填充 charInfoCache 與 _charContextWord
+ * 使 speakChar 在使用者點擊生字卡或進行測驗時即可使用正確讀音語境
+ * 請求間隔 200ms，避免 API 限流
+ * @param {Array} charArray 生字陣列
+ */
+function preloadCharInfoAll(charArray) {
+  var queue = charArray.filter(function(c) { return !charInfoCache[c]; });
+  var idx = 0;
+  function next() {
+    if (idx >= queue.length) return;
+    var c = queue[idx++];
+    fetch('https://www.moedict.tw/' + c + '.json')
+      .then(function(res) { return res.ok ? res.json() : null; })
+      .then(function(data) {
+        if (!data) return;
+        var seenBopomofo = {};
+        var heteronyms   = [];
+        (data.heteronyms || []).forEach(function(h) {
+          var bopomofo = h.bopomofo || '－';
+          if (seenBopomofo[bopomofo] || heteronyms.length >= 4) return;
+          seenBopomofo[bopomofo] = true;
+          var wordDefPairs = [];
+          (h.definitions || []).forEach(function(d) {
+            if (!d.example) return;
+            var defText = stripHtml(d.def) || '－';
+            d.example.forEach(function(ex) {
+              if (wordDefPairs.length >= 3) return;
+              var cleaned = stripHtml(ex).replace(/～/g, c);
+              var matches = cleaned.match(/「([^」]+)」/g) || [];
+              matches.forEach(function(m) {
+                if (wordDefPairs.length >= 3) return;
+                var word    = m.replace(/「|」/g, '').trim();
+                var already = wordDefPairs.some(function(p) { return p.word === word; });
+                if (word.length >= 2 && word.length <= 4 && !already) {
+                  wordDefPairs.push({ word: word, def: defText });
+                }
+              });
+            });
+          });
+          var fallbackDef = h.definitions && h.definitions[0] ? stripHtml(h.definitions[0].def) || '－' : '－';
+          heteronyms.push({ bopomofo: bopomofo, wordDefPairs: wordDefPairs, fallbackDef: fallbackDef });
+        });
+        charInfoCache[c] = {
+          radical:    stripHtml(data.radical) || '－',
+          strokes:    data.stroke_count != null ? String(data.stroke_count) : '－',
+          heteronyms: heteronyms
+        };
+        // 以第一個讀音的第一個造詞初始化語境詞
+        if (heteronyms[0] && heteronyms[0].wordDefPairs && heteronyms[0].wordDefPairs.length > 0) {
+          setCharSpeakContext(c, heteronyms[0].wordDefPairs[0].word);
+        }
+      })
+      .catch(function() {})
+      .then(function() { setTimeout(next, 200); });
+  }
+  next();
 }

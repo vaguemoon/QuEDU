@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>語文練習</title>
+<link rel="stylesheet" href="chinese-quiz.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="entry-page">
+<div class="entry-wrapper">
+
+  <div class="entry-card">
+    <div class="entry-logo">📝</div>
+    <h1 class="entry-title">語文練習</h1>
+    <div class="entry-student" id="entry-student"></div>
+    <div class="entry-error"   id="entry-error"></div>
+
+    <!-- 分享試卷清單 -->
+    <div class="setup-step" id="step-list">
+      <div id="quiz-list-body">
+        <div class="past-panel-empty">載入中…</div>
+      </div>
+    </div>
+
+    <!-- 無班級提示 -->
+    <div class="setup-step" id="step-no-class" style="display:none">
+      <div class="offline-notice">請先在個人設定中加入班級</div>
+    </div>
+
+    <!-- 離線備援 -->
+    <div class="setup-step" id="step-offline" style="display:none">
+      <div class="offline-notice">⚠️ 無法連線伺服器<br>請確認網路後再試</div>
+      <button class="btn-start" onclick="initStudentMode()">重試</button>
+    </div>
+
+    <div class="entry-divider"></div>
+    <button class="btn-entry-return" onclick="returnToHub()">← 返回主頁</button>
+  </div>
+
+
+</div><!-- /.entry-wrapper -->
+</div>
+
+<script>
+'use strict';
+
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
+  authDomain:        'tainping-hanzi-app.firebaseapp.com',
+  projectId:         'tainping-hanzi-app',
+  storageBucket:     'tainping-hanzi-app.firebasestorage.app',
+  messagingSenderId: '158917910126',
+  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
+};
+
+var db = null;
+
+/* ── URL Params ── */
+var _urlParams     = new URLSearchParams(window.location.search);
+var studentClassId = _urlParams.get('classId') || '';
+
+/* ── Navigation ── */
+function returnToHub() {
+  window.parent.postMessage({ type: 'chinese-quiz-back-to-hub' }, '*');
+}
+
+function showStep(name) {
+  ['list', 'no-class', 'offline'].forEach(function(s) {
+    var el = document.getElementById('step-' + s);
+    if (el) el.style.display = (s === name) ? '' : 'none';
+  });
+}
+
+/* ── Init ── */
+(function init() {
+  try {
+    var student = null;
+    try { student = JSON.parse(sessionStorage.getItem('hub_student')); } catch(e) {}
+    var name = (student && (student.nickname || student.name)) || '';
+    document.getElementById('entry-student').textContent = name;
+
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+      db = firebase.firestore();
+    } catch(e) { db = null; }
+
+    if (!db) { showStep('offline'); return; }
+
+    if (!studentClassId) {
+      showStep('no-class');
+      return;
+    }
+
+    initStudentMode();
+  } catch(e) {
+    showStep('offline');
+  }
+})();
+
+/* ── 載入分享試卷清單 ── */
+async function initStudentMode() {
+  var body = document.getElementById('quiz-list-body');
+  if (body) body.innerHTML = '<div class="past-panel-empty">載入中…</div>';
+  try {
+    var snap = await db.collection('classes')
+      .doc(studentClassId).collection('sharedQuizSessions').get();
+
+    // 逐一確認 quizSessions 主文件仍存在且為進行中，過濾已刪除/已關閉的試卷
+    var results = await Promise.all(snap.docs.map(async function(d) {
+      var qs = await db.collection('quizSessions').doc(d.id).get();
+      if (!qs.exists || qs.data().active === false) return null;
+      return Object.assign({ sessionId: d.id }, d.data());
+    }));
+
+    var sessions = results.filter(function(s) { return s !== null; });
+    renderSharedList(sessions);
+  } catch(e) {
+    showStep('offline');
+  }
+}
+
+function renderSharedList(sessions) {
+  var body = document.getElementById('quiz-list-body');
+  if (!body) return;
+  if (!sessions.length) {
+    body.innerHTML = '<div class="past-panel-empty">老師尚未分享試卷</div>';
+    return;
+  }
+  body.innerHTML = sessions.map(function(s) {
+    return '<div class="shared-quiz-card" onclick="startSharedQuiz(\'' + escJs(s.sessionId) + '\')">' +
+      '<div>' +
+        '<div class="shared-quiz-name">' + escHtml(s.name || '未命名') + '</div>' +
+        '<div class="shared-quiz-meta">' + escHtml(s.grade || '') +
+          (s.lesson ? '　第 ' + escHtml(s.lesson) + ' 課' : '') +
+          (s.lessonName ? '　' + escHtml(s.lessonName) : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="shared-quiz-arrow">›</div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ── 進入指定試卷 ── */
+async function startSharedQuiz(sessionId) {
+  try {
+    var doc = await db.collection('quizSessions').doc(sessionId).get();
+    if (!doc.exists || doc.data().active === false) {
+      document.getElementById('entry-error').textContent = '這份試卷已關閉，請聯繫老師';
+      initStudentMode();
+      return;
+    }
+    var d = doc.data();
+    var settings = {
+      type:        d.type        || 'random',
+      sessionId:   sessionId,
+      sessionCode: d.code        || '',
+      sessionName: d.name        || '',
+      grade:       d.grade       || '',
+      lesson:      d.lesson      || '',
+      lessonName:  d.lessonName  || d.lesson || '',
+      teacherUid:  d.teacherUid  || '',
+      counts: {
+        '詞語解釋': (d.counts || {}).explain || 0,
+        '詞語填空': (d.counts || {}).fillIn  || 0,
+        '選擇題':   (d.counts || {}).mc      || 0
+      }
+    };
+    if (d.questionIds && d.questionIds.length) settings.questionIds = d.questionIds;
+    sessionStorage.setItem('quiz_settings', JSON.stringify(settings));
+    window.location.href = 'quiz.html';
+  } catch(e) {
+    document.getElementById('entry-error').textContent = '載入失敗，請重試';
+  }
+}
+
+
+/* ── Helpers ── */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escJs(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+</script>
+</body>
+</html>
