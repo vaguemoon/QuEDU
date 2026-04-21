@@ -34,18 +34,19 @@ function setCharSpeakContext(char, word) {
 
 /**
  * 朗讀漢字或詞語（使用 Web Speech API）
- * 若傳入單字，依優先順序選擇發音語境：
+ * 若傳入單字且未指定 bare，依優先順序選擇發音語境：
  *   1. setCharSpeakContext 設定的語境詞（使用者切換注音 tab 時）
  *   2. charInfoCache 快取中第一個讀音的第一個造詞（背景預載後）
  *   3. 裸字（無快取時的回退，TTS 自行判斷）
  * @param {string} char 要朗讀的字或詞
+ * @param {boolean} [bare] 傳入 true 時強制唸裸字，不套用語境詞
  */
-function speakChar(char) {
+function speakChar(char, bare) {
   if (!soundEnabled) return;
   try {
     synth.cancel();
     var text = char;
-    if (char && char.length === 1) {
+    if (!bare && char && char.length === 1) {
       if (_charContextWord[char]) {
         // 優先使用使用者切換注音 tab 時設定的語境詞
         text = _charContextWord[char];

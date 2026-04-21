@@ -169,7 +169,7 @@ function cancelExamSelect() {
 function onCardSelectToggle(idx) {
   sfxTap();
   examSelected[idx] = !examSelected[idx];
-  speakChar(chars[idx]);
+  speakChar(chars[idx], true);
   renderMenu();
 }
 
@@ -200,7 +200,7 @@ ripple.style.cssText = 'position:absolute;width:' + size + 'px;height:' + size +
     card.appendChild(ripple);
     setTimeout(function(){ ripple.remove(); }, 500);
   }
-  speakChar(chars[idx]);
+  speakChar(chars[idx], true);
   setTimeout(function() {
     currentIdx = idx;
     showPage('learn');
