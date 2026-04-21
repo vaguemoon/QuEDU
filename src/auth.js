@@ -78,9 +78,15 @@ function doLogin() {
       loginPin = ''; updatePinDisplay('pd', ''); return;
     }
     var d = doc.data();
+    // 舊資料只有 classId 字串，自動遷移為 classIds 陣列寫回 Firestore
+    if (d.classId && !d.classIds) {
+      db.collection('students').doc(name + '_' + loginPin)
+        .update({ classIds: [d.classId] })
+        .catch(function() {});
+    }
     onLoginSuccess({ id: name + '_' + loginPin, name: name, pin: loginPin,
                      nickname: d.nickname || '', avatar: d.avatar || '🐣',
-                     classId: d.classId || '' });
+                     classIds: d.classIds || (d.classId ? [d.classId] : []) });
   }).catch(function() {
     showToast('連線失敗，請重試');
     document.getElementById('btn-login-ok').disabled = false;
@@ -223,8 +229,6 @@ function doLogout() {
   document.getElementById('login-name').value = '';
   document.getElementById('btn-login-ok').disabled = true;
   document.getElementById('subject-frame').src = 'about:blank';
-  document.getElementById('activity-list').innerHTML =
-    '<div class="activity-empty">登入後查看學習記錄</div>';
   hideLogoutConfirm(); showPanel('login');
   showToast('已登出，掰掰！👋');
 }

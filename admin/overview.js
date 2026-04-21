@@ -31,7 +31,7 @@ function loadClassRoster(classId) {
     });
   }
 
-  db.collection('students').where('classId', '==', classId).get()
+  db.collection('students').where('classIds', 'array-contains', classId).get()
     .then(function(snap) {
       var studentDocs = [];
       snap.forEach(function(doc) { studentDocs.push({ id: doc.id, data: doc.data() }); });

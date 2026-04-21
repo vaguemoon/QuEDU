@@ -64,13 +64,18 @@ window.addEventListener('load', function() {
           // 載入學習進度
           charStatus = pData.charStatus || {};
 
-          // 非同步載入班級指派生字（不阻塞主流程）
-          if (sData.classId) {
-            db.collection('classes').doc(sData.classId).get().then(function(clsDoc) {
-              if (clsDoc.exists && clsDoc.data().assignedChars && clsDoc.data().assignedChars.length) {
-                teacherAssignedChars = clsDoc.data().assignedChars.slice();
-              }
-            }).catch(function() {});
+          // 非同步載入班級指派生字（合併所有班級，不阻塞主流程）
+          var _cids = sData.classIds || (sData.classId ? [sData.classId] : []);
+          if (_cids.length) {
+            Promise.all(_cids.map(function(cid) {
+              return db.collection('classes').doc(cid).get().then(function(clsDoc) {
+                return (clsDoc.exists && clsDoc.data().assignedChars) ? clsDoc.data().assignedChars : [];
+              }).catch(function() { return []; });
+            })).then(function(arrays) {
+              var merged = arrays.reduce(function(acc, arr) { return acc.concat(arr); }, []);
+              var unique = merged.filter(function(v, i, a) { return a.indexOf(v) === i; });
+              if (unique.length) teacherAssignedChars = unique;
+            });
           }
 
           // 載入課程選單

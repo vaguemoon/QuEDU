@@ -132,17 +132,24 @@ function renderHub() {
   learnGrid.style.gridTemplateColumns = learnSubjects.length === 1 ? '1fr' : '1fr 1fr';
   learnGrid.innerHTML = _renderSubjectCards(learnSubjects);
 
-  var quizSection = document.getElementById('quiz-section');
-  var quizGrid    = document.getElementById('quiz-grid');
-  if (quizSubjects.length > 0) {
-    quizSection.style.display = '';
-    quizGrid.style.gridTemplateColumns = quizSubjects.length === 1 ? '1fr' : '1fr 1fr';
-    quizGrid.innerHTML = _renderSubjectCards(quizSubjects);
-  } else {
-    quizSection.style.display = 'none';
-  }
+  var quizGrid = document.getElementById('quiz-grid');
+  quizGrid.style.gridTemplateColumns = quizSubjects.length === 1 ? '1fr' : '1fr 1fr';
+  quizGrid.innerHTML = _renderSubjectCards(quizSubjects);
 
   loadSubjectBadges();
+}
+
+function switchHubTab(tab) {
+  ['learn', 'quiz', 'profile'].forEach(function(t) {
+    var panel  = document.getElementById('hub-panel-' + t);
+    var tabBtn = document.getElementById('hub-tab-' + t);
+    var btmBtn = document.getElementById('hub-bottom-' + t);
+    var active = t === tab;
+    if (panel)  panel.classList.toggle('active', active);
+    if (tabBtn) tabBtn.classList.toggle('active', active);
+    if (btmBtn) btmBtn.classList.toggle('active', active);
+  });
+  if (tab === 'profile') _populateProfilePanel();
 }
 
 function loadSubjectBadges() {
@@ -161,12 +168,15 @@ function loadSubjectBadges() {
 function openSubject(id) {
   var s = SUBJECTS.find(function(x) { return x.id === id; });
   if (!s || !currentStudent) return;
-  if (s.studentMode && !currentStudent.classId) {
-    /* classId 可能因舊 session 未載入，先從 Firestore 補抓 */
+  var ids = currentStudent.classIds || [];
+  if (s.studentMode && !ids.length) {
+    /* classIds 可能因舊 session 未載入，先從 Firestore 補抓 */
     if (db) {
       db.collection('students').doc(currentStudent.id).get().then(function(doc) {
-        if (doc.exists && doc.data().classId) {
-          currentStudent.classId = doc.data().classId;
+        var d = doc.exists ? doc.data() : {};
+        var fetched = d.classIds || (d.classId ? [d.classId] : []);
+        if (fetched.length) {
+          currentStudent.classIds = fetched;
           sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
           openSubject(id);
         } else {
@@ -186,8 +196,8 @@ function openSubject(id) {
   showPanel('subject');
   setTimeout(function() {
     var url = s.file;
-    if (s.studentMode && currentStudent.classId) {
-      url += '?mode=student&classId=' + encodeURIComponent(currentStudent.classId);
+    if (s.studentMode && ids.length) {
+      url += '?mode=student&classIds=' + encodeURIComponent(ids.join(','));
     }
     document.getElementById('subject-frame').src = url;
   }, 380);
@@ -223,69 +233,86 @@ function loadActivity() {
 
 // ── 個人設定 ──
 
-function showProfile() {
+function _populateProfilePanel() {
   if (!currentStudent) return;
-  document.getElementById('profile-nickname').value     = currentStudent.nickname || '';
+  document.getElementById('profile-nickname').value          = currentStudent.nickname || '';
   document.getElementById('profile-avatar-big').textContent = currentStudent.avatar || '🐣';
-  document.getElementById('profile-header-name').textContent = currentStudent.nickname || currentStudent.name;
   selectedAvatar = currentStudent.avatar || '🐣';
   renderAvatarGrid(); _renderHubThemeGrid(); applySoundUI();
   loadStudentClass();
-  showPanel('profile');
 }
 
-// ── 班級加入 ──
+function showProfile() {
+  switchHubTab('profile');
+}
+
+// ── 班級加入（支援複數班級） ──
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
 function loadStudentClass() {
   if (!db || !currentStudent) return;
   var wrap = document.getElementById('class-join-wrap');
   if (!wrap) return;
+  wrap.innerHTML = '<div style="color:var(--muted);font-size:.85rem;font-weight:600">載入中…</div>';
+
   db.collection('students').doc(currentStudent.id).get().then(function(doc) {
-    var classId = doc.exists ? doc.data().classId : null;
-    if (classId) {
-      db.collection('classes').doc(classId).get().then(function(cdoc) {
-        if (cdoc.exists) {
-          var cls = cdoc.data();
-          wrap.innerHTML =
-            '<div class="class-joined-row">' +
-              '<div>' +
-                '<div class="class-joined-name">🏫 ' + escHtml(cls.name) + '</div>' +
-                '<div class="class-joined-code">邀請碼：' + cls.inviteCode + '</div>' +
-              '</div>' +
-              '<button class="btn-leave-class" onclick="leaveClass()">離開班級</button>' +
-            '</div>';
-        } else { renderJoinForm(wrap); }
-      }).catch(function() { renderJoinForm(wrap); });
-    } else { renderJoinForm(wrap); }
-  }).catch(function() { renderJoinForm(wrap); });
+    var d = doc.exists ? doc.data() : {};
+    var ids = d.classIds || (d.classId ? [d.classId] : []);
+    currentStudent.classIds = ids;
+    sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+
+    if (!ids.length) { _renderJoinUI(wrap, []); return; }
+
+    Promise.all(ids.map(function(cid) {
+      return db.collection('classes').doc(cid).get()
+        .then(function(cdoc) { return cdoc.exists ? { id: cid, data: cdoc.data() } : null; })
+        .catch(function() { return null; });
+    })).then(function(results) {
+      _renderJoinUI(wrap, results.filter(Boolean));
+    });
+  }).catch(function() { _renderJoinUI(wrap, []); });
 }
-function renderJoinForm(wrap) {
-  wrap.innerHTML =
-    '<div class="join-class-row">' +
+
+function _renderJoinUI(wrap, classes) {
+  var html = '';
+  classes.forEach(function(cls) {
+    html +=
+      '<div class="class-joined-row">' +
+        '<div>' +
+          '<div class="class-joined-name">🏫 ' + escHtml(cls.data.name) + '</div>' +
+          '<div class="class-joined-code">邀請碼：' + escHtml(cls.data.inviteCode) + '</div>' +
+        '</div>' +
+        '<button class="btn-leave-class" onclick="leaveClass(\'' + cls.id + '\')">離開</button>' +
+      '</div>';
+  });
+  html +=
+    '<div class="join-class-row" style="margin-top:' + (classes.length ? '12px' : '0') + '">' +
       '<input id="join-code-input" type="text" placeholder="輸入 6 碼邀請碼" maxlength="6"' +
-        ' class="join-code-input"' +
-        ' oninput="this.value=this.value.toUpperCase()">' +
+        ' class="join-code-input" oninput="this.value=this.value.toUpperCase()">' +
       '<button class="btn-join-class" onclick="joinClass()">加入</button>' +
     '</div>' +
     '<div id="join-class-error" class="join-class-error"></div>';
+  wrap.innerHTML = html;
 }
+
 function joinClass() {
   var input = document.getElementById('join-code-input');
   var code  = (input ? input.value.trim().toUpperCase() : '');
-  var errEl = document.getElementById('join-class-error');
-  if (errEl) errEl.textContent = '';
   if (code.length !== 6) { showJoinError('請輸入 6 碼邀請碼'); return; }
   if (!db || !currentStudent) return;
+  var existing = currentStudent.classIds || [];
   db.collection('classes').where('inviteCode','==',code).where('active','==',true).get()
     .then(function(snap) {
       if (snap.empty) { showJoinError('找不到這個邀請碼，請確認是否正確或班級已停用'); return; }
       var classId = snap.docs[0].id;
-      return db.collection('students').doc(currentStudent.id).set({ classId: classId }, { merge: true })
+      if (existing.indexOf(classId) !== -1) { showJoinError('你已經在這個班級了'); return; }
+      return db.collection('students').doc(currentStudent.id)
+        .update({ classIds: firebase.firestore.FieldValue.arrayUnion(classId) })
         .then(function() {
-          currentStudent.classId = classId;
+          currentStudent.classIds = existing.concat([classId]);
           sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
           showToast('✅ 已加入班級！');
           loadStudentClass();
@@ -293,17 +320,19 @@ function joinClass() {
     })
     .catch(function(e) { showJoinError('加入失敗：' + e.message); });
 }
+
 function showJoinError(msg) {
   var el = document.getElementById('join-class-error');
   if (el) el.textContent = msg;
 }
-function leaveClass() {
-  if (!confirm('確定要離開目前的班級嗎？')) return;
+
+function leaveClass(classId) {
+  if (!confirm('確定要離開這個班級嗎？')) return;
   if (!db || !currentStudent) return;
   db.collection('students').doc(currentStudent.id)
-    .update({ classId: firebase.firestore.FieldValue.delete() })
+    .update({ classIds: firebase.firestore.FieldValue.arrayRemove(classId) })
     .then(function() {
-      delete currentStudent.classId;
+      currentStudent.classIds = (currentStudent.classIds || []).filter(function(id) { return id !== classId; });
       sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
       showToast('已離開班級');
       loadStudentClass();

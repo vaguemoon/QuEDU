@@ -125,7 +125,7 @@ function renderClasses() {
 
   /* 非同步載入各班學生數 */
   currentClasses.forEach(function(cls) {
-    db.collection('students').where('classId', '==', cls.id).get()
+    db.collection('students').where('classIds', 'array-contains', cls.id).get()
       .then(function(snap) {
         var el = document.getElementById('cs-count-' + cls.id);
         if (el) el.textContent = '👥 ' + snap.size + ' 位學生已加入';

@@ -60,8 +60,8 @@ var FB_CONFIG = {
 var db = null;
 
 /* ── URL Params ── */
-var _urlParams     = new URLSearchParams(window.location.search);
-var studentClassId = _urlParams.get('classId') || '';
+var _urlParams      = new URLSearchParams(window.location.search);
+var studentClassIds = (_urlParams.get('classIds') || _urlParams.get('classId') || '').split(',').filter(Boolean);
 
 /* ── Navigation ── */
 function returnToHub() {
@@ -90,7 +90,7 @@ function showStep(name) {
 
     if (!db) { showStep('offline'); return; }
 
-    if (!studentClassId) {
+    if (!studentClassIds.length) {
       showStep('no-class');
       return;
     }
@@ -101,16 +101,22 @@ function showStep(name) {
   }
 })();
 
-/* ── 載入分享試卷清單 ── */
+/* ── 載入分享試卷清單（合併所有班級） ── */
 async function initStudentMode() {
   var body = document.getElementById('quiz-list-body');
   if (body) body.innerHTML = '<div class="past-panel-empty">載入中…</div>';
   try {
-    var snap = await db.collection('classes')
-      .doc(studentClassId).collection('sharedQuizSessions').get();
+    var allDocs = [];
+    var seen = {};
+    await Promise.all(studentClassIds.map(async function(cid) {
+      var snap = await db.collection('classes').doc(cid).collection('sharedQuizSessions').get();
+      snap.docs.forEach(function(d) {
+        if (!seen[d.id]) { seen[d.id] = true; allDocs.push(d); }
+      });
+    }));
 
     // 逐一確認 quizSessions 主文件仍存在且為進行中，過濾已刪除/已關閉的試卷
-    var results = await Promise.all(snap.docs.map(async function(d) {
+    var results = await Promise.all(allDocs.map(async function(d) {
       var qs = await db.collection('quizSessions').doc(d.id).get();
       if (!qs.exists || qs.data().active === false) return null;
       return Object.assign({ sessionId: d.id }, d.data());

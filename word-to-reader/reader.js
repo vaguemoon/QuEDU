@@ -69,7 +69,7 @@ function escapeHtml(s) {
 /* ══ Student Mode URL Params ════════════════════════════════ */
 var _urlParams      = new URLSearchParams(window.location.search);
 var studentMode     = _urlParams.get('mode') === 'student';
-var studentClassId  = _urlParams.get('classId') || '';
+var studentClassIds = (_urlParams.get('classIds') || _urlParams.get('classId') || '').split(',').filter(Boolean);
 
 /* ══ State ══════════════════════════════════════════════════ */
 var selectedFile    = null;
@@ -331,18 +331,23 @@ async function initStudentMode() {
   document.getElementById('login-btn').style.display   = 'none';
   showPage('student');
 
-  if (!studentClassId) {
+  if (!studentClassIds.length) {
     studentLoading.style.display = 'none';
     studentEmpty.style.display   = 'block';
     return;
   }
 
   try {
-    var snap = await fbDb.collection('classes')
-      .doc(studentClassId).collection('sharedReaderDocs').get();
+    var allDocs = [];
+    var seen = {};
+    await Promise.all(studentClassIds.map(async function(cid) {
+      var snap = await fbDb.collection('classes').doc(cid).collection('sharedReaderDocs').get();
+      snap.docs.forEach(function(d) {
+        if (!seen[d.id]) { seen[d.id] = true; allDocs.push(d.data()); }
+      });
+    }));
     studentLoading.style.display = 'none';
-    var docs = snap.docs.map(function(d) { return d.data(); });
-    renderStudentDocList(docs);
+    renderStudentDocList(allDocs);
   } catch(e) {
     studentLoading.style.display = 'none';
     studentDocList.innerHTML = '<div style="text-align:center;padding:32px;color:#e00;font-size:.85rem">載入失敗，請重新整理</div>';

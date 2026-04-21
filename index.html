@@ -168,77 +168,101 @@
 
     <!-- ④ Hub 主頁 -->
     <div class="panel right" id="panel-hub">
-      <div class="hub-body">
-        <button class="hub-profile-card" onclick="showProfile()">
-          <div class="hub-profile-left">
-            <div class="hub-profile-avatar" id="hub-avatar">🐣</div>
+      <div class="hub-screen">
+
+        <!-- 左側 sidebar（桌面版） -->
+        <aside class="hub-sidebar">
+          <div class="hub-sidebar-brand">
+            <div class="hub-sidebar-avatar" id="hub-avatar">🐣</div>
             <div>
-              <div class="hub-welcome-name" id="hub-name">—</div>
-              <div class="hub-welcome-sub">歡迎回來・點此編輯個人資料</div>
+              <div class="hub-sidebar-name" id="hub-name">—</div>
+              <div class="hub-sidebar-sub">上學趣</div>
             </div>
           </div>
-          <span class="hub-profile-arrow">›</span>
-        </button>
-        <div class="hub-section-label">📚 學習區</div>
-        <div class="subjects-grid" id="subjects-grid"></div>
-        <div id="quiz-section">
-          <div class="hub-section-label">📝 測驗區</div>
-          <div class="subjects-grid" id="quiz-grid"></div>
-        </div>
-        <div class="hub-section-label">📊 近期記錄</div>
-        <div class="activity-card">
-          <div id="activity-list"><div class="activity-empty">載入中…</div></div>
-        </div>
+          <nav class="hub-sidebar-nav">
+            <button class="hub-tab active" id="hub-tab-learn" onclick="switchHubTab('learn')">📚 學習區</button>
+            <button class="hub-tab" id="hub-tab-quiz" onclick="switchHubTab('quiz')">📝 測驗區</button>
+          </nav>
+          <div class="hub-sidebar-footer">
+            <button class="hub-tab" id="hub-tab-profile" onclick="switchHubTab('profile')">⚙️ 個人設定</button>
+            <button class="btn-logout-hub" onclick="showLogoutConfirm()">🚪 登出</button>
+          </div>
+        </aside>
+
+        <!-- 主內容區 -->
+        <main class="hub-content">
+
+          <!-- 學習區 -->
+          <div class="hub-panel active" id="hub-panel-learn">
+            <div class="hub-section-label">📚 學習區</div>
+            <div class="subjects-grid" id="subjects-grid"></div>
+          </div>
+
+          <!-- 測驗區 -->
+          <div class="hub-panel" id="hub-panel-quiz">
+            <div class="hub-section-label">📝 測驗區</div>
+            <div class="subjects-grid" id="quiz-grid"></div>
+          </div>
+
+          <!-- 個人資料 -->
+          <div class="hub-panel" id="hub-panel-profile">
+            <div class="hub-section-label">⚙️ 個人設定</div>
+            <div class="profile-body">
+              <div class="profile-avatar-big" id="profile-avatar-big">🐣</div>
+              <div class="profile-section">
+                <div class="profile-section-title">暱稱</div>
+                <input class="profile-input" id="profile-nickname" type="text"
+                  placeholder="輸入暱稱（選填）" maxlength="10">
+              </div>
+              <div class="profile-section">
+                <div class="profile-section-title">頭像</div>
+                <div class="avatar-grid" id="avatar-grid"></div>
+              </div>
+              <div class="profile-section">
+                <div class="profile-section-title">主題色系</div>
+                <div class="theme-grid" id="theme-grid"></div>
+              </div>
+              <div class="profile-section">
+                <div class="profile-section-title">音效</div>
+                <div class="sound-row">
+                  <span style="font-size:.9rem;font-weight:700">練習音效</span>
+                  <button class="sound-toggle" id="sound-toggle" onclick="toggleSoundUI()">
+                    <div class="sound-knob" id="sound-knob"></div>
+                  </button>
+                </div>
+              </div>
+              <div class="profile-section">
+                <div class="profile-section-title">班級</div>
+                <div id="class-join-wrap"><div style="color:var(--muted);font-size:.85rem;font-weight:600">載入中…</div></div>
+              </div>
+              <button class="btn-save-profile" onclick="saveProfile()">💾 儲存設定</button>
+            </div>
+          </div>
+
+        </main>
+
+        <!-- 手機版底部 tab bar -->
+        <nav class="hub-bottom-nav">
+          <button class="hub-bottom-btn active" id="hub-bottom-learn" onclick="switchHubTab('learn')">
+            <span class="hub-bottom-icon">📚</span>
+            <span class="hub-bottom-label">學習區</span>
+          </button>
+          <button class="hub-bottom-btn" id="hub-bottom-quiz" onclick="switchHubTab('quiz')">
+            <span class="hub-bottom-icon">📝</span>
+            <span class="hub-bottom-label">測驗區</span>
+          </button>
+          <button class="hub-bottom-btn" id="hub-bottom-profile" onclick="switchHubTab('profile')">
+            <span class="hub-bottom-icon">⚙️</span>
+            <span class="hub-bottom-label">個人設定</span>
+          </button>
+        </nav>
+
       </div>
     </div>
 
     <!-- ⑤ 子項目 iframe -->
     <div class="panel right" id="panel-subject">
       <iframe id="subject-frame" src="about:blank" allow="microphone"></iframe>
-    </div>
-
-    <!-- ⑥ 個人設定 -->
-    <div class="panel right" id="panel-profile">
-      <div class="profile-nav-row">
-        <button class="btn-back-profile" onclick="showPanel('hub')">← 返回</button>
-      </div>
-      <div class="profile-header">
-        <div class="profile-avatar-big" id="profile-avatar-big">🐣</div>
-        <div>
-          <div class="profile-header-name" id="profile-header-name">—</div>
-          <div class="profile-header-sub">個人設定</div>
-        </div>
-      </div>
-      <div class="profile-body">
-        <div class="profile-section">
-          <div class="profile-section-title">暱稱</div>
-          <input class="profile-input" id="profile-nickname" type="text"
-            placeholder="輸入暱稱（選填）" maxlength="10">
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">頭像</div>
-          <div class="avatar-grid" id="avatar-grid"></div>
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">主題色系</div>
-          <div class="theme-grid" id="theme-grid"></div>
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">音效</div>
-          <div class="sound-row">
-            <span style="font-size:.9rem;font-weight:700">練習音效</span>
-            <button class="sound-toggle" id="sound-toggle" onclick="toggleSoundUI()">
-              <div class="sound-knob" id="sound-knob"></div>
-            </button>
-          </div>
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">班級</div>
-          <div id="class-join-wrap"><div style="color:var(--muted);font-size:.85rem;font-weight:600">載入中…</div></div>
-        </div>
-        <button class="btn-save-profile" onclick="saveProfile()">💾 儲存設定</button>
-        <button class="btn-logout" onclick="showLogoutConfirm()">登出</button>
-      </div>
     </div>
 
   </div>

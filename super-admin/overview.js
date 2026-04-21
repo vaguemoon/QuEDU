@@ -88,7 +88,7 @@ function loadOverview() {
 
       // 非同步載入各班學生數
       classes.forEach(function(cls) {
-        db.collection('students').where('classId','==',cls.id).get()
+        db.collection('students').where('classIds','array-contains',cls.id).get()
           .then(function(snap) {
             var el = document.getElementById('oc-' + cls.id);
             if (el) el.textContent = snap.size + ' 位';
