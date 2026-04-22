@@ -14,7 +14,7 @@
  */
 var SUBJECTS = [
   {
-    id: 'chinese', file: 'chinese/index.html',
+    id: 'chinese', file: 'apps/learn/lang/chinese/index.html',
     icon: '國', name: '練字趣', desc: '國小國字筆順學習',
     type: 'learn', category: 'chinese',
     theme: 'theme-blue', badge: '練字LV1', badgeClass: 'green',
@@ -36,7 +36,7 @@ var SUBJECTS = [
     }
   },
   {
-    id: 'multiply', file: 'multiply/index.html',
+    id: 'multiply', file: 'apps/learn/math/multiply/index.html',
     icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
     type: 'learn', category: 'math',
     theme: 'theme-orange', badge: '乘法LV1', badgeClass: 'green',
@@ -58,7 +58,7 @@ var SUBJECTS = [
     }
   },
   {
-    id: 'exam-reader', file: 'word-to-reader/index.html',
+    id: 'exam-reader', file: 'apps/quiz/word-to-reader/index.html',
     icon: '🎧', name: '考卷報讀', desc: '老師分享的有聲考卷',
     type: 'quiz', studentMode: true,
     theme: 'theme-teal', badge: '考卷報讀', badgeClass: 'green',
@@ -74,7 +74,7 @@ var SUBJECTS = [
     }
   },
   {
-    id: 'recognize', file: 'recognize/index.html',
+    id: 'recognize', file: 'apps/learn/lang/recognize/index.html',
     icon: '🔊', name: '認字趣', desc: '聽音辨字・選字選詞',
     type: 'learn', category: 'chinese',
     theme: 'theme-teal', badge: '認字LV1', badgeClass: 'green',
@@ -104,7 +104,7 @@ var SUBJECTS = [
     }
   },
   {
-    id: 'chinese-quiz', file: 'chinese-quiz/index.html',
+    id: 'chinese-quiz', file: 'apps/quiz/chinese-quiz/index.html',
     icon: '📝', name: '語文練習', desc: '詞語填空與選擇題練習',
     type: 'quiz', studentMode: true,
     theme: 'theme-purple', badge: '語文練習', badgeClass: 'blue',

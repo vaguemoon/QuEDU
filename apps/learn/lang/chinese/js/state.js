@@ -4,6 +4,14 @@
  */
 'use strict';
 
+// ── curriculum.js Hook：選課後初始化學習狀態 ──
+
+function onCurriculumLessonSelected(lesson, verName, bookId, gradeData) {
+  chars = (lesson.chars || []).slice();
+  chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
+  if (typeof preloadCharInfoAll === 'function') preloadCharInfoAll(chars);
+}
+
 // ── 學生與學習狀態 ──
 var currentStudent = null;
 var chars      = [];      // 本次練習的生字陣列

@@ -70,88 +70,14 @@
 
 /* ── 頁面基礎（全畫面使用） ── */
 .page {
-  display: none; position: fixed; inset: 0; overflow-y: auto;
+  display: none; 
+  position: fixed;
+  inset: 0; overflow-y: auto;
   padding: 60px 0 0;
 }
 .page.active { display: block; }
 
-/* ── 課程選擇（套用練字趣風格） ── */
-#page-curriculum { padding: 60px 14px 24px; }
-.curr-step { }
-.curr-step-title {
-  font-size: 1.5rem; font-weight: 900; color: var(--blue-dk);
-  margin: 8px 0 16px; padding: 0 4px;
-}
-.curr-ver-cards {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 24px;
-}
-/* 課程版本卡片（全畫面） */
-.curr-ver-card {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 20px; padding: 48px 24px; aspect-ratio: 1;
-  border: 2.5px solid; border-radius: var(--radius);
-  cursor: pointer; font-family: inherit;
-  font-weight: 800; transition: transform .12s, box-shadow .12s;
-  box-shadow: var(--shadow);
-}
-.curr-ver-card:active { transform: scale(.97); }
-.curr-ver-icon { font-size: 5.6rem; }
-.curr-ver-name {
-  font-size: 2rem; font-weight: 900; text-align: center;
-  font-family: 'Noto Serif TC', serif;
-}
-.curr-loading { color: var(--muted); font-size: .88rem; font-weight: 700; padding: 16px 0; }
-.curr-loading-inline { font-size: .78rem; color: var(--muted); font-weight: 600; }
-.btn-retry-curr {
-  margin-top: 8px; padding: 8px 18px; border: 1.5px solid var(--border);
-  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
-  font-size: .85rem; font-weight: 800; cursor: pointer; font-family: inherit;
-}
-/* 課程書本列表（全畫面） */
-.curr-book-cards {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  gap: 10px;
-}
-/* 課程書本卡片（全畫面） */
-.curr-book-card {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 20px 8px; border: 2px solid var(--border); border-radius: var(--radius);
-  background: var(--white); cursor: pointer; font-family: inherit;
-  transition: all .12s; box-shadow: 0 2px 8px rgba(44,100,160,.07);
-}
-.curr-book-card:active { background: var(--blue-lt); border-color: var(--blue); transform: scale(.96); }
-.curr-book-icon  { font-size: 2.2rem; }
-.curr-book-label { font-size: 1.15rem; font-weight: 900; color: var(--text); font-family: 'Noto Serif TC', serif; }
-.curr-book-meta  { font-size: .8rem; font-weight: 700; color: var(--muted); }
-.curr-lesson-cards { display: flex; gap: 10px; }
-.curr-lesson-col   { flex: 1; display: flex; flex-direction: column; gap: 9px; }
-.curr-lesson-card {
-  width: 100%; padding: 12px 14px; text-align: left;
-  border: 2px solid var(--border); border-radius: 16px;
-  background: var(--white); cursor: pointer; font-family: inherit;
-  transition: all .12s; box-shadow: 0 2px 8px rgba(44,100,160,.06);
-}
-.curr-lesson-card:active, .curr-lesson-card.active {
-  border-color: var(--blue); background: var(--blue-lt);
-}
-.curr-lesson-card.lesson-all-mastered {
-  border-color: var(--green); background: #f0fbf5;
-  box-shadow: 0 0 0 3px rgba(82,201,122,.18);
-}
-.curr-lesson-num  { font-size: .75rem; font-weight: 800; color: var(--muted); display: flex; align-items: center; gap: 5px; }
-.curr-lesson-name { font-size: .95rem; font-weight: 900; color: var(--text); margin: 3px 0; font-family: 'Noto Serif TC', serif; }
-.curr-lesson-chars{ font-size: .82rem; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.lesson-word-badge {
-  display: inline-block; padding: 1px 7px;
-  background: var(--blue-lt); color: var(--blue-dk);
-  border-radius: 20px; font-size: .72rem; font-weight: 800;
-}
-.lesson-mastered-badge {
-  display: inline-block; padding: 1px 7px;
-  background: #d5f5e3; color: #1e8449;
-  border-radius: 20px; font-size: .72rem; font-weight: 900;
-}
+/* ── 課程選擇：樣式由 shared/curriculum.css 提供 ── */
 
 /* ── 字詞列表（全畫面） ── */
 #page-menu { padding-bottom: 88px; }

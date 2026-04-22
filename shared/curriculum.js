@@ -1,6 +1,16 @@
 /**
- * curriculum.js — 課程選擇（三步卡片）
- * 依賴：state.js（currentLessonData、gradePool）、nav.js（showPage）
+ * curriculum.js — 語文學習 App 課程選擇範本（版本→冊次→課次）
+ *
+ * 使用方式：
+ *   各 app 在 state.js（或 init.js）中定義兩個可選 Hook：
+ *
+ *   function onCurriculumLessonSelected(lesson, verName, bookId, gradeData) { ... }
+ *     — 在選好課次後呼叫，用來初始化 app 自身的學習狀態
+ *
+ *   function getLessonMasteredState(lesson) { return true/false; }
+ *     — 決定課次卡片是否顯示「✓ 全過」標記，未定義則不顯示
+ *
+ * 依賴：shared.js（db）、nav.js（showPage）、各 app 的 renderMenu()
  */
 'use strict';
 
@@ -51,7 +61,7 @@ function loadCurriculumVersions() {
       };
       container.appendChild(card);
 
-      // 非同步載入課次（含 words 欄位）
+      // 非同步載入課次（含 chars 與 words 欄位）
       db.collection('curriculum').doc(verId).collection('lessons').get().then(function(lSnap) {
         var books = {};
         lSnap.forEach(function(lDoc) {
@@ -186,17 +196,14 @@ function selectBook(bookId) {
 
   lessons.forEach(function(lesson, i) {
     var card = document.createElement('button');
-    // 判斷整課是否全部通過
-    var allChars  = lesson.chars || [];
-    var allWords  = lesson.words || [];
-    var hasItems  = allChars.length > 0;
-    var allPassed = hasItems &&
-      allChars.every(function(c) { return charStatus[c] === 'mastered'; }) &&
-      (!allWords.length || allWords.every(function(w) { return wordStatus[w] === 'mastered'; }));
+
+    // 可選 Hook：判斷整課是否全部通過
+    var allPassed = typeof getLessonMasteredState === 'function'
+      ? getLessonMasteredState(lesson) : false;
     card.className = 'curr-lesson-card' + (allPassed ? ' lesson-all-mastered' : '');
 
-    var charPreview = allChars.slice(0, 8).join(' ');
-    var wordCount   = allWords.length;
+    var charPreview = (lesson.chars || []).slice(0, 8).join(' ');
+    var wordCount   = (lesson.words || []).length;
     var meta = wordCount ? '<span class="lesson-word-badge">' + wordCount + '詞</span>' : '';
     var badge = allPassed ? '<span class="lesson-mastered-badge">✓ 全過</span>' : '';
     card.innerHTML =
@@ -224,25 +231,17 @@ function selectLesson(lesson, cardEl) {
 
 function startCurriculumLesson() {
   if (!currSelectedVer || !currSelectedBook || !currSelectedLesson) return;
-  var lesson  = currSelectedLesson;
-  var verName = currSelectedVer.name;
-
-  currentLessonLabel = verName + '　' + currSelectedBook + '・第 ' + (lesson.lessonNum || '') + ' 課　' + (lesson.name || '');
-  currentLessonData  = lesson;
-
-  // 初始化新字的狀態
-  (lesson.chars || []).forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
-  (lesson.words || []).forEach(function(w) { if (!wordStatus[w]) wordStatus[w] = 'new'; });
-
-  // 建立同冊備用誘答池（排除當前課）
+  var lesson    = currSelectedLesson;
+  var verName   = currSelectedVer.name;
   var verId     = currSelectedVer.verId;
   var gradeData = ((curriculumData[verId] || {}).books || {})[currSelectedBook] || [];
-  gradePool.chars = gradeData.reduce(function(acc, l) {
-    return acc.concat((l.chars || []).filter(function(c) { return (lesson.chars || []).indexOf(c) === -1; }));
-  }, []);
-  gradePool.words = gradeData.reduce(function(acc, l) {
-    return acc.concat((l.words || []).filter(function(w) { return (lesson.words || []).indexOf(w) === -1; }));
-  }, []);
+
+  currentLessonLabel = verName + '　' + currSelectedBook + '・第 ' + (lesson.lessonNum || '') + ' 課　' + (lesson.name || '');
+
+  // App 自訂 Hook：初始化各 app 的學習狀態
+  if (typeof onCurriculumLessonSelected === 'function') {
+    onCurriculumLessonSelected(lesson, verName, currSelectedBook, gradeData);
+  }
 
   renderMenu();
   showPage('menu');

@@ -10,6 +10,28 @@ var charStatus = {};           // { '字': 'new'|'practiced'|'mastered' }
 var wordStatus = {};           // { '詞語': 'new'|'practiced'|'mastered' }
 var gradePool  = { chars: [], words: [] }; // 同冊備用誘答池
 
+// ── curriculum.js Hook：選課後初始化學習狀態 ──
+
+function onCurriculumLessonSelected(lesson, verName, bookId, gradeData) {
+  currentLessonData = lesson;
+  (lesson.chars || []).forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
+  (lesson.words || []).forEach(function(w) { if (!wordStatus[w]) wordStatus[w] = 'new'; });
+  gradePool.chars = gradeData.reduce(function(acc, l) {
+    return acc.concat((l.chars || []).filter(function(c) { return (lesson.chars || []).indexOf(c) === -1; }));
+  }, []);
+  gradePool.words = gradeData.reduce(function(acc, l) {
+    return acc.concat((l.words || []).filter(function(w) { return (lesson.words || []).indexOf(w) === -1; }));
+  }, []);
+}
+
+function getLessonMasteredState(lesson) {
+  var allChars = lesson.chars || [];
+  var allWords = lesson.words || [];
+  return allChars.length > 0
+    && allChars.every(function(c) { return charStatus[c] === 'mastered'; })
+    && (!allWords.length || allWords.every(function(w) { return wordStatus[w] === 'mastered'; }));
+}
+
 function saveProgress() {
   if (!db || !currentStudent) return;
   db.collection('students').doc(currentStudent.id)
