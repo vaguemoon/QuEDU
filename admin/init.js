@@ -28,7 +28,7 @@ function toggleDarkMode() {
 var APP_REGISTRY = [
   { id: 'chinese',      label: '識字趣', icon: '📖', color: 'var(--blue)',   progress: 'hanzi'    },
   { id: 'multiply',     label: '乘法趣', icon: '✖️',  color: 'var(--green)',  progress: 'multiply' },
-  { id: 'chinese-quiz', label: '語文練習', icon: '📝', color: 'var(--orange)', progress: null       }
+  { id: 'chinese-quiz', label: '語文測驗', icon: '📝', color: 'var(--orange)', progress: null       }
 ];
 
 function onFirebaseReady() {

@@ -125,22 +125,22 @@ var SUBJECTS = [
   },
   {
     id: 'chinese-quiz', file: 'apps/quiz/chinese-quiz/index.html',
-    icon: '📝', name: '語文練習', desc: '詞語填空與選擇題練習',
+    icon: '📝', name: '語文測驗', desc: '詞語填空與選擇題練習',
     type: 'quiz', studentMode: true,
-    theme: 'theme-purple', badge: '語文練習', badgeClass: 'blue',
+    theme: 'theme-purple', badge: '語文測驗', badgeClass: 'blue',
     getLevel: function(sid) {
-      // 讀最近一次語文練習的分數當作標籤
+      // 讀最近一次語文測驗的分數當作標籤
       return db.collection('students').doc(sid).collection('activities')
         .where('app', '==', 'chinese-quiz')
         .orderBy('timestamp', 'desc')
         .limit(1)
         .get()
         .then(function(snap) {
-          if (snap.empty) return '語文練習';
+          if (snap.empty) return '語文測驗';
           var d = snap.docs[0].data();
           return '最近 ' + d.score + ' 分';
         })
-        .catch(function() { return '語文練習'; });
+        .catch(function() { return '語文測驗'; });
     },
     activity: function(sid) {
       return db.collection('students').doc(sid).collection('activities')

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>語文練習 — 作答</title>
+<title>語文測驗 — 作答</title>
 <link rel="stylesheet" href="chinese-quiz.css">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -12,7 +12,7 @@
 
 <div class="quiz-topbar">
   <button class="btn-quiz-back" onclick="confirmBack()">← 返回</button>
-  <div class="quiz-topbar-title" id="topbar-title">語文練習</div>
+  <div class="quiz-topbar-title" id="topbar-title">語文測驗</div>
 </div>
 
 <div class="quiz-body">
@@ -211,7 +211,7 @@ window.addEventListener('load', function() {
   }
 
   var name = student.nickname || student.name;
-  document.getElementById('topbar-title').textContent = name + ' 的語文練習';
+  document.getElementById('topbar-title').textContent = name + ' 的語文測驗';
   document.getElementById('sheet-meta').textContent   = '作答者：' + name;
 
   try {
