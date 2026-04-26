@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>數學測驗</title>
+<link rel="stylesheet" href="math-quiz.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="entry-page">
+<div class="entry-wrapper">
+  <div class="entry-card">
+    <div class="entry-logo">🔢</div>
+    <h1 class="entry-title">數學測驗</h1>
+    <div class="entry-student" id="entry-student"></div>
+    <div class="entry-error"   id="entry-error"></div>
+
+    <!-- 測驗清單 -->
+    <div class="setup-step" id="step-list">
+      <div id="quiz-list-body">
+        <div class="past-panel-empty">載入中…</div>
+      </div>
+    </div>
+
+    <!-- 無班級提示 -->
+    <div class="setup-step" id="step-no-class" style="display:none">
+      <div class="offline-notice">請先在個人設定中加入班級</div>
+    </div>
+
+    <!-- 離線備援 -->
+    <div class="setup-step" id="step-offline" style="display:none">
+      <div class="offline-notice">⚠️ 無法連線伺服器<br>請確認網路後再試</div>
+      <button class="btn-start" onclick="initStudentMode()">重試</button>
+    </div>
+
+    <div class="entry-divider"></div>
+    <button class="btn-entry-return" onclick="returnToHub()">← 返回主頁</button>
+  </div>
+</div>
+</div>
+
+<script>
+'use strict';
+
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
+  authDomain:        'tainping-hanzi-app.firebaseapp.com',
+  projectId:         'tainping-hanzi-app',
+  storageBucket:     'tainping-hanzi-app.firebasestorage.app',
+  messagingSenderId: '158917910126',
+  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
+};
+
+var db = null;
+var _urlParams      = new URLSearchParams(window.location.search);
+var studentClassIds = (_urlParams.get('classIds') || _urlParams.get('classId') || '').split(',').filter(Boolean);
+
+function returnToHub() {
+  window.parent.postMessage({ type: 'math-quiz-back-to-hub' }, '*');
+}
+
+function showStep(name) {
+  ['list', 'no-class', 'offline'].forEach(function(s) {
+    var el = document.getElementById('step-' + s);
+    if (el) el.style.display = (s === name) ? '' : 'none';
+  });
+}
+
+function showError(msg) {
+  var el = document.getElementById('entry-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+(function init() {
+  try {
+    var student = null;
+    try { student = JSON.parse(sessionStorage.getItem('hub_student')); } catch(e) {}
+    var name = (student && (student.nickname || student.name)) || '';
+    document.getElementById('entry-student').textContent = name;
+
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+      db = firebase.firestore();
+    } catch(e) { db = null; }
+
+    if (!db)                    { showStep('offline'); return; }
+    if (!studentClassIds.length) { showStep('no-class'); return; }
+
+    initStudentMode();
+  } catch(e) { showStep('offline'); }
+})();
+
+async function initStudentMode() {
+  var body = document.getElementById('quiz-list-body');
+  if (body) body.innerHTML = '<div class="past-panel-empty">載入中…</div>';
+  try {
+    var allDocs = [];
+    var seen = {};
+    await Promise.all(studentClassIds.map(async function(cid) {
+      var snap = await db.collection('classes').doc(cid).collection('sharedQuizSessions').get();
+      snap.docs.forEach(function(d) {
+        if (!seen[d.id]) { seen[d.id] = true; allDocs.push(d); }
+      });
+    }));
+
+    var results = await Promise.all(allDocs.map(async function(d) {
+      var qs = await db.collection('mathQuizSessions').doc(d.id).get();
+      if (!qs.exists || qs.data().active === false) return null;
+      if (qs.data().quizType !== 'math') return null;
+      return Object.assign({ sessionId: d.id }, qs.data());
+    }));
+
+    var sessions = results.filter(function(s) { return s !== null; });
+
+    var student = null;
+    try { student = JSON.parse(sessionStorage.getItem('hub_student')); } catch(e) {}
+    var studentId = (student && student.id) || null;
+    var completedMap = {};
+    if (studentId && sessions.length) {
+      try {
+        var rSnap = await db.collection('mathQuizResults')
+          .where('studentId', '==', studentId)
+          .get();
+        rSnap.forEach(function(d) {
+          var rd = d.data();
+          if (completedMap[rd.sessionId] === undefined || rd.score > completedMap[rd.sessionId]) {
+            completedMap[rd.sessionId] = rd.score;
+          }
+        });
+      } catch(e) { /* completedMap stays empty — quiz list still loads */ }
+    }
+
+    renderSharedList(sessions, completedMap);
+  } catch(e) {
+    showStep('offline');
+  }
+}
+
+function renderSharedList(sessions, completedMap) {
+  var body = document.getElementById('quiz-list-body');
+  if (!body) return;
+  if (!sessions.length) {
+    body.innerHTML = '<div class="past-panel-empty">老師尚未分享試卷</div>';
+    return;
+  }
+  body.innerHTML = sessions.map(function(s) {
+    var meta = s.totalQuestions + ' 題';
+    var ops = [];
+    if (s.operations) {
+      if (s.operations.addition      && s.operations.addition.enabled)      ops.push('加法');
+      if (s.operations.subtraction   && s.operations.subtraction.enabled)   ops.push('減法');
+      if (s.operations.multiplication && s.operations.multiplication.enabled) ops.push('乘法');
+      if (s.operations.division      && s.operations.division.enabled)      ops.push('除法');
+    }
+    if (ops.length) meta += '　' + ops.join('・');
+
+    var done  = completedMap && completedMap[s.sessionId] !== undefined;
+    var score = done ? completedMap[s.sessionId] : null;
+
+    if (done) {
+      return '<div class="shared-quiz-card shared-quiz-done">' +
+        '<div>' +
+          '<div class="shared-quiz-name">' + escHtml(s.name || '未命名') + '</div>' +
+          '<div class="shared-quiz-meta">' + escHtml(meta) + '</div>' +
+        '</div>' +
+        '<div class="shared-quiz-score">' + score + '<span>分</span></div>' +
+      '</div>';
+    }
+
+    return '<div class="shared-quiz-card" onclick="startQuiz(\'' + escJs(s.sessionId) + '\')">' +
+      '<div>' +
+        '<div class="shared-quiz-name">' + escHtml(s.name || '未命名') + '</div>' +
+        '<div class="shared-quiz-meta">' + escHtml(meta) + '</div>' +
+      '</div>' +
+      '<div class="shared-quiz-arrow">›</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function startQuiz(sessionId) {
+  try {
+    var doc = await db.collection('mathQuizSessions').doc(sessionId).get();
+    if (!doc.exists || doc.data().active === false) {
+      showError('這份試卷已關閉，請聯繫老師');
+      initStudentMode();
+      return;
+    }
+    var d = doc.data();
+    var settings = {
+      sessionId:   sessionId,
+      sessionName: d.name        || '數學測驗',
+      teacherUid:  d.teacherUid  || '',
+      totalQuestions: d.totalQuestions || 10,
+      operations:  d.operations  || {}
+    };
+    sessionStorage.setItem('math_quiz_settings', JSON.stringify(settings));
+    window.location.href = 'quiz.html';
+  } catch(e) {
+    showError('載入失敗，請重試');
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escJs(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+</script>
+</body>
+</html>

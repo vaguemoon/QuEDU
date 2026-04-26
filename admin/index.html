@@ -56,6 +56,7 @@
     <nav class="sidebar-nav">
       <button class="admin-tab active" id="tab-classes" onclick="switchTab('classes')">🏫 班級管理</button>
       <button class="admin-tab" id="tab-quiz" onclick="switchTab('quiz')">📝 語文測驗</button>
+      <button class="admin-tab" id="tab-math" onclick="switchTab('math')">🔢 數學測驗</button>
       <button class="admin-tab" id="tab-tools" onclick="switchTab('tools')">🎧 教學工具</button>
     </nav>
     <div class="sidebar-footer">
@@ -244,6 +245,23 @@
       </div><!-- /qpanel-sessions -->
 
     </div><!-- /panel-quiz -->
+
+    <!-- ══ 數學測驗 ══ -->
+    <div id="panel-math" style="display:none">
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+        <div class="card-title" style="margin:0">🔢 四則運算測驗</div>
+        <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showMqCreateModal()">＋ 新增測驗</button>
+        <button class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem" onclick="loadMathQuizSessions()">重新整理</button>
+      </div>
+
+      <div class="card">
+        <div id="mq-list-wrap">
+          <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div><!-- /panel-math -->
 
     <!-- 教學工具 -->
     <div id="panel-tools" style="display:none">
@@ -511,6 +529,7 @@
 <script src="students.js"></script>
 <script src="quiz-bank.js"></script>
 <script src="quiz-sessions.js"></script>
+<script src="math-quiz.js"></script>
 <script>
 var TOOL_CONFIG = {
   reader: { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' }
@@ -531,6 +550,172 @@ window.addEventListener('message', function(e) {
   if (e.data === 'close-tool') closeToolModal();
 });
 </script>
+
+<!-- ══ 數學測驗：建立 Modal ══ -->
+<div id="mq-create-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:520px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2);margin:auto">
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:20px">🔢 新增四則運算測驗</div>
+
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">測驗名稱</label>
+    <input id="mq-name" type="text" placeholder="例如：三年級加減法練習" maxlength="30"
+      style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:14px">
+
+
+    <!-- 加法 -->
+    <div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:var(--gray-lt,#f5f5f5)">
+        <input type="checkbox" id="mq-op-addition" onchange="toggleMqOpPanel('addition')">
+        <span style="font-weight:800;font-size:.9rem">➕ 加法</span>
+      </label>
+      <div id="mq-panel-addition" style="display:none;padding:14px 16px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border)">
+          <label style="font-size:.75rem;font-weight:900;color:var(--muted);white-space:nowrap">出題數</label>
+          <input id="mq-add-count" type="number" min="1" max="20" value="5" onchange="updateMqTotal()"
+            style="width:58px;border:2px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit">
+          <span style="font-size:.75rem;color:var(--muted)">題</span>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">被加數位數</label><br>
+            <input id="mq-add-dA" type="number" min="1" max="4" value="2" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">加數位數</label><br>
+            <input id="mq-add-dB" type="number" min="1" max="4" value="2" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+        </div>
+        <div style="font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:6px">進位設定</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-add-carry" value="none" checked> 不進位</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-add-carry" value="carry"> 需進位</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-add-carry" value="consecutive"> 連續進位</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 減法 -->
+    <div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:var(--gray-lt,#f5f5f5)">
+        <input type="checkbox" id="mq-op-subtraction" onchange="toggleMqOpPanel('subtraction')">
+        <span style="font-weight:800;font-size:.9rem">➖ 減法</span>
+      </label>
+      <div id="mq-panel-subtraction" style="display:none;padding:14px 16px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border)">
+          <label style="font-size:.75rem;font-weight:900;color:var(--muted);white-space:nowrap">出題數</label>
+          <input id="mq-sub-count" type="number" min="1" max="20" value="5" onchange="updateMqTotal()"
+            style="width:58px;border:2px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit">
+          <span style="font-size:.75rem;color:var(--muted)">題</span>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">被減數位數</label><br>
+            <input id="mq-sub-dA" type="number" min="1" max="4" value="2" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">減數位數</label><br>
+            <input id="mq-sub-dB" type="number" min="1" max="4" value="2" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+        </div>
+        <div style="font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:6px">退位設定</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-sub-borrow" value="none" checked> 不退位</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-sub-borrow" value="borrow"> 需退位</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-sub-borrow" value="consecutive"> 連續退位</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 乘法 -->
+    <div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:var(--gray-lt,#f5f5f5)">
+        <input type="checkbox" id="mq-op-multiplication" onchange="toggleMqOpPanel('multiplication')">
+        <span style="font-weight:800;font-size:.9rem">✖️ 乘法</span>
+      </label>
+      <div id="mq-panel-multiplication" style="display:none;padding:14px 16px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border)">
+          <label style="font-size:.75rem;font-weight:900;color:var(--muted);white-space:nowrap">出題數</label>
+          <input id="mq-mul-count" type="number" min="1" max="20" value="5" onchange="updateMqTotal()"
+            style="width:58px;border:2px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit">
+          <span style="font-size:.75rem;color:var(--muted)">題</span>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">被乘數位數</label><br>
+            <input id="mq-mul-dA" type="number" min="1" max="4" value="2" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">乘數位數</label><br>
+            <input id="mq-mul-dB" type="number" min="1" max="2" value="1" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="mq-mul-trailing"> 包含尾數為 0</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="mq-mul-middle"> 乘積中間有 0</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 除法 -->
+    <div style="border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden">
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:var(--gray-lt,#f5f5f5)">
+        <input type="checkbox" id="mq-op-division" onchange="toggleMqOpPanel('division')">
+        <span style="font-weight:800;font-size:.9rem">➗ 除法</span>
+      </label>
+      <div id="mq-panel-division" style="display:none;padding:14px 16px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border)">
+          <label style="font-size:.75rem;font-weight:900;color:var(--muted);white-space:nowrap">出題數</label>
+          <input id="mq-div-count" type="number" min="1" max="20" value="5" onchange="updateMqTotal()"
+            style="width:58px;border:2px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit">
+          <span style="font-size:.75rem;color:var(--muted)">題</span>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">被除數位數</label><br>
+            <input id="mq-div-dd" type="number" min="1" max="4" value="2" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">除數位數</label><br>
+            <input id="mq-div-dv" type="number" min="1" max="2" value="1" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+          <div><label style="font-size:.75rem;font-weight:700;color:var(--muted)">商的位數</label><br>
+            <input id="mq-div-q" type="number" min="1" max="3" value="1" style="width:60px;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.9rem;text-align:center;font-family:inherit"></div>
+        </div>
+        <div style="font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:6px">結果類型</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-div-result" value="exact" checked> 整除</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="radio" name="mq-div-result" value="remainder"> 有餘數</label>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="mq-div-trailing"> 商的尾數為 0</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="mq-div-middle"> 商中間有 0</label>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:14px;padding:10px 14px;background:var(--gray-lt,#f5f5f5);border-radius:8px;border:1.5px solid var(--border)">
+      <span style="font-size:.82rem;font-weight:700;color:var(--muted)">合計</span>
+      <span id="mq-total-display" style="font-size:1.2rem;font-weight:900;color:var(--ink)">0</span>
+      <span style="font-size:.82rem;font-weight:700;color:var(--muted)">題</span>
+    </div>
+    <div id="mq-create-error" style="font-size:.82rem;font-weight:700;color:var(--red);min-height:20px;margin-bottom:10px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="hideMqCreateModal()"
+        style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">取消</button>
+      <button id="btn-create-mq" onclick="createMathQuizSession()"
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">建立測驗</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 數學測驗：結果 Modal ══ -->
+<div id="mq-results-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:white;border-radius:20px;max-width:620px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2);margin:auto">
+    <div style="padding:24px 24px 0;display:flex;align-items:center;gap:10px">
+      <div style="font-size:1.05rem;font-weight:900" id="mq-results-title">測驗結果</div>
+      <button onclick="hideMqResultsModal()"
+        style="margin-left:auto;padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit">關閉</button>
+    </div>
+    <div id="mq-results-body" style="padding:16px 24px 24px;overflow-y:auto;max-height:72vh">
+      <div class="loading-wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
 
 <!-- 語文練習試卷分享 Modal -->
 <div id="qs-share-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">

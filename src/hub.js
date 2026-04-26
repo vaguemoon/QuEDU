@@ -124,6 +124,34 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'math-quiz', file: 'apps/quiz/math-quiz/index.html',
+    icon: '🔢', name: '數學測驗', desc: '四則運算練習測驗',
+    type: 'quiz', studentMode: true,
+    theme: 'theme-green', badge: '數學測驗', badgeClass: 'green',
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'math-quiz')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return '數學測驗';
+          var d = snap.docs[0].data();
+          return '最近 ' + d.score + ' 分';
+        })
+        .catch(function() { return '數學測驗'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'math-quiz')
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return null;
+          return { sub: '已完成 ' + snap.size + ' 次練習', score: snap.size + ' 次' };
+        });
+    }
+  },
+  {
     id: 'chinese-quiz', file: 'apps/quiz/chinese-quiz/index.html',
     icon: '📝', name: '語文測驗', desc: '詞語填空與選擇題練習',
     type: 'quiz', studentMode: true,
@@ -462,7 +490,7 @@ function saveProfile() {
 
 window.addEventListener('message', function(e) {
   if (!e.data) return;
-  if (e.data.type === 'hanzi-back-to-hub' || e.data.type === 'multiply-back-to-hub' || e.data.type === 'chinese-quiz-back-to-hub' || e.data.type === 'exam-reader-back-to-hub' || e.data.type === 'recognize-back-to-hub' || e.data.type === 'convert-back-to-hub') returnToHub();
+  if (e.data.type === 'hanzi-back-to-hub' || e.data.type === 'multiply-back-to-hub' || e.data.type === 'chinese-quiz-back-to-hub' || e.data.type === 'math-quiz-back-to-hub' || e.data.type === 'exam-reader-back-to-hub' || e.data.type === 'recognize-back-to-hub' || e.data.type === 'convert-back-to-hub') returnToHub();
   else if (e.data.type === 'hanzi-logout' || e.data.type === 'multiply-logout' || e.data.type === 'recognize-logout') doLogout();
 });
 

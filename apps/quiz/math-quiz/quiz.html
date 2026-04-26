@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>數學測驗</title>
+<link rel="stylesheet" href="math-quiz.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- Quiz screen -->
+<div class="quiz-screen" id="quiz-screen">
+  <div class="quiz-topbar">
+    <button class="btn-quiz-back" onclick="confirmBack()">← 返回</button>
+    <div class="quiz-topbar-title" id="topbar-title">數學測驗</div>
+    <div class="quiz-topbar-counter" id="topbar-counter">1 / 10</div>
+  </div>
+
+  <div class="quiz-content" id="quiz-content">
+    <div class="quiz-loading">載入中…</div>
+  </div>
+
+  <div class="quiz-keypad-area">
+    <!-- Warning banner (division only) -->
+    <div class="warn-banner" id="warn-banner">
+      ⚠️ 餘數好像比除數大，再確認看看！
+    </div>
+
+    <!-- Progress dots -->
+    <div class="progress-dots" id="progress-dots" style="margin-bottom:8px"></div>
+
+    <!-- Keypad -->
+    <div class="keypad" id="keypad">
+      <button class="keypad-btn" onclick="keyInput('7')">7</button>
+      <button class="keypad-btn" onclick="keyInput('8')">8</button>
+      <button class="keypad-btn" onclick="keyInput('9')">9</button>
+      <button class="keypad-btn" onclick="keyInput('4')">4</button>
+      <button class="keypad-btn" onclick="keyInput('5')">5</button>
+      <button class="keypad-btn" onclick="keyInput('6')">6</button>
+      <button class="keypad-btn" onclick="keyInput('1')">1</button>
+      <button class="keypad-btn" onclick="keyInput('2')">2</button>
+      <button class="keypad-btn" onclick="keyInput('3')">3</button>
+      <button class="keypad-btn wide" onclick="keyInput('0')">0</button>
+      <button class="keypad-btn del"  onclick="keyInput('⌫')">⌫</button>
+    </div>
+
+    <!-- Navigation -->
+    <div class="quiz-nav">
+      <button class="btn-nav btn-nav-prev" id="btn-prev" onclick="goPrev()" disabled>← 上一題</button>
+      <button class="btn-nav btn-nav-next" id="btn-next" onclick="goNext()">下一題 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result screen -->
+<div class="result-screen" id="result-screen">
+  <div class="result-top">
+    <div class="result-score-circle">
+      <div class="result-score-num" id="result-score-num">—</div>
+      <div class="result-score-unit">分</div>
+    </div>
+    <div class="result-title" id="result-title">測驗完成！</div>
+    <div class="result-sub"   id="result-sub"></div>
+  </div>
+
+  <div class="result-list" id="result-list"></div>
+
+  <div class="result-btns">
+    <button class="btn-return-hub" onclick="returnToHub()">← 返回主頁</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ════════════ Firebase ════════════ */
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
+  authDomain:        'tainping-hanzi-app.firebaseapp.com',
+  projectId:         'tainping-hanzi-app',
+  storageBucket:     'tainping-hanzi-app.firebasestorage.app',
+  messagingSenderId: '158917910126',
+  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
+};
+var db = null;
+try {
+  if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+  db = firebase.firestore();
+} catch(e) { db = null; }
+
+/* ════════════ State ════════════ */
+var settings        = null;
+var questions       = [];   // [{a, b, op, answer, remainder}]
+var answers         = [];   // [{mainCells:[], remCells:[]}]
+var currentIdx      = 0;
+var activeCellGroup = 'main'; // 'main' | 'rem'
+var activeCellIdx   = 0;
+var submitted       = false;
+
+/* ════════════ Timing ════════════ */
+var quizStartTime   = null;
+var quizEndTime     = null;
+var questionTimings = [];   // ms spent per question
+var qEnterTime      = null; // when current question was entered
+
+/* ════════════ Init ════════════ */
+window.addEventListener('load', function() {
+  try {
+    settings = JSON.parse(sessionStorage.getItem('math_quiz_settings') || 'null');
+  } catch(e) {}
+
+  if (!settings || !settings.operations) {
+    window.location.href = 'index.html';
+    return;
+  }
+
+  document.getElementById('topbar-title').textContent = settings.sessionName || '數學測驗';
+  questions = generateQuestions(settings.operations, settings.totalQuestions || 10);
+  answers   = questions.map(function(q) {
+    var mainLen = String(q.answer).length;
+    var remLen  = (q.remainder !== null) ? Math.max(1, String(q.remainder).length) : 0;
+    return {
+      mainCells: new Array(mainLen).fill(''),
+      remCells:  q.remainder !== null ? new Array(remLen).fill('') : []
+    };
+  });
+
+  quizStartTime   = Date.now();
+  questionTimings = new Array(questions.length).fill(0);
+  renderQuestion(0);
+  renderDots();
+  updateNav();
+});
+
+/* ════════════ Question Generation ════════════ */
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateQuestions(ops, total) {
+  var qs = [];
+  var exprSet = {};
+  var keys = ['addition', 'subtraction', 'multiplication', 'division'];
+
+  function addQ(key, cfg) {
+    for (var t = 0; t < 25; t++) {
+      var q = generateOne(key, cfg);
+      var ek = q.a + q.op + q.b;
+      if (!exprSet[ek]) { exprSet[ek] = true; qs.push(q); return; }
+    }
+    qs.push(generateOne(key, cfg)); // give up on uniqueness if space too small
+  }
+
+  /* New format: per-op count stored in ops[key].count */
+  var hasPerOpCount = keys.some(function(k) { return ops[k] && ops[k].enabled && ops[k].count > 0; });
+
+  if (hasPerOpCount) {
+    keys.forEach(function(key) {
+      var cfg = ops[key];
+      if (!cfg || !cfg.enabled) return;
+      var n = cfg.count || 0;
+      for (var i = 0; i < n; i++) addQ(key, cfg);
+    });
+  } else {
+    /* Legacy format: cycle through enabled ops up to total */
+    var pool = keys.filter(function(k) { return ops[k] && ops[k].enabled; });
+    if (!pool.length) pool = ['addition'];
+    for (var i = 0; i < (total || 10); i++) {
+      addQ(pool[i % pool.length], ops[pool[i % pool.length]]);
+    }
+  }
+
+  return shuffleArr(qs);
+}
+
+function generateOne(key, cfg) {
+  for (var t = 0; t < 150; t++) {
+    var q = tryGenOne(key, cfg);
+    if (q) return q;
+  }
+  return fallback(key);
+}
+
+function tryGenOne(key, cfg) {
+  if (key === 'addition')       return tryAddSub(cfg, false);
+  if (key === 'subtraction')    return tryAddSub(cfg, true);
+  if (key === 'multiplication') return tryMul(cfg);
+  if (key === 'division')       return tryDiv(cfg);
+  return null;
+}
+
+function digRange(d) {
+  var min = d <= 1 ? 1 : Math.pow(10, d - 1);
+  var max = Math.pow(10, d) - 1;
+  return { min: min, max: max };
+}
+
+function tryAddSub(cfg, isSub) {
+  var ra = digRange(cfg.digitsA || 2);
+  var rb = digRange(cfg.digitsB || 2);
+  var a = randInt(ra.min, ra.max);
+  var b = randInt(rb.min, rb.max);
+  if (isSub && a < b) { var tmp = a; a = b; b = tmp; }
+
+  var carryType = isSub ? (cfg.borrowType || 'none') : (cfg.carryType || 'none');
+  var hasCarryVal = isSub ? hasBorrow(a, b) : hasCarry_f(a, b);
+  var consec      = isSub ? hasConsecBorrow(a, b) : hasConsecCarry(a, b);
+
+  if (carryType === 'none'        && hasCarryVal) return null;
+  if (carryType === 'carry'       && !hasCarryVal) return null;
+  if (carryType === 'consecutive' && !consec)     return null;
+
+  var ans = isSub ? a - b : a + b;
+  if (ans < 0) return null;
+  return { a: a, b: b, op: isSub ? '-' : '+', answer: ans, remainder: null };
+}
+
+function hasCarry_f(a, b) {
+  while (a > 0 || b > 0) {
+    if ((a % 10) + (b % 10) >= 10) return true;
+    a = Math.floor(a / 10); b = Math.floor(b / 10);
+  }
+  return false;
+}
+function hasBorrow(a, b) {
+  while (a > 0 || b > 0) {
+    if ((a % 10) < (b % 10)) return true;
+    a = Math.floor(a / 10); b = Math.floor(b / 10);
+  }
+  return false;
+}
+function hasConsecCarry(a, b) {
+  var carry = 0, streak = 0, maxStreak = 0;
+  while (a > 0 || b > 0) {
+    var s = (a % 10) + (b % 10) + carry;
+    if (s >= 10) { streak++; carry = 1; }
+    else { maxStreak = Math.max(maxStreak, streak); streak = 0; carry = 0; }
+    a = Math.floor(a / 10); b = Math.floor(b / 10);
+  }
+  return Math.max(maxStreak, streak) >= 2;
+}
+function hasConsecBorrow(a, b) {
+  var borrow = 0, streak = 0, maxStreak = 0;
+  while (a > 0 || b > 0) {
+    var da = (a % 10) - borrow, db = b % 10;
+    if (da < db) { streak++; borrow = 1; }
+    else { maxStreak = Math.max(maxStreak, streak); streak = 0; borrow = 0; }
+    a = Math.floor(a / 10); b = Math.floor(b / 10);
+  }
+  return Math.max(maxStreak, streak) >= 2;
+}
+
+function tryMul(cfg) {
+  var ra = digRange(cfg.digitsA || 2);
+  var rb = digRange(cfg.digitsB || 1);
+  var a, b;
+
+  if (cfg.trailingZero) {
+    a = randInt(ra.min / 10 || 1, ra.max / 10) * 10;
+    if (a < ra.min || a > ra.max) return null;
+    b = randInt(rb.min, rb.max);
+  } else {
+    a = randInt(ra.min, ra.max);
+    b = randInt(rb.min, rb.max);
+    if (a % 10 === 0 || b % 10 === 0) return null;
+  }
+
+  var product = a * b;
+  if (cfg.middleZero) {
+    var ps = String(product);
+    if (ps.length < 3) return null;
+    var mid = ps.slice(1, -1);
+    if (mid.indexOf('0') === -1) return null;
+  }
+  return { a: a, b: b, op: '×', answer: product, remainder: null };
+}
+
+function tryDiv(cfg) {
+  var rD = digRange(cfg.divisorDigits  || 1);
+  var rQ = digRange(cfg.quotientDigits || 1);
+  var divisor  = randInt(rD.min, rD.max);
+  if (divisor === 0) divisor = 1;
+  var quotient = randInt(rQ.min, rQ.max);
+  if (quotient === 0) return null;
+
+  var qs = String(quotient);
+  if (cfg.trailingZero  && quotient % 10 !== 0) return null;
+  if (!cfg.trailingZero && quotient % 10 === 0 && rQ.min < rQ.max) return null;
+  if (cfg.middleZero) {
+    if (qs.length < 3) return null;
+    if (qs.slice(1, -1).indexOf('0') === -1) return null;
+  }
+
+  var hasRem  = cfg.resultType === 'remainder';
+  if (hasRem && divisor <= 1) return null;
+  var remainder = hasRem ? randInt(1, divisor - 1) : null;
+  var dividend  = divisor * quotient + (remainder || 0);
+  return { a: dividend, b: divisor, op: '÷', answer: quotient, remainder: remainder };
+}
+
+function fallback(key) {
+  var a, b, ans;
+  if (key === 'addition') {
+    a = randInt(11, 89); b = randInt(10, 99 - a);
+    return { a: a, b: b, op: '+', answer: a + b, remainder: null };
+  }
+  if (key === 'subtraction') {
+    a = randInt(20, 99); b = randInt(10, a - 1);
+    return { a: a, b: b, op: '-', answer: a - b, remainder: null };
+  }
+  if (key === 'multiplication') {
+    a = randInt(12, 99); b = randInt(2, 9);
+    return { a: a, b: b, op: '×', answer: a * b, remainder: null };
+  }
+  b = randInt(2, 9); a = b * randInt(10, 99);
+  return { a: a, b: b, op: '÷', answer: a / b, remainder: null };
+}
+
+function shuffleArr(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+/* ════════════ Render Question ════════════ */
+function renderQuestion(idx) {
+  if (qEnterTime !== null) {
+    questionTimings[currentIdx] = (questionTimings[currentIdx] || 0) + (Date.now() - qEnterTime);
+  }
+  currentIdx = idx;
+  qEnterTime = Date.now();
+  var ans = answers[idx];
+
+  // Focus first empty main cell, or last cell if all filled
+  var firstEmpty = ans.mainCells.indexOf('');
+  activeCellGroup = 'main';
+  activeCellIdx   = firstEmpty >= 0 ? firstEmpty : ans.mainCells.length - 1;
+
+  var q = questions[idx];
+  document.getElementById('topbar-counter').textContent = (idx + 1) + ' / ' + questions.length;
+
+  var content = document.getElementById('quiz-content');
+  if (q.op === '÷') {
+    content.innerHTML = renderLongDivQuestion(q);
+  } else {
+    content.innerHTML = renderVerticalQuestion(q);
+  }
+
+  checkRemainderWarning();
+}
+
+function renderCellGroup(group, cells) {
+  return '<div class="vc-cell-group" id="cells-' + group + '">' +
+    cells.map(function(v, i) {
+      var cls = 'vc-cell';
+      if (group === activeCellGroup && i === activeCellIdx) cls += ' active';
+      if (v === '') cls += ' empty';
+      return '<div class="' + cls + '" onclick="clickCell(\'' + group + '\',' + i + ')">' +
+        escHtml(v) + '</div>';
+    }).join('') +
+  '</div>';
+}
+
+function renderVerticalQuestion(q) {
+  var aStr    = String(q.a);
+  var bStr    = String(q.b);
+  var ansStr  = String(q.answer);
+  var numCols = Math.max(aStr.length, bStr.length, ansStr.length);
+  var ans     = answers[currentIdx];
+
+  return '<div class="vc-box">' +
+    '<div class="vc-row">' +
+      '<span class="vc-placeholder"></span>' +
+      '<span class="vc-num">' + escHtml(padLeft(aStr, numCols)) + '</span>' +
+    '</div>' +
+    '<div class="vc-row">' +
+      '<span class="vc-op">' + escHtml(q.op) + '</span>' +
+      '<span class="vc-num">' + escHtml(padLeft(bStr, numCols)) + '</span>' +
+    '</div>' +
+    '<div class="vc-rule"></div>' +
+    '<div class="vc-ans-row">' +
+      renderCellGroup('main', ans.mainCells) +
+    '</div>' +
+  '</div>';
+}
+
+function renderLongDivQuestion(q) {
+  var ans         = answers[currentIdx];
+  var showRem     = q.remainder !== null;
+  var dividendStr = String(q.a);
+  var N           = dividendStr.length;
+  var Q           = ans.mainCells.length;
+  var R           = showRem ? ans.remCells.length : 0;
+
+  function cellTd(group, idx) {
+    var cells = group === 'rem' ? ans.remCells : ans.mainCells;
+    var v = cells[idx] || '';
+    var cls = 'vc-cell' +
+      (group === activeCellGroup && idx === activeCellIdx ? ' active' : '') +
+      (v === '' ? ' empty' : '');
+    return '<td class="vc-ld-col"><div class="' + cls +
+      '" data-group="' + group + '" data-idx="' + idx +
+      '" onclick="clickCell(\'' + group + '\',' + idx + ')">' +
+      escHtml(v) + '</div></td>';
+  }
+  function emptyTd() { return '<td class="vc-ld-col"></td>'; }
+
+  // Row 1: quotient cells right-aligned over dividend
+  var row1 = '';
+  for (var i = 0; i < N; i++) {
+    var qi = i - (N - Q);
+    row1 += qi >= 0 ? cellTd('main', qi) : emptyTd();
+  }
+  if (showRem) {
+    row1 += '<td class="vc-ld-dots">···</td>';
+    for (var ri = 0; ri < R; ri++) row1 += cellTd('rem', ri);
+  }
+
+  // Row 2: horizontal rule
+  var totalCols = N + (showRem ? 1 + R : 0);
+  var row2 = '<td colspan="' + totalCols + '" class="vc-ld-rule-td"></td>';
+
+  // Row 3: divisor ) dividend
+  var row3 = '';
+  for (var i = 0; i < N; i++) {
+    row3 += '<td class="vc-ld-col vc-ld-static">' + escHtml(dividendStr[i]) + '</td>';
+  }
+  if (showRem) row3 += '<td colspan="' + (1 + R) + '"></td>';
+
+  var divCell = '<td class="vc-ld-div-cell"><span class="vc-ld-dv-num">' +
+    escHtml(String(q.b)) + '</span><span class="vc-ld-paren">)</span></td>';
+
+  return '<div class="vc-ld-wrap">' +
+    '<table class="vc-ld-table"><tbody>' +
+    '<tr><td></td>'  + row1 + '</tr>' +
+    '<tr><td></td>'  + row2 + '</tr>' +
+    '<tr>' + divCell + row3 + '</tr>' +
+    '</tbody></table></div>';
+}
+
+function renderDivQuestion(q) {
+  var ans = answers[currentIdx];
+  var showRem = q.remainder !== null;
+
+  return '<div class="vc-div-box">' +
+    '<div class="vc-div-top">' +
+      '<span class="vc-div-num">' + escHtml(String(q.a)) + '</span>' +
+      '<span class="vc-div-sign">÷</span>' +
+      '<span class="vc-div-num">' + escHtml(String(q.b)) + '</span>' +
+      '<span class="vc-div-eq">=</span>' +
+      '<div class="vc-div-fields">' +
+        '<div class="vc-div-field">' +
+          '<span class="vc-div-field-label">商</span>' +
+          renderCellGroup('main', ans.mainCells) +
+        '</div>' +
+        (showRem ?
+          '<span class="vc-div-dots">···</span>' +
+          '<div class="vc-div-field">' +
+            '<span class="vc-div-field-label">餘數</span>' +
+            renderCellGroup('rem', ans.remCells) +
+          '</div>'
+        : '') +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function padLeft(str, width) {
+  while (str.length < width) str = ' ' + str;
+  return str;
+}
+
+/* ════════════ Cell Input ════════════ */
+function clickCell(group, idx) {
+  var q = questions[currentIdx];
+  if (group === 'rem' && q.remainder === null) return;
+  activeCellGroup = group;
+  activeCellIdx   = idx;
+  refreshCells();
+}
+
+function keyInput(val) {
+  var ans = answers[currentIdx];
+  var cells = activeCellGroup === 'rem' ? ans.remCells : ans.mainCells;
+  if (!cells || cells.length === 0) return;
+
+  if (val === '⌫') {
+    cells[activeCellIdx] = '';
+    if (activeCellIdx > 0) activeCellIdx--;
+  } else {
+    cells[activeCellIdx] = val;
+    if (activeCellIdx < cells.length - 1) {
+      activeCellIdx++;
+    } else {
+      var q = questions[currentIdx];
+      if (q.op === '÷' && q.remainder !== null && activeCellGroup === 'main') {
+        activeCellGroup = 'rem';
+        activeCellIdx   = 0;
+      }
+    }
+  }
+
+  refreshCells();
+  checkRemainderWarning();
+  updateDots();
+}
+
+function refreshCells() {
+  var ans = answers[currentIdx];
+  var q   = questions[currentIdx];
+
+  if (q.op === '÷') {
+    document.querySelectorAll('.vc-cell[data-group]').forEach(function(el) {
+      var grp = el.getAttribute('data-group');
+      var idx = parseInt(el.getAttribute('data-idx'));
+      var cells = grp === 'rem' ? ans.remCells : ans.mainCells;
+      var v = cells[idx] || '';
+      el.className = 'vc-cell' +
+        (grp === activeCellGroup && idx === activeCellIdx ? ' active' : '') +
+        (v === '' ? ' empty' : '');
+      el.textContent = v;
+    });
+    return;
+  }
+
+  var mainGroup = document.getElementById('cells-main');
+  if (mainGroup) {
+    mainGroup.querySelectorAll('.vc-cell').forEach(function(el, i) {
+      el.className = 'vc-cell' +
+        (activeCellGroup === 'main' && i === activeCellIdx ? ' active' : '') +
+        (ans.mainCells[i] === '' ? ' empty' : '');
+      el.textContent = ans.mainCells[i];
+    });
+  }
+
+  var remGroup = document.getElementById('cells-rem');
+  if (remGroup) {
+    remGroup.querySelectorAll('.vc-cell').forEach(function(el, i) {
+      el.className = 'vc-cell' +
+        (activeCellGroup === 'rem' && i === activeCellIdx ? ' active' : '') +
+        (ans.remCells[i] === '' ? ' empty' : '');
+      el.textContent = ans.remCells[i];
+    });
+  }
+}
+
+function getCellsNum(cells) {
+  if (!cells || cells.length === 0) return null;
+  if (cells.some(function(c) { return c === ''; })) return null;
+  return parseInt(cells.join(''), 10);
+}
+
+function checkRemainderWarning() {
+  var q      = questions[currentIdx];
+  var banner = document.getElementById('warn-banner');
+  if (!banner) return;
+  if (q.op === '÷' && q.remainder !== null) {
+    var remCells = answers[currentIdx].remCells;
+    var hasAny   = remCells.some(function(c) { return c !== ''; });
+    var remVal   = getCellsNum(remCells);
+    var show     = hasAny && remVal !== null && remVal >= q.b;
+    banner.classList.toggle('show', show);
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+/* ════════════ Navigation ════════════ */
+function goPrev() {
+  if (currentIdx > 0) { renderQuestion(currentIdx - 1); updateDots(); updateNav(); }
+}
+
+function goNext() {
+  if (currentIdx < questions.length - 1) {
+    renderQuestion(currentIdx + 1); updateDots(); updateNav();
+  } else {
+    submitQuiz();
+  }
+}
+
+function updateNav() {
+  var prevBtn = document.getElementById('btn-prev');
+  var nextBtn = document.getElementById('btn-next');
+  if (prevBtn) prevBtn.disabled = currentIdx === 0;
+
+  var isLast = currentIdx === questions.length - 1;
+  if (nextBtn) {
+    if (isLast) {
+      nextBtn.className  = 'btn-nav btn-nav-submit';
+      nextBtn.textContent = '送出答案';
+    } else {
+      nextBtn.className  = 'btn-nav btn-nav-next';
+      nextBtn.textContent = '下一題 →';
+    }
+  }
+}
+
+/* ════════════ Progress Dots ════════════ */
+function renderDots() {
+  var container = document.getElementById('progress-dots');
+  if (!container) return;
+  container.innerHTML = questions.map(function(_, i) {
+    return '<span class="dot' + (i === currentIdx ? ' current' : '') + '" onclick="jumpTo(' + i + ')"></span>';
+  }).join('');
+}
+
+function updateDots() {
+  var dots = document.querySelectorAll('.dot');
+  dots.forEach(function(dot, i) {
+    var ans = answers[i];
+    var q   = questions[i];
+    var mainDone = ans.mainCells.every(function(c) { return c !== ''; });
+    var remDone  = q.remainder === null || ans.remCells.every(function(c) { return c !== ''; });
+    var answered = mainDone && remDone;
+    dot.className = 'dot' +
+      (i === currentIdx ? ' current' : (answered ? ' answered' : ''));
+  });
+  updateNav();
+}
+
+function jumpTo(idx) {
+  renderQuestion(idx);
+  updateDots();
+  updateNav();
+}
+
+/* ════════════ Submit ════════════ */
+function submitQuiz() {
+  if (qEnterTime !== null) {
+    questionTimings[currentIdx] = (questionTimings[currentIdx] || 0) + (Date.now() - qEnterTime);
+    qEnterTime = null;
+  }
+  quizEndTime = Date.now();
+  submitted = true;
+  var resultData = buildResult();
+  showResultScreen(resultData);
+  saveResult(resultData);
+}
+
+function buildResult() {
+  var correct = 0;
+  var items = questions.map(function(q, i) {
+    var ans = answers[i];
+    var studentMain = getCellsNum(ans.mainCells);
+    var studentMainVal = studentMain !== null ? studentMain : -1;
+    var studentRem = null;
+    if (q.remainder !== null) {
+      var remNum = getCellsNum(ans.remCells);
+      studentRem = remNum !== null ? remNum : -1;
+    }
+    var isCorrect = checkCorrect(q, studentMainVal, studentRem);
+    var errorType = isCorrect ? null : classifyError(q, studentMainVal, studentRem);
+    if (isCorrect) correct++;
+    return { q: q, studentMain: studentMainVal, studentRem: studentRem, correct: isCorrect, errorType: errorType, timeSeconds: Math.round((questionTimings[i] || 0) / 1000) };
+  });
+  var score = Math.round((correct / questions.length) * 100);
+  return { items: items, score: score, correct: correct, total: questions.length };
+}
+
+function checkCorrect(q, studentMain, studentRem) {
+  if (studentMain !== q.answer) return false;
+  if (q.op === '÷' && q.remainder !== null) {
+    if (studentRem !== q.remainder) return false;
+  }
+  return true;
+}
+
+function classifyError(q, studentMain, studentRem) {
+  if (q.op === '÷') {
+    if (studentRem !== null && studentRem >= q.b) return '餘數大於除數';
+    if (studentMain === q.answer) return '餘數計算錯誤';
+    if (studentRem  === q.remainder) return '商計算錯誤';
+    return '計算錯誤';
+  }
+
+  var diff = Math.abs(q.answer - studentMain);
+  if (q.op === '+') {
+    return isPowerOf10(diff) ? '進位錯誤' : '計算錯誤';
+  }
+  if (q.op === '-') {
+    return isPowerOf10(diff) ? '退位錯誤' : '計算錯誤';
+  }
+  if (q.op === '×') {
+    if (diff > 0 && diff <= Math.max(q.a, q.b)) return '乘法表小錯';
+    var bU = q.b % 10, bT = Math.floor(q.b / 10);
+    if ((bU && Math.abs(q.a * bU - studentMain) <= 1) ||
+        (bT && Math.abs(q.a * bT * 10 - studentMain) <= 1)) return '部分積錯誤';
+    return '計算錯誤';
+  }
+  return '計算錯誤';
+}
+
+function isPowerOf10(n) {
+  if (n <= 0) return false;
+  while (n >= 10) { if (n % 10 !== 0) return false; n /= 10; }
+  return n === 1;
+}
+
+/* ════════════ Result Screen ════════════ */
+function showResultScreen(data) {
+  document.getElementById('quiz-screen').style.display   = 'none';
+  document.getElementById('result-screen').classList.add('show');
+
+  document.getElementById('result-score-num').textContent = data.score;
+  document.getElementById('result-title').textContent     = data.score >= 60 ? '🎉 測驗完成！' : '📝 測驗完成！';
+  document.getElementById('result-sub').textContent       = '答對 ' + data.correct + ' / ' + data.total + ' 題';
+
+  var listEl = document.getElementById('result-list');
+  listEl.innerHTML = data.items.map(function(item, i) {
+    var q = item.q;
+    var correctCls = item.correct ? 'correct' : 'wrong';
+    var icon       = item.correct ? '✓' : '✗';
+
+    var exprStr = q.a + ' ' + q.op + ' ' + q.b + ' = ' + q.answer;
+    if (q.op === '÷' && q.remainder !== null) exprStr += ' … ' + q.remainder;
+
+    var detail = '';
+    if (!item.correct) {
+      var stuAns = item.studentMain >= 0 ? item.studentMain : '未作答';
+      var stuStr = '你答：' + stuAns;
+      if (q.op === '÷' && q.remainder !== null) {
+        stuStr += ' … ' + (item.studentRem !== null && item.studentRem >= 0 ? item.studentRem : '未填');
+      }
+      detail = '<div class="result-ans-detail">' + escHtml(stuStr) + '</div>';
+    }
+
+    var tag = item.errorType ?
+      ' <span class="result-error-tag">' + escHtml(item.errorType) + '</span>' : '';
+
+    return '<div class="result-item ' + correctCls + '">' +
+      '<div class="result-item-top">' +
+        '<span class="result-q-num">' + (i + 1) + '.</span>' +
+        '<span class="result-q-expr">' + escHtml(exprStr) + '</span>' +
+        tag +
+        '<span class="result-icon">' + icon + '</span>' +
+      '</div>' +
+      detail +
+    '</div>';
+  }).join('');
+}
+
+/* ════════════ Save Result ════════════ */
+async function saveResult(data) {
+  if (!db) return;
+  try {
+    var student = null;
+    try { student = JSON.parse(sessionStorage.getItem('hub_student')); } catch(e) {}
+    var studentId   = (student && student.id)   || 'unknown';
+    var studentName = (student && (student.nickname || student.name)) || '匿名';
+
+    var resultDoc = {
+      sessionId:       settings.sessionId,
+      teacherUid:      settings.teacherUid,
+      studentId:       studentId,
+      studentName:     studentName,
+      score:           data.score,
+      total:           data.total,
+      correct:         data.correct,
+      durationSeconds: (quizStartTime && quizEndTime) ? Math.round((quizEndTime - quizStartTime) / 1000) : null,
+      questions:       data.items.map(function(item) {
+        return {
+          a: item.q.a, b: item.q.b, op: item.q.op,
+          answer: item.q.answer, remainder: item.q.remainder,
+          studentAnswer:    item.studentMain >= 0 ? item.studentMain : null,
+          studentRemainder: item.studentRem,
+          correct:          item.correct,
+          errorType:        item.errorType || null,
+          timeSeconds:      item.timeSeconds || null
+        };
+      }),
+      submittedAt: new Date().toISOString()
+    };
+
+    await db.collection('mathQuizResults').add(resultDoc);
+
+    await db.collection('students').doc(studentId).collection('activities').add({
+      app:       'math-quiz',
+      score:     data.score,
+      correct:   data.correct,
+      total:     data.total,
+      sessionId: settings.sessionId,
+      timestamp: new Date().toISOString()
+    });
+  } catch(e) { /* silent — result already shown to student */ }
+}
+
+/* ════════════ Back / Hub ════════════ */
+function confirmBack() {
+  if (submitted) { returnToHub(); return; }
+  var anyFilled = answers.some(function(a) {
+    return a.mainCells.some(function(c) { return c !== ''; });
+  });
+  if (!anyFilled) { returnToHub(); return; }
+  if (confirm('確定要返回？作答進度將不會儲存。')) returnToHub();
+}
+function returnToHub() {
+  window.parent.postMessage({ type: 'math-quiz-back-to-hub' }, '*');
+  window.location.href = 'index.html';
+}
+
+/* ════════════ Toast ════════════ */
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+/* ════════════ Keyboard Support ════════════ */
+document.addEventListener('keydown', function(e) {
+  if (submitted) return;
+  if (e.key >= '0' && e.key <= '9') {
+    e.preventDefault(); keyInput(e.key);
+  } else if (e.key === 'Backspace') {
+    e.preventDefault(); keyInput('⌫');
+  } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+    e.preventDefault(); goNext();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault(); goPrev();
+  } else if (e.key === 'Tab') {
+    var q = questions[currentIdx];
+    if (q && q.op === '÷' && q.remainder !== null) {
+      e.preventDefault();
+      activeCellGroup = activeCellGroup === 'main' ? 'rem' : 'main';
+      activeCellIdx = 0;
+      refreshCells();
+    }
+  }
+});
+
+/* ════════════ Helpers ════════════ */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
