@@ -124,8 +124,9 @@ window.addEventListener('load', function() {
     var mainLen = String(q.answer).length;
     var remLen  = (q.remainder !== null) ? Math.max(1, String(q.remainder).length) : 0;
     return {
-      mainCells: new Array(mainLen).fill(''),
-      remCells:  q.remainder !== null ? new Array(remLen).fill('') : []
+      mainCells:  new Array(mainLen).fill(''),
+      remCells:   q.remainder !== null ? new Array(remLen).fill('') : [],
+      carryCells: computeCarryCells(q)
     };
   });
 
@@ -328,6 +329,27 @@ function shuffleArr(arr) {
   return arr;
 }
 
+/* ════════════ Carry Cell Computation ════════════ */
+function computeCarryCells(q) {
+  if (q.op !== '+') return null;
+  var ansLen = String(q.answer).length;
+  var cells = new Array(ansLen).fill(null);
+  var carry = 0, pos = 0, tempA = q.a, tempB = q.b;
+  var hasAny = false;
+  while (tempA > 0 || tempB > 0 || carry > 0) {
+    var sum = (tempA % 10) + (tempB % 10) + carry;
+    carry = Math.floor(sum / 10);
+    if (carry > 0) {
+      var idx = ansLen - 1 - (pos + 1);
+      if (idx >= 0) { cells[idx] = ''; hasAny = true; }
+    }
+    tempA = Math.floor(tempA / 10);
+    tempB = Math.floor(tempB / 10);
+    pos++;
+  }
+  return hasAny ? cells : null;
+}
+
 /* ════════════ Render Question ════════════ */
 function renderQuestion(idx) {
   if (qEnterTime !== null) {
@@ -367,6 +389,26 @@ function renderCellGroup(group, cells) {
   '</div>';
 }
 
+function renderCarryRow(ans, numCols) {
+  if (!ans.carryCells) return '';
+  var html = '<div class="vc-carry-row">';
+  for (var i = 0; i < numCols; i++) {
+    var v = ans.carryCells[i];
+    if (v === null) {
+      html += '<div class="vc-carry-spacer"></div>';
+    } else {
+      var cls = 'vc-carry-cell';
+      if (activeCellGroup === 'carry' && i === activeCellIdx) cls += ' active';
+      if (v === '') cls += ' empty';
+      html += '<div class="' + cls + '" data-carry-idx="' + i + '" onclick="clickCell(\'carry\',' + i + ')">' +
+        '<span class="vc-carry-digit">' + escHtml(v) + '</span>' +
+        '</div>';
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
 function renderVerticalQuestion(q) {
   var aStr    = String(q.a);
   var bStr    = String(q.b);
@@ -375,6 +417,7 @@ function renderVerticalQuestion(q) {
   var ans     = answers[currentIdx];
 
   return '<div class="vc-box">' +
+    renderCarryRow(ans, numCols) +
     '<div class="vc-row">' +
       '<span class="vc-placeholder"></span>' +
       '<span class="vc-num">' + escHtml(padLeft(aStr, numCols)) + '</span>' +
@@ -480,6 +523,10 @@ function padLeft(str, width) {
 function clickCell(group, idx) {
   var q = questions[currentIdx];
   if (group === 'rem' && q.remainder === null) return;
+  if (group === 'carry') {
+    var ans = answers[currentIdx];
+    if (!ans.carryCells || ans.carryCells[idx] === null) return;
+  }
   activeCellGroup = group;
   activeCellIdx   = idx;
   refreshCells();
@@ -487,6 +534,25 @@ function clickCell(group, idx) {
 
 function keyInput(val) {
   var ans = answers[currentIdx];
+
+  if (activeCellGroup === 'carry') {
+    var cc = ans.carryCells;
+    if (!cc || cc[activeCellIdx] === null) return;
+    if (val === '⌫') {
+      cc[activeCellIdx] = '';
+      var prev = activeCellIdx - 1;
+      while (prev >= 0 && cc[prev] === null) prev--;
+      if (prev >= 0) activeCellIdx = prev;
+    } else {
+      cc[activeCellIdx] = val;
+      var next = activeCellIdx + 1;
+      while (next < cc.length && cc[next] === null) next++;
+      if (next < cc.length) activeCellIdx = next;
+    }
+    refreshCells();
+    return;
+  }
+
   var cells = activeCellGroup === 'rem' ? ans.remCells : ans.mainCells;
   if (!cells || cells.length === 0) return;
 
@@ -527,6 +593,17 @@ function refreshCells() {
       el.textContent = v;
     });
     return;
+  }
+
+  if (ans.carryCells) {
+    document.querySelectorAll('.vc-carry-cell').forEach(function(el) {
+      var idx = parseInt(el.getAttribute('data-carry-idx'));
+      var v = ans.carryCells[idx];
+      el.className = 'vc-carry-cell' +
+        (activeCellGroup === 'carry' && idx === activeCellIdx ? ' active' : '') +
+        (v === '' ? ' empty' : '');
+      el.querySelector('.vc-carry-digit').textContent = v !== null ? v : '';
+    });
   }
 
   var mainGroup = document.getElementById('cells-main');
