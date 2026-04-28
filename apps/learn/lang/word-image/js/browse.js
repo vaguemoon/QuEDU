@@ -19,7 +19,6 @@ function _renderBrowse() {
   var item = wordImages[browseIdx];
   var n    = wordImages.length;
   var hasQuiz  = n >= 2;
-  var hasMatch = n >= 4;
 
   inner.innerHTML =
     '<div class="wi-browse-wrap">' +
@@ -29,14 +28,10 @@ function _renderBrowse() {
         '<div class="wi-flip-inner">' +
           '<div class="wi-flip-front">' +
             '<img src="' + _escAttr(item.imageUrl) + '" alt="">' +
-            '<div class="wi-flip-front-label">' +
-              _escHtml(item.word) +
-              '<div class="wi-flip-hint">點擊查看釋義</div>' +
-            '</div>' +
           '</div>' +
           '<div class="wi-flip-back">' +
-            '<div class="wi-flip-back-word">' + _escHtml(item.word) + '</div>' +
-            '<div class="wi-flip-back-def">'  + _escHtml(item.definition) + '</div>' +
+            '<div class="wi-flip-back-word" data-speak="' + _escAttr(item.word) + '" onclick="wiSpeak(event,this)">' + _escHtml(item.word) + '</div>' +
+            '<div class="wi-flip-back-def" data-speak="' + _escAttr(item.definition) + '" onclick="wiSpeak(event,this)">' + _escHtml(item.definition) + '</div>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -49,7 +44,6 @@ function _renderBrowse() {
 
       '<div class="wi-browse-actions">' +
         (hasQuiz  ? '<button class="wi-btn-primary"    onclick="startQuiz()">🎯 看圖猜詞</button>'  : '') +
-        (hasMatch ? '<button class="wi-btn-secondary"  onclick="startMatch()">🔗 配對遊戲</button>' : '') +
       '</div>' +
     '</div>';
 }
@@ -79,4 +73,13 @@ function browseNext() {
 
 function browseGoTo(i) {
   browseIdx = i; browseFlipped = false; _renderBrowse();
+}
+
+function wiSpeak(evt, el) {
+  evt.stopPropagation();
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  var utt = new SpeechSynthesisUtterance(el.dataset.speak);
+  utt.lang = 'zh-TW';
+  window.speechSynthesis.speak(utt);
 }

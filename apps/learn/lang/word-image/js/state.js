@@ -4,7 +4,7 @@ var currentStudent    = null;
 var currentGrade      = '';
 var currentLesson     = '';
 var currentLessonName = '';
-var currentMode       = '';  // 'browse' | 'quiz' | 'match'
+var currentMode       = '';  // 'browse' | 'quiz'
 
 var wordImages   = [];  // 本課次圖片詞語 [{word, definition, imageUrl}]
 var wordProgress = {};  // { 'grade_lesson_word': { correct, wrong } }

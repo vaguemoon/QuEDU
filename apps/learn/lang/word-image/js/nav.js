@@ -8,7 +8,6 @@ var _PAGE_TITLES = {
   mode:   '',          // set dynamically
   browse: '圖卡瀏覽',
   quiz:   '看圖猜詞',
-  match:  '配對遊戲',
   result: '成績'
 };
 
@@ -48,23 +47,15 @@ function backToHub() {
   try { window.parent.postMessage({ type: 'word-image-back' }, '*'); } catch(e) {}
 }
 
-/* ── Result page (shared by quiz and match) ── */
-function renderResultPage(scoreOrWrong, total, mode) {
-  var pct, scoreText;
-  if (mode === 'quiz') {
-    pct       = total ? Math.round(scoreOrWrong / total * 100) : 0;
-    scoreText = scoreOrWrong + ' / ' + total + ' 答對';
-  } else {
-    pct       = total ? Math.round(total / (total + scoreOrWrong) * 100) : 0;
-    scoreText = scoreOrWrong > 0 ? ('錯誤 ' + scoreOrWrong + ' 次') : '完美配對！';
-  }
-
+/* ── Result page ── */
+function renderResultPage(score, total, rounds) {
+  var pct       = total ? Math.round(score / total * 100) : 0;
+  var scoreText = score + ' / ' + total + ' 首輪答對';
   var emoji = pct >= 90 ? '🎉' : pct >= 70 ? '👍' : '💪';
-  var msg   = pct >= 90 ? '太厲害了！' : pct >= 70 ? '繼續加油！' : '再試一次！';
-
-  var againBtn = mode === 'quiz'
-    ? '<button class="wi-btn-primary" onclick="startQuiz()">再玩一次</button>'
-    : '<button class="wi-btn-primary" onclick="startMatch()">再玩一次</button>';
+  var msg   = pct >= 90 ? '太厲害了！' : pct >= 70 ? '繼續加油！' : '加油！';
+  var roundNote = (rounds && rounds > 1)
+    ? '<div class="wi-result-rounds">複習了 ' + (rounds - 1) + ' 輪，全部完成！</div>'
+    : '';
 
   var inner = document.querySelector('#page-result .wi-page-inner');
   if (!inner) return;
@@ -73,8 +64,9 @@ function renderResultPage(scoreOrWrong, total, mode) {
       '<div class="wi-result-emoji">' + emoji + '</div>' +
       '<div class="wi-result-score">' + _escHtml(scoreText) + '</div>' +
       '<div class="wi-result-pct">' + pct + '%　' + msg + '</div>' +
+      roundNote +
       '<div class="wi-result-btns">' +
-        againBtn +
+        '<button class="wi-btn-primary" onclick="startQuiz()">再玩一次</button>' +
         '<button class="wi-btn-secondary" onclick="startBrowse()">🃏 圖卡瀏覽</button>' +
         '<button class="wi-btn-secondary" onclick="showPage(\'mode\', false)">← 回選單</button>' +
       '</div>' +
