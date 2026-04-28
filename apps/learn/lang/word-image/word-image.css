@@ -69,7 +69,7 @@
   background: var(--bg);
 }
 .wi-page.active { display: block; }
-
+/* 內部容器：限制最大寬度並置中，提供適當內距 */
 .wi-page-inner {
   max-width: 900px;
   margin: 0 auto;
@@ -146,27 +146,29 @@
 /* ════════════════════════════
    圖卡瀏覽（Browse）
    ════════════════════════════ */
+/* 卡片瀏覽區 */
 .wi-browse-wrap {
   display: flex; flex-direction: column; align-items: center; gap: 20px;
   padding-top: 8px;
 }
-
+/* 計數器 */
 .wi-browse-counter {
   font-size: .85rem; font-weight: 700; color: var(--muted);
 }
 
 /* 翻轉卡片 */
 .wi-flip-card {
-  width: 100%; max-width: 440px; height: min(360px, 52vh);
+  width: 100%; max-width: 60%; aspect-ratio: 4/3;
   perspective: 1000px; cursor: pointer;
 }
+/* 翻轉內部結構：前後兩面重疊，翻轉時旋轉Y軸180度 */
 .wi-flip-inner {
   width: 100%; height: 100%;
   position: relative; transform-style: preserve-3d;
   transition: transform .45s ease;
 }
 .wi-flip-card.flipped .wi-flip-inner { transform: rotateY(180deg); }
-
+/* 卡片前後兩面樣式 */
 .wi-flip-front, .wi-flip-back {
   position: absolute; inset: 0;
   backface-visibility: hidden;
@@ -178,7 +180,7 @@
   display: flex; flex-direction: column; background: white;
 }
 .wi-flip-front img {
-  flex: 1; width: 100%; object-fit: contain; display: block;
+  width: 100%; height: 100%; object-fit: contain; display: block;
 }
 
 .wi-flip-back {
@@ -189,12 +191,12 @@
   gap: 16px; padding: 28px 24px;
 }
 .wi-flip-back-word {
-  font-size: 2.2rem; font-weight: 900; color: white;
+  font-size: 5rem; font-weight: 900; color: white;
   cursor: pointer; padding: 8px 16px; border-radius: 10px; transition: background .15s;
 }
 .wi-flip-back-word:active { background: rgba(255,255,255,.15); }
 .wi-flip-back-def {
-  font-size: 1rem; font-weight: 700; color: rgba(255,255,255,.92);
+  font-size: 2rem; font-weight: 700; color: rgba(255,255,255,.92);
   text-align: center; line-height: 1.7;
   cursor: pointer; padding: 8px 16px; border-radius: 10px; transition: background .15s;
 }
@@ -248,8 +250,9 @@
 .wi-quiz-progress-fill {
   height: 100%; background: var(--blue); border-radius: 4px; transition: width .3s;
 }
+/* 圖片區：圓角、陰影、背景色 */
 .wi-quiz-img-wrap {
-  width: 100%; max-width: 360px; aspect-ratio: 1;
+  width: 100%; max-width: 60%; aspect-ratio: 4/3;
   border-radius: 20px; overflow: hidden;
   box-shadow: 0 6px 24px rgba(0,0,0,.13);
   background: var(--gray-lt);
@@ -258,15 +261,17 @@
 .wi-quiz-question {
   font-size: .95rem; font-weight: 800; color: var(--muted);
 }
+/* 選項區 */
 .wi-quiz-opts {
-  width: 100%; max-width: 440px;
+  width: 100%; max-width: 100%;
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
 }
+/* 選項按鈕：圓角、陰影、字體 */
 .wi-quiz-opt {
   padding: 16px 12px; min-height: 56px;
   background: white; border: 2.5px solid var(--border);
   border-radius: 14px;
-  font-family: inherit; font-size: 1.05rem; font-weight: 800; color: var(--text);
+  font-family: inherit; font-size: 4rem; font-weight: 800; color: var(--text);
   cursor: pointer; transition: all .15s;
 }
 .wi-quiz-opt:hover:not(:disabled) {

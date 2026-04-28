@@ -16,11 +16,22 @@ var pracVocabCount     = 0;
 var pracFirstRoundQueue = [];
 var pracFirstRoundIdx   = 0;
 var pracPrevStars       = 0;
+var pracActiveChars     = [];
+var pracActiveWords     = [];
 
-function startPractice() {
+function startPractice(selectedItems) {
   var lesson = currentLessonData;
   if (!lesson) { showToast('請先選擇課程'); return; }
-  pracVocabCount = (lesson.chars || []).length + (lesson.words || []).length;
+  var allChars = lesson.chars || [];
+  var allWords = lesson.words || [];
+  if (selectedItems && selectedItems.length) {
+    pracActiveChars = allChars.filter(function(c) { return selectedItems.indexOf(c) !== -1; });
+    pracActiveWords = allWords.filter(function(w) { return selectedItems.indexOf(w) !== -1; });
+  } else {
+    pracActiveChars = allChars;
+    pracActiveWords = allWords;
+  }
+  pracVocabCount = pracActiveChars.length + pracActiveWords.length;
   if (!pracVocabCount) { showToast('這一課沒有題目'); return; }
 
   pracSeenWords       = new Set();
@@ -37,15 +48,11 @@ function startPractice() {
 }
 
 function buildOrderedQuestions() {
-  var lesson = currentLessonData;
-  if (!lesson) return [];
-  var chars  = lesson.chars || [];
-  var words  = lesson.words || [];
-  var charQs = chars.map(function(c) {
-    return { type: 'char', answer: c, options: buildOptions(c, chars, gradePool.chars) };
+  var charQs = pracActiveChars.map(function(c) {
+    return { type: 'char', answer: c, options: buildPracOptions(c, 'char') };
   });
-  var wordQs = words.map(function(w) {
-    return { type: 'word', answer: w, options: buildOptions(w, words, gradePool.words) };
+  var wordQs = pracActiveWords.map(function(w) {
+    return { type: 'word', answer: w, options: buildPracOptions(w, 'word') };
   });
   var result = [], ci = 0, wi = 0;
   while (ci < charQs.length || wi < wordQs.length) {
@@ -56,23 +63,26 @@ function buildOrderedQuestions() {
 }
 
 function buildRandomQuestion() {
-  var lesson = currentLessonData;
-  if (!lesson) return null;
-  var chars = lesson.chars || [];
-  var words = lesson.words || [];
-  var pool  = chars.map(function(c) { return { type: 'char', answer: c }; })
-               .concat(words.map(function(w) { return { type: 'word', answer: w }; }));
+  var pool = pracActiveChars.map(function(c) { return { type: 'char', answer: c }; })
+             .concat(pracActiveWords.map(function(w) { return { type: 'word', answer: w }; }));
   if (!pool.length) return null;
   var item = pool[Math.floor(Math.random() * pool.length)];
   return {
     type:    item.type,
     answer:  item.answer,
-    options: buildOptions(
-      item.answer,
-      item.type === 'char' ? chars : words,
-      item.type === 'char' ? gradePool.chars : gradePool.words
-    )
+    options: buildPracOptions(item.answer, item.type)
   };
+}
+
+function buildPracOptions(answer, type) {
+  var lesson      = currentLessonData;
+  var allItems    = type === 'char' ? (lesson.chars || []) : (lesson.words || []);
+  var activeItems = type === 'char' ? pracActiveChars : pracActiveWords;
+  var gradeItems  = type === 'char' ? gradePool.chars : gradePool.words;
+  var extraPool   = allItems.filter(function(x) {
+    return activeItems.indexOf(x) === -1;
+  }).concat(gradeItems);
+  return buildOptions(answer, activeItems, extraPool);
 }
 
 function pracNextQuestion() {

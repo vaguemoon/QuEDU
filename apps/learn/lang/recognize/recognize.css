@@ -132,6 +132,13 @@
   content: '✓'; position: absolute; top: 3px; right: 6px;
   font-size: .65rem; font-weight: 900; color: var(--green);
 }
+.menu-item-selected {
+  border-color: var(--blue) !important;
+  background: var(--blue-lt) !important;
+  color: var(--blue-dk) !important;
+  box-shadow: 0 0 0 3px rgba(74,144,217,.28), 0 2px 8px rgba(44,100,160,.07) !important;
+}
+.menu-select-mode .menu-item-btn:not(.menu-item-selected) { opacity: .4; }
 
 .menu-action-bar {
   position: fixed; bottom: 0; left: 0; right: 0;
@@ -152,6 +159,22 @@
 .btn-exam {
   background: linear-gradient(135deg, var(--green), #389959);
   color: white; box-shadow: 0 4px 16px rgba(82,201,122,.35);
+}
+.btn-select-mode {
+  background: linear-gradient(135deg, var(--orange), #d4621a);
+  color: white; box-shadow: 0 4px 16px rgba(255,140,66,.35);
+}
+.btn-select-all {
+  background: var(--blue-lt); color: var(--blue-dk);
+  border: 2px solid var(--blue);
+}
+.btn-start-select {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white; box-shadow: 0 4px 16px rgba(74,144,217,.35);
+}
+.btn-cancel-select {
+  background: var(--bg); color: var(--muted);
+  border: 2px solid var(--border);
 }
 .menu-empty { color: var(--muted); font-size: .88rem; font-weight: 700; padding: 8px; }
 

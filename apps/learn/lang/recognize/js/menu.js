@@ -3,6 +3,9 @@
  */
 'use strict';
 
+var menuSelectMode    = false;
+var pracSelectedItems = new Set();
+
 function renderMenu() {
   if (!currentLessonData) return;
   var lesson = currentLessonData;
@@ -15,6 +18,9 @@ function renderMenu() {
   var body = document.getElementById('menu-body');
   if (!body) return;
   body.innerHTML = '';
+  menuSelectMode = false;
+  pracSelectedItems.clear();
+  body.classList.remove('menu-select-mode');
 
   // 單字區
   if (chars.length) {
@@ -28,7 +34,8 @@ function renderMenu() {
       var btn = document.createElement('button');
       btn.className = 'menu-item-btn menu-item-' + st;
       btn.textContent = c;
-      btn.onclick = function() { speakText(c); };
+      btn.dataset.item = c;
+      btn.onclick = function() { onMenuItemClick(this, c); };
       charGrid.appendChild(btn);
     });
     charSec.appendChild(charGrid);
@@ -47,22 +54,101 @@ function renderMenu() {
       var btn = document.createElement('button');
       btn.className = 'menu-item-btn menu-word-btn menu-item-' + st;
       btn.textContent = w;
-      btn.onclick = function() { speakText(w); };
+      btn.dataset.item = w;
+      btn.onclick = function() { onMenuItemClick(this, w); };
       wordGrid.appendChild(btn);
     });
     wordSec.appendChild(wordGrid);
     body.appendChild(wordSec);
   }
 
-  // 底部按鈕列
-  var bar = document.getElementById('menu-action-bar');
-  if (bar) {
-    var total = chars.length + words.length;
-    bar.innerHTML = total
-      ? '<button class="btn-action btn-practice" onclick="startPractice()">🎯 練習模式</button>' +
-        '<button class="btn-action btn-exam" onclick="startExam()">📝 測驗模式</button>'
-      : '<div class="menu-empty">這一課沒有生字或詞語</div>';
+  renderNormalActionBar();
+}
+
+function onMenuItemClick(btn, item) {
+  if (menuSelectMode) {
+    toggleSelectItem(item, btn);
+  } else {
+    speakText(item);
   }
+}
+
+function toggleSelectItem(item, btn) {
+  if (pracSelectedItems.has(item)) {
+    pracSelectedItems.delete(item);
+    btn.classList.remove('menu-item-selected');
+  } else {
+    pracSelectedItems.add(item);
+    btn.classList.add('menu-item-selected');
+  }
+  speakText(item);
+  updateSelectCount();
+}
+
+function selectAll() {
+  var lesson = currentLessonData;
+  var all = (lesson.chars || []).concat(lesson.words || []);
+  all.forEach(function(item) { pracSelectedItems.add(item); });
+  document.querySelectorAll('#menu-body .menu-item-btn').forEach(function(btn) {
+    btn.classList.add('menu-item-selected');
+  });
+  updateSelectCount();
+}
+
+function updateSelectCount() {
+  var btn = document.getElementById('btn-start-select');
+  if (!btn) return;
+  var n = pracSelectedItems.size;
+  btn.textContent = n ? '開始練習（' + n + ' 個）' : '開始練習（全部）';
+}
+
+function enterSelectMode() {
+  menuSelectMode = true;
+  pracSelectedItems.clear();
+  var body = document.getElementById('menu-body');
+  if (body) body.classList.add('menu-select-mode');
+  document.querySelectorAll('#menu-body .menu-item-btn').forEach(function(btn) {
+    btn.classList.remove('menu-item-selected');
+  });
+  renderSelectActionBar();
+}
+
+function exitSelectMode() {
+  menuSelectMode = false;
+  pracSelectedItems.clear();
+  var body = document.getElementById('menu-body');
+  if (body) body.classList.remove('menu-select-mode');
+  document.querySelectorAll('#menu-body .menu-item-btn').forEach(function(btn) {
+    btn.classList.remove('menu-item-selected');
+  });
+  renderNormalActionBar();
+}
+
+function startSelectPractice() {
+  var selected = pracSelectedItems.size ? Array.from(pracSelectedItems) : null;
+  exitSelectMode();
+  startPractice(selected);
+}
+
+function renderNormalActionBar() {
+  var bar = document.getElementById('menu-action-bar');
+  if (!bar) return;
+  var lesson = currentLessonData;
+  var total = ((lesson && lesson.chars) || []).length + ((lesson && lesson.words) || []).length;
+  bar.innerHTML = total
+    ? '<button class="btn-action btn-practice" onclick="startPractice()">🎯 全部練習</button>' +
+      '<button class="btn-action btn-select-mode" onclick="enterSelectMode()">✏️ 自選練習</button>' +
+      '<button class="btn-action btn-exam" onclick="startExam()">📝 測驗模式</button>'
+    : '<div class="menu-empty">這一課沒有生字或詞語</div>';
+}
+
+function renderSelectActionBar() {
+  var bar = document.getElementById('menu-action-bar');
+  if (!bar) return;
+  bar.innerHTML =
+    '<button class="btn-action btn-select-all" onclick="selectAll()">☑ 全選</button>' +
+    '<button class="btn-action btn-start-select" id="btn-start-select" onclick="startSelectPractice()">開始練習（全部）</button>' +
+    '<button class="btn-action btn-cancel-select" onclick="exitSelectMode()">✕ 取消</button>';
 }
 
 function renderMenuProgress(chars, words) {

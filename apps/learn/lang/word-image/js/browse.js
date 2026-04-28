@@ -18,7 +18,6 @@ function _renderBrowse() {
 
   var item = wordImages[browseIdx];
   var n    = wordImages.length;
-  var hasQuiz  = n >= 2;
 
   inner.innerHTML =
     '<div class="wi-browse-wrap">' +
@@ -42,9 +41,6 @@ function _renderBrowse() {
         '<button class="wi-nav-btn" onclick="browseNext()" ' + (browseIdx === n - 1 ? 'disabled' : '') + '>▶</button>' +
       '</div>' +
 
-      '<div class="wi-browse-actions">' +
-        (hasQuiz  ? '<button class="wi-btn-primary"    onclick="startQuiz()">🎯 看圖猜詞</button>'  : '') +
-      '</div>' +
     '</div>';
 }
 
