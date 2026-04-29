@@ -204,8 +204,11 @@ function _wiRenderWordGrid() {
         '</div>';
     }
     html +=
-      '<div class="wi-word-label">' + _wiEsc(item.word) + '</div>' +
-      '<div class="wi-def-label">'  + _wiEsc(item.definition) + '</div>';
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px 4px">' +
+        '<span style="font-size:.95rem;font-weight:900;color:var(--text)">' + _wiEsc(item.word) + '</span>' +
+        '<button class="wi-search-btn" onclick="event.stopPropagation();_wiOpenGoogleSearch(' + i + ')">搜圖</button>' +
+      '</div>' +
+      '<div class="wi-def-label">' + _wiEsc(item.definition) + '</div>';
     if (hasImage) {
       html += '<button class="wi-del-btn" onclick="event.stopPropagation();_wiDeleteImage(' + i + ')">' +
         '刪除圖片</button>';
@@ -401,6 +404,16 @@ function _wiCompressToDataUrl(blob, maxPx, quality, callback) {
   };
   img.src = url;
 }
+
+/* ════════════════════════════
+   搜圖功能
+   ════════════════════════════ */
+function _wiOpenGoogleSearch(wordIdx) {
+  var item = _wiWordList[wordIdx];
+  if (!item) return;
+  window.open('https://www.google.com/search?q=' + encodeURIComponent(item.word) + '&tbm=isch', '_blank');
+}
+
 
 /* ── 工具函式 ── */
 function _wiEsc(s) {
