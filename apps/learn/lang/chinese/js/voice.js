@@ -12,6 +12,18 @@ var zhVoice = null;
 // 由 char-info.js 的 applyCharInfo / 注音切換 tab 更新
 var _charContextWord = {};
 
+// 管理員設定的 TTS 覆寫文字，優先權高於 _charContextWord 與萌典快取
+// 由 state.js 在選課時透過 setCharTtsOverride() 寫入
+var _charTtsOverride = {};
+
+function setCharTtsOverride(char, ttsText) {
+  if (char && ttsText) _charTtsOverride[char] = ttsText;
+}
+
+function clearCharTtsOverrides() {
+  _charTtsOverride = {};
+}
+
 function loadVoices() {
   var voices = synth.getVoices();
   zhVoice = voices.find(function(v) {
@@ -35,9 +47,10 @@ function setCharSpeakContext(char, word) {
 /**
  * 朗讀漢字或詞語（使用 Web Speech API）
  * 若傳入單字且未指定 bare，依優先順序選擇發音語境：
- *   1. setCharSpeakContext 設定的語境詞（使用者切換注音 tab 時）
- *   2. charInfoCache 快取中第一個讀音的第一個造詞（背景預載後）
- *   3. 裸字（無快取時的回退，TTS 自行判斷）
+ *   1. _charTtsOverride（管理員後台設定的覆寫文字，最高優先）
+ *   2. _charContextWord（使用者切換注音 tab 時設定的語境詞）
+ *   3. charInfoCache 萌典快取中第一個讀音的第一個造詞
+ *   4. 裸字（無快取時的回退，TTS 自行判斷）
  * @param {string} char 要朗讀的字或詞
  * @param {boolean} [bare] 傳入 true 時強制唸裸字，不套用語境詞
  */
@@ -46,15 +59,19 @@ function speakChar(char, bare) {
   try {
     synth.cancel();
     var text = char;
-    if (!bare && char && char.length === 1) {
-      if (_charContextWord[char]) {
-        // 優先使用使用者切換注音 tab 時設定的語境詞
-        text = _charContextWord[char];
-      } else if (typeof charInfoCache !== 'undefined' && charInfoCache[char]) {
-        // 其次從萌典快取取第一個讀音的第一個造詞
-        var h0 = charInfoCache[char].heteronyms && charInfoCache[char].heteronyms[0];
-        if (h0 && h0.wordDefPairs && h0.wordDefPairs.length > 0) {
-          text = h0.wordDefPairs[0].word;
+    if (char && char.length === 1) {
+      if (_charTtsOverride[char]) {
+        // 最高優先：管理員後台設定的覆寫文字（bare 也套用，因為是明確指定）
+        text = _charTtsOverride[char];
+      } else if (!bare) {
+        // bare=true 時跳過萌典語境詞，直接唸裸字
+        if (_charContextWord[char]) {
+          text = _charContextWord[char];
+        } else if (typeof charInfoCache !== 'undefined' && charInfoCache[char]) {
+          var h0 = charInfoCache[char].heteronyms && charInfoCache[char].heteronyms[0];
+          if (h0 && h0.wordDefPairs && h0.wordDefPairs.length > 0) {
+            text = h0.wordDefPairs[0].word;
+          }
         }
       }
     }

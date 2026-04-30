@@ -72,8 +72,9 @@ function loadCurriculumVersions() {
             lessonId:  lDoc.id,
             lessonNum: d.lessonNum,
             name:      d.name,
-            chars:     d.chars  || [],
-            words:     d.words  || []
+            chars:         d.chars         || [],
+            words:         d.words         || [],
+            charOverrides: d.charOverrides || {}
           });
         });
         Object.keys(books).forEach(function(g) {
@@ -222,11 +223,39 @@ function selectBook(bookId) {
 // ── Step 3 → 選課次 ──
 
 function selectLesson(lesson, cardEl) {
-  currSelectedLesson = lesson;
   document.querySelectorAll('.curr-lesson-card').forEach(function(c) { c.classList.remove('active'); });
   cardEl.classList.add('active');
   if (typeof sfxTap === 'function') sfxTap();
-  startCurriculumLesson();
+
+  // 每次選課都從 Firestore 拿最新資料，確保 charOverrides 是最新版本
+  if (db && currSelectedVer && lesson.lessonId) {
+    db.collection('curriculum').doc(currSelectedVer.verId)
+      .collection('lessons').doc(lesson.lessonId).get()
+      .then(function(doc) {
+        if (doc.exists) {
+          var d = doc.data();
+          currSelectedLesson = {
+            lessonId:      lesson.lessonId,
+            lessonNum:     d.lessonNum,
+            name:          d.name,
+            chars:         d.chars         || [],
+            words:         d.words         || [],
+            charOverrides: d.charOverrides || {}
+          };
+        } else {
+          currSelectedLesson = lesson;
+        }
+        startCurriculumLesson();
+      })
+      .catch(function(e) {
+        console.warn('selectLesson fetch failed, using cache:', e);
+        currSelectedLesson = lesson;
+        startCurriculumLesson();
+      });
+  } else {
+    currSelectedLesson = lesson;
+    startCurriculumLesson();
+  }
 }
 
 function startCurriculumLesson() {

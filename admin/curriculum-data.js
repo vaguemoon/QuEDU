@@ -185,6 +185,24 @@ function importCSV() {
 }
 
 // ════════════════════════════════════════
+//  儲存課次生字 TTS 覆寫
+// ════════════════════════════════════════
+
+function saveCharOverrides(vId, lessonId, overrides, statusEl) {
+  if (!db) return;
+  db.collection('curriculum').doc(vId).collection('lessons').doc(lessonId)
+    .update({ charOverrides: overrides })
+    .then(function() {
+      if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已儲存'; }
+      showToast('✅ TTS 覆寫已儲存');
+    })
+    .catch(function(e) {
+      if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
+      showToast('❌ 儲存失敗：' + e.message);
+    });
+}
+
+// ════════════════════════════════════════
 //  手動新增課程
 // ════════════════════════════════════════
 

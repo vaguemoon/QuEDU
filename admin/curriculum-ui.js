@@ -5,6 +5,8 @@
 'use strict';
 
 var allVersions = [];
+var _loData    = {}; // 課次覆寫快取 { key: { vId, lessonId, chars, charOverrides } }
+var _loCounter = 0;
 
 /* 跳脫 inline onclick 字串中的單引號與反斜線 */
 function _escQ(s) {
@@ -173,15 +175,23 @@ function loadVersionContent(vId, vName, container) {
           var wordsHtml = (lesson.words && lesson.words.length)
             ? '<div class="lesson-words" style="font-size:.78rem;color:var(--muted);margin-top:3px">詞：' + lesson.words.join('・') + '</div>'
             : '';
+          var loKey = 'lo' + (_loCounter++);
+          _loData[loKey] = {
+            vId: vId, lessonId: lesson.id,
+            chars: lesson.chars || [], charOverrides: lesson.charOverrides || {}
+          };
           html +=
-            '<div class="lesson-item">' +
-              '<div class="lesson-num">第 ' + lesson.lessonNum + ' 課</div>' +
-              '<div class="lesson-name">' + lesson.name + '</div>' +
-              '<div class="lesson-chars">' + lesson.chars.join('') + wordsHtml + '</div>' +
-              '<div class="lesson-actions">' +
-                '<button class="btn-tiny" ' +
-                  'onclick="deleteLesson(\'' + _escQ(vId) + '\',\'' + _escQ(lesson.id) + '\')">🗑</button>' +
+            '<div class="lesson-accordion">' +
+              '<div class="lesson-item lesson-item-toggle" onclick="toggleLessonOverride(\'' + loKey + '\')">' +
+                '<div class="lesson-num">第 ' + lesson.lessonNum + ' 課</div>' +
+                '<div class="lesson-name">' + lesson.name + '</div>' +
+                '<div class="lesson-chars">' + lesson.chars.join('') + wordsHtml + '</div>' +
+                '<div class="lesson-actions">' +
+                  '<span id="lo-ico-' + loKey + '" style="font-size:.65rem;color:var(--blue);width:10px;flex-shrink:0">▶</span>' +
+                  '<button class="btn-tiny" onclick="event.stopPropagation();deleteLesson(\'' + _escQ(vId) + '\',\'' + _escQ(lesson.id) + '\')">🗑</button>' +
+                '</div>' +
               '</div>' +
+              '<div id="lo-body-' + loKey + '" class="lesson-override-body" style="display:none"></div>' +
             '</div>';
         });
 
@@ -253,4 +263,74 @@ function updateManualPreview() {
   prev.innerHTML = chars.length
     ? '<div class="lesson-chars-chip" style="font-size:1.2rem;letter-spacing:4px">' + chars.join('') + '</div>'
     : '';
+}
+
+// ════════════════════════════════════════
+//  課次 TTS 覆寫
+// ════════════════════════════════════════
+
+function toggleLessonOverride(key) {
+  var body = document.getElementById('lo-body-' + key);
+  var ico  = document.getElementById('lo-ico-' + key);
+  var acc  = body && body.parentElement;
+  if (!body) return;
+  var opening = body.style.display === 'none';
+  body.style.display = opening ? '' : 'none';
+  if (ico) ico.textContent = opening ? '▼' : '▶';
+  if (acc) acc.classList.toggle('open', opening);
+  if (opening && !body.dataset.rendered) {
+    _renderLessonOverrideBody(key, body);
+    body.dataset.rendered = '1';
+  }
+}
+
+function _renderLessonOverrideBody(key, body) {
+  var data = _loData[key];
+  if (!data || !data.chars.length) {
+    body.innerHTML = '<div style="color:var(--muted);font-size:.82rem">此課無生字。</div>';
+    return;
+  }
+  var html =
+    '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:10px;line-height:1.6">' +
+      '輸入包含該字的<strong>詞語</strong>（國字），TTS 會讀出整個詞來引導正確讀音。' +
+      '例如：噸 → <code>公噸</code>、垃 → <code>垃圾桶</code>。留空則使用萌典預設。' +
+    '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
+  data.chars.forEach(function(char) {
+    var ov = (data.charOverrides[char] && data.charOverrides[char].ttsText) || '';
+    var hi = ov ? 'border-color:var(--blue)' : '';
+    html +=
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 6px;' +
+        'border:1.5px solid var(--border);' + hi + ';border-radius:10px;background:white;min-width:60px">' +
+        '<div style="font-size:1.4rem;font-family:\'Noto Sans TC\',sans-serif;font-weight:900;line-height:1">' + char + '</div>' +
+        '<input type="text" data-char="' + char + '" value="' + _escQ(ov) + '" placeholder="詞語"' +
+          ' style="width:56px;border:1.5px solid var(--border);border-radius:6px;padding:3px 5px;' +
+          'font-size:.75rem;font-family:\'Noto Sans TC\',sans-serif;text-align:center;outline:none">' +
+      '</div>';
+  });
+  html += '</div>';
+  html +=
+    '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">' +
+      '<span id="lo-status-' + key + '" style="font-size:.78rem;font-weight:700;color:var(--muted)"></span>' +
+      '<button onclick="saveLessonOverride(\'' + key + '\')" ' +
+        'style="padding:6px 18px;border:none;border-radius:8px;background:var(--blue);color:white;' +
+        'font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">儲存</button>' +
+    '</div>';
+  body.innerHTML = html;
+}
+
+function saveLessonOverride(key) {
+  var data     = _loData[key];
+  var body     = document.getElementById('lo-body-' + key);
+  var statusEl = document.getElementById('lo-status-' + key);
+  if (!data || !body) return;
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '儲存中…'; }
+
+  var overrides = {};
+  body.querySelectorAll('input[data-char]').forEach(function(input) {
+    var val = input.value.trim();
+    if (val) overrides[input.dataset.char] = { ttsText: val };
+  });
+  data.charOverrides = overrides;
+  saveCharOverrides(data.vId, data.lessonId, overrides, statusEl);
 }

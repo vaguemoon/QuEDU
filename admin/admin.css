@@ -302,6 +302,22 @@ body {
 }
 .btn-tiny:hover { border-color:var(--red); color:var(--red); }
 
+/* ── 課次 TTS 覆寫 ── */
+.lesson-accordion { margin-bottom:6px; }
+.lesson-accordion > .lesson-item { margin-bottom:0; transition:border-color .15s, border-radius .1s; }
+.lesson-accordion.open > .lesson-item {
+  border-color:var(--blue);
+  border-bottom-left-radius:0; border-bottom-right-radius:0;
+}
+.lesson-item-toggle { cursor:pointer; }
+.lesson-item-toggle:hover { background:#f0f7ff; }
+.lesson-override-body {
+  border:1px solid var(--blue); border-top:none;
+  border-radius:0 0 8px 8px;
+  padding:12px 14px;
+  background:#f8fbff;
+}
+
 /* 課程層級視角 */
 .version-block { margin-bottom:16px; }
 .version-header {
@@ -581,6 +597,9 @@ body.dark .version-item.active       { background: var(--blue-lt); }
 body.dark .version-accordion         { background: #21262d; }
 body.dark .version-accordion-header:hover { background: var(--blue-lt); }
 body.dark .lesson-item               { background: #21262d; }
+body.dark .lesson-item-toggle:hover  { background: #1c3a5f; }
+body.dark .lesson-accordion.open > .lesson-item { border-color:#3b82f6; }
+body.dark .lesson-override-body      { background:#161b22; border-color:#3b82f6; }
 body.dark .lesson-row                { background: #21262d; }
 body.dark .lesson-row-header:hover   { background: #2d333b; }
 body.dark .lesson-row-body           { background: #161b22; }
