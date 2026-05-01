@@ -20,6 +20,10 @@ function speakText(text) {
   if (!soundEnabled) return;
   try {
     synth.cancel();
+    if (text && text.length === 1) {
+      var _ov = typeof getCurriculumCharOverride === 'function' ? getCurriculumCharOverride(text) : null;
+      if (_ov) text = _ov;
+    }
     var u = new SpeechSynthesisUtterance(text);
     u.lang  = 'zh-TW';
     u.rate  = 0.85;

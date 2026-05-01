@@ -10,9 +10,26 @@
  *   function getLessonMasteredState(lesson) { return true/false; }
  *     — 決定課次卡片是否顯示「✓ 全過」標記，未定義則不顯示
  *
+ * TTS 覆寫：
+ *   管理員在後台設定的字音覆寫統一存於 _currCharOverrides。
+ *   任何 app 的 TTS 函式只需呼叫 getCurriculumCharOverride(char) 取得覆寫文字，
+ *   有值則用覆寫，無值則走原本邏輯。
+ *
  * 依賴：shared.js（db）、nav.js（showPage）、各 app 的 renderMenu()
  */
 'use strict';
+
+// ── 課次 TTS 覆寫（集中管理，任何使用 curriculum.js 的 app 均可存取） ──
+var _currCharOverrides = {}; // { char: ttsText }
+
+/**
+ * 取得指定漢字的管理員 TTS 覆寫文字
+ * @param {string} char 漢字
+ * @returns {string|null} 覆寫文字（若無則 null）
+ */
+function getCurriculumCharOverride(char) {
+  return _currCharOverrides[char] || null;
+}
 
 var curriculumData     = {}; // { verId: { name, books: { grade: [lesson...] } } }
 var currSelectedVer    = null;
@@ -266,6 +283,15 @@ function startCurriculumLesson() {
   var gradeData = ((curriculumData[verId] || {}).books || {})[currSelectedBook] || [];
 
   currentLessonLabel = verName + '　' + currSelectedBook + '・第 ' + (lesson.lessonNum || '') + ' 課　' + (lesson.name || '');
+
+  // 集中套用管理員 TTS 覆寫，讓所有 app 的 getCurriculumCharOverride() 即時生效
+  _currCharOverrides = {};
+  var _ovs = lesson.charOverrides;
+  if (_ovs) {
+    Object.keys(_ovs).forEach(function(c) {
+      if (_ovs[c] && _ovs[c].ttsText) _currCharOverrides[c] = _ovs[c].ttsText;
+    });
+  }
 
   // App 自訂 Hook：初始化各 app 的學習狀態
   if (typeof onCurriculumLessonSelected === 'function') {

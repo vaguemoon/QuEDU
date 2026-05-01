@@ -9,14 +9,6 @@
 function onCurriculumLessonSelected(lesson, verName, bookId, gradeData) {
   chars = (lesson.chars || []).slice();
   chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
-  // 套用管理員設定的 TTS 覆寫（優先權高於萌典語境詞，不受 preloadCharInfoAll 覆蓋）
-  if (typeof clearCharTtsOverrides === 'function') clearCharTtsOverrides();
-  if (lesson.charOverrides && typeof setCharTtsOverride === 'function') {
-    Object.keys(lesson.charOverrides).forEach(function(char) {
-      var ov = lesson.charOverrides[char];
-      if (ov && ov.ttsText) setCharTtsOverride(char, ov.ttsText);
-    });
-  }
   if (typeof preloadCharInfoAll === 'function') preloadCharInfoAll(chars);
 }
 
