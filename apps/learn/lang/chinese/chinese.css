@@ -245,23 +245,10 @@
   cursor: pointer; transition: all .18s; border: none;
   font-family: 'Nunito', 'Noto Sans TC', sans-serif;
 }
-.mode-choice-left     { background: #e8f4fd; border-right: 1px solid var(--border); }
-.mode-choice-right    { flex: 1; display: flex; flex-direction: column; }
-.mode-choice-assigned { background: #fff4e6; border-bottom: 1px solid var(--border); }
-.mode-choice-custom   { background: #f0fff8; }
-/* 右側兩個半格：縮小圖示與文字以配合較小空間 */
-.mode-choice-right .mode-choice { gap: 12px; padding: 20px 24px; }
-.mode-choice-right .mode-choice-icon  { font-size: 3.2rem; }
-.mode-choice-right .mode-choice-title { font-size: 1.6rem; }
-.mode-choice-right .mode-choice-sub   { font-size: .88rem; }
+.mode-choice-left   { background: #e8f4fd; border-right: 1px solid var(--border); }
+.mode-choice-custom { background: #f0fff8; }
 @media(max-width:600px) {
-  .mode-choice-left  { border-right: none; border-bottom: 1px solid var(--border); }
-  .mode-choice-right { flex-direction: row; }
-  .mode-choice-assigned { border-bottom: none; border-right: 1px solid var(--border); }
-  .mode-choice-right .mode-choice { gap: 8px; padding: 16px 10px; }
-  .mode-choice-right .mode-choice-icon  { font-size: 2.4rem; }
-  .mode-choice-right .mode-choice-title { font-size: 1.2rem; }
-  .mode-choice-right .mode-choice-sub   { font-size: .78rem; }
+  .mode-choice-left { border-right: none; border-bottom: 1px solid var(--border); }
 }
 .mode-choice:hover  { filter: brightness(.95); transform: scale(1.01); }
 .mode-choice:active { filter: brightness(.9);  transform: scale(.99); }

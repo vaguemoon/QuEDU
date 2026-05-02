@@ -214,7 +214,9 @@ function _qsRenderList() {
     var active = d.active !== false;
     var date   = d.createdAt ? d.createdAt.slice(0, 10) : '—';
     var counts = d.counts || {};
-    var total  = (counts.explain || 0) + (counts.fillIn || 0) + (counts.mc || 0);
+    var total  = d.type === 'exam'
+      ? (counts.total || (d.questionIds || []).length || 0)
+      : (counts.explain || 0) + (counts.fillIn || 0) + (counts.mc || 0);
     var borderCol = active ? 'var(--blue)' : 'var(--border)';
     var bgCol     = active ? 'var(--blue-lt,#eef5fc)' : 'var(--gray-lt)';
     var nameCol   = active ? 'var(--blue-dk,#2d6fa8)' : 'var(--muted)';
@@ -223,6 +225,9 @@ function _qsRenderList() {
     var typeBadge = d.type === 'custom'
       ? '<span style="font-size:.65rem;font-weight:800;background:#dbeafe;color:#1d4ed8;' +
         'border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle">自選</span>'
+      : d.type === 'exam'
+      ? '<span style="font-size:.65rem;font-weight:800;background:#fef3c7;color:#92400e;' +
+        'border:1px solid #fde68a;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle">試卷</span>'
       : '<span style="font-size:.65rem;font-weight:800;background:var(--gray-lt);color:var(--muted);' +
         'border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle">隨機</span>';
 
@@ -234,8 +239,10 @@ function _qsRenderList() {
     html += '<div style="font-size:1rem;font-weight:900;color:' + nameCol + '">' + _qsEsc(d.name || '未命名') + typeBadge + '</div>';
     html += '<div style="font-size:.78rem;font-weight:700;color:var(--muted);margin-top:2px">' +
       _qsEsc(d.grade || '') + '　第 ' + _qsEsc(d.lesson || '') + ' 課　' + _qsEsc(d.lessonName || '') + '</div>';
-    html += '<div style="font-size:.75rem;color:var(--muted);margin-top:2px">建立：' + date +
-      '　解釋 ' + (counts.explain || 0) + '／填空 ' + (counts.fillIn || 0) + '／選擇 ' + (counts.mc || 0) + '　共 ' + total + ' 題</div>';
+    var countDetail = d.type === 'exam'
+      ? '共 ' + total + ' 題'
+      : '解釋 ' + (counts.explain || 0) + '／填空 ' + (counts.fillIn || 0) + '／選擇 ' + (counts.mc || 0) + '　共 ' + total + ' 題';
+    html += '<div style="font-size:.75rem;color:var(--muted);margin-top:2px">建立：' + date + '　' + countDetail + '</div>';
 
     /* 最高成績 + 折疊式學生名單 */
     if (stats && stats.count > 0) {

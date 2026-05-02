@@ -94,15 +94,14 @@ function doLogout() {
 
 function switchTab(tab) {
   if (document.getElementById('tool-modal').style.display === 'flex') closeToolModal();
-  ['classes', 'quiz', 'math', 'tools', 'word-image'].forEach(function(t) {
+  ['classes', 'database', 'quiz-zone', 'tools'].forEach(function(t) {
     document.getElementById('panel-'+t).style.display = t===tab ? '' : 'none';
     document.getElementById('tab-'+t).classList.toggle('active', t===tab);
   });
   document.getElementById('panel-student').style.display = 'none';
-  if (tab === 'classes')    { backToClasses(); loadClasses(); }
-  if (tab === 'quiz')       { loadQuizBankStats(); loadQuizSessions(); }
-  if (tab === 'math')       { loadMathQuizSessions(); }
-  if (tab === 'word-image') { loadWordImageTab(); }
+  if (tab === 'classes')   { backToClasses(); loadClasses(); }
+  if (tab === 'database')  { _initDatabaseTab(); }
+  if (tab === 'quiz-zone') { _initQuizZoneTab(); }
 }
 
 /* ── 題庫年級組合 ── */
@@ -112,13 +111,62 @@ function updateQbGrade() {
   document.getElementById('qb-grade').value = (v && s) ? v + s : '';
 }
 
-/* ── 語文練習內子頁籤 ── */
-function switchQuizTab(subId, btn) {
-  ['bank', 'sessions'].forEach(function(id) {
-    var el = document.getElementById('qpanel-' + id);
-    if (el) el.style.display = id === subId ? '' : 'none';
+/* ── 資料庫：初始化（切換至資料庫 tab 時呼叫）── */
+function _initDatabaseTab() {
+  var activeBtn = document.querySelector('.db-nav-btn.active');
+  var viewId = activeBtn ? activeBtn.id.replace('dbnav-', '') : 'chinese-bank';
+  switchDbView(viewId, activeBtn);
+}
+
+/* ── 資料庫：切換左欄項目 ── */
+function switchDbView(viewId, btn) {
+  ['chinese-bank', 'word-image', 'audio-chinese', 'math-bank', 'audio-math'].forEach(function(v) {
+    var el = document.getElementById('dbview-' + v);
+    if (el) el.style.display = v === viewId ? '' : 'none';
   });
-  var tabs = document.querySelectorAll('#panel-quiz .app-tab-mini');
-  tabs.forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.db-nav-btn').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
+  if (viewId === 'chinese-bank')  loadQuizBankStats();
+  if (viewId === 'word-image')    loadWordImageTab();
+  if (viewId === 'math-bank')     loadMathBankStats();
+  if (viewId === 'audio-chinese') loadAudioClipsTab('chinese');
+  if (viewId === 'audio-math')    loadAudioClipsTab('math');
+}
+
+/* ── 測驗區：初始化 ── */
+function _initQuizZoneTab() {
+  var activeBtn = document.querySelector('#panel-quiz-zone > .app-tabs-mini .app-tab-mini.active');
+  switchQzTab('sessions', activeBtn);
+}
+
+/* ── 測驗區：主頁籤（線上測驗 / 試卷編製）── */
+function switchQzTab(tabId, btn) {
+  ['sessions', 'compose'].forEach(function(id) {
+    var el = document.getElementById('qz-panel-' + id);
+    if (el) el.style.display = id === tabId ? '' : 'none';
+  });
+  document.querySelectorAll('#panel-quiz-zone > .app-tabs-mini .app-tab-mini').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  if (btn) btn.classList.add('active');
+  if (tabId === 'sessions') {
+    var activeTypeBtn = document.querySelector('#qz-panel-sessions > .app-tabs-mini .app-tab-mini.active');
+    var type = activeTypeBtn && activeTypeBtn.getAttribute('data-type') || 'quiz';
+    switchQzSessionType(type, activeTypeBtn);
+  }
+  if (tabId === 'compose') loadExamComposeTab();
+}
+
+/* ── 測驗區：科目切換（語文 / 數學）── */
+function switchQzSessionType(type, btn) {
+  ['quiz', 'math'].forEach(function(t) {
+    var el = document.getElementById('qz-sessions-' + t);
+    if (el) el.style.display = t === type ? '' : 'none';
+  });
+  document.querySelectorAll('#qz-panel-sessions > .app-tabs-mini .app-tab-mini').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  if (btn) btn.classList.add('active');
+  if (type === 'quiz') loadQuizSessions();
+  if (type === 'math') loadMathQuizSessions();
 }

@@ -228,7 +228,10 @@ function loadQuestions() {
   var settings;
   try { settings = JSON.parse(sessionStorage.getItem('quiz_settings')); } catch(e) {}
 
-  if (!settings || !settings.grade || !settings.lesson) {
+  var hasIds = settings && settings.questionIds && settings.questionIds.length;
+
+  /* 試卷編製發布的 session 有 questionIds 但無 lesson，需先跳過 lesson 判斷 */
+  if (!settings || (!hasIds && (!settings.grade || !settings.lesson))) {
     currentSession = null;
     startQuiz(FALLBACK, null);
     return;
@@ -242,8 +245,8 @@ function loadQuestions() {
     teacherUid:  settings.teacherUid  || ''
   };
 
-  /* ── 固定題組（隨機出題已鎖定 / 自選測驗）：依指定 ID 直接讀取題目 ── */
-  if (settings.questionIds && settings.questionIds.length) {
+  /* ── 固定題組（隨機出題已鎖定 / 自選測驗 / 試卷編製）：依指定 ID 直接讀取題目 ── */
+  if (hasIds) {
     if (!db) { startQuiz(FALLBACK, null); return; }
     Promise.all(settings.questionIds.map(function(id) {
       return db.collection('questions').doc(id).get();

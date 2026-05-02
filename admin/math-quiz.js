@@ -139,7 +139,10 @@ function _mqDetailHtml(s) {
     var dType = d.resultType === 'remainder' ? '有餘數' : '整除';
     lines.push('<b>除法 ' + (d.count||'?') + ' 題</b>：除數 ' + (d.divisorDigits||1) + ' 位，商 ' + (d.quotientDigits||1) + ' 位，' + dType + (dExtra.length ? '，' + dExtra.join('・') : ''));
   }
-  return lines.join('<br>') || '<span style="color:var(--muted)">無設定</span>';
+  var codeHtml = s.code
+    ? '<div style="margin-bottom:8px">測驗代碼：<span style="font-family:\'Courier New\',monospace;font-weight:900;font-size:1.05rem;letter-spacing:.12em;color:var(--blue)">' + _mqEsc(s.code) + '</span></div>'
+    : '';
+  return codeHtml + (lines.join('<br>') || '<span style="color:var(--muted)">無設定</span>');
 }
 
 function toggleMqDetail(id) {

@@ -8,7 +8,6 @@ var PAGE_STACK = [];
 var PAGE_CONFIG = {
   'mode-select':   { title:'✏️ <span>練字趣</span>',    back:false },
   'curriculum':    { title:'📚 <span>選擇課程</span>',   back:true  },
-  'assigned':      { title:'📋 <span>老師指派</span>',   back:true  },
   'custom-input':  { title:'✍️ <span>自行輸入</span>',  back:true  },
   'menu':          { title:'📋 <span>今天的生字</span>', back:true  },
   'mode':          { title:'選擇模式',                    back:true  },
@@ -76,4 +75,68 @@ function goBack() {
 
 function backToHub() {
   try { window.parent.postMessage({ type: 'hanzi-back-to-hub' }, '*'); } catch(e) {}
+}
+
+/* ── 自行輸入 ── */
+function openCustomInputPage() {
+  var ta = document.getElementById('custom-chars-input');
+  if (ta) ta.value = '';
+  onCustomInputChange();
+  showPage('custom-input');
+}
+
+function onCustomInputChange() {
+  var ta       = document.getElementById('custom-chars-input');
+  var countEl  = document.getElementById('custom-input-count');
+  var preview  = document.getElementById('custom-chars-preview');
+  var emptyEl  = document.getElementById('custom-chars-empty');
+  var startBtn = document.getElementById('btn-start-custom');
+  if (!ta) return;
+
+  var raw    = ta.value.replace(/\s/g, '');
+  var unique = [];
+  var seen   = {};
+  for (var i = 0; i < raw.length; i++) {
+    var c = raw[i];
+    if (/[一-鿿㐀-䶿]/.test(c) && !seen[c]) {
+      seen[c] = true;
+      unique.push(c);
+      if (unique.length >= 20) break;
+    }
+  }
+
+  if (countEl) countEl.textContent = unique.length + ' / 20 字';
+
+  if (preview) {
+    if (unique.length) {
+      preview.innerHTML = unique.map(function(c) {
+        return '<span class="assigned-char-chip">' + c + '</span>';
+      }).join('');
+    } else {
+      preview.innerHTML = '<div class="assigned-empty" id="custom-chars-empty">輸入國字後，會在這裡預覽</div>';
+    }
+  }
+
+  if (startBtn) startBtn.disabled = unique.length === 0;
+}
+
+function startCustomLesson() {
+  var ta = document.getElementById('custom-chars-input');
+  if (!ta) return;
+  var raw    = ta.value.replace(/\s/g, '');
+  var unique = [];
+  var seen   = {};
+  for (var i = 0; i < raw.length; i++) {
+    var c = raw[i];
+    if (/[一-鿿㐀-䶿]/.test(c) && !seen[c]) {
+      seen[c] = true;
+      unique.push(c);
+      if (unique.length >= 20) break;
+    }
+  }
+  if (!unique.length) return;
+  chars = unique;
+  chars.forEach(function(c) { if (!charStatus[c]) charStatus[c] = 'new'; });
+  if (typeof preloadCharInfoAll === 'function') preloadCharInfoAll(chars);
+  showPage('menu');
 }

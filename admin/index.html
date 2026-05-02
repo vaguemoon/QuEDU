@@ -54,11 +54,10 @@
       </div>
     </div>
     <nav class="sidebar-nav">
-      <button class="admin-tab active" id="tab-classes" onclick="switchTab('classes')">🏫 班級管理</button>
-      <button class="admin-tab" id="tab-quiz" onclick="switchTab('quiz')">📝 語文測驗</button>
-      <button class="admin-tab" id="tab-math" onclick="switchTab('math')">🔢 數學測驗</button>
-      <button class="admin-tab" id="tab-tools" onclick="switchTab('tools')">🎧 教學工具</button>
-      <button class="admin-tab" id="tab-word-image" onclick="switchTab('word-image')">🖼️ 詞語圖庫</button>
+      <button class="admin-tab active" id="tab-classes"   onclick="switchTab('classes')">🏫 班級管理</button>
+      <button class="admin-tab" id="tab-database"          onclick="switchTab('database')">📁 資料庫</button>
+      <button class="admin-tab" id="tab-quiz-zone"         onclick="switchTab('quiz-zone')">📋 測驗區</button>
+      <button class="admin-tab" id="tab-tools"             onclick="switchTab('tools')">🎧 教學工具</button>
     </nav>
     <div class="sidebar-footer">
       <button id="dark-mode-btn" class="btn-dark-toggle" onclick="toggleDarkMode()">🌙 暗色模式</button>
@@ -125,144 +124,374 @@
 
     </div>
 
-    <!-- ══ 語文練習 ══ -->
-    <div id="panel-quiz" style="display:none">
+    <!-- ══ 資料庫 ══ -->
+    <div id="panel-database" style="display:none">
+      <div class="db-layout">
 
-      <!-- App 子頁籤 -->
+        <!-- 左欄導航 -->
+        <nav class="db-sidenav">
+          <div class="db-nav-group">
+            <div class="db-nav-label">語文</div>
+            <button class="db-nav-btn active" id="dbnav-chinese-bank" onclick="switchDbView('chinese-bank',this)">📚 題庫</button>
+            <button class="db-nav-btn" id="dbnav-word-image"    onclick="switchDbView('word-image',this)">🖼️ 詞語圖庫</button>
+            <button class="db-nav-btn" id="dbnav-audio-chinese" onclick="switchDbView('audio-chinese',this)">🎵 音檔(施工中)</button>
+          </div>
+          <div class="db-nav-group">
+            <div class="db-nav-label">數學</div>
+            <button class="db-nav-btn" id="dbnav-math-bank"   onclick="switchDbView('math-bank',this)">📊 題組(施工中)</button>
+            <button class="db-nav-btn" id="dbnav-audio-math"  onclick="switchDbView('audio-math',this)">🎵 音檔(施工中)</button>
+          </div>
+        </nav>
+
+        <!-- 右側內容 -->
+        <div class="db-content">
+
+          <!-- 語文 › 題庫 -->
+          <div id="dbview-chinese-bank">
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                📤 上傳題庫 .xlsx
+                <button onclick="downloadQbTemplate()"
+                  style="margin-left:auto;padding:6px 14px;border:1.5px solid var(--blue);border-radius:8px;
+                         background:var(--blue-lt);color:var(--blue-dk);font-size:.78rem;
+                         font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s"
+                  onmouseover="this.style.background='var(--blue)';this.style.color='white'"
+                  onmouseout="this.style.background='var(--blue-lt)';this.style.color='var(--blue-dk)'">
+                  ⬇️ 下載 Excel 範例
+                </button>
+              </div>
+              <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px;line-height:1.7">
+                工作表需包含欄位：<strong>課次、課名、題型、題幹、選項一、選項二、選項三（選項四選填）、答案</strong>（第一列為標題列）。<br>
+                題型限：詞語解釋／詞語填空／選擇題。選擇題答案欄填數字 <strong>1／2／3</strong>，對應選項一／二／三。
+              </p>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+                <div style="flex:1;min-width:140px">
+                  <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">版本</label>
+                  <select id="qb-version" onchange="updateQbGrade()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">
+                    <option value="">── 請選擇 ──</option>
+                    <option value="康軒">康軒版</option>
+                    <option value="南一">南一版</option>
+                    <option value="翰林">翰林版</option>
+                  </select>
+                </div>
+                <div style="flex:1;min-width:140px">
+                  <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">冊次</label>
+                  <select id="qb-volume" onchange="updateQbGrade()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">
+                    <option value="">── 請選擇 ──</option>
+                    <option value="一上">一上</option><option value="一下">一下</option>
+                    <option value="二上">二上</option><option value="二下">二下</option>
+                    <option value="三上">三上</option><option value="三下">三下</option>
+                    <option value="四上">四上</option><option value="四下">四下</option>
+                    <option value="五上">五上</option><option value="五下">五下</option>
+                    <option value="六上">六上</option><option value="六下">六下</option>
+                  </select>
+                </div>
+                <input type="hidden" id="qb-grade">
+                <div style="flex:2;min-width:220px">
+                  <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">選擇 .xlsx 檔案</label>
+                  <input type="file" id="qb-file" accept=".xlsx" onchange="previewQuizBank()" style="font-size:.88rem">
+                </div>
+              </div>
+              <div id="qb-errors" style="display:none;margin-bottom:12px"></div>
+              <div id="qb-preview-wrap" style="display:none;margin-bottom:4px">
+                <div style="font-size:.82rem;font-weight:800;color:var(--muted);margin-bottom:6px">
+                  前 10 筆預覽（共 <span id="qb-total-count">0</span> 筆有效題目）
+                </div>
+                <div style="overflow-x:auto">
+                  <table id="qb-preview-table" style="width:100%;border-collapse:collapse;font-size:.82rem"></table>
+                </div>
+                <div style="margin-top:14px;display:flex;gap:10px">
+                  <button class="btn btn-primary" onclick="uploadQuizBank()">⬆️ 上傳至 Firebase</button>
+                  <button class="btn btn-secondary" onclick="clearQuizBankPreview()">✕ 取消</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                📊 我的題庫
+                <button class="btn btn-secondary" style="margin-left:auto;padding:6px 14px;font-size:.78rem" onclick="loadQuizBankStats()">重新整理</button>
+              </div>
+              <div id="qb-stats-wrap">
+                <div class="loading-wrap"><div class="spinner"></div></div>
+              </div>
+            </div>
+          </div><!-- /dbview-chinese-bank -->
+
+          <!-- 語文 › 詞語圖庫 -->
+          <div id="dbview-word-image" style="display:none">
+            <div id="wi-main"><div class="loading-wrap"><div class="spinner"></div></div></div>
+          </div>
+
+          <!-- 語文 › 音檔 -->
+          <div id="dbview-audio-chinese" style="display:none">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <div class="card-title" style="margin:0">🎵 語文音檔</div>
+              <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="openAcModal('chinese')">＋ 新增音檔</button>
+            </div>
+            <div class="card">
+              <div id="ac-list-wrap-chinese"><div class="loading-wrap"><div class="spinner"></div></div></div>
+            </div>
+          </div>
+
+          <!-- 數學 › 題組 -->
+          <div id="dbview-math-bank" style="display:none">
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                📤 上傳數學題組 .xlsx
+                <button onclick="downloadMbTemplate()"
+                  style="margin-left:auto;padding:6px 14px;border:1.5px solid var(--blue);border-radius:8px;
+                         background:var(--blue-lt);color:var(--blue-dk);font-size:.78rem;
+                         font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .15s"
+                  onmouseover="this.style.background='var(--blue)';this.style.color='white'"
+                  onmouseout="this.style.background='var(--blue-lt)';this.style.color='var(--blue-dk)'">
+                  ⬇️ 下載 Excel 範例
+                </button>
+              </div>
+              <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px;line-height:1.7">
+                工作表需包含欄位：<strong>年級、類別、題幹、答案</strong>（第一列為標題列）。<br>
+                年級填：一上、二下…；類別填：加法、減法、乘法、除法、應用題…等。
+              </p>
+              <div style="margin-bottom:14px">
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">選擇 .xlsx 檔案</label>
+                <input type="file" id="mb-file" accept=".xlsx" onchange="previewMathBank()" style="font-size:.88rem">
+              </div>
+              <div id="mb-errors" style="display:none;margin-bottom:12px"></div>
+              <div id="mb-preview-wrap" style="display:none;margin-bottom:4px">
+                <div style="font-size:.82rem;font-weight:800;color:var(--muted);margin-bottom:6px">
+                  前 10 筆預覽（共 <span id="mb-total-count">0</span> 筆有效題目）
+                </div>
+                <div style="overflow-x:auto">
+                  <table id="mb-preview-table" style="width:100%;border-collapse:collapse;font-size:.82rem"></table>
+                </div>
+                <div style="margin-top:14px;display:flex;gap:10px">
+                  <button id="btn-mb-upload" class="btn btn-primary" onclick="uploadMathBank()">⬆️ 上傳至 Firebase</button>
+                  <button class="btn btn-secondary" onclick="clearMathBankPreview()">✕ 取消</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title" style="display:flex;align-items:center;gap:8px">
+                📊 我的數學題組
+                <button class="btn btn-secondary" style="margin-left:auto;padding:6px 14px;font-size:.78rem" onclick="loadMathBankStats()">重新整理</button>
+              </div>
+              <div id="mb-stats-wrap"><div class="loading-wrap"><div class="spinner"></div></div></div>
+            </div>
+          </div>
+
+          <!-- 數學 › 音檔 -->
+          <div id="dbview-audio-math" style="display:none">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <div class="card-title" style="margin:0">🎵 數學音檔</div>
+              <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="openAcModal('math')">＋ 新增音檔</button>
+            </div>
+            <div class="card">
+              <div id="ac-list-wrap-math"><div class="loading-wrap"><div class="spinner"></div></div></div>
+            </div>
+          </div>
+
+        </div><!-- /db-content -->
+      </div><!-- /db-layout -->
+    </div><!-- /panel-database -->
+
+    <!-- ══ 測驗區 ══ -->
+    <div id="panel-quiz-zone" style="display:none">
+
       <div class="app-tabs-mini" style="margin-bottom:20px">
-        <button class="app-tab-mini active" onclick="switchQuizTab('bank', this)">📚 題庫管理</button>
-        <button class="app-tab-mini"        onclick="switchQuizTab('sessions', this)">📋 測驗管理</button>
+        <button class="app-tab-mini active" onclick="switchQzTab('sessions',this)">📋 線上測驗</button>
+        <button class="app-tab-mini"        onclick="switchQzTab('compose',this)">📝 試卷編製</button>
       </div>
 
-      <!-- 題庫管理 -->
-      <div id="qpanel-bank">
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-title" style="display:flex;align-items:center;gap:8px">
-            📤 上傳題庫 .xlsx
-            <button onclick="downloadQbTemplate()"
-              style="margin-left:auto;padding:6px 14px;border:1.5px solid var(--blue);border-radius:8px;
-                     background:var(--blue-lt,#eef5fc);color:var(--blue-dk,#2d6fa8);font-size:.78rem;
-                     font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;
-                     transition:background .15s"
-              onmouseover="this.style.background='var(--blue)';this.style.color='white'"
-              onmouseout="this.style.background='var(--blue-lt,#eef5fc)';this.style.color='var(--blue-dk,#2d6fa8)'">
-              ⬇️ 下載 Excel 範例
-            </button>
-          </div>
-          <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px;line-height:1.7">
-            工作表需包含欄位：<strong>課次、課名、題型、題幹、選項一、選項二、選項三（選項四選填）、答案</strong>（第一列為標題列）。<br>
-            題型限：詞語解釋／詞語填空／選擇題。選擇題答案欄填數字 <strong>1／2／3</strong>，對應選項一／二／三。
-          </p>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
-            <div style="flex:1;min-width:140px">
-              <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">版本</label>
-              <select id="qb-version" onchange="updateQbGrade()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">
-                <option value="">── 請選擇 ──</option>
-                <option value="康軒">康軒版</option>
-                <option value="南一">南一版</option>
-                <option value="翰林">翰林版</option>
-              </select>
-            </div>
-            <div style="flex:1;min-width:140px">
-              <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">冊次</label>
-              <select id="qb-volume" onchange="updateQbGrade()" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">
-                <option value="">── 請選擇 ──</option>
-                <option value="一上">一上</option><option value="一下">一下</option>
-                <option value="二上">二上</option><option value="二下">二下</option>
-                <option value="三上">三上</option><option value="三下">三下</option>
-                <option value="四上">四上</option><option value="四下">四下</option>
-                <option value="五上">五上</option><option value="五下">五下</option>
-                <option value="六上">六上</option><option value="六下">六下</option>
-              </select>
-            </div>
-            <!-- Hidden combined grade field consumed by quiz-bank.js -->
-            <input type="hidden" id="qb-grade">
-            <div style="flex:2;min-width:220px">
-              <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">選擇 .xlsx 檔案</label>
-              <input type="file" id="qb-file" accept=".xlsx" onchange="previewQuizBank()" style="font-size:.88rem">
-            </div>
-          </div>
-          <div id="qb-errors" style="display:none;margin-bottom:12px"></div>
-          <div id="qb-preview-wrap" style="display:none;margin-bottom:4px">
-            <div style="font-size:.82rem;font-weight:800;color:var(--muted);margin-bottom:6px">
-              前 10 筆預覽（共 <span id="qb-total-count">0</span> 筆有效題目）
-            </div>
-            <div style="overflow-x:auto">
-              <table id="qb-preview-table" style="width:100%;border-collapse:collapse;font-size:.82rem"></table>
-            </div>
-            <div style="margin-top:14px;display:flex;gap:10px">
-              <button class="btn btn-primary" onclick="uploadQuizBank()">⬆️ 上傳至 Firebase</button>
-              <button class="btn btn-secondary" onclick="clearQuizBankPreview()">✕ 取消</button>
-            </div>
-          </div>
+      <!-- 線上測驗 -->
+      <div id="qz-panel-sessions">
+        <div class="app-tabs-mini" style="margin-bottom:16px">
+          <button class="app-tab-mini active" data-type="quiz" onclick="switchQzSessionType('quiz',this)">📝 語文</button>
+          <button class="app-tab-mini"        data-type="math" onclick="switchQzSessionType('math',this)">🔢 數學</button>
         </div>
 
-        <div class="card">
-          <div class="card-title" style="display:flex;align-items:center;gap:8px">
-            📊 我的題庫
-            <button class="btn btn-secondary" style="margin-left:auto;padding:6px 14px;font-size:.78rem" onclick="loadQuizBankStats()">重新整理</button>
+        <!-- 語文測驗 session 列表 -->
+        <div id="qz-sessions-quiz">
+          <div class="card">
+            <div class="card-title">📋 語文測驗列表</div>
+            <div id="qs-filter-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1.5px solid var(--border);margin-bottom:14px">
+              <select id="qs-filter-status" onchange="_qsFilterChanged()"
+                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
+                <option value="">全部狀態</option>
+                <option value="active">進行中</option>
+                <option value="closed">已關閉</option>
+              </select>
+              <select id="qs-filter-grade" onchange="_qsFilterGradeChanged()"
+                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
+                <option value="">全部年級</option>
+              </select>
+              <select id="qs-filter-lesson" onchange="_qsFilterChanged()"
+                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
+                <option value="">全部課次</option>
+              </select>
+              <div style="flex:1;min-width:160px;position:relative">
+                <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.88rem;color:var(--muted);pointer-events:none">🔍</span>
+                <input id="qs-filter-search" type="text" placeholder="搜尋測驗名稱…" oninput="_qsFilterChanged()"
+                  style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;outline:none;box-sizing:border-box">
+              </div>
+              <span id="qs-filter-count" style="font-size:.78rem;font-weight:700;color:var(--muted);white-space:nowrap"></span>
+            </div>
+            <div id="qs-list-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
           </div>
-          <div id="qb-stats-wrap">
+        </div><!-- /qz-sessions-quiz -->
+
+        <!-- 數學測驗 session 列表 -->
+        <div id="qz-sessions-math" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <div class="card-title" style="margin:0">🔢 四則運算測驗</div>
+            <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showMqCreateModal()">＋ 新增測驗</button>
+            <button class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem" onclick="loadMathQuizSessions()">重新整理</button>
+          </div>
+          <div class="card">
+            <div id="mq-list-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div><!-- /qz-sessions-math -->
+
+      </div><!-- /qz-panel-sessions -->
+
+      <!-- 試卷編製 -->
+      <div id="qz-panel-compose" style="display:none">
+
+        <!-- ── 草稿列表 view ── -->
+        <div id="ec-list-view">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <div class="card-title" style="margin:0">📝 試卷草稿</div>
+            <button class="btn-save-lesson" onclick="_ecNewDraft()" style="margin-left:auto;padding:8px 16px;font-size:.82rem">＋ 新增試卷</button>
+          </div>
+          <div id="ec-drafts-wrap">
             <div class="loading-wrap"><div class="spinner"></div></div>
           </div>
         </div>
-      </div><!-- /qpanel-bank -->
 
-      <!-- 測驗管理 -->
-      <div id="qpanel-sessions" style="display:none">
-        <div class="card">
-          <div class="card-title" style="display:flex;align-items:center;gap:8px">
-            📋 測驗列表
-            <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showModeSelectModal()">＋ 新增測驗</button>
-            <button class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem" onclick="loadQuizSessions()">重新整理</button>
+        <!-- ── 精靈 view ── -->
+        <div id="ec-wizard-view" style="display:none">
+
+          <button class="back-btn" onclick="_ecShowList()" style="margin-bottom:16px">← 返回列表</button>
+
+          <!-- Step bar -->
+          <div class="ec-step-bar">
+            <div id="ec-stp-1" class="ec-step-dot active"><div class="ec-step-circle">1</div><div class="ec-step-label">基本資料</div></div>
+            <div id="ec-conn-1" class="ec-step-connector"></div>
+            <div id="ec-stp-2" class="ec-step-dot"><div class="ec-step-circle">2</div><div class="ec-step-label">選題</div></div>
+            <div id="ec-conn-2" class="ec-step-connector"></div>
+            <div id="ec-stp-3" class="ec-step-dot"><div class="ec-step-circle">3</div><div class="ec-step-label">排版</div></div>
+            <div id="ec-conn-3" class="ec-step-connector"></div>
+            <div id="ec-stp-4" class="ec-step-dot"><div class="ec-step-circle">4</div><div class="ec-step-label">輸出</div></div>
           </div>
-          <!-- 篩選列 -->
-          <div id="qs-filter-bar" style="display:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1.5px solid var(--border);margin-bottom:14px">
-            <select id="qs-filter-status" onchange="_qsFilterChanged()"
-              style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
-              <option value="">全部狀態</option>
-              <option value="active">進行中</option>
-              <option value="closed">已關閉</option>
-            </select>
-            <select id="qs-filter-grade" onchange="_qsFilterGradeChanged()"
-              style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
-              <option value="">全部年級</option>
-            </select>
-            <select id="qs-filter-lesson" onchange="_qsFilterChanged()"
-              style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
-              <option value="">全部課次</option>
-            </select>
-            <div style="flex:1;min-width:160px;position:relative">
-              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.88rem;color:var(--muted);pointer-events:none">🔍</span>
-              <input id="qs-filter-search" type="text" placeholder="搜尋測驗名稱…" oninput="_qsFilterChanged()"
-                style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;outline:none;box-sizing:border-box">
+
+          <!-- Step 1: 基本資料 -->
+          <div id="ec-panel-1" class="card">
+            <div class="card-title">📋 基本資料</div>
+            <div style="display:flex;flex-direction:column;gap:16px;max-width:480px">
+              <div>
+                <div style="font-size:.82rem;font-weight:800;color:var(--muted);margin-bottom:6px">試卷名稱 *</div>
+                <input id="ec-name" type="text" placeholder="例：第一單元語文測驗"
+                  style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.92rem;font-family:inherit;outline:none;box-sizing:border-box">
+              </div>
+              <div>
+                <div style="font-size:.82rem;font-weight:800;color:var(--muted);margin-bottom:6px">科目</div>
+                <select id="ec-subject"
+                  style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.92rem;font-family:inherit;background:white;cursor:pointer">
+                  <option value="chinese">語文</option>
+                  <option value="math">數學</option>
+                </select>
+              </div>
+              <div>
+                <div style="font-size:.82rem;font-weight:800;color:var(--muted);margin-bottom:6px">年級（選填）</div>
+                <input id="ec-grade" type="text" placeholder="例：三上"
+                  style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:.92rem;font-family:inherit;outline:none;box-sizing:border-box">
+              </div>
             </div>
-            <span id="qs-filter-count" style="font-size:.78rem;font-weight:700;color:var(--muted);white-space:nowrap"></span>
+            <div id="ec-step1-err" style="color:var(--red);font-size:.82rem;margin-top:10px;font-weight:700;min-height:20px"></div>
+            <div style="display:flex;justify-content:flex-end;margin-top:20px">
+              <button class="btn btn-primary" onclick="_ecGoStep(2)">下一步 →</button>
+            </div>
           </div>
-          <div id="qs-list-wrap">
-            <div class="loading-wrap"><div class="spinner"></div></div>
+
+          <!-- Step 2: 選題 -->
+          <div id="ec-panel-2" class="card" style="display:none">
+            <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              📚 選題
+              <span style="margin-left:auto;font-size:.82rem;font-weight:700;color:var(--blue)">已選 <span id="ec-selected-count">0</span> 題</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 0;border-bottom:1.5px solid var(--border);margin-bottom:12px">
+              <select id="ec-filter-grade" onchange="_ecOnGradeChange()"
+                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
+                <option value="">全部年級</option>
+              </select>
+              <select id="ec-filter-cat" onchange="_ecFilterAndRender()"
+                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
+                <option value="">全部課次</option>
+              </select>
+              <select id="ec-filter-type" onchange="_ecFilterAndRender()"
+                style="display:none;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
+                <option value="">全部題型</option>
+              </select>
+              <div style="flex:1;min-width:160px;position:relative">
+                <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.88rem;color:var(--muted);pointer-events:none">🔍</span>
+                <input id="ec-filter-search" type="text" placeholder="搜尋題目…" oninput="_ecFilterAndRender()"
+                  style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;outline:none;box-sizing:border-box">
+              </div>
+            </div>
+            <div id="ec-q-list"
+              style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 12px;min-height:80px">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
+            <div id="ec-step2-err" style="color:var(--red);font-size:.82rem;margin-top:8px;font-weight:700;min-height:18px"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:16px">
+              <button class="btn btn-secondary" onclick="_ecGoStep(1)">← 上一步</button>
+              <button class="btn btn-primary"   onclick="_ecGoStep(3)">下一步 →</button>
+            </div>
           </div>
-        </div>
-      </div><!-- /qpanel-sessions -->
 
-    </div><!-- /panel-quiz -->
+          <!-- Step 3: 排版 -->
+          <div id="ec-panel-3" class="card" style="display:none">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              🗂 排版
+              <span style="font-size:.82rem;font-weight:700;color:var(--muted)">共 <span id="ec-layout-count">0</span> 題</span>
+            </div>
+            <div id="ec-layout-list" style="min-height:80px;margin-top:4px"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:16px">
+              <button class="btn btn-secondary" onclick="_ecGoStep(2)">← 上一步</button>
+              <button class="btn btn-primary"   onclick="_ecGoStep(4)">下一步 →</button>
+            </div>
+          </div>
 
-    <!-- ══ 數學測驗 ══ -->
-    <div id="panel-math" style="display:none">
+          <!-- Step 4: 輸出 -->
+          <div id="ec-panel-4" class="card" style="display:none">
+            <div class="card-title">📤 輸出</div>
+            <div id="ec-preview-summary"
+              style="padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;background:var(--gray-lt);margin-bottom:20px">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;max-width:360px">
+              <button id="ec-btn-save" onclick="_ecSaveDraft()"
+                style="padding:12px 20px;border:1.5px solid var(--blue);border-radius:10px;background:white;color:var(--blue);font-size:.92rem;font-weight:800;cursor:pointer;font-family:inherit;text-align:left">
+                💾 儲存草稿</button>
+              <button id="ec-btn-publish" onclick="_ecPublishOnline()"
+                style="padding:12px 20px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.92rem;font-weight:800;cursor:pointer;font-family:inherit;text-align:left">
+                📤 發布為線上測驗</button>
+              <button onclick="_ecPrint()"
+                style="padding:12px 20px;border:1.5px solid var(--border);border-radius:10px;background:white;color:var(--text);font-size:.92rem;font-weight:800;cursor:pointer;font-family:inherit;text-align:left">
+                🖨 列印試卷</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:24px">
+              <button class="btn btn-secondary" onclick="_ecGoStep(3)">← 上一步</button>
+              <button class="btn btn-secondary" onclick="_ecShowList()">回到列表</button>
+            </div>
+          </div>
 
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-        <div class="card-title" style="margin:0">🔢 四則運算測驗</div>
-        <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showMqCreateModal()">＋ 新增測驗</button>
-        <button class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem" onclick="loadMathQuizSessions()">重新整理</button>
-      </div>
+        </div><!-- /ec-wizard-view -->
 
-      <div class="card">
-        <div id="mq-list-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-      </div>
+      </div><!-- /qz-panel-compose -->
 
-    </div><!-- /panel-math -->
+    </div><!-- /panel-quiz-zone -->
 
     <!-- 教學工具 -->
     <div id="panel-tools" style="display:none">
@@ -274,18 +503,11 @@
           <div class="tool-card-icon">🎧</div>
           <div class="tool-card-body">
             <div class="tool-card-name">報讀工具</div>
-            <div class="tool-card-desc">將 Word 文件轉換為可點擊朗讀的有聲教材</div>
+            <div class="tool-card-desc">Word、或自行輸入文本轉報讀</div>
           </div>
           <div class="tool-card-arrow">→</div>
         </button>
 
-      </div>
-    </div>
-
-    <!-- ══ 詞語圖庫 ══ -->
-    <div id="panel-word-image" style="display:none">
-      <div id="wi-main">
-        <div class="loading-wrap"><div class="spinner"></div></div>
       </div>
     </div>
 
@@ -644,6 +866,46 @@
 .wi-search-btn:hover { background:var(--blue,#3182ce); color:white; }
 </style>
 
+<!-- ══ 音檔錄製 Modal ══ -->
+<div id="ac-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:20px">🎵 新增音檔</div>
+
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">音檔名稱</label>
+    <input id="ac-name" type="text" placeholder="例如：第三課生字朗讀" maxlength="40"
+      style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:16px">
+
+    <!-- 錄音區 -->
+    <div style="border:2px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;text-align:center">
+      <div style="font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:10px">麥克風錄音（最長 60 秒）</div>
+      <div id="ac-timer" style="font-size:2.2rem;font-weight:900;color:var(--text);font-family:'Courier New',monospace;margin-bottom:14px;line-height:1">0.0s</div>
+      <button id="ac-rec-btn" class="ac-rec-btn" onclick="_acToggleRecord()">🎙 開始錄音</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:.75rem;color:var(--muted);font-weight:700;white-space:nowrap">或上傳音檔</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <input type="file" id="ac-file" accept="audio/*" onchange="_acFileSelected(this)"
+      style="font-size:.85rem;margin-bottom:6px;width:100%">
+    <div style="font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:12px">音檔限 500KB 以內</div>
+
+    <audio id="ac-preview" controls style="display:none;width:100%;margin-bottom:10px"></audio>
+
+    <div id="ac-size-warn" style="display:none;font-size:.78rem;color:var(--yellow);font-weight:700;margin-bottom:6px"></div>
+    <div id="ac-error"    style="font-size:.82rem;color:var(--red);font-weight:700;min-height:18px;margin-bottom:10px"></div>
+
+    <div style="display:flex;gap:10px">
+      <button onclick="closeAcModal()"
+        style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">取消</button>
+      <button id="ac-confirm-btn" onclick="_acConfirmSave()" disabled
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit;opacity:.5;transition:opacity .15s">儲存</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -657,6 +919,9 @@
 <script src="quiz-sessions.js"></script>
 <script src="math-quiz.js"></script>
 <script src="word-image.js"></script>
+<script src="math-bank.js"></script>
+<script src="audio-clips.js"></script>
+<script src="exam-compose.js"></script>
 <script>
 var TOOL_CONFIG = {
   reader: { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' }

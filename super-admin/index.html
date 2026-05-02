@@ -11,9 +11,21 @@
 <style>
 /* ══ 管理者後台擴充樣式 ══ */
 
-/* tabs 捲動（行動版） */
-.admin-tabs { overflow-x:auto; flex-wrap:nowrap; }
-.admin-tab  { white-space:nowrap; }
+/* SUPERUSER 徽章 */
+.sa-role-badge {
+  display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+  margin:0 0 22px 6px; padding:3px 9px; border-radius:999px;
+  background:#fff4e6; color:#9a4a07;
+  font-size:.68rem; font-weight:900; letter-spacing:.5px;
+}
+.sa-role-badge .dot { width:6px; height:6px; border-radius:50%; background:#e67e22; }
+
+/* 系統運作中狀態（sidebar footer） */
+.sa-status-row { display:flex; align-items:center; gap:6px; }
+.sa-status-dot {
+  width:7px; height:7px; border-radius:50%; background:var(--green);
+  box-shadow:0 0 0 3px rgba(82,201,122,.18);
+}
 
 /* 4 欄統計（全校總覽） */
 .stats-row-4 {
@@ -103,31 +115,41 @@
 <!-- ══ 管理者後台主畫面 ══ -->
 <div id="admin-screen">
 
-  <!-- 頂部列 -->
-  <div class="admin-topbar">
-    <div class="topbar-brand">
-      <div class="topbar-brand-icon">⚙️</div>
+  <!-- 側邊欄 -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚙️</div>
       <div>
-        <div class="topbar-brand-name">上學趣 管理者後台</div>
-        <div class="topbar-brand-sub">系統管理</div>
+        <div class="sidebar-brand-name">上學趣</div>
+        <div class="sidebar-brand-sub">系統管理者</div>
       </div>
     </div>
-    <div class="topbar-right">
-      <span id="admin-email-display" style="font-size:.78rem;font-weight:600;color:var(--muted)"></span>
-      <button class="btn-logout" onclick="doLogout()">登出</button>
-    </div>
-  </div>
 
+    <div class="sa-role-badge"><span class="dot"></span>SUPERUSER</div>
+
+    <nav class="sidebar-nav">
+      <button class="admin-tab active" id="tab-overview"   onclick="switchTab('overview')">📊 全校總覽</button>
+      <button class="admin-tab"        id="tab-accounts"   onclick="switchTab('accounts')">👤 帳號管理</button>
+      <button class="admin-tab"        id="tab-curriculum" onclick="switchTab('curriculum')">📚 課程管理</button>
+      <button class="admin-tab"        id="tab-invites"    onclick="switchTab('invites')">🔑 邀請碼管理</button>
+      <button class="admin-tab"        id="tab-settings"   onclick="switchTab('settings')">⚙️ 系統設定</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-label sa-status-row">
+          <span class="sa-status-dot"></span>系統運作中
+        </div>
+        <div id="admin-email-display" class="sidebar-user-email"></div>
+        <div class="sidebar-last-update">系統管理員</div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">🚪 登出</button>
+    </div>
+  </aside>
+
+  <!-- 主內容 -->
+  <main class="admin-content">
   <div class="admin-main">
-
-    <!-- 分頁 -->
-    <div class="admin-tabs">
-      <button class="admin-tab active" id="tab-overview"    onclick="switchTab('overview')">📊 全校總覽</button>
-      <button class="admin-tab"        id="tab-accounts"    onclick="switchTab('accounts')">👤 帳號管理</button>
-      <button class="admin-tab"        id="tab-curriculum"  onclick="switchTab('curriculum')">📚 課程管理</button>
-      <button class="admin-tab"        id="tab-invites"     onclick="switchTab('invites')">🔑 邀請碼管理</button>
-      <button class="admin-tab"        id="tab-settings"    onclick="switchTab('settings')">⚙️ 系統設定</button>
-    </div>
 
     <!-- ① 全校總覽 -->
     <div id="panel-overview">
@@ -396,6 +418,7 @@
     </div>
 
   </div><!-- /admin-main -->
+  </main>
 </div><!-- /admin-screen -->
 
 <div id="toast"></div>

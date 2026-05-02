@@ -103,5 +103,22 @@ service cloud.firestore {
       allow read:  if true;
       allow write: if request.auth != null;
     }
+
+    // 數學題組 —— 學生（無 Auth）可讀（測驗時需取題），教師可寫
+    match /mathQuestions/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 音檔庫 —— 學生（無 Auth）可讀（測驗時播音），教師可寫
+    match /audioClips/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 試卷草稿 —— 僅已登入教師可讀寫
+    match /examDrafts/{doc} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
