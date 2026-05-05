@@ -508,15 +508,71 @@ function toggleSoundUI() {
 // ── 儲存個人設定 ──
 
 function saveProfile() {
-  if (!currentStudent || !db) return;
+  if (!currentStudent) return;
   var nickname = document.getElementById('profile-nickname').value.trim();
   currentStudent.nickname = nickname;
   currentStudent.avatar   = selectedAvatar;
   sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+  if (currentStudent.isGuest || !db) {
+    showToast('✅ 已儲存（訪客模式，重新整理後重置）');
+    renderHub(); showPanel('hub'); return;
+  }
   db.collection('students').doc(currentStudent.id)
     .set({ nickname: nickname, avatar: selectedAvatar }, { merge: true })
     .then(function() { showToast('✅ 已儲存！'); renderHub(); showPanel('hub'); })
     .catch(function() { showToast('儲存失敗，請重試'); });
+}
+
+// ── 修改 PIN 碼 ──
+
+function changePIN() {
+  if (!currentStudent || currentStudent.isGuest || !db) {
+    showToast('訪客模式無法修改 PIN');
+    return;
+  }
+  var oldPin  = (document.getElementById('pin-old').value  || '').trim();
+  var newPin1 = (document.getElementById('pin-new1').value || '').trim();
+  var newPin2 = (document.getElementById('pin-new2').value || '').trim();
+  var status  = document.getElementById('pin-change-status');
+
+  if (oldPin.length !== 4 || newPin1.length !== 4 || newPin2.length !== 4) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'PIN 碼必須是 4 位數字';
+    return;
+  }
+  if (!/^\d{4}$/.test(oldPin) || !/^\d{4}$/.test(newPin1)) {
+    status.style.color = 'var(--red)';
+    status.textContent = '請只輸入數字';
+    return;
+  }
+  if (newPin1 !== newPin2) {
+    status.style.color = 'var(--red)';
+    status.textContent = '兩次新 PIN 碼不一致';
+    return;
+  }
+  if (oldPin !== currentStudent.pin) {
+    status.style.color = 'var(--red)';
+    status.textContent = '目前 PIN 碼不正確';
+    return;
+  }
+  status.style.color = 'var(--muted)';
+  status.textContent = '儲存中…';
+
+  db.collection('students').doc(currentStudent.id)
+    .update({ pin: newPin1 })
+    .then(function() {
+      currentStudent.pin = newPin1;
+      sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+      document.getElementById('pin-old').value  = '';
+      document.getElementById('pin-new1').value = '';
+      document.getElementById('pin-new2').value = '';
+      status.style.color = 'var(--green)';
+      status.textContent = '✅ PIN 碼已更新';
+    })
+    .catch(function(e) {
+      status.style.color = 'var(--red)';
+      status.textContent = '更新失敗：' + e.message;
+    });
 }
 
 // ── 接收 iframe 訊息 ──
@@ -558,6 +614,16 @@ window.addEventListener('load', function() {
   if (welcome) {
     sessionStorage.removeItem('hub_welcome');
     setTimeout(function() { showToast(welcome); }, 200);
+  }
+
+  if (currentStudent.isGuest) {
+    /* 訪客：隱藏 PIN 修改與班級管理，不載入 Firestore 資料 */
+    var pinSection = document.getElementById('pin-change-section');
+    if (pinSection) pinSection.style.display = 'none';
+    var classWrap = document.getElementById('class-join-wrap');
+    if (classWrap) classWrap.innerHTML =
+      '<div style="color:var(--muted);font-size:.85rem;font-weight:600">訪客模式不支援班級功能。</div>';
+    return;
   }
 
   (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); })();

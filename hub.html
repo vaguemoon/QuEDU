@@ -88,6 +88,19 @@
                   </button>
                 </div>
               </div>
+              <div class="profile-section" id="pin-change-section">
+                <div class="profile-section-title">修改 PIN 碼</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <input class="profile-input" id="pin-old" type="password" inputmode="numeric"
+                    maxlength="4" placeholder="目前 PIN 碼（4位數字）" autocomplete="off">
+                  <input class="profile-input" id="pin-new1" type="password" inputmode="numeric"
+                    maxlength="4" placeholder="新 PIN 碼（4位數字）" autocomplete="off">
+                  <input class="profile-input" id="pin-new2" type="password" inputmode="numeric"
+                    maxlength="4" placeholder="再輸入一次新 PIN 碼" autocomplete="off">
+                  <button class="btn-save-profile" style="margin-top:0;padding:10px" onclick="changePIN()">🔒 更改 PIN 碼</button>
+                  <div id="pin-change-status" style="font-size:.82rem;font-weight:700;min-height:18px"></div>
+                </div>
+              </div>
               <div class="profile-section">
                 <div class="profile-section-title">班級</div>
                 <div id="class-join-wrap"><div style="color:var(--muted);font-size:.85rem;font-weight:600">載入中…</div></div>

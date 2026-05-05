@@ -97,6 +97,20 @@
 }
 .toggle-switch.on::after { left:27px; }
 
+/* 學校手風琴 */
+.school-accordion { border:1.5px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:12px; }
+.school-acc-header {
+  display:flex; align-items:center; gap:10px; padding:14px 16px;
+  background:#f8fafc; cursor:pointer; user-select:none;
+  transition:background .15s;
+}
+.school-acc-header:hover { background:#f0f4f8; }
+.school-acc-name  { font-size:.95rem; font-weight:900; color:var(--text); flex:1; }
+.school-acc-count { font-size:.78rem; font-weight:700; color:var(--muted); }
+.school-acc-arrow { font-size:.8rem; color:var(--muted); transition:transform .2s; flex-shrink:0; }
+.school-acc-arrow.open { transform:rotate(180deg); }
+.school-acc-body  { border-top:1.5px solid var(--border); padding:0; }
+
 /* 新增管理者表單 */
 .add-admin-form {
   display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px;
@@ -129,7 +143,7 @@
 
     <nav class="sidebar-nav">
       <button class="admin-tab active" id="tab-overview"   onclick="switchTab('overview')">📊 全校總覽</button>
-      <button class="admin-tab"        id="tab-accounts"   onclick="switchTab('accounts')">👤 帳號管理</button>
+      <button class="admin-tab"        id="tab-schools"    onclick="switchTab('schools')">🏫 學校管理</button>
       <button class="admin-tab"        id="tab-curriculum" onclick="switchTab('curriculum')">📚 課程管理</button>
       <button class="admin-tab"        id="tab-invites"    onclick="switchTab('invites')">🔑 邀請碼管理</button>
       <button class="admin-tab"        id="tab-settings"   onclick="switchTab('settings')">⚙️ 系統設定</button>
@@ -182,22 +196,31 @@
       </div>
     </div>
 
-    <!-- ② 帳號管理 -->
-    <div id="panel-accounts" style="display:none">
+    <!-- ③ 學校管理 -->
+    <div id="panel-schools" style="display:none">
       <div class="card">
-        <div class="card-title">👤 教師帳號列表
-          <button onclick="loadAccounts()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+        <div class="card-title">🏫 學校列表
+          <button onclick="loadSchools()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
         </div>
         <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-          教師首次登入後即自動記錄。封鎖後教師將無法進入後台。
+          停用學校後，該校教師仍可登入，但學生端「選擇學校」列表中不會顯示該校。
         </div>
-        <div id="accounts-wrap">
+        <div id="schools-wrap">
           <div class="loading-wrap"><div class="spinner"></div></div>
         </div>
+        <div class="add-admin-form" style="margin-top:14px">
+          <input id="new-school-name" type="text" class="add-admin-input"
+            placeholder="輸入學校名稱（例如：太平國小）"
+            onkeydown="if(event.key==='Enter')addSchool()">
+          <button class="btn-save-lesson" style="padding:9px 18px" onclick="addSchool()">
+            <span>＋</span><span>新增學校</span>
+          </button>
+        </div>
+        <div id="add-school-status" style="margin-top:10px;font-size:.82rem;font-weight:700"></div>
       </div>
     </div>
 
-    <!-- ③ 課程管理（與教師後台共用 curriculum.js） -->
+    <!-- ④ 課程管理（與教師後台共用 curriculum.js） -->
     <div id="panel-curriculum" style="display:none">
 
       <!-- App 頁籤 -->
@@ -428,6 +451,7 @@
 <script src="init.js"></script>
 <script src="overview.js"></script>
 <script src="accounts.js"></script>
+<script src="schools.js"></script>
 <script src="../admin/curriculum-ui.js"></script>
 <script src="../admin/curriculum-data.js"></script>
 <script src="invites.js"></script>

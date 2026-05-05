@@ -18,76 +18,204 @@
   ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
 </script>
 <link rel="stylesheet" href="src/index.css">
+<style>
+/* ══ 登入步驟通用 ══ */
+.login-step { display:none; }
+.login-step.active { display:block; }
+
+/* 選項按鈕（選學校 / 一般登入） */
+.login-choice-btn {
+  display:flex; align-items:center; gap:14px;
+  width:100%; padding:18px 20px; margin-bottom:12px;
+  border:2px solid var(--border); border-radius:14px;
+  background:white; cursor:pointer; font-family:inherit;
+  text-align:left; transition:border-color .15s, box-shadow .15s;
+}
+.login-choice-btn:hover { border-color:var(--blue); box-shadow:0 4px 12px rgba(74,144,217,.15); }
+.login-choice-btn .btn-icon { font-size:1.8rem; flex-shrink:0; }
+.login-choice-btn .btn-label { font-size:1rem; font-weight:900; color:var(--text); }
+.login-choice-btn .btn-desc  { font-size:.78rem; font-weight:600; color:var(--muted); margin-top:2px; }
+.login-choice-btn-guest {
+  width:100%; padding:12px; border:none; background:none;
+  font-size:.88rem; font-weight:700; color:var(--muted); cursor:pointer;
+  font-family:inherit; text-decoration:underline; text-underline-offset:3px;
+}
+
+/* 列表按鈕（學校 / 班級） */
+.login-list-item {
+  display:block; width:100%; padding:15px 18px;
+  border:none; border-bottom:1px solid var(--border);
+  background:white; text-align:left; cursor:pointer; font-family:inherit;
+  font-size:1rem; font-weight:800; color:var(--text);
+  transition:background .12s;
+}
+.login-list-item:last-child { border-bottom:none; }
+.login-list-item:hover { background:var(--blue-lt); color:var(--blue-dk); }
+.login-list-box {
+  border:2px solid var(--border); border-radius:12px;
+  overflow:hidden; max-height:320px; overflow-y:auto;
+  margin-bottom:16px;
+}
+
+/* 座號格子 */
+.seat-grid {
+  display:grid; grid-template-columns:repeat(5, 1fr); gap:8px;
+  margin-bottom:16px;
+}
+.seat-btn {
+  aspect-ratio:1; border:2px solid var(--border); border-radius:10px;
+  background:white; font-size:1.1rem; font-weight:900;
+  font-family:'Courier New',monospace; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:border-color .12s, background .12s;
+}
+.seat-btn:hover { border-color:var(--blue); background:var(--blue-lt); color:var(--blue-dk); }
+.seat-btn:active { transform:scale(.94); }
+
+/* 步驟 header */
+.step-header {
+  display:flex; align-items:center; gap:10px; margin-bottom:18px;
+}
+.step-sub { font-size:.82rem; font-weight:700; color:var(--muted); margin-bottom:14px; }
+</style>
 </head>
 <body>
 <div class="app">
   <div id="main-content">
+  <div class="panel active" id="panel-login">
+  <div class="slogin-wrap">
+  <div class="login-card">
 
-    <!-- 學生登入 -->
-    <div class="panel active" id="panel-login">
-      <div class="slogin-wrap">
-        <div class="login-card">
-          <button class="btn-back-role" onclick="window.location.href='index.html'">← 返回</button>
-          <div class="login-school">學生登入</div>
-          <div class="login-title">歡迎<span>回來</span></div>
+    <!-- ── 步驟 0：選擇登入方式 ── -->
+    <div id="step-choice" class="login-step active">
+      <button class="btn-back-role" onclick="window.location.href='index.html'">← 返回</button>
+      <div class="login-school">學生登入</div>
+      <div class="login-title">你是哪裡的<span>學生</span>？</div>
 
-          <div id="login-form">
-            <label class="login-label">你的名字</label>
-            <input class="login-input" id="login-name" type="text" placeholder="輸入姓名"
-              autocomplete="off" oninput="updateLoginBtn()">
-            <label class="login-label">PIN 碼（4位數字）</label>
-            <div class="pin-display" id="pin-display">
-              <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
-              <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
-            </div>
-            <div class="pin-pad">
-              <button class="pin-btn" onclick="pinInput('1')">1</button>
-              <button class="pin-btn" onclick="pinInput('2')">2</button>
-              <button class="pin-btn" onclick="pinInput('3')">3</button>
-              <button class="pin-btn" onclick="pinInput('4')">4</button>
-              <button class="pin-btn" onclick="pinInput('5')">5</button>
-              <button class="pin-btn" onclick="pinInput('6')">6</button>
-              <button class="pin-btn" onclick="pinInput('7')">7</button>
-              <button class="pin-btn" onclick="pinInput('8')">8</button>
-              <button class="pin-btn" onclick="pinInput('9')">9</button>
-              <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
-              <button class="pin-btn" onclick="pinInput('0')">0</button>
-              <button class="pin-btn pin-btn-ok" id="btn-login-ok" onclick="doLogin()" disabled>✓</button>
-            </div>
-            <div class="login-error" id="login-error">名字或 PIN 碼不正確，請再試一次</div>
-            <div class="login-switch">還沒有帳號？<a onclick="showRegister()">點這裡註冊</a></div>
-          </div>
-
-          <div id="register-form" style="display:none">
-            <label class="login-label">你的名字</label>
-            <input class="login-input" id="reg-name" type="text" placeholder="輸入姓名"
-              autocomplete="off" oninput="updateRegBtn()">
-            <label class="login-label">設定 PIN 碼（4位數字）</label>
-            <div class="pin-display" id="reg-pin-display">
-              <div class="pin-dot" id="rpd0"></div><div class="pin-dot" id="rpd1"></div>
-              <div class="pin-dot" id="rpd2"></div><div class="pin-dot" id="rpd3"></div>
-            </div>
-            <div class="pin-pad">
-              <button class="pin-btn" onclick="regPinInput('1')">1</button>
-              <button class="pin-btn" onclick="regPinInput('2')">2</button>
-              <button class="pin-btn" onclick="regPinInput('3')">3</button>
-              <button class="pin-btn" onclick="regPinInput('4')">4</button>
-              <button class="pin-btn" onclick="regPinInput('5')">5</button>
-              <button class="pin-btn" onclick="regPinInput('6')">6</button>
-              <button class="pin-btn" onclick="regPinInput('7')">7</button>
-              <button class="pin-btn" onclick="regPinInput('8')">8</button>
-              <button class="pin-btn" onclick="regPinInput('9')">9</button>
-              <button class="pin-btn pin-btn-del" onclick="regPinDelete()">⌫</button>
-              <button class="pin-btn" onclick="regPinInput('0')">0</button>
-              <button class="pin-btn pin-btn-ok" id="btn-reg-ok" onclick="doRegister()" disabled>✓</button>
-            </div>
-            <div class="login-error" id="reg-error"></div>
-            <div class="login-switch">已有帳號？<a onclick="showLogin()">點這裡登入</a></div>
-          </div>
+      <button class="login-choice-btn" onclick="goSchoolLogin()">
+        <span class="btn-icon">🏫</span>
+        <div>
+          <div class="btn-label">選擇學校登入</div>
+          <div class="btn-desc">不用打字，點選學校→班級→座號</div>
         </div>
+      </button>
+
+      <button class="login-choice-btn" onclick="goRegularLogin()">
+        <span class="btn-icon">🔑</span>
+        <div>
+          <div class="btn-label">一般登入</div>
+          <div class="btn-desc">輸入姓名 + PIN 碼</div>
+        </div>
+      </button>
+
+      <button class="login-choice-btn-guest" onclick="goGuest()">訪客試用（不建立帳號）</button>
+    </div>
+
+    <!-- ── 步驟 1a：選擇學校 ── -->
+    <div id="step-school" class="login-step">
+      <div class="step-header">
+        <button class="btn-back-role" style="position:static;margin:0" onclick="goBack('step-choice')">← 返回</button>
+        <div style="font-size:1rem;font-weight:900">選擇學校</div>
+      </div>
+      <div id="school-list-box" class="login-list-box">
+        <div class="loading-wrap"><div class="spinner"></div></div>
       </div>
     </div>
 
+    <!-- ── 步驟 1b：選擇班級 ── -->
+    <div id="step-class" class="login-step">
+      <div class="step-header">
+        <button class="btn-back-role" style="position:static;margin:0" onclick="goBack('step-school')">← 返回</button>
+        <div>
+          <div style="font-size:1rem;font-weight:900">選擇班級</div>
+          <div class="step-sub" id="step-class-school" style="margin:0;font-size:.8rem"></div>
+        </div>
+      </div>
+      <div id="class-list-box" class="login-list-box">
+        <div class="loading-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ── 步驟 1c：選擇座號 ── -->
+    <div id="step-seat" class="login-step">
+      <div class="step-header">
+        <button class="btn-back-role" style="position:static;margin:0" onclick="goBack('step-class')">← 返回</button>
+        <div>
+          <div style="font-size:1rem;font-weight:900">選擇座號</div>
+          <div class="step-sub" id="step-seat-class" style="margin:0;font-size:.8rem"></div>
+        </div>
+      </div>
+      <div id="seat-grid-wrap" class="seat-grid"></div>
+    </div>
+
+    <!-- ── 步驟 1d：輸入 PIN（學校制）── -->
+    <div id="step-pin" class="login-step">
+      <div class="step-header">
+        <button class="btn-back-role" style="position:static;margin:0" onclick="goBack('step-seat')">← 返回</button>
+        <div>
+          <div style="font-size:1rem;font-weight:900" id="step-pin-seat">輸入 PIN 碼</div>
+          <div class="step-sub" id="step-pin-class" style="margin:0;font-size:.8rem"></div>
+        </div>
+      </div>
+      <label class="login-label">PIN 碼（4位數字）</label>
+      <div class="pin-display" id="school-pin-display">
+        <div class="pin-dot" id="spd0"></div><div class="pin-dot" id="spd1"></div>
+        <div class="pin-dot" id="spd2"></div><div class="pin-dot" id="spd3"></div>
+      </div>
+      <div class="pin-pad">
+        <button class="pin-btn" onclick="schoolPinInput('1')">1</button>
+        <button class="pin-btn" onclick="schoolPinInput('2')">2</button>
+        <button class="pin-btn" onclick="schoolPinInput('3')">3</button>
+        <button class="pin-btn" onclick="schoolPinInput('4')">4</button>
+        <button class="pin-btn" onclick="schoolPinInput('5')">5</button>
+        <button class="pin-btn" onclick="schoolPinInput('6')">6</button>
+        <button class="pin-btn" onclick="schoolPinInput('7')">7</button>
+        <button class="pin-btn" onclick="schoolPinInput('8')">8</button>
+        <button class="pin-btn" onclick="schoolPinInput('9')">9</button>
+        <button class="pin-btn pin-btn-del" onclick="schoolPinDelete()">⌫</button>
+        <button class="pin-btn" onclick="schoolPinInput('0')">0</button>
+        <button class="pin-btn pin-btn-ok" id="btn-school-login-ok" onclick="doSchoolLogin()" disabled>✓</button>
+      </div>
+      <div class="login-error" id="school-login-error">PIN 碼不正確，請再試一次</div>
+    </div>
+
+    <!-- ── 步驟 2：一般登入 ── -->
+    <div id="step-regular" class="login-step">
+      <div class="step-header">
+        <button class="btn-back-role" style="position:static;margin:0" onclick="goBack('step-choice')">← 返回</button>
+        <div style="font-size:1rem;font-weight:900">一般登入</div>
+      </div>
+
+      <div id="login-form">
+        <label class="login-label">你的名字</label>
+        <input class="login-input" id="login-name" type="text" placeholder="輸入姓名"
+          autocomplete="off" oninput="updateLoginBtn()">
+        <label class="login-label">PIN 碼（4位數字）</label>
+        <div class="pin-display" id="pin-display">
+          <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+          <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+        </div>
+        <div class="pin-pad">
+          <button class="pin-btn" onclick="pinInput('1')">1</button>
+          <button class="pin-btn" onclick="pinInput('2')">2</button>
+          <button class="pin-btn" onclick="pinInput('3')">3</button>
+          <button class="pin-btn" onclick="pinInput('4')">4</button>
+          <button class="pin-btn" onclick="pinInput('5')">5</button>
+          <button class="pin-btn" onclick="pinInput('6')">6</button>
+          <button class="pin-btn" onclick="pinInput('7')">7</button>
+          <button class="pin-btn" onclick="pinInput('8')">8</button>
+          <button class="pin-btn" onclick="pinInput('9')">9</button>
+          <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
+          <button class="pin-btn" onclick="pinInput('0')">0</button>
+          <button class="pin-btn pin-btn-ok" id="btn-login-ok" onclick="doLogin()" disabled>✓</button>
+        </div>
+        <div class="login-error" id="login-error">名字或 PIN 碼不正確，請再試一次</div>
+      </div>
+    </div>
+
+  </div>
+  </div>
+  </div>
   </div>
 </div>
 

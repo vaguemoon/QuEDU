@@ -33,6 +33,7 @@ var APP_REGISTRY = [
 
 function onFirebaseReady() {
   loadClasses();
+  loadTeacherSchool();
 }
 
 window.addEventListener('load', function() {
@@ -72,7 +73,13 @@ window.addEventListener('load', function() {
             displayName:  user.displayName || '',
             lastLoginAt:  new Date().toISOString()
           }, { merge: true }).catch(function() {});
-          onFirebaseReady();
+          // 強制設定學校：若教師尚未選擇學校則顯示必填 overlay
+          var hasSchool = doc.exists && !!doc.data().schoolId;
+          if (!hasSchool) {
+            showSchoolRequiredOverlay();
+          } else {
+            onFirebaseReady();
+          }
         }).catch(function() {
           // Firestore 讀取失敗時仍允許進入，不中斷教師工作
           onFirebaseReady();
@@ -81,6 +88,63 @@ window.addEventListener('load', function() {
     });
   })();
 });
+
+/* ── 強制學校選擇 Overlay ── */
+function showSchoolRequiredOverlay() {
+  var overlay = document.getElementById('school-required-overlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  _loadSchoolsForOverlay();
+}
+
+function _loadSchoolsForOverlay() {
+  var list = document.getElementById('school-required-list');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.88rem">載入中…</div>';
+  db.collection('schools').where('active', '==', true).get()
+    .then(function(snap) {
+      var schools = [];
+      snap.forEach(function(doc) {
+        schools.push({ id: doc.id, name: doc.data().name || '（未命名）' });
+      });
+      schools.sort(function(a, b) { return a.name.localeCompare(b.name, 'zh-TW'); });
+      if (!schools.length) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.88rem">目前尚無學校，請聯絡系統管理員。</div>';
+        return;
+      }
+      list.innerHTML = schools.map(function(s) {
+        var escapedId   = _escInit(s.id);
+        var escapedName = _escInit(s.name);
+        var htmlName    = s.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return '<button class="school-required-item" onclick="selectSchoolFromOverlay(\'' + escapedId + '\',\'' + escapedName + '\')">'
+          + '<span class="school-required-item-name">' + htmlName + '</span>'
+          + '<span class="school-required-item-arrow">→</span>'
+          + '</button>';
+      }).join('');
+    })
+    .catch(function(e) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--red);font-size:.88rem">載入失敗：' + e.message + '</div>';
+    });
+}
+
+function selectSchoolFromOverlay(schoolId, schoolName) {
+  db.collection('teachers').doc(currentTeacher.uid).set({
+    schoolId:   schoolId,
+    schoolName: schoolName
+  }, { merge: true })
+    .then(function() {
+      var overlay = document.getElementById('school-required-overlay');
+      if (overlay) overlay.style.display = 'none';
+      onFirebaseReady();
+    })
+    .catch(function(e) {
+      alert('儲存失敗：' + e.message);
+    });
+}
+
+function _escInit(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
 
 function doLogout() {
   if (auth) {

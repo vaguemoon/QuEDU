@@ -3,7 +3,8 @@
     "allow": [
       "Bash(ls /d/githubdesk/QuEDU/icon-*.png)",
       "Bash(wc -l d:/githubdesk/QuEDU/chinese/js/*.js)",
-      "Bash(ls -lh /d/githubdesk/QuEDU/icon-*)"
+      "Bash(ls -lh /d/githubdesk/QuEDU/icon-*)",
+      "Bash(node --check *)"
     ]
   }
 }

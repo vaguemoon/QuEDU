@@ -57,15 +57,18 @@ function loadClassRoster(classId) {
           db.collection('students').doc(s.id).collection('progress').doc('hanzi').get(),
           db.collection('students').doc(s.id).collection('progress').doc('multiply').get()
         ]).then(function(pDocs) {
+          var displayName = s.data.name || (s.data.seatNumber ? s.data.seatNumber + '號' : s.id);
           students.push({
             id:         s.id,
-            name:       s.data.name || s.id,
+            name:       displayName,
+            seatNumber: s.data.seatNumber || 0,
             lastSeen:   s.data.lastSeen || null,
             charStatus: pDocs[0].exists ? (pDocs[0].data().charStatus || {}) : {},
             multiply:   pDocs[1].exists ? pDocs[1].data() : null
           });
         }).catch(function() {
-          students.push({ id: s.id, name: s.data.name || s.id, lastSeen: null, charStatus: {}, multiply: null });
+          var displayName = s.data.name || (s.data.seatNumber ? s.data.seatNumber + '號' : s.id);
+          students.push({ id: s.id, name: displayName, seatNumber: s.data.seatNumber || 0, lastSeen: null, charStatus: {}, multiply: null });
         }).then(function() {
           done++;
           if (done === studentDocs.length) {
@@ -90,8 +93,18 @@ function switchRosterTab(appId, btn) {
     tabsEl.querySelectorAll('.app-tab-mini').forEach(function(b) { b.classList.remove('active'); });
     if (btn) btn.classList.add('active');
   }
-  var wrap = document.getElementById('class-roster-wrap');
-  if (wrap) renderClassRoster(wrap);
+  var isNames = appId === 'names';
+  var progressView = document.getElementById('roster-progress-view');
+  var namesView    = document.getElementById('roster-names-view');
+  if (progressView) progressView.style.display = isNames ? 'none' : '';
+  if (namesView)    namesView.style.display    = isNames ? '' : 'none';
+
+  if (isNames) {
+    loadNameManager();
+  } else {
+    var wrap = document.getElementById('class-roster-wrap');
+    if (wrap) renderClassRoster(wrap);
+  }
 }
 
 /* ── 渲染名單（讀取 currentRosterApp 決定顯示哪個 APP）── */
@@ -101,6 +114,9 @@ function renderClassRoster(wrap) {
   var appId    = currentRosterApp;
 
   students.sort(function(a, b) {
+    if (a.seatNumber && b.seatNumber) return a.seatNumber - b.seatNumber;
+    if (a.seatNumber) return -1;
+    if (b.seatNumber) return 1;
     return (b.lastSeen ? b.lastSeen.seconds : 0) - (a.lastSeen ? a.lastSeen.seconds : 0);
   });
 

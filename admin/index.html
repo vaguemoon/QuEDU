@@ -65,6 +65,14 @@
         <div class="sidebar-user-label">登入身份</div>
         <div id="teacher-email-display" class="sidebar-user-email"></div>
         <div id="last-update" class="sidebar-last-update"></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:.72rem;font-weight:600;color:var(--muted)">學校：</span>
+          <span id="teacher-school-name" style="font-size:.72rem;font-weight:800;color:var(--text)">未設定</span>
+          <button onclick="showSchoolSelectModal()"
+            style="font-size:.68rem;font-weight:800;padding:2px 7px;border:1.5px solid var(--border);border-radius:6px;background:white;cursor:pointer;font-family:inherit;color:var(--blue)">
+            設定
+          </button>
+        </div>
       </div>
       <button class="btn-logout" onclick="doLogout()">🚪 登出</button>
     </div>
@@ -109,15 +117,45 @@
         <div class="app-tabs-mini" id="roster-app-tabs" style="margin-bottom:16px">
           <button class="app-tab-mini active" onclick="switchRosterTab('chinese', this)">📖 識字趣</button>
           <button class="app-tab-mini" onclick="switchRosterTab('multiply', this)">✖️ 乘法趣</button>
+          <button class="app-tab-mini" id="roster-tab-names" onclick="switchRosterTab('names', this)">👤 姓名管理</button>
         </div>
-        <div class="card">
-          <div class="card-title">
-            <button class="back-btn" style="margin:0;padding:0" onclick="backToClasses()">← 返回班級</button>
-            <span id="roster-class-name" style="margin-left:10px;font-weight:900"></span>
-            <button onclick="refreshRoster()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+
+        <!-- 進度名單 -->
+        <div id="roster-progress-view">
+          <div class="card">
+            <div class="card-title">
+              <button class="back-btn" style="margin:0;padding:0" onclick="backToClasses()">← 返回班級</button>
+              <span id="roster-class-name" style="margin-left:10px;font-weight:900"></span>
+              <button onclick="refreshRoster()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+            </div>
+            <div id="class-roster-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
           </div>
-          <div id="class-roster-wrap">
-            <div class="loading-wrap"><div class="spinner"></div></div>
+        </div>
+
+        <!-- 姓名管理 -->
+        <div id="roster-names-view" style="display:none">
+          <div class="card">
+            <div class="card-title">
+              <button class="back-btn" style="margin:0;padding:0" onclick="backToClasses()">← 返回班級</button>
+              <span id="roster-names-class-name" style="margin-left:10px;font-weight:900"></span>
+              <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+                <input type="file" id="excel-import-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelFile(this)">
+                <button onclick="document.getElementById('excel-import-input').click()"
+                  style="padding:5px 12px;border:1.5px solid #bfdbfe;border-radius:7px;background:#eff6ff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;color:#1d4ed8">
+                  📥 匯入 Excel
+                </button>
+                <button onclick="loadNameManager()" style="padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+              </div>
+            </div>
+            <div style="font-size:.8rem;color:var(--muted);font-weight:600;padding:10px;background:#f8fafc;border-radius:8px;margin-bottom:14px">
+              填寫學生姓名後，老師在後台可識別學生身份。姓名不會顯示在學生登入畫面。<br>
+              <span style="color:#1d4ed8">Excel 格式：A欄座號、B欄姓名（或單欄姓名依序對應座號）</span>
+            </div>
+            <div id="name-manager-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -642,13 +680,49 @@
 
 <!-- 新增班級 Modal -->
 <div id="class-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
-  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
     <div style="font-size:1.1rem;font-weight:900;margin-bottom:20px">🏫 新增班級</div>
-    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:6px">班級名稱</label>
-    <input id="new-class-name" type="text" placeholder="例如：三年甲班、資源班 112 學年"
+
+    <!-- 年級 + 班級 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">年級</label>
+        <select id="new-class-grade"
+          style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.92rem;font-family:inherit;outline:none"
+          onchange="updateClassNamePreview()">
+          <option value="">── 請選 ──</option>
+          <option value="1">1 年</option>
+          <option value="2">2 年</option>
+          <option value="3">3 年</option>
+          <option value="4">4 年</option>
+          <option value="5">5 年</option>
+          <option value="6">6 年</option>
+          <option value="0">其他</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">班級號</label>
+        <input id="new-class-number" type="number" min="1" max="40" placeholder="例如：1"
+          style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.92rem;font-family:inherit;outline:none"
+          oninput="updateClassNamePreview()">
+      </div>
+    </div>
+
+    <!-- 班級名稱（自動帶入，可覆寫） -->
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">
+      班級名稱 <span style="font-weight:600;color:var(--blue)">（自動帶入，可修改）</span>
+    </label>
+    <input id="new-class-name" type="text" placeholder="例如：1年1班"
       maxlength="30"
-      style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:8px"
-      onkeydown="if(event.key==='Enter')createClass()">
+      style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:12px">
+
+    <!-- 學生人數 -->
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">
+      學生人數 <span style="font-weight:600;color:var(--blue)">（建班後自動產生座號帳號，PIN 預設 0000）</span>
+    </label>
+    <input id="new-class-student-count" type="number" min="0" max="60" value="0"
+      style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:8px">
+
     <div id="class-modal-error" style="font-size:.82rem;font-weight:700;color:var(--red);min-height:20px;margin-bottom:12px"></div>
     <div style="display:flex;gap:10px">
       <button onclick="hideCreateClassModal()"
@@ -656,6 +730,19 @@
       <button id="btn-create-class" onclick="createClass()"
         style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">建立班級</button>
     </div>
+  </div>
+</div>
+
+<!-- 選擇學校 Modal -->
+<div id="school-select-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:6px">🏫 選擇所屬學校</div>
+    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:16px">選擇後，你建立的班級將歸屬於該學校，學生可在登入頁選擇學校找到你的班級。</div>
+    <div id="school-select-list" style="max-height:280px;overflow-y:auto;border:2px solid var(--border);border-radius:10px;margin-bottom:16px">
+      <div class="loading-wrap"><div class="spinner"></div></div>
+    </div>
+    <button onclick="hideSchoolSelectModal()"
+      style="width:100%;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">取消</button>
   </div>
 </div>
 
@@ -825,6 +912,8 @@
 <script src="../shared/shared.js"></script>
 <script src="init.js"></script>
 <script src="classes.js"></script>
+<script src="teacher-school.js"></script>
+<script src="name-manager.js"></script>
 <script src="overview.js"></script>
 <script src="students.js"></script>
 <script src="quiz-bank.js"></script>
@@ -1020,6 +1109,52 @@ window.addEventListener('message', function(e) {
     </div>
   </div>
 </div>
+
+<!-- Excel 匯入預覽 Modal -->
+<div id="excel-preview-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:520px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2);max-height:90vh;display:flex;flex-direction:column">
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:4px">📥 匯入姓名預覽</div>
+    <div id="excel-preview-summary" style="font-size:.82rem;color:var(--muted);font-weight:600;margin-bottom:14px"></div>
+    <div id="excel-preview-list" style="flex:1;overflow-y:auto;border:1.5px solid var(--border);border-radius:12px;margin-bottom:16px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeExcelPreview()"
+        style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="excel-confirm-btn" onclick="confirmExcelImport()"
+        style="padding:9px 18px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">✅ 確認匯入</button>
+    </div>
+  </div>
+</div>
+
+<!-- 強制選擇學校 Overlay（教師首次登入時，schoolId 尚未設定）-->
+<div id="school-required-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:24px;padding:36px 28px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.28);text-align:center">
+    <div style="font-size:2.4rem;margin-bottom:12px">🏫</div>
+    <div style="font-size:1.25rem;font-weight:900;margin-bottom:8px;color:var(--text)">請選擇您任職的學校</div>
+    <div style="font-size:.85rem;font-weight:600;color:var(--muted);margin-bottom:24px;line-height:1.6">
+      首次使用教師後台，請先選擇您的學校，<br>方便系統管理員進行帳號管理。
+    </div>
+    <div id="school-required-list" style="max-height:320px;overflow-y:auto;border:1.5px solid var(--border);border-radius:14px;padding:6px 6px"></div>
+    <div style="margin-top:20px;font-size:.78rem;color:var(--muted);font-weight:600">
+      找不到您的學校？請聯絡系統管理員新增。
+    </div>
+  </div>
+</div>
+<style>
+.school-required-item {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 13px 16px;
+  border: none; border-bottom: 1px solid var(--border);
+  background: white; font-family: inherit; cursor: pointer;
+  font-size: .92rem; font-weight: 700; color: var(--text);
+  transition: background .12s;
+  text-align: left;
+}
+.school-required-item:last-child { border-bottom: none; }
+.school-required-item:hover { background: var(--bg); }
+.school-required-item:active { background: #e0e7ff; }
+.school-required-item-name { flex: 1; }
+.school-required-item-arrow { color: var(--blue); font-weight: 900; font-size: 1rem; }
+</style>
 
 <!-- 語文練習試卷分享 Modal -->
 <div id="qs-share-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">

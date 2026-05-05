@@ -69,10 +69,21 @@ function renderClasses() {
 
   wrap.innerHTML = currentClasses.map(function(cls) {
     var inactive = !cls.active;
-    return '<div class="class-card' + (inactive ? ' class-inactive' : '') + '">' +
+    var eid = escHtml(cls.id);
+    return '<div class="class-card' + (inactive ? ' class-inactive' : '') + '" id="card-' + eid + '">' +
       '<div class="class-card-top">' +
         '<div class="class-info">' +
-          '<div class="class-name">' + escHtml(cls.name) + '</div>' +
+          '<div class="class-name" id="cn-display-' + eid + '">' +
+            escHtml(cls.name) +
+            '<button class="btn-cls-edit" onclick="startEditClassName(\'' + eid + '\',\'' + escHtml(cls.name) + '\')" title="編輯班級名稱">✏️</button>' +
+          '</div>' +
+          '<div class="class-name-edit-row" id="cn-edit-' + eid + '" style="display:none">' +
+            '<input class="class-name-input" id="cn-input-' + eid + '" type="text" maxlength="40"' +
+              ' onkeydown="if(event.key===\'Enter\')saveClassName(\'' + eid + '\');if(event.key===\'Escape\')cancelEditClassName(\'' + eid + '\')">' +
+            '<button class="btn-sm-green" onclick="saveClassName(\'' + eid + '\')">儲存</button>' +
+            '<button class="btn-sm-cancel" onclick="cancelEditClassName(\'' + eid + '\')">取消</button>' +
+          '</div>' +
+          '<div id="cn-error-' + eid + '" style="font-size:.75rem;color:var(--red);font-weight:700;margin-top:4px"></div>' +
           '<div class="class-code-row">' +
             '<span class="class-code">' + cls.inviteCode + '</span>' +
             '<span class="class-status-badge ' + (cls.active ? 'badge-green' : 'badge-gray') + '">' +
@@ -138,36 +149,72 @@ function fallbackCopy(text, code) {
   document.body.removeChild(ta);
 }
 
+/* ── 班級名稱自動帶入 ── */
+function updateClassNamePreview() {
+  var grade  = document.getElementById('new-class-grade').value;
+  var number = document.getElementById('new-class-number').value;
+  var nameEl = document.getElementById('new-class-name');
+  if (grade && grade !== '0' && number) {
+    nameEl.value = grade + '年' + number + '班';
+  }
+}
+
 /* ── 新增班級 Modal ── */
 function showCreateClassModal() {
   document.getElementById('class-modal').style.display = 'flex';
+  document.getElementById('new-class-grade').value = '';
+  document.getElementById('new-class-number').value = '';
   document.getElementById('new-class-name').value = '';
+  document.getElementById('new-class-student-count').value = '0';
   document.getElementById('class-modal-error').textContent = '';
   var btnEl = document.getElementById('btn-create-class');
   btnEl.disabled = false; btnEl.textContent = '建立班級';
-  setTimeout(function() { document.getElementById('new-class-name').focus(); }, 100);
 }
 function hideCreateClassModal() {
   document.getElementById('class-modal').style.display = 'none';
 }
 
 function createClass() {
-  var name  = document.getElementById('new-class-name').value.trim();
-  var errEl = document.getElementById('class-modal-error');
-  var btnEl = document.getElementById('btn-create-class');
+  var name         = document.getElementById('new-class-name').value.trim();
+  var grade        = parseInt(document.getElementById('new-class-grade').value) || 0;
+  var classNumber  = parseInt(document.getElementById('new-class-number').value) || 0;
+  var studentCount = parseInt(document.getElementById('new-class-student-count').value) || 0;
+  var errEl        = document.getElementById('class-modal-error');
+  var btnEl        = document.getElementById('btn-create-class');
   errEl.textContent = '';
+
   if (!name) { errEl.textContent = '請輸入班級名稱'; return; }
+  if (studentCount < 0 || studentCount > 60) { errEl.textContent = '學生人數請填 0–60'; return; }
   if (!db || !currentTeacher) return;
 
-  btnEl.disabled = true; btnEl.textContent = '建立中…';
+  /* ── 重複偵測 ── */
+  var nameLower = name.toLowerCase();
+  var dupName = currentClasses.some(function(c) {
+    return c.name.toLowerCase() === nameLower;
+  });
+  if (dupName) { errEl.textContent = '班級名稱「' + name + '」已存在，請勿重複建立。'; return; }
+  if (grade && classNumber) {
+    var dupNum = currentClasses.some(function(c) {
+      return c.grade === grade && c.classNumber === classNumber;
+    });
+    if (dupNum) { errEl.textContent = grade + '年' + classNumber + '班已存在，請勿重複建立。'; return; }
+  }
 
-  /* 確保邀請碼不重複 */
-  var code = generateInviteCode();
+  btnEl.disabled = true;
+  btnEl.textContent = studentCount > 0 ? '建立中（產生帳號）…' : '建立中…';
+
+  var code    = generateInviteCode();
+  var classId = null;
+
   db.collection('classes').where('inviteCode', '==', code).get()
     .then(function(snap) {
-      if (!snap.empty) code = generateInviteCode(); // 碰撞時重新產生
+      if (!snap.empty) code = generateInviteCode();
       return db.collection('classes').add({
         name:         name,
+        grade:        grade,
+        classNumber:  classNumber,
+        schoolId:     currentSchoolId   || '',
+        schoolName:   currentSchoolName || '',
         teacherUid:   currentTeacher.uid,
         teacherEmail: currentTeacher.email || '',
         inviteCode:   code,
@@ -175,15 +222,56 @@ function createClass() {
         createdAt:    new Date().toISOString()
       });
     })
+    .then(function(ref) {
+      classId = ref.id;
+      if (studentCount <= 0) return Promise.resolve();
+      return _generateStudentAccounts(classId, grade, classNumber, studentCount);
+    })
     .then(function() {
       hideCreateClassModal();
       loadClasses();
-      showToast('🎉 班級「' + name + '」建立成功！');
+      var msg = studentCount > 0
+        ? '🎉 班級「' + name + '」建立成功，已產生 ' + studentCount + ' 個座號帳號！'
+        : '🎉 班級「' + name + '」建立成功！';
+      showToast(msg);
     })
     .catch(function(e) {
       errEl.textContent = '建立失敗：' + e.message;
       btnEl.disabled = false; btnEl.textContent = '建立班級';
     });
+}
+
+/* ── 批次產生座號帳號 ── */
+function _generateStudentAccounts(classId, grade, classNumber, count) {
+  var BATCH_SIZE = 500;
+  var batches    = [];
+  var batch      = db.batch();
+  var batchCount = 0;
+
+  for (var i = 1; i <= count; i++) {
+    var ref = db.collection('students').doc();
+    batch.set(ref, {
+      schoolId:    currentSchoolId   || '',
+      schoolName:  currentSchoolName || '',
+      classId:     classId,
+      classIds:    [classId],
+      grade:       grade,
+      classNumber: classNumber,
+      seatNumber:  i,
+      name:        '',
+      pin:         '0000',
+      createdAt:   Date.now(),
+      lastSeen:    null
+    });
+    batchCount++;
+    if (batchCount === BATCH_SIZE) {
+      batches.push(batch.commit());
+      batch      = db.batch();
+      batchCount = 0;
+    }
+  }
+  if (batchCount > 0) batches.push(batch.commit());
+  return Promise.all(batches);
 }
 
 /* ── 分享 Modal ── */
@@ -270,6 +358,15 @@ function viewClassStudents(classId, className) {
   document.getElementById('classes-list-view').style.display = 'none';
   document.getElementById('class-roster-view').style.display = '';
   document.getElementById('roster-class-name').textContent = className;
+  var namesLabel = document.getElementById('roster-names-class-name');
+  if (namesLabel) namesLabel.textContent = className;
+  /* 切回進度頁籤（預設） */
+  var progressView = document.getElementById('roster-progress-view');
+  var namesView    = document.getElementById('roster-names-view');
+  if (progressView) progressView.style.display = '';
+  if (namesView)    namesView.style.display    = 'none';
+  var tabs = document.querySelectorAll('#roster-app-tabs .app-tab-mini');
+  tabs.forEach(function(b, i) { b.classList.toggle('active', i === 0); });
   loadClassRoster(classId);
 }
 
@@ -280,4 +377,58 @@ function backToClasses() {
 
 function refreshRoster() {
   if (currentRosterClassId) loadClassRoster(currentRosterClassId);
+}
+
+/* ── 班級名稱 inline 編輯 ── */
+function startEditClassName(classId, currentName) {
+  document.getElementById('cn-display-' + classId).style.display = 'none';
+  var editRow = document.getElementById('cn-edit-' + classId);
+  editRow.style.display = 'flex';
+  var input = document.getElementById('cn-input-' + classId);
+  input.value = currentName;
+  input.focus();
+  input.select();
+  document.getElementById('cn-error-' + classId).textContent = '';
+}
+
+function cancelEditClassName(classId) {
+  document.getElementById('cn-edit-' + classId).style.display = 'none';
+  document.getElementById('cn-display-' + classId).style.display = '';
+  document.getElementById('cn-error-' + classId).textContent = '';
+}
+
+function saveClassName(classId) {
+  var input  = document.getElementById('cn-input-' + classId);
+  var errEl  = document.getElementById('cn-error-' + classId);
+  var newName = input.value.trim();
+  errEl.textContent = '';
+
+  if (!newName) { errEl.textContent = '班級名稱不能為空'; return; }
+
+  /* 重複偵測（排除自身） */
+  var nameLower = newName.toLowerCase();
+  var dup = currentClasses.some(function(c) {
+    return c.id !== classId && c.name.toLowerCase() === nameLower;
+  });
+  if (dup) { errEl.textContent = '班級名稱「' + newName + '」已存在，請更換名稱。'; return; }
+
+  input.disabled = true;
+  db.collection('classes').doc(classId).update({ name: newName })
+    .then(function() {
+      /* 更新本地快取 */
+      var cls = currentClasses.find(function(c) { return c.id === classId; });
+      if (cls) cls.name = newName;
+      /* 更新顯示文字（不重新整理整個列表，保留開啟狀態）*/
+      var displayEl = document.getElementById('cn-display-' + classId);
+      if (displayEl) {
+        displayEl.innerHTML = escHtml(newName)
+          + '<button class="btn-cls-edit" onclick="startEditClassName(\'' + classId + '\',\'' + escHtml(newName).replace(/'/g,'&#39;') + '\')" title="編輯班級名稱">✏️</button>';
+      }
+      cancelEditClassName(classId);
+      showToast('✅ 班級名稱已更新為「' + newName + '」');
+    })
+    .catch(function(e) {
+      errEl.textContent = '儲存失敗：' + e.message;
+      input.disabled = false;
+    });
 }

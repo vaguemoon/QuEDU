@@ -415,7 +415,24 @@ body {
 .class-inactive { opacity:.6; }
 .class-card-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:12px; }
 .class-info { flex:1; min-width:0; }
-.class-name { font-size:1.05rem; font-weight:900; color:var(--text); margin-bottom:6px; }
+.class-name { font-size:1.05rem; font-weight:900; color:var(--text); margin-bottom:6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.btn-cls-edit {
+  background:none; border:none; cursor:pointer; font-size:.8rem; padding:2px 4px;
+  opacity:0; transition:opacity .15s; line-height:1;
+}
+.class-card:hover .btn-cls-edit { opacity:1; }
+.class-name-edit-row { display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
+.class-name-input {
+  font-size:1rem; font-weight:800; font-family:inherit; color:var(--text);
+  border:2px solid var(--blue); border-radius:8px; padding:4px 10px;
+  outline:none; flex:1; min-width:160px;
+}
+.btn-sm-cancel {
+  padding:5px 10px; border-radius:7px; border:1.5px solid var(--border);
+  background:white; font-size:.78rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--muted); transition:all .15s; white-space:nowrap;
+}
+.btn-sm-cancel:hover { border-color:var(--muted); }
 .class-code-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .class-code {
   font-size:1.1rem; font-weight:900; letter-spacing:4px;

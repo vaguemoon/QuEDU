@@ -59,7 +59,7 @@ function doLogout() {
 }
 
 /* ── 分頁切換 ── */
-var TABS = ['overview', 'accounts', 'curriculum', 'invites', 'settings'];
+var TABS = ['overview', 'schools', 'curriculum', 'invites', 'settings'];
 
 function switchTab(tab) {
   TABS.forEach(function(t) {
@@ -67,7 +67,7 @@ function switchTab(tab) {
     document.getElementById('tab-'   + t).classList.toggle('active', t === tab);
   });
   if (tab === 'overview')   loadOverview();
-  if (tab === 'accounts')   loadAccounts();
+  if (tab === 'schools')    loadSchools();
   if (tab === 'curriculum') loadVersions();
   if (tab === 'invites')    loadInvites();
   if (tab === 'settings')   loadSettings();

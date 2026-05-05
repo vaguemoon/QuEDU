@@ -9,6 +9,221 @@ var currentStudent = null;
 var loginPin = '';
 var regPin   = '';
 
+// ── 學校制登入狀態 ──
+var _selectedSchoolId   = '';
+var _selectedSchoolName = '';
+var _selectedClassId    = '';
+var _selectedClassName  = '';
+var _selectedSeatNumber = 0;
+var _schoolPin = '';
+
+function _esc(s) {
+  return String(s).replace(/'/g, "\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── 登入步驟導航 ──
+function _showStep(id) {
+  document.querySelectorAll('.login-step').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+function goBack(stepId) { _showStep(stepId); }
+
+// ── 學校制：Step 0 → 1a ──
+function goSchoolLogin() {
+  _showStep('step-school');
+  _loadSchools();
+}
+function goRegularLogin() {
+  _showStep('step-regular');
+  loginPin = ''; updatePinDisplay('pd', loginPin);
+  var nameEl = document.getElementById('login-name');
+  if (nameEl) { nameEl.value = ''; updateLoginBtn(); }
+}
+function goGuest() {
+  sessionStorage.setItem('hub_student', JSON.stringify({
+    id: 'guest', name: '訪客', nickname: '訪客', avatar: '👤',
+    isGuest: true, classIds: []
+  }));
+  sessionStorage.setItem('hub_welcome', '👋 訪客模式：學習進度不會保存。');
+  window.location.href = 'hub.html';
+}
+
+// ── Step 1a：載入學校列表 ──
+function _loadSchools() {
+  var box = document.getElementById('school-list-box');
+  if (!box) return;
+  if (!db) { setTimeout(_loadSchools, 300); return; }
+  box.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  db.collection('schools').where('active', '==', true).get()
+    .then(function(snap) {
+      if (snap.empty) {
+        box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-weight:700">目前尚無學校。<br><small>請聯繫老師或管理員設定。</small></div>';
+        return;
+      }
+      var schools = [];
+      snap.forEach(function(doc) { schools.push({ id: doc.id, name: doc.data().name || '' }); });
+      schools.sort(function(a, b) { return a.name.localeCompare(b.name, 'zh-TW'); });
+      var html = '';
+      schools.forEach(function(s) {
+        html += '<button class="login-list-item" onclick="_selectSchool(\'' +
+          _esc(s.id) + '\',\'' + _esc(s.name) + '\')">' + _esc(s.name) + '</button>';
+      });
+      box.innerHTML = html;
+    })
+    .catch(function() {
+      box.innerHTML = '<div style="padding:16px;color:var(--red);font-weight:700">載入失敗，請重試。</div>';
+    });
+}
+
+// ── Step 1b：選擇學校 → 載入班級 ──
+function _selectSchool(schoolId, schoolName) {
+  _selectedSchoolId   = schoolId;
+  _selectedSchoolName = schoolName;
+  document.getElementById('step-class-school').textContent = schoolName;
+  _showStep('step-class');
+  _loadClasses(schoolId);
+}
+function _loadClasses(schoolId) {
+  var box = document.getElementById('class-list-box');
+  if (!box) return;
+  box.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  db.collection('classes')
+    .where('schoolId', '==', schoolId)
+    .where('active', '==', true)
+    .get()
+    .then(function(snap) {
+      if (snap.empty) {
+        box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-weight:700">此學校尚無班級。<br><small>請聯繫老師建立班級。</small></div>';
+        return;
+      }
+      var classes = [];
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        d._id = doc.id;
+        classes.push(d);
+      });
+      classes.sort(function(a, b) {
+        if (a.grade !== b.grade) return (a.grade || 0) - (b.grade || 0);
+        return (a.classNumber || 0) - (b.classNumber || 0);
+      });
+      var html = '';
+      classes.forEach(function(cls) {
+        html += '<button class="login-list-item" onclick="_selectClass(\'' +
+          _esc(cls._id) + '\',\'' + _esc(cls.name) + '\')">' +
+          _esc(cls.name) + '</button>';
+      });
+      box.innerHTML = html;
+    })
+    .catch(function() {
+      box.innerHTML = '<div style="padding:16px;color:var(--red);font-weight:700">載入失敗，請重試。</div>';
+    });
+}
+
+// ── Step 1c：選擇班級 → 載入座號 ──
+function _selectClass(classId, className) {
+  _selectedClassId   = classId;
+  _selectedClassName = className;
+  document.getElementById('step-seat-class').textContent = _selectedSchoolName + ' ' + className;
+  _showStep('step-seat');
+  _loadSeats(classId);
+}
+function _loadSeats(classId) {
+  var wrap = document.getElementById('seat-grid-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  db.collection('students').where('classId', '==', classId).get()
+    .then(function(snap) {
+      var seats = [];
+      snap.forEach(function(doc) {
+        var n = doc.data().seatNumber;
+        if (n) seats.push(n);
+      });
+      seats.sort(function(a, b) { return a - b; });
+      if (!seats.length) {
+        wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-weight:700">此班級尚無座號帳號。<br><small>請聯繫老師設定帳號。</small></div>';
+        return;
+      }
+      wrap.innerHTML = seats.map(function(n) {
+        return '<button class="seat-btn" onclick="_selectSeat(' + n + ')">' + n + '</button>';
+      }).join('');
+    })
+    .catch(function() {
+      wrap.innerHTML = '<div style="padding:16px;color:var(--red);font-weight:700">載入失敗，請重試。</div>';
+    });
+}
+
+// ── Step 1d：選擇座號 → PIN 輸入 ──
+function _selectSeat(seatNumber) {
+  _selectedSeatNumber = seatNumber;
+  _schoolPin = '';
+  updatePinDisplay('spd', _schoolPin);
+  document.getElementById('btn-school-login-ok').disabled = true;
+  document.getElementById('school-login-error').classList.remove('show');
+  document.getElementById('step-pin-seat').textContent = seatNumber + ' 號';
+  document.getElementById('step-pin-class').textContent = _selectedSchoolName + ' ' + _selectedClassName;
+  _showStep('step-pin');
+}
+function schoolPinInput(d) {
+  if (_schoolPin.length >= 4) return;
+  _schoolPin += d; updatePinDisplay('spd', _schoolPin);
+  document.getElementById('btn-school-login-ok').disabled = _schoolPin.length < 4;
+}
+function schoolPinDelete() {
+  _schoolPin = _schoolPin.slice(0, -1); updatePinDisplay('spd', _schoolPin);
+  document.getElementById('btn-school-login-ok').disabled = true;
+}
+
+// ── Step 1d：學校制登入驗證 ──
+function doSchoolLogin() {
+  if (_schoolPin.length !== 4 || !_selectedClassId || !_selectedSeatNumber) return;
+  var btn = document.getElementById('btn-school-login-ok');
+  btn.disabled = true;
+  document.getElementById('school-login-error').classList.remove('show');
+  if (!db) { setTimeout(doSchoolLogin, 300); return; }
+
+  db.collection('students')
+    .where('classId', '==', _selectedClassId)
+    .where('seatNumber', '==', _selectedSeatNumber)
+    .limit(1)
+    .get()
+    .then(function(snap) {
+      if (snap.empty) {
+        document.getElementById('school-login-error').classList.add('show');
+        btn.disabled = false;
+        _schoolPin = ''; updatePinDisplay('spd', _schoolPin);
+        return;
+      }
+      var doc = snap.docs[0];
+      var d   = doc.data();
+      if (d.pin !== _schoolPin) {
+        document.getElementById('school-login-error').classList.add('show');
+        btn.disabled = false;
+        _schoolPin = ''; updatePinDisplay('spd', _schoolPin);
+        return;
+      }
+      onLoginSuccess({
+        id:       doc.id,
+        name:     d.name || (_selectedSeatNumber + '號'),
+        nickname: d.nickname || '',
+        avatar:   d.avatar   || '🐣',
+        pin:      _schoolPin,
+        seatNumber:  d.seatNumber,
+        classId:     _selectedClassId,
+        classIds:    d.classIds || [_selectedClassId]
+      });
+    })
+    .catch(function() {
+      showToast('連線失敗，請重試');
+      btn.disabled = false;
+    });
+}
+
 // ── 畫面切換（index.html: role↔teacher-login；hub.html: hub↔subject） ──
 
 var PANELS = ['role', 'teacher-login', 'hub', 'subject'];
