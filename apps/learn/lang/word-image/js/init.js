@@ -46,7 +46,7 @@ function _autoLogin() {
     var saved = sessionStorage.getItem('hub_student');
     if (!saved) return;
     var hub = JSON.parse(saved);
-    var id  = hub.name + '_' + hub.pin;
+    var id  = hub.id;
 
     Promise.all([
       db.collection('students').doc(id).get(),

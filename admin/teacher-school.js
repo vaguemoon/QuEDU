@@ -13,6 +13,12 @@ var currentSchoolName = null;
 function loadTeacherSchool() {
   if (!db || !currentTeacher) { setTimeout(loadTeacherSchool, 300); return; }
 
+  // 若 init.js 已從初次讀取的 doc 設好學校，直接更新顯示即可
+  if (currentSchoolId) {
+    _updateSchoolDisplay();
+    return;
+  }
+
   db.collection('teachers').doc(currentTeacher.uid).get()
     .then(function(doc) {
       if (doc.exists && doc.data().schoolId) {

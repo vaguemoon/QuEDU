@@ -25,6 +25,20 @@ function showStudentDetail(studentId) {
   document.getElementById('panel-classes').style.display = 'none';
   document.getElementById('panel-student').style.display  = '';
 
+  /* 依班級類型切換刪除按鈕行為 */
+  var currentClass = (currentClasses || []).find(function(c) { return c.id === currentRosterClassId; });
+  var isSubject    = currentClass && currentClass.classType === 'subject';
+  var deleteBtn    = document.getElementById('btn-student-delete');
+  if (deleteBtn) {
+    if (isSubject) {
+      deleteBtn.textContent = '移出班級';
+      deleteBtn.onclick     = removeStudentFromClass;
+    } else {
+      deleteBtn.textContent = '🗑 刪除學生';
+      deleteBtn.onclick     = deleteStudent;
+    }
+  }
+
   /* 重置頁籤到識字趣 */
   switchStudentTab('chinese',
     document.querySelector('#student-app-tabs .app-tab-mini'));
@@ -324,6 +338,19 @@ function deleteStudent() {
       backToOverview();
       if (currentRosterClassId) loadClassRoster(currentRosterClassId);
     }).catch(function(e){ showToast('❌ 刪除失敗：'+e.message); });
+}
+
+function removeStudentFromClass() {
+  if (!currentDetailId || !currentRosterClassId) return;
+  var name = document.getElementById('detail-name').textContent;
+  if (!confirm('確定要將「'+name+'」從此班級移出？\n（學生的原班帳號與學習資料不受影響）')) return;
+  db.collection('students').doc(currentDetailId).update({
+    classIds: firebase.firestore.FieldValue.arrayRemove(currentRosterClassId)
+  }).then(function(){
+    showToast('已將「'+name+'」移出此班級');
+    backToOverview();
+    loadClassRoster(currentRosterClassId);
+  }).catch(function(e){ showToast('操作失敗：'+e.message); });
 }
 
 function backToOverview() {

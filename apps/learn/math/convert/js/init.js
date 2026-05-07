@@ -37,7 +37,7 @@ window.addEventListener('load', function() {
       var hubStudent = JSON.parse(saved);
       (function autoLogin() {
         if (!db) { setTimeout(autoLogin, 200); return; }
-        var id = hubStudent.name + '_' + hubStudent.pin;
+        var id = hubStudent.id;
 
         Promise.all([
           db.collection('students').doc(id).get(),

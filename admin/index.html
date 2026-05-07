@@ -58,6 +58,7 @@
       <button class="admin-tab" id="tab-database"          onclick="switchTab('database')">📁 資料庫</button>
       <button class="admin-tab" id="tab-quiz-zone"         onclick="switchTab('quiz-zone')">📋 測驗區</button>
       <button class="admin-tab" id="tab-tools"             onclick="switchTab('tools')">🎧 教學工具</button>
+      <button class="admin-tab" id="tab-school-admin"    onclick="switchTab('school-admin')" style="display:none">🏛 校務管理</button>
     </nav>
     <div class="sidebar-footer">
       <button id="dark-mode-btn" class="btn-dark-toggle" onclick="toggleDarkMode()">🌙 暗色模式</button>
@@ -568,6 +569,183 @@
 
     <!-- 課程管理已移至管理者後台 (super-admin.html) -->
 
+    <!-- 校務管理 -->
+    <div id="panel-school-admin" style="display:none">
+      <div class="app-tabs-mini" style="margin-bottom:16px">
+        <button class="app-tab-mini active" onclick="switchSaView('classes',this)">🏫 全校班級管理</button>
+        <button class="app-tab-mini" onclick="switchSaView('students',this)">👥 學生名單</button>
+        <button class="app-tab-mini" onclick="switchSaView('teachers',this)">👨‍🏫 教師管理</button>
+        <button class="app-tab-mini" onclick="switchSaView('tools',this)">🔧 學年工具</button>
+      </div>
+
+      <!-- View：全校學生名單 -->
+      <div id="sa-view-students" style="display:none">
+        <div class="stats-row" style="margin-bottom:16px">
+          <div class="stat-card stat-blue">
+            <div class="stat-num" id="sa-stat-total">—</div>
+            <div class="stat-lbl">全校學生</div>
+          </div>
+          <div class="stat-card stat-green">
+            <div class="stat-num" id="sa-stat-active">—</div>
+            <div class="stat-lbl">在學</div>
+          </div>
+          <div class="stat-card stat-yellow">
+            <div class="stat-num" id="sa-stat-archived">—</div>
+            <div class="stat-lbl">已封存</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🏛 全校學生名單
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button onclick="openSaAddStudentModal()"
+                style="padding:7px 14px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
+                ＋ 新增學生
+              </button>
+              <button onclick="generateHomeroomClasses()"
+                style="padding:7px 14px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-lt);color:var(--blue-dk);font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
+                ⚡ 生成原班
+              </button>
+              <button onclick="_saLoaded=false;loadMainRoster()"
+                style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">
+                🔄
+              </button>
+            </div>
+          </div>
+          <!-- 篩選列 -->
+          <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+            <select id="sa-filter-grade" onchange="filterMainRoster()"
+              style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none">
+              <option value="">全部年級</option>
+              <option value="1">1 年</option>
+              <option value="2">2 年</option>
+              <option value="3">3 年</option>
+              <option value="4">4 年</option>
+              <option value="5">5 年</option>
+              <option value="6">6 年</option>
+            </select>
+            <select id="sa-filter-class" onchange="filterMainRoster()"
+              style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none">
+              <option value="">全部班級</option>
+            </select>
+            <select id="sa-filter-status" onchange="filterMainRoster()"
+              style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none">
+              <option value="active">在學中</option>
+              <option value="archived">已封存</option>
+              <option value="">全部</option>
+            </select>
+            <input id="sa-search" type="text" placeholder="搜尋姓名…" oninput="filterMainRoster()"
+              style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none;min-width:140px">
+          </div>
+          <div id="sa-roster-wrap">
+            <div class="loading-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View：班級管理 -->
+      <div id="sa-view-classes" style="display:none">
+        <div class="app-tabs-mini" style="margin-bottom:16px">
+          <button class="app-tab-mini active" id="sa-cls-tab-homeroom" onclick="switchSaClassTab('homeroom',this)">🏫 行政班</button>
+          <button class="app-tab-mini" id="sa-cls-tab-subject" onclick="switchSaClassTab('subject',this)">📋 一般班級</button>
+        </div>
+
+        <!-- 行政班 -->
+        <div id="sa-cls-panel-homeroom">
+          <div class="card">
+            <div class="card-title">🏫 行政班級管理
+              <div style="margin-left:auto">
+                <button onclick="_saClassesLoaded=false;loadSaClasses()"
+                  style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">🔄</button>
+              </div>
+            </div>
+            <div id="sa-classes-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 一般班級 -->
+        <div id="sa-cls-panel-subject" style="display:none">
+          <div class="card">
+            <div class="card-title">📋 一般班級（教師自建）
+              <div style="margin-left:auto">
+                <button onclick="_saSubjectLoaded=false;loadSaSubjectClasses()"
+                  style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">🔄</button>
+              </div>
+            </div>
+            <div id="sa-subject-classes-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View：教師管理 -->
+      <div id="sa-view-teachers" style="display:none">
+        <div class="card">
+          <div class="card-title">👨‍🏫 教師管理
+            <div style="margin-left:auto">
+              <button onclick="_saTeachersLoaded=false;loadSaTeachers()"
+                style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">🔄</button>
+            </div>
+          </div>
+          <div id="sa-teachers-wrap">
+            <div class="loading-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View：學年工具 -->
+      <div id="sa-view-tools" style="display:none">
+        <div class="card">
+          <div class="card-title">🔧 學年升級工具</div>
+          <div style="font-size:.82rem;color:var(--muted);font-weight:600;margin-bottom:20px;line-height:1.7">
+            每學年結束時，依序執行以下步驟。<strong>操作前請務必確認，部分步驟無法復原。</strong>
+          </div>
+
+          <!-- 步驟 1 -->
+          <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px">
+            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 1：全校升級（年級 +1）</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">將所有 1–5 年在學學生的年級加 1。六年級學生請在步驟 2 處理。</div>
+            <button onclick="batchGradeUp()"
+              style="padding:9px 20px;border:none;border-radius:9px;background:var(--blue);color:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
+              執行升級
+            </button>
+          </div>
+
+          <!-- 步驟 2 -->
+          <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px">
+            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 2：六年級學生封存（畢業）</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">將六年級學生的 status 設為 archived。學習紀錄完整保留。</div>
+            <button onclick="archiveGraduation()"
+              style="padding:9px 20px;border:none;border-radius:9px;background:#f97316;color:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
+              封存六年級
+            </button>
+          </div>
+
+          <!-- 步驟 3 -->
+          <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px">
+            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 3：舊班級封存</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">將此學校所有啟用中的班級設為停用。老師仍可查看歷史紀錄。</div>
+            <button onclick="archiveAllClasses()"
+              style="padding:9px 20px;border:none;border-radius:9px;background:var(--red,#dc2626);color:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
+              封存所有班級
+            </button>
+          </div>
+
+          <!-- 步驟 4 -->
+          <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px">
+            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 4：重新分班</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">先在「班級管理」建立新班級，再用本工具將學生批次移入。</div>
+            <button onclick="openReassignModal()"
+              style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;background:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit;color:var(--text)">
+              開啟重新分班工具
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 學生詳細頁 -->
     <div id="panel-student" style="display:none">
       <button class="back-btn" onclick="backToOverview()">← 返回班級總覽</button>
@@ -578,7 +756,7 @@
           <div class="sub" id="detail-sub"></div>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button class="btn-danger" onclick="deleteStudent()">🗑 刪除學生</button>
+          <button id="btn-student-delete" class="btn-danger" onclick="deleteStudent()">🗑 刪除學生</button>
         </div>
       </div>
 
@@ -681,47 +859,13 @@
 <!-- 新增班級 Modal -->
 <div id="class-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
-    <div style="font-size:1.1rem;font-weight:900;margin-bottom:20px">🏫 新增班級</div>
+    <div style="font-size:1.1rem;font-weight:900;margin-bottom:16px">🏫 新增班級</div>
 
-    <!-- 年級 + 班級 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div>
-        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">年級</label>
-        <select id="new-class-grade"
-          style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.92rem;font-family:inherit;outline:none"
-          onchange="updateClassNamePreview()">
-          <option value="">── 請選 ──</option>
-          <option value="1">1 年</option>
-          <option value="2">2 年</option>
-          <option value="3">3 年</option>
-          <option value="4">4 年</option>
-          <option value="5">5 年</option>
-          <option value="6">6 年</option>
-          <option value="0">其他</option>
-        </select>
-      </div>
-      <div>
-        <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">班級號</label>
-        <input id="new-class-number" type="number" min="1" max="40" placeholder="例如：1"
-          style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 12px;font-size:.92rem;font-family:inherit;outline:none"
-          oninput="updateClassNamePreview()">
-      </div>
-    </div>
-
-    <!-- 班級名稱（自動帶入，可覆寫） -->
-    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">
-      班級名稱 <span style="font-weight:600;color:var(--blue)">（自動帶入，可修改）</span>
-    </label>
-    <input id="new-class-name" type="text" placeholder="例如：1年1班"
+    <!-- 班級名稱 -->
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">班級名稱</label>
+    <input id="new-class-name" type="text" placeholder="例如：社會三甲、資源A組"
       maxlength="30"
       style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:12px">
-
-    <!-- 學生人數 -->
-    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">
-      學生人數 <span style="font-weight:600;color:var(--blue)">（建班後自動產生座號帳號，PIN 預設 0000）</span>
-    </label>
-    <input id="new-class-student-count" type="number" min="0" max="60" value="0"
-      style="width:100%;border:2px solid var(--border);border-radius:10px;padding:10px 14px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:8px">
 
     <div id="class-modal-error" style="font-size:.82rem;font-weight:700;color:var(--red);min-height:20px;margin-bottom:12px"></div>
     <div style="display:flex;gap:10px">
@@ -923,6 +1067,7 @@
 <script src="math-bank.js"></script>
 <script src="audio-clips.js"></script>
 <script src="exam-compose.js"></script>
+<script src="school-admin.js"></script>
 <script>
 var TOOL_CONFIG = {
   reader: { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' }
@@ -1106,6 +1251,192 @@ window.addEventListener('message', function(e) {
     </div>
     <div id="mq-results-body" style="padding:16px 24px 24px;overflow-y:auto;max-height:72vh">
       <div class="loading-wrap"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 從名冊加入學生 Modal -->
+<div id="roster-add-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:0;max-width:540px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2);max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:24px 24px 16px;border-bottom:1.5px solid var(--border)">
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:4px">👥 從名冊加入學生</div>
+      <div id="roster-add-target-name" style="font-size:.82rem;color:var(--muted);font-weight:600"></div>
+    </div>
+    <!-- 步驟一：選年級 + 選原班 -->
+    <div style="padding:16px 24px;border-bottom:1.5px solid var(--border);display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div>
+        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">年級</label>
+        <select id="roster-add-grade"
+          style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none"
+          onchange="loadRosterAddClasses()">
+          <option value="">── 請選 ──</option>
+          <option value="1">1 年</option>
+          <option value="2">2 年</option>
+          <option value="3">3 年</option>
+          <option value="4">4 年</option>
+          <option value="5">5 年</option>
+          <option value="6">6 年</option>
+          <option value="0">其他</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">班級</label>
+        <select id="roster-add-class"
+          style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none;min-width:140px"
+          onchange="loadRosterAddStudents()">
+          <option value="">全部班級</option>
+        </select>
+      </div>
+      <div style="font-size:.75rem;color:var(--muted);font-weight:600;padding-bottom:8px" id="roster-add-hint">請先選擇年級與班級</div>
+    </div>
+    <!-- 步驟二：學生勾選清單 -->
+    <div style="flex:1;overflow-y:auto;padding:0">
+      <div id="roster-add-list" style="padding:12px 24px">
+        <div style="text-align:center;padding:24px;color:var(--muted);font-size:.85rem">請先選擇年級與班級</div>
+      </div>
+    </div>
+    <!-- 底部操作列 -->
+    <div style="padding:16px 24px;border-top:1.5px solid var(--border);display:flex;gap:10px;align-items:center">
+      <button id="roster-add-select-all" onclick="toggleAllRosterStudents()" disabled
+        style="padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">全選</button>
+      <span id="roster-add-count" style="font-size:.8rem;font-weight:700;color:var(--muted);flex:1">已選 0 人</span>
+      <button onclick="closeRosterAddModal()"
+        style="padding:9px 16px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="roster-add-confirm" onclick="confirmRosterAdd()" disabled
+        style="padding:9px 16px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">加入班級</button>
+    </div>
+  </div>
+</div>
+
+<!-- 校務管理：編輯學生 Modal -->
+<div id="sa-edit-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.05rem;font-weight:900;margin-bottom:20px">✏️ 編輯學生</div>
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">姓名</label>
+    <input id="sa-edit-name" type="text" maxlength="20"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:14px">
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">PIN（4 位數字）</label>
+    <input id="sa-edit-pin" type="text" maxlength="4" inputmode="numeric"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:'Courier New',monospace;outline:none;margin-bottom:6px">
+    <div id="sa-edit-err" style="font-size:.8rem;font-weight:700;color:var(--red);min-height:18px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeSaEditModal()"
+        style="flex:1;padding:10px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">取消</button>
+      <button id="sa-edit-save" onclick="saveSaStudent()"
+        style="flex:2;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 校務管理：新增學生 Modal -->
+<div id="sa-add-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.05rem;font-weight:900;margin-bottom:6px">＋ 新增學生（轉入生）</div>
+    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:18px">學生將加入全校名單（Main），尚未歸屬任何班級。</div>
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">姓名 <span style="color:var(--red)">*</span></label>
+    <input id="sa-add-name" type="text" maxlength="20" placeholder="請輸入學生姓名"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      <div>
+        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">年級</label>
+        <select id="sa-add-grade"
+          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:8px 6px;font-size:.88rem;font-family:inherit;outline:none">
+          <option value="">—</option>
+          <option value="1">1年</option><option value="2">2年</option><option value="3">3年</option>
+          <option value="4">4年</option><option value="5">5年</option><option value="6">6年</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">班號</label>
+        <input id="sa-add-classnum" type="number" min="1" max="30" placeholder="班"
+          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.88rem;font-family:inherit;outline:none">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">座號</label>
+        <input id="sa-add-seat" type="number" min="1" max="60" placeholder="號"
+          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.88rem;font-family:inherit;outline:none">
+      </div>
+    </div>
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">PIN（4 位數字，預設 0000）</label>
+    <input id="sa-add-pin" type="text" maxlength="4" inputmode="numeric" value="0000"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:'Courier New',monospace;outline:none;margin-bottom:6px">
+    <div id="sa-add-err" style="font-size:.8rem;font-weight:700;color:var(--red);min-height:18px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeSaAddStudentModal()"
+        style="flex:1;padding:10px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">取消</button>
+      <button id="sa-add-save" onclick="saveSaNewStudent()"
+        style="flex:2;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- 校務管理：重新分班 Modal -->
+<div id="sa-reassign-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:0;max-width:580px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2);max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:22px 24px 14px;border-bottom:1.5px solid var(--border)">
+      <div style="font-size:1.05rem;font-weight:900;margin-bottom:4px">🔀 重新分班</div>
+      <div style="font-size:.78rem;color:var(--muted);font-weight:600">勾選學生 → 選目標班級 → 確認</div>
+    </div>
+    <!-- 篩選列 -->
+    <div style="padding:12px 24px;border-bottom:1.5px solid var(--border);display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+      <div>
+        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">年級篩選</label>
+        <select id="sa-reassign-grade" onchange="filterReassignList()"
+          style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none">
+          <option value="">全部年級</option>
+          <option value="1">1年</option><option value="2">2年</option><option value="3">3年</option>
+          <option value="4">4年</option><option value="5">5年</option><option value="6">6年</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">班級篩選</label>
+        <input id="sa-reassign-classnum" type="number" min="1" max="30" placeholder="班號"
+          oninput="filterReassignList()"
+          style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none;width:80px">
+      </div>
+    </div>
+    <!-- 學生清單 -->
+    <div style="flex:1;overflow-y:auto">
+      <div id="sa-reassign-list" style="padding:0"></div>
+    </div>
+    <!-- 目標班級 + 操作 -->
+    <div style="padding:14px 24px;border-top:1.5px solid var(--border)">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <label style="font-size:.78rem;font-weight:800;color:var(--muted);white-space:nowrap">目標班級：</label>
+        <select id="sa-reassign-target" onchange="updateReassignCount()"
+          style="flex:1;min-width:160px;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none">
+          <option value="">── 請選目標班級 ──</option>
+        </select>
+        <span id="sa-reassign-count" style="font-size:.8rem;font-weight:700;color:var(--muted);white-space:nowrap">已選 0 人</span>
+      </div>
+    </div>
+    <div style="padding:14px 24px;border-top:1.5px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeReassignModal()"
+        style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="sa-reassign-confirm" onclick="confirmReassign()" disabled
+        style="padding:9px 18px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit">確認分班</button>
+    </div>
+  </div>
+</div>
+
+<!-- 指派教師 Modal -->
+<div id="sa-assign-teacher-modal" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
+    <div style="font-size:1.05rem;font-weight:900;margin-bottom:4px">👤 指派負責教師</div>
+    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:16px" id="sa-assign-teacher-classname"></div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:6px">選擇教師</label>
+      <select id="sa-assign-teacher-select"
+        style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;font-size:.9rem;font-family:inherit;outline:none;background:white">
+        <option value="">（校管理員負責，不指派）</option>
+      </select>
+    </div>
+    <div id="sa-assign-teacher-err" style="font-size:.8rem;font-weight:700;color:var(--red);margin-bottom:12px;min-height:18px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeSaAssignTeacherModal()"
+        style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="sa-assign-teacher-save" onclick="saveSaAssignTeacher()"
+        style="padding:9px 18px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit">儲存</button>
     </div>
   </div>
 </div>

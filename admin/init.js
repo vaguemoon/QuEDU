@@ -4,7 +4,8 @@
  */
 'use strict';
 
-var currentTeacher = null; // Firebase Auth User 物件
+var currentTeacher     = null; // Firebase Auth User 物件
+var currentTeacherRole = 'teacher'; // 'teacher' | 'school-admin'
 
 /* ── 暗色模式 ── */
 (function() {
@@ -34,6 +35,12 @@ var APP_REGISTRY = [
 function onFirebaseReady() {
   loadClasses();
   loadTeacherSchool();
+  _applyTeacherRole(currentTeacherRole);
+}
+
+function _applyTeacherRole(role) {
+  var tab = document.getElementById('tab-school-admin');
+  if (tab) tab.style.display = role === 'school-admin' ? '' : 'none';
 }
 
 window.addEventListener('load', function() {
@@ -66,6 +73,7 @@ window.addEventListener('load', function() {
             });
             return;
           }
+          currentTeacherRole = (doc.exists && doc.data().role) || 'teacher';
           // 記錄教師登入資料（供管理者後台帳號管理使用）
           db.collection('teachers').doc(user.uid).set({
             uid:          user.uid,
@@ -78,6 +86,9 @@ window.addEventListener('load', function() {
           if (!hasSchool) {
             showSchoolRequiredOverlay();
           } else {
+            // 直接從已讀取的 doc 設定學校變數，避免 loadTeacherSchool 再做第二次讀取時碰到競態
+            currentSchoolId   = doc.data().schoolId;
+            currentSchoolName = doc.data().schoolName || '（未知學校）';
             onFirebaseReady();
           }
         }).catch(function() {
@@ -158,14 +169,17 @@ function doLogout() {
 
 function switchTab(tab) {
   if (document.getElementById('tool-modal').style.display === 'flex') closeToolModal();
-  ['classes', 'database', 'quiz-zone', 'tools'].forEach(function(t) {
-    document.getElementById('panel-'+t).style.display = t===tab ? '' : 'none';
-    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  ['classes', 'database', 'quiz-zone', 'tools', 'school-admin'].forEach(function(t) {
+    var panel  = document.getElementById('panel-' + t);
+    var tabBtn = document.getElementById('tab-' + t);
+    if (panel)  panel.style.display = t === tab ? '' : 'none';
+    if (tabBtn) tabBtn.classList.toggle('active', t === tab);
   });
   document.getElementById('panel-student').style.display = 'none';
-  if (tab === 'classes')   { backToClasses(); loadClasses(); }
-  if (tab === 'database')  { _initDatabaseTab(); }
-  if (tab === 'quiz-zone') { _initQuizZoneTab(); }
+  if (tab === 'classes')      { backToClasses(); loadClasses(); }
+  if (tab === 'database')     { _initDatabaseTab(); }
+  if (tab === 'quiz-zone')    { _initQuizZoneTab(); }
+  if (tab === 'school-admin') { if (!_saLoaded) loadMainRoster(); }
 }
 
 /* ── 題庫年級組合 ── */

@@ -93,8 +93,9 @@ function _loadClasses(schoolId) {
   box.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
   db.collection('classes')
-    .where('schoolId', '==', schoolId)
-    .where('active', '==', true)
+    .where('schoolId',   '==', schoolId)
+    .where('active',     '==', true)
+    .where('classType',  '==', 'homeroom')
     .get()
     .then(function(snap) {
       if (snap.empty) {
@@ -107,9 +108,17 @@ function _loadClasses(schoolId) {
         d._id = doc.id;
         classes.push(d);
       });
+      var gradeMap = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6 };
+      function _gradeOf(cls) {
+        if (cls.grade) return cls.grade;
+        var m = (cls.name || '').match(/^([一二三四五六])年/);
+        return m ? (gradeMap[m[1]] || 0) : 0;
+      }
       classes.sort(function(a, b) {
-        if (a.grade !== b.grade) return (a.grade || 0) - (b.grade || 0);
-        return (a.classNumber || 0) - (b.classNumber || 0);
+        var ga = _gradeOf(a), gb = _gradeOf(b);
+        if (ga !== gb) return ga - gb;
+        if ((a.classNumber || 0) !== (b.classNumber || 0)) return (a.classNumber || 0) - (b.classNumber || 0);
+        return (a.name || '').localeCompare(b.name || '', 'zh-TW');
       });
       var html = '';
       classes.forEach(function(cls) {

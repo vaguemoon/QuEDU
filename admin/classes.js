@@ -68,40 +68,64 @@ function renderClasses() {
   }
 
   wrap.innerHTML = currentClasses.map(function(cls) {
-    var inactive = !cls.active;
+    var inactive   = !cls.active;
+    var isHomeroom = cls.classType === 'homeroom';
     var eid = escHtml(cls.id);
-    return '<div class="class-card' + (inactive ? ' class-inactive' : '') + '" id="card-' + eid + '">' +
-      '<div class="class-card-top">' +
-        '<div class="class-info">' +
-          '<div class="class-name" id="cn-display-' + eid + '">' +
-            escHtml(cls.name) +
-            '<button class="btn-cls-edit" onclick="startEditClassName(\'' + eid + '\',\'' + escHtml(cls.name) + '\')" title="編輯班級名稱">✏️</button>' +
-          '</div>' +
-          '<div class="class-name-edit-row" id="cn-edit-' + eid + '" style="display:none">' +
-            '<input class="class-name-input" id="cn-input-' + eid + '" type="text" maxlength="40"' +
-              ' onkeydown="if(event.key===\'Enter\')saveClassName(\'' + eid + '\');if(event.key===\'Escape\')cancelEditClassName(\'' + eid + '\')">' +
-            '<button class="btn-sm-green" onclick="saveClassName(\'' + eid + '\')">儲存</button>' +
-            '<button class="btn-sm-cancel" onclick="cancelEditClassName(\'' + eid + '\')">取消</button>' +
-          '</div>' +
-          '<div id="cn-error-' + eid + '" style="font-size:.75rem;color:var(--red);font-weight:700;margin-top:4px"></div>' +
-          '<div class="class-code-row">' +
-            '<span class="class-code">' + cls.inviteCode + '</span>' +
-            '<span class="class-status-badge ' + (cls.active ? 'badge-green' : 'badge-gray') + '">' +
-              (cls.active ? '邀請中' : '已停用') + '</span>' +
-            '<button class="btn-copy-code" onclick="copyCode(\'' + cls.inviteCode + '\')">複製邀請碼</button>' +
-          '</div>' +
+
+    var nameBlock = isHomeroom
+      ? '<div class="class-name" id="cn-display-' + eid + '">' +
+          escHtml(cls.name) +
+          '<span style="font-size:.68rem;font-weight:800;color:#1e40af;background:#dbeafe;padding:2px 7px;border-radius:999px;margin-left:8px;vertical-align:middle">行政班</span>' +
+        '</div>'
+      : '<div class="class-name" id="cn-display-' + eid + '">' +
+          escHtml(cls.name) +
+          '<button class="btn-cls-edit" onclick="startEditClassName(\'' + eid + '\',\'' + escHtml(cls.name) + '\')" title="編輯班級名稱">✏️</button>' +
         '</div>' +
-        '<div class="class-top-actions">' +
+        '<div class="class-name-edit-row" id="cn-edit-' + eid + '" style="display:none">' +
+          '<input class="class-name-input" id="cn-input-' + eid + '" type="text" maxlength="40"' +
+            ' onkeydown="if(event.key===\'Enter\')saveClassName(\'' + eid + '\');if(event.key===\'Escape\')cancelEditClassName(\'' + eid + '\')">' +
+          '<button class="btn-sm-green" onclick="saveClassName(\'' + eid + '\')">儲存</button>' +
+          '<button class="btn-sm-cancel" onclick="cancelEditClassName(\'' + eid + '\')">取消</button>' +
+        '</div>' +
+        '<div id="cn-error-' + eid + '" style="font-size:.75rem;color:var(--red);font-weight:700;margin-top:4px"></div>';
+
+    var topActions = isHomeroom
+      ? ''
+      : '<div class="class-top-actions">' +
           '<button class="btn-share-class" onclick="showShareModal(\'' + escHtml(cls.name) + '\',\'' + cls.inviteCode + '\')">📤 分享</button>' +
           '<button class="btn-cls-toggle" onclick="toggleClassActive(\'' + cls.id + '\',' + !cls.active + ')">' +
             (cls.active ? '停用' : '啟用') + '</button>' +
           '<button class="btn-cls-delete" onclick="confirmDeleteClass(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">刪除</button>' +
+        '</div>';
+
+    var footer = isHomeroom
+      ? '<div class="class-footer" id="cs-' + cls.id + '">' +
+          '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
+          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
+        '</div>'
+      : '<div class="class-footer" id="cs-' + cls.id + '">' +
+          '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
+          '<button class="btn-roster-add" onclick="showRosterAddModal(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👥 從名冊加入</button>' +
+          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
+        '</div>';
+
+    var codeRow = isHomeroom ? '' :
+      '<div class="class-code-row">' +
+        '<span class="class-code">' + cls.inviteCode + '</span>' +
+        '<span class="class-status-badge ' + (cls.active ? 'badge-green' : 'badge-gray') + '">' +
+          (cls.active ? '邀請中' : '已停用') + '</span>' +
+        '<button class="btn-copy-code" onclick="copyCode(\'' + cls.inviteCode + '\')">複製邀請碼</button>' +
+      '</div>';
+
+    return '<div class="class-card' + (inactive ? ' class-inactive' : '') + '" id="card-' + eid + '">' +
+      '<div class="class-card-top">' +
+        '<div class="class-info">' +
+          nameBlock +
+          codeRow +
         '</div>' +
+        topActions +
       '</div>' +
-      '<div class="class-footer" id="cs-' + cls.id + '">' +
-        '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
-        '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
-      '</div>' +
+      footer +
     '</div>';
   }).join('');
 
@@ -162,10 +186,7 @@ function updateClassNamePreview() {
 /* ── 新增班級 Modal ── */
 function showCreateClassModal() {
   document.getElementById('class-modal').style.display = 'flex';
-  document.getElementById('new-class-grade').value = '';
-  document.getElementById('new-class-number').value = '';
   document.getElementById('new-class-name').value = '';
-  document.getElementById('new-class-student-count').value = '0';
   document.getElementById('class-modal-error').textContent = '';
   var btnEl = document.getElementById('btn-create-class');
   btnEl.disabled = false; btnEl.textContent = '建立班級';
@@ -176,31 +197,47 @@ function hideCreateClassModal() {
 
 function createClass() {
   var name         = document.getElementById('new-class-name').value.trim();
-  var grade        = parseInt(document.getElementById('new-class-grade').value) || 0;
-  var classNumber  = parseInt(document.getElementById('new-class-number').value) || 0;
-  var studentCount = parseInt(document.getElementById('new-class-student-count').value) || 0;
+  var grade        = 0;
+  var classNumber  = 0;
+  var classType    = 'subject';
+  var studentCount = 0;
   var errEl        = document.getElementById('class-modal-error');
   var btnEl        = document.getElementById('btn-create-class');
   errEl.textContent = '';
 
   if (!name) { errEl.textContent = '請輸入班級名稱'; return; }
-  if (studentCount < 0 || studentCount > 60) { errEl.textContent = '學生人數請填 0–60'; return; }
   if (!db || !currentTeacher) return;
 
-  /* ── 重複偵測 ── */
-  var nameLower = name.toLowerCase();
-  var dupName = currentClasses.some(function(c) {
-    return c.name.toLowerCase() === nameLower;
-  });
-  if (dupName) { errEl.textContent = '班級名稱「' + name + '」已存在，請勿重複建立。'; return; }
-  if (grade && classNumber) {
-    var dupNum = currentClasses.some(function(c) {
-      return c.grade === grade && c.classNumber === classNumber;
-    });
-    if (dupNum) { errEl.textContent = grade + '年' + classNumber + '班已存在，請勿重複建立。'; return; }
-  }
-
   btnEl.disabled = true;
+  btnEl.textContent = '檢查中…';
+
+  /* ── 全校查重（含行政班與其他教師班） ── */
+  var nameLower  = name.toLowerCase();
+  var checkQuery = currentSchoolId
+    ? db.collection('classes').where('schoolId', '==', currentSchoolId).get()
+    : Promise.resolve({ forEach: function() {} });
+
+  checkQuery.then(function(snap) {
+    var dup = false;
+    snap.forEach(function(doc) {
+      if ((doc.data().name || '').toLowerCase() === nameLower) dup = true;
+    });
+    /* 舊式：同教師自建班查重（schoolId 可能空） */
+    if (!dup) {
+      dup = currentClasses.some(function(c) { return c.name.toLowerCase() === nameLower; });
+    }
+    if (dup) {
+      errEl.textContent = '班級名稱「' + name + '」在此學校已存在，請使用其他名稱。';
+      btnEl.disabled = false; btnEl.textContent = '建立班級';
+      return;
+    }
+    _doCreateClass(name, grade, classNumber, classType, studentCount, errEl, btnEl);
+  }).catch(function() {
+    _doCreateClass(name, grade, classNumber, classType, studentCount, errEl, btnEl);
+  });
+}
+
+function _doCreateClass(name, grade, classNumber, classType, studentCount, errEl, btnEl) {
   btnEl.textContent = studentCount > 0 ? '建立中（產生帳號）…' : '建立中…';
 
   var code    = generateInviteCode();
@@ -213,6 +250,7 @@ function createClass() {
         name:         name,
         grade:        grade,
         classNumber:  classNumber,
+        classType:    classType,
         schoolId:     currentSchoolId   || '',
         schoolName:   currentSchoolName || '',
         teacherUid:   currentTeacher.uid,
@@ -377,6 +415,220 @@ function backToClasses() {
 
 function refreshRoster() {
   if (currentRosterClassId) loadClassRoster(currentRosterClassId);
+}
+
+/* ════════════════════════════════
+   從名冊加入學生（科任班用）
+   ════════════════════════════════ */
+var _rosterAddTargetId    = '';  // 目標科任班 classId
+var _rosterAddAllStudents = [];  // 全校學生快取（from main）
+var _rosterAddClassMap    = {};  // classId → { name, grade, classNumber }
+
+/* 從班名解析年級（一年甲班 → 1，五年體班 → 5） */
+function _gradeFromName(name) {
+  var m = (name || '').match(/^([一二三四五六])年/);
+  return m ? ({ '一':1,'二':2,'三':3,'四':4,'五':5,'六':6 }[m[1]] || 0) : 0;
+}
+
+function showRosterAddModal(subjectClassId, subjectClassName) {
+  _rosterAddTargetId    = subjectClassId;
+  _rosterAddAllStudents = [];
+  _rosterAddClassMap    = {};
+  document.getElementById('roster-add-modal').style.display = 'flex';
+  document.getElementById('roster-add-target-name').textContent = '加入目標：' + subjectClassName;
+  document.getElementById('roster-add-grade').value = '';
+  document.getElementById('roster-add-class').innerHTML = '<option value="">全部班級</option>';
+  document.getElementById('roster-add-list').innerHTML =
+    '<div style="text-align:center;padding:24px;color:var(--muted)">載入中…</div>';
+  document.getElementById('roster-add-hint').textContent = '';
+  document.getElementById('roster-add-count').textContent = '已選 0 人';
+  document.getElementById('roster-add-confirm').disabled = true;
+  document.getElementById('roster-add-select-all').disabled = true;
+
+  if (!currentSchoolId) {
+    document.getElementById('roster-add-list').innerHTML =
+      '<div style="padding:20px;color:var(--red);font-size:.85rem;font-weight:700">請先設定所屬學校</div>';
+    return;
+  }
+
+  Promise.all([
+    db.collection('students').where('schoolId', '==', currentSchoolId).get(),
+    db.collection('classes').where('schoolId',  '==', currentSchoolId).get()
+  ]).then(function(results) {
+    results[1].forEach(function(doc) {
+      var d = doc.data();
+      _rosterAddClassMap[doc.id] = { name: d.name || '', grade: d.grade || _gradeFromName(d.name), classNumber: d.classNumber || 0 };
+    });
+
+    results[0].forEach(function(doc) {
+      var d = doc.data();
+      if (d.status === 'archived') return;
+      var classId = d.classId || (d.classIds && d.classIds[0]) || '';
+      _rosterAddAllStudents.push({
+        id:         doc.id,
+        name:       d.name       || '',
+        seatNumber: d.seatNumber || 0,
+        grade:      d.grade      || 0,
+        classId:    classId,
+        classIds:   d.classIds   || []
+      });
+    });
+
+    /* 補抓 schoolId 為空的舊班級文件 */
+    var missing = {}, missingIds = [];
+    _rosterAddAllStudents.forEach(function(s) {
+      if (s.classId && !_rosterAddClassMap[s.classId] && !missing[s.classId]) {
+        missing[s.classId] = true;
+        missingIds.push(s.classId);
+      }
+    });
+    return missingIds.length
+      ? Promise.all(missingIds.map(function(id) { return db.collection('classes').doc(id).get(); }))
+          .then(function(docs) {
+            docs.forEach(function(doc) {
+              if (!doc.exists) return;
+              var d = doc.data();
+              _rosterAddClassMap[doc.id] = { name: d.name || '', grade: d.grade || _gradeFromName(d.name), classNumber: d.classNumber || 0 };
+            });
+          })
+      : Promise.resolve();
+  }).then(function() {
+    /* 用 classMap 補齊學生的 grade（學生文件上可能為 0） */
+    _rosterAddAllStudents.forEach(function(s) {
+      var cls = s.classId ? _rosterAddClassMap[s.classId] : null;
+      if (cls && !s.grade) s.grade = cls.grade;
+    });
+    _rosterAddAllStudents.sort(function(a, b) {
+      if (a.grade !== b.grade) return a.grade - b.grade;
+      var ca = _rosterAddClassMap[a.classId], cb = _rosterAddClassMap[b.classId];
+      var na = ca ? ca.classNumber : 0, nb = cb ? cb.classNumber : 0;
+      if (na && nb && na !== nb) return na - nb;
+      var nameA = ca ? ca.name : '', nameB = cb ? cb.name : '';
+      if (nameA !== nameB) return nameA.localeCompare(nameB, 'zh-TW');
+      return a.seatNumber - b.seatNumber;
+    });
+    _renderRosterAddStudents();
+  }).catch(function(e) {
+    document.getElementById('roster-add-list').innerHTML =
+      '<div style="padding:16px;color:var(--red);font-size:.85rem">載入失敗：' + e.message + '</div>';
+  });
+}
+
+/* 年級選擇時：重建班級下拉選單（用班名，不用班號）*/
+function loadRosterAddClasses() {
+  var grade = parseInt(document.getElementById('roster-add-grade').value) || 0;
+  var seen = {}, classIds = [];
+  _rosterAddAllStudents.forEach(function(s) {
+    if (grade && s.grade !== grade) return;
+    if (s.classId && !seen[s.classId]) { seen[s.classId] = true; classIds.push(s.classId); }
+  });
+  classIds.sort(function(a, b) {
+    var ca = _rosterAddClassMap[a], cb = _rosterAddClassMap[b];
+    var na = ca ? ca.classNumber : 0, nb = cb ? cb.classNumber : 0;
+    if (na && nb && na !== nb) return na - nb;
+    return (ca ? ca.name : a).localeCompare(cb ? cb.name : b, 'zh-TW');
+  });
+  document.getElementById('roster-add-class').innerHTML = '<option value="">全部班級</option>'
+    + classIds.map(function(id) {
+        var cls = _rosterAddClassMap[id];
+        return '<option value="' + escHtml(id) + '">' + escHtml(cls ? cls.name : id) + '</option>';
+      }).join('');
+  _renderRosterAddStudents();
+}
+
+/* 班級選擇時：重繪名單 */
+function loadRosterAddStudents() {
+  _renderRosterAddStudents();
+}
+
+function _renderRosterAddStudents() {
+  var grade   = parseInt(document.getElementById('roster-add-grade').value) || 0;
+  var classId = document.getElementById('roster-add-class').value;
+  var listEl  = document.getElementById('roster-add-list');
+
+  var filtered = _rosterAddAllStudents.filter(function(s) {
+    if (grade   && s.grade   !== grade)   return false;
+    if (classId && s.classId !== classId) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:.85rem">沒有符合條件的學生</div>';
+    document.getElementById('roster-add-select-all').disabled = true;
+    return;
+  }
+
+  listEl.innerHTML = '<table style="width:100%;border-collapse:collapse">'
+    + filtered.map(function(s) {
+        var cls       = _rosterAddClassMap[s.classId];
+        var classStr  = cls ? cls.name : (s.grade ? s.grade + '年' : '—');
+        var label     = s.seatNumber ? s.seatNumber + ' 號' : '—';
+        var nameStr   = s.name || '（未填姓名）';
+        var alreadyIn = s.classIds.indexOf(_rosterAddTargetId) !== -1;
+        var already   = alreadyIn
+          ? '<span style="font-size:.7rem;color:var(--green);font-weight:800;margin-left:6px">已在班</span>' : '';
+        return '<tr style="border-bottom:1px solid var(--border)">'
+          + '<td style="padding:8px 16px;width:40px">'
+          +   '<input type="checkbox" class="roster-add-chk" data-id="' + escHtml(s.id) + '"'
+          +   (alreadyIn ? ' disabled checked' : '')
+          +   ' onchange="updateRosterAddCount()">'
+          + '</td>'
+          + '<td style="padding:8px 4px;font-weight:900;color:var(--muted);width:50px">' + label + '</td>'
+          + '<td style="padding:8px 8px;font-weight:700">' + escHtml(nameStr) + already + '</td>'
+          + '<td style="padding:8px 8px;font-size:.8rem;color:var(--muted)">' + escHtml(classStr) + '</td>'
+          + '</tr>';
+      }).join('')
+    + '</table>';
+
+  document.getElementById('roster-add-select-all').disabled = false;
+  updateRosterAddCount();
+}
+
+function updateRosterAddCount() {
+  var checked = document.querySelectorAll('.roster-add-chk:not([disabled]):checked').length;
+  document.getElementById('roster-add-count').textContent = '已選 ' + checked + ' 人';
+  document.getElementById('roster-add-confirm').disabled = checked === 0;
+}
+
+function toggleAllRosterStudents() {
+  var boxes    = document.querySelectorAll('.roster-add-chk:not([disabled])');
+  var allChecked = Array.prototype.every.call(boxes, function(b) { return b.checked; });
+  boxes.forEach(function(b) { b.checked = !allChecked; });
+  var btn = document.getElementById('roster-add-select-all');
+  btn.textContent = allChecked ? '全選' : '取消全選';
+  updateRosterAddCount();
+}
+
+function closeRosterAddModal() {
+  document.getElementById('roster-add-modal').style.display = 'none';
+  _rosterAddTargetId = '';
+}
+
+function confirmRosterAdd() {
+  var boxes = document.querySelectorAll('.roster-add-chk:not([disabled]):checked');
+  if (!boxes.length) return;
+
+  var btn = document.getElementById('roster-add-confirm');
+  btn.disabled = true; btn.textContent = '加入中…';
+
+  var batch = db.batch();
+  boxes.forEach(function(box) {
+    var sid = box.getAttribute('data-id');
+    batch.update(db.collection('students').doc(sid), {
+      classIds: firebase.firestore.FieldValue.arrayUnion(_rosterAddTargetId)
+    });
+  });
+
+  batch.commit()
+    .then(function() {
+      closeRosterAddModal();
+      showToast('✅ 已加入 ' + boxes.length + ' 位學生');
+      loadClasses();
+    })
+    .catch(function(e) {
+      btn.disabled = false; btn.textContent = '加入班級';
+      showToast('加入失敗：' + e.message);
+    });
 }
 
 /* ── 班級名稱 inline 編輯 ── */

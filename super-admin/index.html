@@ -111,6 +111,16 @@
 .school-acc-arrow.open { transform:rotate(180deg); }
 .school-acc-body  { border-top:1.5px solid var(--border); padding:0; }
 
+/* 學校手風琴內頁籤 */
+.sa-tab-btn {
+  padding:7px 16px; border:none; border-bottom:3px solid transparent;
+  background:none; font-size:.82rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--muted); transition:color .15s, border-color .15s;
+  margin-bottom:-2px;
+}
+.sa-tab-btn.active { color:var(--blue); border-bottom-color:var(--blue); }
+.sa-tab-btn:hover:not(.active) { color:var(--text); }
+
 /* 新增管理者表單 */
 .add-admin-form {
   display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px;
@@ -198,6 +208,36 @@
 
     <!-- ③ 學校管理 -->
     <div id="panel-schools" style="display:none">
+
+      <!-- 全校名單批次匯入 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📥 全校學生名單批次匯入</div>
+        <div style="background:#f0f9ff;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:.8rem;font-weight:600;color:#0369a1;line-height:1.8">
+          <strong>Excel 格式（支援兩種）：</strong><br>
+          格式 A（四欄）：<code style="background:#e0f2fe;padding:1px 5px;border-radius:4px">年級 | 班號 | 座號 | 姓名</code>（年級/班號填數字）<br>
+          格式 B（三欄）：<code style="background:#e0f2fe;padding:1px 5px;border-radius:4px">班級名稱 | 座號 | 姓名</code>（如「3年1班」）<br>
+          第一列有無標頭均可，PIN 預設 0000。
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+          <div>
+            <label style="font-size:.75rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">目標學校</label>
+            <select id="bulk-import-school"
+              style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.88rem;font-family:inherit;outline:none;min-width:180px">
+              <option value="">── 請選擇學校 ──</option>
+            </select>
+          </div>
+          <div>
+            <input type="file" id="bulk-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleBulkImportFile(this)">
+            <button onclick="triggerBulkImport()"
+              style="padding:9px 18px;border:1.5px solid #bfdbfe;border-radius:8px;background:#eff6ff;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;color:#1d4ed8">
+              📂 選擇 Excel 檔案
+            </button>
+          </div>
+          <span id="bulk-import-filename" style="font-size:.78rem;color:var(--muted);font-weight:600;align-self:center"></span>
+        </div>
+        <div id="bulk-import-status" style="font-size:.82rem;font-weight:700"></div>
+      </div>
+
       <div class="card">
         <div class="card-title">🏫 學校列表
           <button onclick="loadSchools()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
@@ -444,6 +484,48 @@
   </main>
 </div><!-- /admin-screen -->
 
+<!-- 學生編輯 Modal -->
+<div id="sa-edit-student-modal" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:18px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div style="font-size:1rem;font-weight:900;margin-bottom:18px">✏️ 編輯學生資料</div>
+    <label style="font-size:.75rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">姓名</label>
+    <input id="sa-edit-student-name" type="text" maxlength="20" placeholder="留空表示未填"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.92rem;font-family:inherit;outline:none;margin-bottom:12px"
+      onkeydown="if(event.key==='Enter')saveSchoolStudent()">
+    <label style="font-size:.75rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">PIN 碼（4 位數字）</label>
+    <input id="sa-edit-student-pin" type="text" maxlength="4" placeholder="0000"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:1.1rem;font-family:'Courier New',monospace;outline:none;margin-bottom:6px;letter-spacing:4px"
+      onkeydown="if(event.key==='Enter')saveSchoolStudent()">
+    <div id="sa-edit-student-err" style="font-size:.78rem;font-weight:700;color:var(--red);min-height:18px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeStudentEditModal()"
+        style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:9px;background:white;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="sa-edit-student-save" onclick="saveSchoolStudent()"
+        style="flex:2;padding:10px;border:none;border-radius:9px;background:var(--blue);color:white;font-size:.88rem;font-weight:900;cursor:pointer;font-family:inherit">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 全校名單匯入預覽 Modal -->
+<div id="bulk-preview-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:0;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:24px 24px 16px;border-bottom:1.5px solid var(--border)">
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:4px">📥 匯入預覽</div>
+      <div id="bulk-preview-summary" style="font-size:.82rem;color:var(--muted);font-weight:600"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      <div id="bulk-preview-table" style="padding:4px 0"></div>
+    </div>
+    <div id="bulk-preview-warn" style="padding:10px 20px;font-size:.78rem;font-weight:700;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;display:none"></div>
+    <div style="padding:16px 24px;border-top:1.5px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeBulkPreview()"
+        style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="bulk-confirm-btn" onclick="confirmBulkImport()"
+        style="padding:9px 22px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">✅ 確認匯入</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -457,5 +539,6 @@
 <script src="invites.js"></script>
 <script src="settings.js"></script>
 <script src="quiz-bank.js"></script>
+<script src="bulk-import.js"></script>
 </body>
 </html>

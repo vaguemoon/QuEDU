@@ -6,9 +6,11 @@
  */
 'use strict';
 
-var _allSchools  = [];  // [{ id, name, active, createdAt }]
-var _allTeachers = [];  // [{ id, email, displayName, lastLoginAt, blocked, schoolId }]
-var _openSchools = {};  // { schoolId: true/false } 手風琴開關狀態
+var _allSchools     = [];  // [{ id, name, active, createdAt }]
+var _allTeachers    = [];  // [{ id, email, displayName, lastLoginAt, blocked, schoolId }]
+var _openSchools    = {};  // { schoolId: true/false } 手風琴開關狀態
+var _activeTab      = {};  // { schoolId: 'teachers'|'students' }
+var _schoolStudents = {};  // { schoolId: { loaded: bool, classes: [...] } } 學生快取
 
 /* ════════════════════════════════
    載入（學校 + 教師 並行）
@@ -42,11 +44,13 @@ function loadSchools() {
         lastLoginAt: d.lastLoginAt  || '',
         blocked:     !!d.blocked,
         schoolId:    d.schoolId     || '',
-        schoolName:  d.schoolName   || ''
+        schoolName:  d.schoolName   || '',
+        role:        d.role         || 'teacher'
       });
     });
 
     _renderSchools(wrap);
+    refreshBulkSchoolSelect();
   })
   .catch(function(e) {
     wrap.innerHTML = '<div style="color:var(--red);padding:20px;font-weight:700">載入失敗：' + e.message + '</div>';
@@ -80,7 +84,7 @@ function _renderSchools(wrap) {
         + '<span class="school-acc-arrow' + (isOpen ? ' open' : '') + '" id="arr-' + escHtml(school.id) + '">▼</span>'
       + '</div>'
       + '<div class="school-acc-body" id="body-' + escHtml(school.id) + '" style="display:' + (isOpen ? '' : 'none') + '">'
-        + _renderTeacherTable(teachers, school.id)
+        + _renderSchoolTabs(school.id, teachers)
       + '</div>'
       + '</div>';
   });
@@ -113,6 +117,210 @@ function _renderSchools(wrap) {
 }
 
 /* ════════════════════════════════
+   學校手風琴內的頁籤
+   ════════════════════════════════ */
+function _renderSchoolTabs(schoolId, teachers) {
+  var sid = escHtml(schoolId);
+  return '<div style="padding:10px 14px 0">'
+    + '<div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:0">'
+      + '<button class="sa-tab-btn active">教師（' + teachers.length + '）</button>'
+    + '</div>'
+  + '</div>'
+  + '<div id="sa-tab-teachers-' + sid + '">'
+    + _renderTeacherTable(teachers, schoolId)
+  + '</div>';
+}
+
+/* ════════════════════════════════
+   學生名單（依學校 lazy-load）
+   ════════════════════════════════ */
+function loadSchoolStudents(schoolId) {
+  var wrap = document.getElementById('sa-students-wrap-' + schoolId);
+  if (!wrap) return;
+  /* 已載入過則直接 re-render（不重打 Firestore）*/
+  if (_schoolStudents[schoolId] && _schoolStudents[schoolId].loaded) {
+    _renderSchoolStudents(wrap, _schoolStudents[schoolId].classes);
+    return;
+  }
+  wrap.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
+
+  Promise.all([
+    db.collection('classes').where('schoolId', '==', schoolId).where('classType', '==', 'homeroom').get(),
+    db.collection('students').where('schoolId', '==', schoolId).get()
+  ]).then(function(results) {
+    var classMap = {};
+    results[0].forEach(function(doc) {
+      var d = doc.data();
+      classMap[doc.id] = { id: doc.id, schoolId: schoolId, name: d.name || '（未命名）', grade: d.grade || 0, classNumber: d.classNumber || 0, students: [] };
+    });
+    results[1].forEach(function(doc) {
+      var d = doc.data();
+      var cls = classMap[d.classId];
+      if (cls) {
+        cls.students.push({ id: doc.id, seat: d.seatNumber || 0, name: d.name || '', pin: d.pin || '0000' });
+      }
+    });
+
+    var classes = Object.values(classMap);
+    classes.sort(function(a, b) {
+      if (a.grade !== b.grade) return a.grade - b.grade;
+      return a.classNumber - b.classNumber;
+    });
+    classes.forEach(function(cls) {
+      cls.students.sort(function(a, b) { return a.seat - b.seat; });
+    });
+
+    _schoolStudents[schoolId] = { loaded: true, classes: classes };
+    _renderSchoolStudents(wrap, classes);
+  }).catch(function(e) {
+    wrap.innerHTML = '<div style="color:var(--red);padding:14px;font-size:.85rem">載入失敗：' + e.message + '</div>';
+  });
+}
+
+function _renderSchoolStudents(wrap, classes) {
+  if (!classes.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-size:.85rem">此學校尚未匯入學生名單。</div>';
+    return;
+  }
+
+  var totalStudents = classes.reduce(function(s, c) { return s + c.students.length; }, 0);
+
+  var html = '<div style="margin-bottom:10px;font-size:.78rem;font-weight:700;color:var(--muted)">'
+    + classes.length + ' 個原班・共 ' + totalStudents + ' 位學生'
+    + '<button onclick="_refreshSchoolStudents(\'' + escHtml(wrap.id.replace('sa-students-wrap-','')) + '\')"'
+      + ' style="margin-left:10px;background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--blue);font-weight:700;padding:0">🔄 重新整理</button>'
+  + '</div>';
+
+  html += classes.map(function(cls) {
+    var sid = escHtml(cls.id);
+    var studentRows = cls.students.length
+      ? cls.students.map(function(s) {
+          var eid  = escHtml(s.id);
+          var eSid = escHtml(cls.schoolId || '');
+          return '<tr id="sa-srow-' + eid + '" style="border-bottom:1px solid var(--border)">'
+            + '<td style="padding:6px 10px;width:56px;font-weight:900;color:var(--muted);font-size:.78rem">' + s.seat + ' 號</td>'
+            + '<td style="padding:6px 8px;font-weight:700;font-size:.85rem" id="sa-sname-' + eid + '">' + escHtml(s.name || '（未填）') + '</td>'
+            + '<td style="padding:6px 8px;font-family:\'Courier New\',monospace;font-size:.78rem;color:var(--muted)" id="sa-spin-' + eid + '">' + escHtml(s.pin) + '</td>'
+            + '<td style="padding:4px 8px;white-space:nowrap">'
+              + '<button class="btn-sm" onclick="openStudentEditModal(\'' + eid + '\',\'' + escHtml(s.name) + '\',\'' + escHtml(s.pin) + '\',\'' + eSid + '\')">編輯</button>'
+              + ' <button class="btn-sm-red" style="font-size:.72rem;padding:3px 8px" onclick="deleteSchoolStudent(\'' + eid + '\',\'' + escHtml(s.name || s.seat + '號') + '\',\'' + eSid + '\')">刪除</button>'
+            + '</td>'
+            + '</tr>';
+        }).join('')
+      : '<tr><td colspan="4" style="padding:12px;text-align:center;color:var(--muted);font-size:.82rem">此班無學生</td></tr>';
+
+    return '<details style="border:1.5px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden">'
+      + '<summary style="padding:10px 14px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;background:#f8fafc;font-weight:800;font-size:.88rem">'
+        + '<span style="flex:1">' + escHtml(cls.name) + '</span>'
+        + '<span style="font-size:.72rem;font-weight:700;color:var(--muted);background:white;padding:2px 8px;border-radius:999px;border:1px solid var(--border)">'
+          + cls.students.length + ' 人</span>'
+      + '</summary>'
+      + '<table style="width:100%;border-collapse:collapse">'
+        + '<thead style="background:#f1f5f9"><tr>'
+          + '<th style="text-align:left;padding:6px 10px;font-size:.68rem;color:var(--muted);font-weight:800">座號</th>'
+          + '<th style="text-align:left;padding:6px 8px;font-size:.68rem;color:var(--muted);font-weight:800">姓名</th>'
+          + '<th style="text-align:left;padding:6px 8px;font-size:.68rem;color:var(--muted);font-weight:800">PIN</th>'
+          + '<th></th>'
+        + '</tr></thead>'
+        + '<tbody>' + studentRows + '</tbody>'
+      + '</table>'
+    + '</details>';
+  }).join('');
+
+  wrap.innerHTML = html;
+}
+
+function _refreshSchoolStudents(schoolId) {
+  if (_schoolStudents[schoolId]) _schoolStudents[schoolId].loaded = false;
+  loadSchoolStudents(schoolId);
+}
+
+/* ════════════════════════════════
+   學生編輯 Modal
+   ════════════════════════════════ */
+var _editStudentId  = '';
+var _editSchoolId   = '';
+
+function openStudentEditModal(studentId, name, pin, schoolId) {
+  _editStudentId = studentId;
+  _editSchoolId  = schoolId;
+  document.getElementById('sa-edit-student-name').value = name;
+  document.getElementById('sa-edit-student-pin').value  = pin;
+  document.getElementById('sa-edit-student-err').textContent = '';
+  var saveBtn = document.getElementById('sa-edit-student-save');
+  saveBtn.disabled = false; saveBtn.textContent = '儲存';
+  document.getElementById('sa-edit-student-modal').style.display = 'flex';
+  document.getElementById('sa-edit-student-name').focus();
+}
+
+function closeStudentEditModal() {
+  document.getElementById('sa-edit-student-modal').style.display = 'none';
+}
+
+function saveSchoolStudent() {
+  var name    = document.getElementById('sa-edit-student-name').value.trim();
+  var pin     = document.getElementById('sa-edit-student-pin').value.trim();
+  var errEl   = document.getElementById('sa-edit-student-err');
+  var saveBtn = document.getElementById('sa-edit-student-save');
+  errEl.textContent = '';
+
+  if (!/^\d{4}$/.test(pin)) { errEl.textContent = 'PIN 須為 4 位數字'; return; }
+
+  saveBtn.disabled = true; saveBtn.textContent = '儲存中…';
+
+  db.collection('students').doc(_editStudentId).update({ name: name, pin: pin })
+    .then(function() {
+      /* 更新快取 */
+      _updateStudentCache(_editSchoolId, _editStudentId, { name: name, pin: pin });
+      /* 就地更新畫面，不重渲染整個列表 */
+      var nameEl = document.getElementById('sa-sname-' + _editStudentId);
+      var pinEl  = document.getElementById('sa-spin-' + _editStudentId);
+      if (nameEl) nameEl.textContent = name || '（未填）';
+      if (pinEl)  pinEl.textContent  = pin;
+      closeStudentEditModal();
+      showToast('✅ 已儲存');
+    })
+    .catch(function(e) {
+      errEl.textContent = '儲存失敗：' + e.message;
+      saveBtn.disabled = false; saveBtn.textContent = '儲存';
+    });
+}
+
+/* ── 刪除學生 ── */
+function deleteSchoolStudent(studentId, label, schoolId) {
+  if (!confirm('確定要刪除「' + label + '」的所有資料？\n此操作無法復原！')) return;
+  db.collection('students').doc(studentId).delete()
+    .then(function() {
+      /* 從快取移除 */
+      _removeStudentFromCache(schoolId, studentId);
+      /* 移除 DOM 列 */
+      var row = document.getElementById('sa-srow-' + studentId);
+      if (row) row.remove();
+      showToast('已刪除學生資料');
+    })
+    .catch(function(e) { showToast('刪除失敗：' + e.message); });
+}
+
+/* ── 快取操作 ── */
+function _updateStudentCache(schoolId, studentId, updates) {
+  var cache = _schoolStudents[schoolId];
+  if (!cache) return;
+  cache.classes.forEach(function(cls) {
+    cls.students.forEach(function(s) {
+      if (s.id === studentId) { Object.assign(s, updates); }
+    });
+  });
+}
+
+function _removeStudentFromCache(schoolId, studentId) {
+  var cache = _schoolStudents[schoolId];
+  if (!cache) return;
+  cache.classes.forEach(function(cls) {
+    cls.students = cls.students.filter(function(s) { return s.id !== studentId; });
+  });
+}
+
+/* ════════════════════════════════
    教師表格（共用：school 內 + 其他）
    ════════════════════════════════ */
 function _renderTeacherTable(teachers, schoolId) {
@@ -130,16 +338,23 @@ function _renderTeacherTable(teachers, schoolId) {
     var blockBtn = t.blocked
       ? '<button class="btn-sm-green" onclick="setTeacherBlocked(\'' + escHtml(t.id) + '\',false)">解除封鎖</button>'
       : '<button class="btn-sm-red"   onclick="setTeacherBlocked(\'' + escHtml(t.id) + '\',true)">封鎖</button>';
+    var isAdmin   = t.role === 'school-admin';
+    var roleBadge = isAdmin
+      ? '<span class="badge" style="background:#dbeafe;color:#1e40af;font-size:.68rem;margin-left:4px">校管理者</span>'
+      : '';
+    var roleBtn   = isAdmin
+      ? '<button class="btn-sm" onclick="setTeacherRole(\'' + escHtml(t.id) + '\',\'teacher\')">移除管理者</button>'
+      : '<button class="btn-sm" onclick="setTeacherRole(\'' + escHtml(t.id) + '\',\'school-admin\')">設校管理者</button>';
 
     /* 指定學校：顯示 inline select */
     var assignCell = _renderAssignCell(t);
 
     return '<tr>'
-      + '<td><strong>' + escHtml(t.displayName) + '</strong></td>'
+      + '<td><strong>' + escHtml(t.displayName) + '</strong>' + roleBadge + '</td>'
       + '<td style="color:var(--muted);font-size:.82rem">' + escHtml(t.email) + '</td>'
       + '<td style="color:var(--muted);font-size:.78rem">' + lastLogin + '</td>'
       + '<td>' + statusBadge + '</td>'
-      + '<td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + blockBtn + assignCell + '</td>'
+      + '<td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + blockBtn + roleBtn + assignCell + '</td>'
       + '</tr>';
   }).join('');
 
@@ -247,6 +462,23 @@ function addSchool() {
     loadSchools();
   })
   .catch(function(e) { status.style.color = 'var(--red)'; status.textContent = '建立失敗：' + e.message; });
+}
+
+/* ════════════════════════════════
+   設定 / 移除校管理者角色
+   ════════════════════════════════ */
+function setTeacherRole(uid, role) {
+  var label = role === 'school-admin' ? '設為校管理者' : '移除管理者權限';
+  if (!confirm('確定要' + label + '？')) return;
+  db.collection('teachers').doc(uid).update({ role: role })
+    .then(function() {
+      showToast(role === 'school-admin' ? '✅ 已設為校管理者' : '已移除管理者權限');
+      var t = _allTeachers.find(function(x) { return x.id === uid; });
+      if (t) t.role = role;
+      var wrap = document.getElementById('schools-wrap');
+      if (wrap) _renderSchools(wrap);
+    })
+    .catch(function(e) { showToast('操作失敗：' + e.message); });
 }
 
 function escHtml(s) {
