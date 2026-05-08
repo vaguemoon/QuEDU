@@ -668,13 +668,14 @@ function _sbPlaceGrid(toDenom, count, ox, oy) {
   var bill  = sbIsBill(toDenom);
   var itemW = bill ? 120 : 64;
   var itemH = bill ? 60  : 64;
-  var gap   = 8, COLS = 5;
+  var gap   = 8;
+  var COLS  = Math.max(1, Math.min(5, Math.floor((sr.width - 16) / (itemW + gap))));
   var cols  = Math.min(count, COLS);
   var rows  = Math.ceil(count / COLS);
   var totalW = cols * itemW + (cols - 1) * gap;
   var totalH = rows * itemH + (rows - 1) * gap;
-  var startX = Math.min(Math.max(8, ox - totalW / 2), sr.width  - totalW - 8);
-  var startY = Math.min(Math.max(8, oy - totalH / 2), sr.height - totalH - 8);
+  var startX = Math.min(Math.max(8, ox - totalW / 2), Math.max(8, sr.width  - totalW - 8));
+  var startY = Math.min(Math.max(8, oy - totalH / 2), Math.max(8, sr.height - totalH - 8));
   for (var i = 0; i < count; i++) {
     sbAddToScene(toDenom,
       startX + (i % COLS) * (itemW + gap),
@@ -687,12 +688,14 @@ function sbClosePopup() {
   if (popup) popup.classList.add('hidden');
 }
 
-document.addEventListener('mousedown', function(e) {
+function _sbClosePopupIfOutside(target) {
   var popup = document.getElementById('sb-popup');
-  if (popup && !popup.classList.contains('hidden') && !popup.contains(e.target)) {
+  if (popup && !popup.classList.contains('hidden') && !popup.contains(target)) {
     sbClosePopup();
   }
-});
+}
+document.addEventListener('mousedown', function(e) { _sbClosePopupIfOutside(e.target); });
+document.addEventListener('touchstart', function(e) { _sbClosePopupIfOutside(e.target); }, { passive: true });
 
 // ════════════════════════════════════════
 //  場景清空
