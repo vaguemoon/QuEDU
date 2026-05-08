@@ -601,6 +601,11 @@
                 style="padding:7px 14px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
                 ＋ 新增學生
               </button>
+              <button onclick="triggerSaBulkImport()"
+                style="padding:7px 14px;border:1.5px solid #bfdbfe;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
+                📥 批次匯入
+              </button>
+              <input type="file" id="sa-bulk-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleSaBulkFile(this)">
               <button onclick="generateHomeroomClasses()"
                 style="padding:7px 14px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-lt);color:var(--blue-dk);font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
                 ⚡ 生成原班
@@ -1068,6 +1073,7 @@
 <script src="audio-clips.js"></script>
 <script src="exam-compose.js"></script>
 <script src="school-admin.js"></script>
+<script src="sa-bulk-import.js"></script>
 <script>
 var TOOL_CONFIG = {
   reader: { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' }
@@ -1499,6 +1505,46 @@ window.addEventListener('message', function(e) {
         style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
       <button id="qs-share-confirm-btn" onclick="saveQuizShareSettings()"
         style="padding:9px 18px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">✅ 確認分享</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 批次匯入觸發 Modal（校管理員用）══ -->
+<div id="sa-bulk-trigger-modal" style="display:none;position:fixed;inset:0;z-index:590;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 28px 24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.22)">
+    <div style="font-size:1.05rem;font-weight:900;margin-bottom:18px">📥 全校學生名單批次匯入</div>
+    <div style="background:#f0f9ff;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:.8rem;font-weight:600;color:#0369a1;line-height:1.8">
+      <strong>Excel 格式（三欄）：</strong>
+      <code style="background:#e0f2fe;padding:1px 5px;border-radius:4px">班級名稱 | 座號 | 姓名</code>（如「3年1班」）<br>
+      第一列有無標頭均可，PIN 預設 0000。
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeSaBulkTrigger()"
+        style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button onclick="document.getElementById('sa-bulk-file').click()"
+        style="padding:9px 20px;border:1.5px solid #bfdbfe;border-radius:10px;background:#eff6ff;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:#1d4ed8">
+        📂 選擇 Excel 檔案
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 批次匯入預覽 Modal（校管理員用）══ -->
+<div id="sa-bulk-preview-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:0;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:24px 24px 16px;border-bottom:1.5px solid var(--border)">
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:4px">📥 匯入預覽</div>
+      <div id="sa-bulk-preview-summary" style="font-size:.82rem;color:var(--muted);font-weight:600"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      <div id="sa-bulk-preview-table" style="padding:4px 0"></div>
+    </div>
+    <div id="sa-bulk-preview-warn" style="padding:10px 20px;font-size:.78rem;font-weight:700;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;display:none"></div>
+    <div style="padding:16px 24px;border-top:1.5px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeSaBulkPreview()"
+        style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="sa-bulk-confirm-btn" onclick="confirmSaBulkImport()"
+        style="padding:9px 22px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">✅ 確認匯入</button>
     </div>
   </div>
 </div>

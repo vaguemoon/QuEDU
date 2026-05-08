@@ -44,7 +44,7 @@ window.addEventListener('load', function() {
 
 /* ── 驗證通過後初始化 ── */
 function onAdminReady() {
-  loadOverview();
+  switchTab('schools');
 }
 
 /* ── 登出 ── */
@@ -59,17 +59,15 @@ function doLogout() {
 }
 
 /* ── 分頁切換 ── */
-var TABS = ['overview', 'schools', 'curriculum', 'invites', 'settings'];
+var TABS = ['schools', 'curriculum', 'settings'];
 
 function switchTab(tab) {
   TABS.forEach(function(t) {
     document.getElementById('panel-' + t).style.display = t === tab ? '' : 'none';
     document.getElementById('tab-'   + t).classList.toggle('active', t === tab);
   });
-  if (tab === 'overview')   loadOverview();
-  if (tab === 'schools')    loadSchools();
+  if (tab === 'schools')    { loadSchoolStats(); loadSchools(); }
   if (tab === 'curriculum') loadVersions();
-  if (tab === 'invites')    loadInvites();
   if (tab === 'settings')   loadSettings();
 }
 

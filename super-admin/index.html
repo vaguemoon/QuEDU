@@ -152,10 +152,8 @@
     <div class="sa-role-badge"><span class="dot"></span>SUPERUSER</div>
 
     <nav class="sidebar-nav">
-      <button class="admin-tab active" id="tab-overview"   onclick="switchTab('overview')">📊 全校總覽</button>
-      <button class="admin-tab"        id="tab-schools"    onclick="switchTab('schools')">🏫 學校管理</button>
+      <button class="admin-tab active" id="tab-schools"    onclick="switchTab('schools')">🏫 學校管理</button>
       <button class="admin-tab"        id="tab-curriculum" onclick="switchTab('curriculum')">📚 課程管理</button>
-      <button class="admin-tab"        id="tab-invites"    onclick="switchTab('invites')">🔑 邀請碼管理</button>
       <button class="admin-tab"        id="tab-settings"   onclick="switchTab('settings')">⚙️ 系統設定</button>
     </nav>
 
@@ -175,9 +173,9 @@
   <main class="admin-content">
   <div class="admin-main">
 
-    <!-- ① 全校總覽 -->
-    <div id="panel-overview">
-      <div class="stats-row-4" id="overview-stats">
+    <!-- 學校管理 -->
+    <div id="panel-schools">
+      <div class="stats-row-4" style="margin-bottom:20px">
         <div class="stat-card stat-blue">
           <div class="stat-num" id="stat-teachers">—</div>
           <div class="stat-lbl">教師人數</div>
@@ -197,48 +195,6 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🏫 所有班級
-          <button onclick="loadOverview()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
-        </div>
-        <div id="overview-classes-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ③ 學校管理 -->
-    <div id="panel-schools" style="display:none">
-
-      <!-- 全校名單批次匯入 -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">📥 全校學生名單批次匯入</div>
-        <div style="background:#f0f9ff;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:.8rem;font-weight:600;color:#0369a1;line-height:1.8">
-          <strong>Excel 格式（支援兩種）：</strong><br>
-          格式 A（四欄）：<code style="background:#e0f2fe;padding:1px 5px;border-radius:4px">年級 | 班號 | 座號 | 姓名</code>（年級/班號填數字）<br>
-          格式 B（三欄）：<code style="background:#e0f2fe;padding:1px 5px;border-radius:4px">班級名稱 | 座號 | 姓名</code>（如「3年1班」）<br>
-          第一列有無標頭均可，PIN 預設 0000。
-        </div>
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
-          <div>
-            <label style="font-size:.75rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">目標學校</label>
-            <select id="bulk-import-school"
-              style="border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.88rem;font-family:inherit;outline:none;min-width:180px">
-              <option value="">── 請選擇學校 ──</option>
-            </select>
-          </div>
-          <div>
-            <input type="file" id="bulk-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleBulkImportFile(this)">
-            <button onclick="triggerBulkImport()"
-              style="padding:9px 18px;border:1.5px solid #bfdbfe;border-radius:8px;background:#eff6ff;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit;color:#1d4ed8">
-              📂 選擇 Excel 檔案
-            </button>
-          </div>
-          <span id="bulk-import-filename" style="font-size:.78rem;color:var(--muted);font-weight:600;align-self:center"></span>
-        </div>
-        <div id="bulk-import-status" style="font-size:.82rem;font-weight:700"></div>
-      </div>
-
-      <div class="card">
         <div class="card-title">🏫 學校列表
           <button onclick="loadSchools()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
         </div>
@@ -248,15 +204,6 @@
         <div id="schools-wrap">
           <div class="loading-wrap"><div class="spinner"></div></div>
         </div>
-        <div class="add-admin-form" style="margin-top:14px">
-          <input id="new-school-name" type="text" class="add-admin-input"
-            placeholder="輸入學校名稱（例如：太平國小）"
-            onkeydown="if(event.key==='Enter')addSchool()">
-          <button class="btn-save-lesson" style="padding:9px 18px" onclick="addSchool()">
-            <span>＋</span><span>新增學校</span>
-          </button>
-        </div>
-        <div id="add-school-status" style="margin-top:10px;font-size:.82rem;font-weight:700"></div>
       </div>
     </div>
 
@@ -433,22 +380,7 @@
 
     </div><!-- /panel-curriculum -->
 
-    <!-- ④ 邀請碼管理 -->
-    <div id="panel-invites" style="display:none">
-      <div class="card">
-        <div class="card-title">🔑 所有班級邀請碼
-          <button onclick="loadInvites()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
-        </div>
-        <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-          停用邀請碼後，學生無法用該邀請碼加入班級（已加入的學生不受影響）。
-        </div>
-        <div id="invites-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ⑤ 系統設定 -->
+    <!-- 系統設定 -->
     <div id="panel-settings" style="display:none">
 
       <!-- 系統開關 -->
@@ -536,7 +468,6 @@
 <script src="schools.js"></script>
 <script src="../admin/curriculum-ui.js"></script>
 <script src="../admin/curriculum-data.js"></script>
-<script src="invites.js"></script>
 <script src="settings.js"></script>
 <script src="quiz-bank.js"></script>
 <script src="bulk-import.js"></script>
