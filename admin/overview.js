@@ -34,7 +34,9 @@ function loadClassRoster(classId) {
   db.collection('students').where('classIds', 'array-contains', classId).get()
     .then(function(snap) {
       var studentDocs = [];
-      snap.forEach(function(doc) { studentDocs.push({ id: doc.id, data: doc.data() }); });
+      snap.forEach(function(doc) {
+        if (!doc.id.startsWith('__preview__')) studentDocs.push({ id: doc.id, data: doc.data() });
+      });
 
       var totalEl = document.getElementById('roster-stat-total');
       if (totalEl) totalEl.textContent = studentDocs.length;

@@ -1,0 +1,194 @@
+/* shared/report.css — 用戶回報 Widget 樣式 */
+
+.report-btn {
+  position: fixed;
+  /* top / left 由 JS 動態設定 */
+  z-index: 9500;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid var(--border, #e2e8f0);
+  box-shadow: 0 2px 10px rgba(0,0,0,.14);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue, #4a90d9);
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+  transition: box-shadow .15s, border-color .15s, top .22s cubic-bezier(.25,.46,.45,.94), left .22s cubic-bezier(.25,.46,.45,.94);
+}
+.report-btn:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  border-color: var(--blue, #4a90d9);
+}
+.report-btn.r-dragging {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+  transition: box-shadow .15s;
+}
+
+.report-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9600;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.report-modal-box {
+  background: white;
+  border-radius: 18px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 16px 48px rgba(0,0,0,.22);
+  overflow: hidden;
+}
+
+.report-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1.5px solid var(--border, #e2e8f0);
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text, #1a1a2e);
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+}
+
+.report-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .95rem;
+  color: var(--muted, #94a3b8);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  line-height: 1;
+  transition: background .12s;
+}
+.report-modal-close:hover { background: var(--border, #e2e8f0); color: var(--text, #1a1a2e); }
+
+.report-modal-body {
+  padding: 18px 22px 22px;
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+}
+
+.report-field { margin-bottom: 14px; }
+
+.report-label {
+  display: block;
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--muted, #64748b);
+  margin-bottom: 6px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+.report-required { color: var(--red, #ef4444); }
+
+.report-type-group {
+  display: flex;
+  gap: 8px;
+}
+.report-type-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text, #1a1a2e);
+  transition: border-color .12s, background .12s, color .12s;
+  user-select: none;
+}
+.report-type-option.selected {
+  border-color: var(--blue, #4a90d9);
+  background: var(--blue-lt, #e8f4fd);
+  color: var(--blue-dk, #2d6fa8);
+}
+.report-type-option input { display: none; }
+
+.report-input,
+.report-textarea {
+  width: 100%;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: .9rem;
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+  outline: none;
+  color: var(--text, #1a1a2e);
+  transition: border-color .12s;
+  box-sizing: border-box;
+  resize: vertical;
+}
+.report-input:focus,
+.report-textarea:focus { border-color: var(--blue, #4a90d9); }
+
+.report-page-val {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  background: #f8fafc;
+  border-radius: 7px;
+  padding: 7px 10px;
+}
+
+.report-error {
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--red, #ef4444);
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+.report-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+.report-btn-cancel {
+  flex: 1;
+  padding: 10px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  background: white;
+  font-size: .88rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+  color: var(--muted, #64748b);
+  transition: background .12s;
+}
+.report-btn-cancel:hover { background: #f8fafc; }
+
+.report-btn-submit {
+  flex: 2;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: var(--blue, #4a90d9);
+  color: white;
+  font-size: .88rem;
+  font-weight: 900;
+  cursor: pointer;
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+  transition: background .12s;
+}
+.report-btn-submit:hover { background: var(--blue-dk, #2d6fa8); }
+.report-btn-submit:disabled { opacity: .6; cursor: not-allowed; }

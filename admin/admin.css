@@ -469,12 +469,12 @@ body {
 .badge-green { background:var(--green-lt); color:var(--green); }
 .badge-gray  { background:#f1f5f9; color:var(--muted); }
 .class-top-actions { display:flex; gap:6px; flex-shrink:0; }
-.btn-share-class {
+.btn-student-view {
   padding:6px 12px; border-radius:8px; border:1.5px solid #bfdbfe;
   background:#eff6ff; font-size:.78rem; font-weight:700; cursor:pointer;
   font-family:inherit; color:#1d4ed8; transition:all .15s;
 }
-.btn-share-class:hover { background:#dbeafe; }
+.btn-student-view:hover { background:#dbeafe; }
 .btn-cls-toggle {
   padding:6px 12px; border-radius:8px; border:1.5px solid var(--border);
   background:white; font-size:.78rem; font-weight:700; cursor:pointer;
@@ -501,7 +501,8 @@ body {
   font-family:inherit; color:var(--blue); flex-shrink:0; transition:all .15s;
 }
 .btn-copy-code:hover { background:#dbeafe; border-color:var(--blue); }
-.class-footer { font-size:.78rem; }
+.class-footer { font-size:.78rem; display:flex; align-items:center; flex-wrap:wrap; gap:8px; justify-content:space-between; }
+.class-footer-left { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .class-stat { font-weight:700; color:var(--gray); }
 .class-empty {
   text-align:center; padding:48px 20px; color:var(--muted);
@@ -655,8 +656,8 @@ body.dark .stroke-canvas-wrap  {
 /* 班級卡片 */
 body.dark .class-card           { background: #21262d; }
 body.dark .class-link-row       { background: #1c2128; }
-body.dark .btn-share-class      { background: #1c2d3f; color: var(--blue-dk); border-color: #1a4a7a; }
-body.dark .btn-share-class:hover{ background: var(--blue-lt); }
+body.dark .btn-student-view      { background: #1c2d3f; color: var(--blue-dk); border-color: #1a4a7a; }
+body.dark .btn-student-view:hover{ background: var(--blue-lt); }
 body.dark .btn-cls-toggle       { background: #21262d; }
 body.dark .btn-cls-delete       { background: #2c1515; }
 body.dark .btn-copy-code        { background: var(--blue-lt); }

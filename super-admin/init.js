@@ -45,6 +45,7 @@ window.addEventListener('load', function() {
 /* ── 驗證通過後初始化 ── */
 function onAdminReady() {
   switchTab('schools');
+  startUnreadBadge();
 }
 
 /* ── 登出 ── */
@@ -59,7 +60,7 @@ function doLogout() {
 }
 
 /* ── 分頁切換 ── */
-var TABS = ['schools', 'curriculum', 'settings'];
+var TABS = ['schools', 'curriculum', 'settings', 'reports'];
 
 function switchTab(tab) {
   TABS.forEach(function(t) {
@@ -69,6 +70,7 @@ function switchTab(tab) {
   if (tab === 'schools')    { loadSchoolStats(); loadSchools(); }
   if (tab === 'curriculum') loadVersions();
   if (tab === 'settings')   loadSettings();
+  if (tab === 'reports')    loadReports();
 }
 
 /* ── 課程管理內 App 子頁籤 ── */

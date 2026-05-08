@@ -616,6 +616,21 @@ window.addEventListener('load', function() {
     setTimeout(function() { showToast(welcome); }, 200);
   }
 
+  if (currentStudent.isPreview) {
+    var logoutBtn = document.querySelector('.btn-logout-hub');
+    if (logoutBtn) logoutBtn.textContent = '← 退出預覽';
+    var overlayTitle = document.querySelector('#logout-overlay .overlay-title');
+    var overlaySub   = document.querySelector('#logout-overlay .overlay-sub');
+    var overlayConfirm = document.querySelector('#logout-overlay .btn-confirm');
+    if (overlayTitle)   overlayTitle.textContent  = '要退出預覽嗎？';
+    if (overlaySub)     overlaySub.textContent    = '將返回教師後台。';
+    if (overlayConfirm) overlayConfirm.textContent = '退出預覽';
+    var pinSection = document.getElementById('pin-change-section');
+    if (pinSection) pinSection.style.display = 'none';
+    (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); })();
+    return;
+  }
+
   if (currentStudent.isGuest) {
     /* 訪客：隱藏 PIN 修改與班級管理，不載入 Firestore 資料 */
     var pinSection = document.getElementById('pin-change-section');

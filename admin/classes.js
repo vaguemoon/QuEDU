@@ -92,21 +92,10 @@ function renderClasses() {
     var topActions = isHomeroom
       ? ''
       : '<div class="class-top-actions">' +
-          '<button class="btn-share-class" onclick="showShareModal(\'' + escHtml(cls.name) + '\',\'' + cls.inviteCode + '\')">📤 分享</button>' +
+          '<button class="btn-student-view" onclick="enterStudentView(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👁 學生視角</button>' +
           '<button class="btn-cls-toggle" onclick="toggleClassActive(\'' + cls.id + '\',' + !cls.active + ')">' +
             (cls.active ? '停用' : '啟用') + '</button>' +
           '<button class="btn-cls-delete" onclick="confirmDeleteClass(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">刪除</button>' +
-        '</div>';
-
-    var footer = isHomeroom
-      ? '<div class="class-footer" id="cs-' + cls.id + '">' +
-          '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
-          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
-        '</div>'
-      : '<div class="class-footer" id="cs-' + cls.id + '">' +
-          '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
-          '<button class="btn-roster-add" onclick="showRosterAddModal(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👥 從名冊加入</button>' +
-          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
         '</div>';
 
     var codeRow = isHomeroom ? '' :
@@ -117,11 +106,24 @@ function renderClasses() {
         '<button class="btn-copy-code" onclick="copyCode(\'' + cls.inviteCode + '\')">複製邀請碼</button>' +
       '</div>';
 
+    var footer = isHomeroom
+      ? '<div class="class-footer" id="cs-' + cls.id + '">' +
+          '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
+          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
+        '</div>'
+      : '<div class="class-footer" id="cs-' + cls.id + '">' +
+          '<div class="class-footer-left">' +
+            '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
+            '<button class="btn-roster-add" onclick="showRosterAddModal(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👥 從名冊加入</button>' +
+            '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
+          '</div>' +
+          codeRow +
+        '</div>';
+
     return '<div class="class-card' + (inactive ? ' class-inactive' : '') + '" id="card-' + eid + '">' +
       '<div class="class-card-top">' +
         '<div class="class-info">' +
           nameBlock +
-          codeRow +
         '</div>' +
         topActions +
       '</div>' +
@@ -133,8 +135,10 @@ function renderClasses() {
   currentClasses.forEach(function(cls) {
     db.collection('students').where('classIds', 'array-contains', cls.id).get()
       .then(function(snap) {
+        var count = 0;
+        snap.forEach(function(doc) { if (!doc.id.startsWith('__preview__')) count++; });
         var el = document.getElementById('cs-count-' + cls.id);
-        if (el) el.textContent = '👥 ' + snap.size + ' 位學生已加入';
+        if (el) el.textContent = '👥 ' + count + ' 位學生已加入';
       }).catch(function() {});
   });
 }
@@ -312,80 +316,21 @@ function _generateStudentAccounts(classId, grade, classNumber, count) {
   return Promise.all(batches);
 }
 
-/* ── 分享 Modal ── */
-var APP_URL = 'https://vaguemoon.github.io/QuEDU/';
-var _shareCode = '';
-var _shareQR   = null;
-
-function showShareModal(className, inviteCode) {
-  _shareCode = inviteCode;
-
-  document.getElementById('share-modal-classname').textContent = className;
-  document.getElementById('share-url-text').textContent        = APP_URL;
-  document.getElementById('share-invite-code').textContent     = inviteCode;
-
-  /* 產生 QR Code（清除舊的再重建） */
-  var qrEl = document.getElementById('share-qrcode');
-  qrEl.innerHTML = '';
-  if (typeof QRCode !== 'undefined') {
-    new QRCode(qrEl, {
-      text:          APP_URL,
-      width:         160,
-      height:        160,
-      correctLevel:  QRCode.CorrectLevel.M
-    });
-  }
-
-  document.getElementById('share-modal').style.display = 'flex';
-}
-
-function hideShareModal() {
-  document.getElementById('share-modal').style.display = 'none';
-}
-
-function copyShareUrl() {
-  _copyText(APP_URL, 'App 網址已複製！');
-}
-
-function copyShareCode() {
-  _copyText(_shareCode, '邀請碼已複製：' + _shareCode);
-}
-
-function _copyText(text, msg) {
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text)
-      .then(function() { showToast('✅ ' + msg); })
-      .catch(function() { _fallback(text, msg); });
-  } else {
-    _fallback(text, msg);
-  }
-}
-
-function _fallback(text, msg) {
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;opacity:0';
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); showToast('✅ ' + msg); }
-  catch(e) { showToast('請手動複製'); }
-  document.body.removeChild(ta);
-}
-
-function nativeShare() {
-  if (navigator.share) {
-    navigator.share({
-      title: '上學趣 — 國字學習 App',
-      text:  '上學趣 App 邀請您加入班級！\n班級邀請碼：' + _shareCode + '\n加入後就能開始練習！',
-      url:   APP_URL
-    }).catch(function() {});
-  } else {
-    /* 桌面版瀏覽器：直接複製完整文字 */
-    _copyText(
-      '上學趣 App 邀請您加入班級！\n班級邀請碼：' + _shareCode + '\n加入後就能開始練習！\n' + APP_URL,
-      '分享文字已複製，貼到 LINE 或 Email 傳給家長！'
-    );
-  }
+/* ── 學生視角 ── */
+function enterStudentView(classId, className) {
+  if (!currentTeacher) return;
+  var name = currentTeacher.displayName || currentTeacher.email.split('@')[0] || '老師';
+  var session = {
+    id:               '__preview__' + currentTeacher.uid,
+    name:             name,
+    nickname:         name,
+    avatar:           '👨‍🏫',
+    classIds:         [classId],
+    isPreview:        true,
+    previewClassName: className
+  };
+  sessionStorage.setItem('hub_student', JSON.stringify(session));
+  window.location.href = '../hub.html';
 }
 
 /* ── 切換到班級學生名單 ── */

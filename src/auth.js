@@ -516,12 +516,17 @@ function doGoogleLogin() {
 function showLogoutConfirm() { document.getElementById('logout-overlay').classList.add('show'); }
 function hideLogoutConfirm() { document.getElementById('logout-overlay').classList.remove('show'); }
 function doLogout() {
+  var isPreview = !!(currentStudent && currentStudent.isPreview);
   currentStudent = null; loginPin = ''; regPin = '';
   sessionStorage.removeItem('hub_student');
   sessionStorage.removeItem('hub_welcome');
   var frame = document.getElementById('subject-frame');
   if (frame) frame.src = 'about:blank';
   hideLogoutConfirm();
+  if (isPreview) {
+    window.location.href = 'admin/index.html';
+    return;
+  }
   showToast('已登出，掰掰！👋');
   setTimeout(function() { window.location.href = 'login.html'; }, 500);
 }
