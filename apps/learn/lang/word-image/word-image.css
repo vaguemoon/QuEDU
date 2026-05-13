@@ -354,6 +354,22 @@
 /* ════════════════════════════
    最終慶祝畫面（Celebration）
    ════════════════════════════ */
+/* ════════════════════════════
+   煙花
+   ════════════════════════════ */
+.wi-fireworks {
+  position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden;
+}
+@keyframes wi-fw-burst {
+  0%   { transform: translate(0, 0) scale(1.3); opacity: 1; }
+  75%  { opacity: .9; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 70px)) scale(0); opacity: 0; }
+}
+.wi-fw-dot {
+  position: absolute; width: 9px; height: 9px; border-radius: 50%;
+  animation: wi-fw-burst 1.1s cubic-bezier(.1,.6,.3,1) forwards;
+}
+
 @keyframes wi-pop-in {
   0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
   65%  { transform: scale(1.25) rotate(5deg); opacity: 1; }
