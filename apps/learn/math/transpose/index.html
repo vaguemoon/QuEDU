@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>移項趣｜上學趣</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+<link rel="stylesheet" href="transpose.css">
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goBack()">← 返回</button>
+  <div id="topbar-title">↔ <span>移項趣</span></div>
+  <div id="topbar-right">
+    <div id="topbar-student" onclick="toggleLogoutMenu()">
+      <span id="topbar-avatar">🐣</span>
+      <span id="topbar-name">—</span>
+      <div id="topbar-logout-menu" class="logout-menu hidden">
+        <button class="lm-btn" onclick="goToSettings(event)">⚙️ 設定</button>
+        <button class="lm-btn lm-logout" onclick="sendLogout(event)">🚪 登出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: HOME ══════════════════ -->
+<div id="page-home" class="page page-fill active">
+  <div class="home-wrap">
+    <div class="home-title">↔ 移項趣</div>
+    <div class="home-sub">選擇題目類型，開始練習</div>
+    <div class="topic-cards">
+
+      <button class="topic-card topic-card--addSub" onclick="startGame('addSub')">
+        <div class="topic-card-icon">➕</div>
+        <div class="topic-card-title">加減移項</div>
+        <div class="topic-card-sub">3 = □ + 1</div>
+      </button>
+
+      <button class="topic-card topic-card--mulDiv" onclick="startGame('mulDiv')">
+        <div class="topic-card-icon">✖️</div>
+        <div class="topic-card-title">乘除移項</div>
+        <div class="topic-card-sub">12 = □ × 3</div>
+      </button>
+
+      <button class="topic-card topic-card--twoStep" onclick="startGame('twoStep')">
+        <div class="topic-card-icon">🔢</div>
+        <div class="topic-card-title">兩步驟</div>
+        <div class="topic-card-sub">10 = □ × 2 + 4</div>
+      </button>
+
+      <button class="topic-card topic-card--withX" onclick="startGame('withX')">
+        <div class="topic-card-icon">🔡</div>
+        <div class="topic-card-title">含未知數</div>
+        <div class="topic-card-sub">x + 1 = 3</div>
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: GAME ══════════════════ -->
+<div id="page-game" class="page">
+  <div class="game-wrap">
+
+    <!-- HUD：愛心 + 連勝 -->
+    <div class="game-hud">
+      <div class="hearts-row">
+        <span class="heart-icon" id="heart-0">❤️</span>
+        <span class="heart-icon" id="heart-1">❤️</span>
+        <span class="heart-icon" id="heart-2">❤️</span>
+      </div>
+      <div class="streak-box">
+        <span class="streak-label">連勝</span>
+        <span class="streak-val anim-pop" id="streak-val">0</span>
+      </div>
+    </div>
+
+    <!-- 拖曳提示 -->
+    <div id="drag-hint" class="drag-hint">把藍色項目拖過 <b>=</b> 到另一邊</div>
+
+    <!-- 方程式列 -->
+    <div id="eq-row" class="eq-row"></div>
+
+    <!-- 填空鍵盤（移項完成後顯示）-->
+    <div id="fill-pad" class="fill-pad" style="display:none">
+      <div class="fill-pad-row">
+        <button class="fill-btn" onclick="fillAppend('7')">7</button>
+        <button class="fill-btn" onclick="fillAppend('8')">8</button>
+        <button class="fill-btn" onclick="fillAppend('9')">9</button>
+      </div>
+      <div class="fill-pad-row">
+        <button class="fill-btn" onclick="fillAppend('4')">4</button>
+        <button class="fill-btn" onclick="fillAppend('5')">5</button>
+        <button class="fill-btn" onclick="fillAppend('6')">6</button>
+      </div>
+      <div class="fill-pad-row">
+        <button class="fill-btn" onclick="fillAppend('1')">1</button>
+        <button class="fill-btn" onclick="fillAppend('2')">2</button>
+        <button class="fill-btn" onclick="fillAppend('3')">3</button>
+      </div>
+      <div class="fill-pad-row">
+        <button class="fill-btn fill-del" onclick="fillBackspace()">⌫</button>
+        <button class="fill-btn" onclick="fillAppend('0')">0</button>
+        <button class="fill-btn fill-ok" onclick="onFillSubmit()">✓</button>
+      </div>
+    </div>
+
+    <button class="btn-end-game" onclick="goBack()">結束練習</button>
+
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: RESULT ══════════════════ -->
+<div id="page-result" class="page">
+  <div class="result-wrap">
+    <div class="result-icon">🎉</div>
+    <div class="result-title">本輪完成！</div>
+    <div class="result-stats">
+      <div class="result-stat-item">
+        <div class="result-stat-val" id="result-hearts">❤️❤️❤️</div>
+        <div class="result-stat-lbl">剩餘愛心</div>
+      </div>
+      <div class="result-stat-item">
+        <div class="result-stat-val" id="result-streak">0</div>
+        <div class="result-stat-lbl">最高連勝</div>
+      </div>
+      <div class="result-stat-item">
+        <div class="result-stat-val" id="result-correct">0</div>
+        <div class="result-stat-lbl">答對題數</div>
+      </div>
+    </div>
+    <div class="result-btns">
+      <button class="btn-result" onclick="restartSameTopic()">再玩一次</button>
+      <button class="btn-result btn-result-home"
+              onclick="PAGE_STACK=['home'];showPage('home',false);">換題目</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: SETTINGS ══════════════════ -->
+<div id="page-settings" class="page">
+  <div class="settings-body">
+    <div class="settings-section-title">頭像</div>
+    <div id="settings-avatar-grid" class="avatar-grid"></div>
+
+    <div class="settings-section-title">主題</div>
+    <div id="theme-grid"></div>
+
+    <div class="settings-section-title">音效</div>
+    <div class="sound-row">
+      <span class="sound-label">音效</span>
+      <div id="sound-toggle-btn" class="sound-toggle-btn" onclick="toggleSound()">
+        <div id="sound-toggle-knob" class="sound-toggle-knob"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ 遊戲結束 OVERLAY ══════════════════ -->
+<div id="gameover-overlay" class="overlay">
+  <div class="overlay-box">
+    <div class="overlay-icon">💔</div>
+    <div class="overlay-title">愛心用完了！</div>
+    <div id="gameover-streak" class="overlay-sub">最高連勝：0</div>
+    <div class="overlay-btns">
+      <button class="btn-cancel" onclick="goBackHome()">回首頁</button>
+      <button class="btn-confirm" style="background:linear-gradient(135deg,var(--blue),var(--blue-dk))"
+              onclick="restartSameTopic()">重新開始</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ TOAST ══════════════════ -->
+<div id="toast" class="toast"></div>
+
+<!-- ══════════════════ SCRIPTS ══════════════════ -->
+<script src="../../../../shared/shared.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/state.js"></script>
+<script src="js/questions.js"></script>
+<script src="js/render.js"></script>
+<script src="js/drag.js"></script>
+<script src="js/game.js"></script>
+<script src="js/init.js"></script>
+
+</body>
+</html>

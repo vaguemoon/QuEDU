@@ -56,6 +56,14 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'transpose', file: 'apps/learn/math/transpose/index.html',
+    icon: '↔', name: '移項趣', desc: '方程式移項練習',
+    type: 'learn', category: 'math',
+    theme: 'theme-green', badge: '移項趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('移項趣'); },
+    activity: function() { return Promise.resolve(null); }
+  },
+  {
     id: 'multiply', file: 'apps/learn/math/multiply/index.html',
     icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
     type: 'learn', category: 'math',
@@ -220,8 +228,8 @@ var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','�
 
 var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
-  'convert-back-to-hub','word-image-back'];
-var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout'];
+  'convert-back-to-hub','word-image-back','transpose-back-to-hub'];
+var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout'];
 
 // ── Hub 渲染 ──
 
