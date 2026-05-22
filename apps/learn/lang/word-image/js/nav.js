@@ -3,12 +3,14 @@
 var PAGE_STACK = [];
 
 var _PAGE_TITLES = {
-  grade:  '🖼️ 詞語趣',
-  lesson: '🖼️ 詞語趣',
-  mode:   '',          // set dynamically
-  browse: '圖卡瀏覽',
-  quiz:   '看圖猜詞',
-  result: '成績'
+  entry:        '🖼️ 詞語趣',
+  grade:        '🖼️ 詞語趣',
+  lesson:       '🖼️ 詞語趣',
+  mode:         '',           // dynamically set
+  'custom-cat': '',           // dynamically set
+  browse:       '圖卡瀏覽',
+  quiz:         '看圖猜詞',
+  result:       '成績'
 };
 
 function showPage(id, push) {
@@ -21,7 +23,7 @@ function showPage(id, push) {
   var backBtn = document.getElementById('topbar-back');
   var hubBtn  = document.getElementById('btn-back-hub');
   var titleEl = document.getElementById('topbar-title');
-  var isRoot  = (id === 'grade');
+  var isRoot  = (id === 'entry');
 
   if (backBtn) backBtn.classList.toggle('hidden', isRoot);
   if (hubBtn)  hubBtn.classList.toggle('hidden', !isRoot);
@@ -31,6 +33,10 @@ function showPage(id, push) {
       titleEl.textContent = currentLessonName
         ? (currentGrade + '　' + currentLessonName)
         : (currentGrade + '　第' + currentLesson + '課');
+    } else if (id === 'custom-cat') {
+      titleEl.textContent = currentCatPath.length
+        ? currentCatPath[currentCatPath.length - 1].name
+        : '自訂類別';
     } else {
       titleEl.textContent = _PAGE_TITLES[id] || '🖼️ 詞語趣';
     }
@@ -38,9 +44,44 @@ function showPage(id, push) {
 }
 
 function goBack() {
+  var current = PAGE_STACK[PAGE_STACK.length - 1];
+  /* 自訂類別導覽頁：由 catGoBack 處理層級返回 */
+  if (current === 'custom-cat') {
+    catGoBack();
+    return;
+  }
   if (PAGE_STACK.length <= 1) { backToHub(); return; }
   PAGE_STACK.pop();
   showPage(PAGE_STACK[PAGE_STACK.length - 1], false);
+}
+
+/* ── 自訂類別：返回上一層 ── */
+function catGoBack() {
+  currentCatPath.pop();
+  if (!currentCatPath.length) {
+    /* 回到頂層入口 */
+    currentCatId = '';
+    PAGE_STACK.pop();
+    showPage(PAGE_STACK[PAGE_STACK.length - 1], false);
+  } else {
+    currentCatId = currentCatPath[currentCatPath.length - 1].id;
+    _renderCatNode();
+    showPage('custom-cat', false);
+  }
+}
+
+/* ── 自訂類別：從成績頁返回類別節點 ── */
+function catReturnFromResult() {
+  /* 清掉 quiz/result/browse 等堆疊，保留 entry + custom-cat */
+  while (PAGE_STACK.length > 1 && PAGE_STACK[PAGE_STACK.length - 1] !== 'entry') {
+    if (PAGE_STACK[PAGE_STACK.length - 1] === 'custom-cat') break;
+    PAGE_STACK.pop();
+  }
+  if (PAGE_STACK[PAGE_STACK.length - 1] !== 'custom-cat') {
+    PAGE_STACK.push('custom-cat');
+  }
+  _renderCatNode();
+  showPage('custom-cat', false);
 }
 
 function backToHub() {
@@ -79,7 +120,7 @@ function _launchFireworks() {
   }, 5000);
 }
 
-/* ── 最終慶祝畫面（全部輪次完成） ── */
+/* ── 最終慶祝畫面 ── */
 function renderResultPage(score, total, rounds) {
   var pct   = total ? Math.round(score / total * 100) : 0;
   var emoji = pct >= 90 ? '🎉' : pct >= 70 ? '🏆' : '💪';
@@ -94,6 +135,12 @@ function renderResultPage(score, total, rounds) {
   sfxCelebrate();
   setTimeout(_launchFireworks, 100);
 
+  /* 返回按鈕依模式決定目標 */
+  var backClick = currentCatId
+    ? 'catReturnFromResult()'
+    : 'showPage(\'mode\', false)';
+  var backLabel = currentCatId ? '← 回類別' : '← 回選單';
+
   inner.innerHTML =
     '<div class="wi-celebrate-wrap">' +
       '<div class="wi-celebrate-emoji">' + emoji + '</div>' +
@@ -103,7 +150,7 @@ function renderResultPage(score, total, rounds) {
       roundNote +
       '<div class="wi-result-btns">' +
         '<button class="wi-btn-primary" onclick="startQuiz()">再玩一次</button>' +
-        '<button class="wi-btn-secondary" onclick="showPage(\'mode\', false)">← 回選單</button>' +
+        '<button class="wi-btn-secondary" onclick="' + backClick + '">' + backLabel + '</button>' +
       '</div>' +
     '</div>';
 }

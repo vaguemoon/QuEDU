@@ -7,11 +7,19 @@ var currentLessonName = '';
 var currentMode       = '';  // 'browse' | 'quiz'
 
 var wordImages   = [];  // 本課次圖片詞語 [{word, definition, imageUrl}]
-var wordProgress = {};  // { 'grade_lesson_word': { correct, wrong } }
+var wordProgress = {};  // { 'grade_lesson_word' | 'cat_catId_word': { correct, wrong } }
+
+/* ── 自訂類別導覽狀態 ── */
+var currentCatId   = '';  // 當前類別節點 ID（'' = 課程模式）
+var currentCatPath = [];  // [{id, name}] 麵包屑路徑
+
+/* ── 自訂類別資料 ── */
+var _rootCatIds = []; // 學生班級被指派的頂層類別 ID 清單
 
 /* ── Progress helpers ── */
 
 function getProgressKey(word) {
+  if (currentCatId) return 'cat_' + currentCatId + '_' + word;
   return currentGrade + '_' + currentLesson + '_' + word;
 }
 
@@ -56,5 +64,5 @@ function _escHtml(s) {
 function _escAttr(s) {
   return String(s)
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
 }

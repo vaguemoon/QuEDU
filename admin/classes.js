@@ -76,9 +76,11 @@ function renderClasses() {
       ? '<div class="class-name" id="cn-display-' + eid + '">' +
           escHtml(cls.name) +
           '<span style="font-size:.68rem;font-weight:800;color:#1e40af;background:#dbeafe;padding:2px 7px;border-radius:999px;margin-left:8px;vertical-align:middle">行政班</span>' +
+          '<span id="cs-count-' + cls.id + '" style="font-size:.72rem;font-weight:700;color:var(--muted);margin-left:10px;vertical-align:middle"></span>' +
         '</div>'
       : '<div class="class-name" id="cn-display-' + eid + '">' +
           escHtml(cls.name) +
+          '<span id="cs-count-' + cls.id + '" style="font-size:.72rem;font-weight:700;color:var(--muted);margin-left:10px;vertical-align:middle"></span>' +
           '<button class="btn-cls-edit" onclick="startEditClassName(\'' + eid + '\',\'' + escHtml(cls.name) + '\')" title="編輯班級名稱">✏️</button>' +
         '</div>' +
         '<div class="class-name-edit-row" id="cn-edit-' + eid + '" style="display:none">' +
@@ -90,7 +92,9 @@ function renderClasses() {
         '<div id="cn-error-' + eid + '" style="font-size:.75rem;color:var(--red);font-weight:700;margin-top:4px"></div>';
 
     var topActions = isHomeroom
-      ? ''
+      ? '<div class="class-top-actions">' +
+          '<button class="btn-student-view" onclick="enterStudentView(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👁 學生視角</button>' +
+        '</div>'
       : '<div class="class-top-actions">' +
           '<button class="btn-student-view" onclick="enterStudentView(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👁 學生視角</button>' +
           '<button class="btn-cls-toggle" onclick="toggleClassActive(\'' + cls.id + '\',' + !cls.active + ')">' +
@@ -100,6 +104,7 @@ function renderClasses() {
 
     var codeRow = isHomeroom ? '' :
       '<div class="class-code-row">' +
+        '<button class="btn-roster-add" onclick="showRosterAddModal(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👥 從名冊加入</button>' +
         '<span class="class-code">' + cls.inviteCode + '</span>' +
         '<span class="class-status-badge ' + (cls.active ? 'badge-green' : 'badge-gray') + '">' +
           (cls.active ? '邀請中' : '已停用') + '</span>' +
@@ -108,14 +113,11 @@ function renderClasses() {
 
     var footer = isHomeroom
       ? '<div class="class-footer" id="cs-' + cls.id + '">' +
-          '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
-          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
+          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">班級管理 →</button>' +
         '</div>'
       : '<div class="class-footer" id="cs-' + cls.id + '">' +
           '<div class="class-footer-left">' +
-            '<span class="class-stat" id="cs-count-' + cls.id + '" style="color:var(--muted);font-size:.78rem">載入中…</span>' +
-            '<button class="btn-roster-add" onclick="showRosterAddModal(\'' + eid + '\',\'' + escHtml(cls.name) + '\')">👥 從名冊加入</button>' +
-            '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">查看學生 →</button>' +
+            '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">班級管理 →</button>' +
           '</div>' +
           codeRow +
         '</div>';
@@ -138,7 +140,7 @@ function renderClasses() {
         var count = 0;
         snap.forEach(function(doc) { if (!doc.id.startsWith('__preview__')) count++; });
         var el = document.getElementById('cs-count-' + cls.id);
-        if (el) el.textContent = '👥 ' + count + ' 位學生已加入';
+        if (el) el.textContent = count + ' 位學生';
       }).catch(function() {});
   });
 }
@@ -341,13 +343,11 @@ function viewClassStudents(classId, className) {
   document.getElementById('classes-list-view').style.display = 'none';
   document.getElementById('class-roster-view').style.display = '';
   document.getElementById('roster-class-name').textContent = className;
-  var namesLabel = document.getElementById('roster-names-class-name');
-  if (namesLabel) namesLabel.textContent = className;
-  /* 切回進度頁籤（預設） */
+  /* 切回學生狀態頁籤（預設） */
   var progressView = document.getElementById('roster-progress-view');
-  var namesView    = document.getElementById('roster-names-view');
+  var tasksView    = document.getElementById('roster-tasks-view');
   if (progressView) progressView.style.display = '';
-  if (namesView)    namesView.style.display    = 'none';
+  if (tasksView)    tasksView.style.display    = 'none';
   var tabs = document.querySelectorAll('#roster-app-tabs .app-tab-mini');
   tabs.forEach(function(b, i) { b.classList.toggle('active', i === 0); });
   loadClassRoster(classId);
@@ -618,7 +618,10 @@ function saveClassName(classId) {
       /* 更新顯示文字（不重新整理整個列表，保留開啟狀態）*/
       var displayEl = document.getElementById('cn-display-' + classId);
       if (displayEl) {
+        var countEl = document.getElementById('cs-count-' + classId);
+        var countText = countEl ? countEl.textContent : '';
         displayEl.innerHTML = escHtml(newName)
+          + '<span id="cs-count-' + classId + '" style="font-size:.72rem;font-weight:700;color:var(--muted);margin-left:10px;vertical-align:middle">' + escHtml(countText) + '</span>'
           + '<button class="btn-cls-edit" onclick="startEditClassName(\'' + classId + '\',\'' + escHtml(newName).replace(/'/g,'&#39;') + '\')" title="編輯班級名稱">✏️</button>';
       }
       cancelEditClassName(classId);

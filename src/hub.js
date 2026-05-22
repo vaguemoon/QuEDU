@@ -591,6 +591,84 @@ function changePIN() {
     });
 }
 
+// ── 老師公告 / 班級任務 ──
+
+var _hubTasksClasses   = [];
+var _hubCompletedTasks = {};
+
+function loadHubTasks() {
+  if (!db || !currentStudent || currentStudent.isGuest) return;
+  var ids = currentStudent.classIds || [];
+  if (ids.length) {
+    _doLoadHubTasks(ids);
+  } else {
+    db.collection('students').doc(currentStudent.id).get()
+      .then(function(doc) {
+        var d = doc.exists ? doc.data() : {};
+        var fetched = d.classIds || (d.classId ? [d.classId] : []);
+        currentStudent.classIds = fetched;
+        sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+        _doLoadHubTasks(fetched);
+      }).catch(function() {});
+  }
+}
+
+function _doLoadHubTasks(classIds) {
+  if (!classIds.length) return;
+  Promise.all([
+    Promise.all(classIds.map(function(cid) {
+      return db.collection('classes').doc(cid).get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var d = doc.data();
+          return { id: cid, name: d.name || '', tasks: d.tasks || [] };
+        }).catch(function() { return null; });
+    })),
+    db.collection('students').doc(currentStudent.id).get()
+  ]).then(function(res) {
+    _hubTasksClasses   = res[0].filter(function(r) { return r && r.tasks.length; });
+    _hubCompletedTasks = (res[1].exists ? res[1].data().completedTasks : null) || {};
+    if (_hubTasksClasses.length) {
+      var section = document.getElementById('hub-tasks-section');
+      if (section) section.style.display = '';
+      renderHubTasks();
+    }
+  }).catch(function() {});
+}
+
+function renderHubTasks() {
+  var wrap = document.getElementById('hub-tasks-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = _hubTasksClasses.map(function(cls) {
+    return '<div class="hub-task-group">' +
+      '<div class="hub-task-class">' + escHtml(cls.name) + '</div>' +
+      cls.tasks.map(function(t) {
+        var done = !!_hubCompletedTasks[t.id];
+        var eid = t.id.replace(/['"]/g, '');
+        return '<div class="hub-task-row' + (done ? ' hub-task-done' : '') +
+          '" onclick="toggleHubTask(\'' + eid + '\')">' +
+          '<div class="hub-task-check">' + (done ? '✅' : '⬜') + '</div>' +
+          '<div class="hub-task-text">' + escHtml(t.text) + '</div>' +
+          '</div>';
+      }).join('') +
+      '</div>';
+  }).join('');
+}
+
+function toggleHubTask(taskId) {
+  if (!currentStudent || currentStudent.isGuest || !db) return;
+  var newVal = !_hubCompletedTasks[taskId];
+  if (newVal) { _hubCompletedTasks[taskId] = true; } else { delete _hubCompletedTasks[taskId]; }
+  renderHubTasks();
+  db.collection('students').doc(currentStudent.id).set(
+    { completedTasks: _hubCompletedTasks }, { merge: true }
+  ).catch(function(e) {
+    if (newVal) { delete _hubCompletedTasks[taskId]; } else { _hubCompletedTasks[taskId] = true; }
+    renderHubTasks();
+    showToast('儲存失敗：' + e.message);
+  });
+}
+
 // ── 接收 iframe 訊息 ──
 
 window.addEventListener('message', function(e) {
@@ -643,7 +721,7 @@ window.addEventListener('load', function() {
     if (overlayConfirm) overlayConfirm.textContent = '退出預覽';
     var pinSection = document.getElementById('pin-change-section');
     if (pinSection) pinSection.style.display = 'none';
-    (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); })();
+    (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); loadHubTasks(); })();
     return;
   }
 
@@ -657,5 +735,5 @@ window.addEventListener('load', function() {
     return;
   }
 
-  (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); })();
+  (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); loadHubTasks(); })();
 });

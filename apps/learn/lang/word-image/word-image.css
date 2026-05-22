@@ -416,6 +416,52 @@
 .wi-empty-text { font-size: .9rem; font-weight: 700; line-height: 1.7; }
 
 /* ════════════════════════════
+   頂層入口頁（選擇課程 / 自訂類別）
+   ════════════════════════════ */
+.wi-entry-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  max-width: 540px;
+  margin: 0 auto;
+}
+.wi-entry-card {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 36px 20px;
+  background: white; border: 2.5px solid var(--border);
+  border-radius: 22px;
+  font-family: inherit; cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 3px 12px rgba(0,0,0,.07);
+}
+.wi-entry-card:hover {
+  border-color: var(--blue); background: var(--blue-lt);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(37,99,235,.15);
+}
+.wi-entry-icon  { font-size: 3rem; line-height: 1; }
+.wi-entry-name  { font-size: 1.1rem; font-weight: 900; color: var(--blue-dk); }
+.wi-entry-desc  { font-size: .78rem; font-weight: 600; color: var(--muted); text-align: center; line-height: 1.5; }
+
+/* ════════════════════════════
+   自訂類別導覽（Custom Cat）
+   ════════════════════════════ */
+.wi-cat-bc {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 4px; margin-bottom: 16px; font-size: .9rem;
+}
+.wi-cat-bc-btn {
+  padding: 3px 8px; border-radius: 6px;
+  border: none; background: none; cursor: pointer;
+  color: var(--blue); font-weight: 700;
+  font-family: inherit; font-size: .9rem;
+  transition: background .15s;
+}
+.wi-cat-bc-btn:hover { background: var(--blue-lt); }
+.wi-cat-bc-curr { font-weight: 900; color: var(--text); padding: 3px 2px; }
+.wi-cat-bc-sep  { color: var(--muted); font-size: .85rem; }
+
+/* ════════════════════════════
    響應式：矮螢幕（≤ 640px 高）橫排版型
    ════════════════════════════ */
 @media (max-height: 640px) {

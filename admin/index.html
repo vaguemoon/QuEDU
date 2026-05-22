@@ -100,28 +100,13 @@
 
       <!-- 子視圖②：班級學生名單 -->
       <div id="class-roster-view" style="display:none">
-        <div class="stats-row">
-          <div class="stat-card stat-blue">
-            <div class="stat-num" id="roster-stat-total">—</div>
-            <div class="stat-lbl">班級學生</div>
-          </div>
-          <div class="stat-card stat-green">
-            <div class="stat-num" id="roster-stat-active">—</div>
-            <div class="stat-lbl">今日活躍</div>
-          </div>
-          <div class="stat-card stat-yellow">
-            <div class="stat-num" id="roster-stat-mastered">—</div>
-            <div class="stat-lbl" id="roster-stat-mastered-lbl">平均通過字數</div>
-          </div>
-        </div>
-        <!-- APP 頁籤列 -->
+        <!-- 頁籤列 -->
         <div class="app-tabs-mini" id="roster-app-tabs" style="margin-bottom:16px">
-          <button class="app-tab-mini active" onclick="switchRosterTab('chinese', this)">📖 識字趣</button>
-          <button class="app-tab-mini" onclick="switchRosterTab('multiply', this)">✖️ 乘法趣</button>
-          <button class="app-tab-mini" id="roster-tab-names" onclick="switchRosterTab('names', this)">👤 姓名管理</button>
+          <button class="app-tab-mini active" onclick="switchRosterTab('students', this)">👥 學生狀態</button>
+          <button class="app-tab-mini" id="roster-tab-tasks" onclick="switchRosterTab('tasks', this)">📢 公告</button>
         </div>
 
-        <!-- 進度名單 -->
+        <!-- 學生名單 -->
         <div id="roster-progress-view">
           <div class="card">
             <div class="card-title">
@@ -135,28 +120,27 @@
           </div>
         </div>
 
-        <!-- 姓名管理 -->
-        <div id="roster-names-view" style="display:none">
+        <!-- 班級公告 -->
+        <div id="roster-tasks-view" style="display:none">
           <div class="card">
             <div class="card-title">
               <button class="back-btn" style="margin:0;padding:0" onclick="backToClasses()">← 返回班級</button>
-              <span id="roster-names-class-name" style="margin-left:10px;font-weight:900"></span>
-              <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-                <input type="file" id="excel-import-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelFile(this)">
-                <button onclick="document.getElementById('excel-import-input').click()"
-                  style="padding:5px 12px;border:1.5px solid #bfdbfe;border-radius:7px;background:#eff6ff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;color:#1d4ed8">
-                  📥 匯入 Excel
-                </button>
-                <button onclick="loadNameManager()" style="padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
-              </div>
+              <span id="roster-tasks-class-name" style="margin-left:10px;font-weight:900"></span>
             </div>
-            <div style="font-size:.8rem;color:var(--muted);font-weight:600;padding:10px;background:#f8fafc;border-radius:8px;margin-bottom:14px">
-              填寫學生姓名後，老師在後台可識別學生身份。姓名不會顯示在學生登入畫面。<br>
-              <span style="color:#1d4ed8">Excel 格式：A欄座號、B欄姓名（或單欄姓名依序對應座號）</span>
-            </div>
-            <div id="name-manager-wrap">
+            <div id="tasks-list-wrap">
               <div class="loading-wrap"><div class="spinner"></div></div>
             </div>
+            <div style="display:flex;gap:8px;margin-top:16px">
+              <input id="new-task-input" type="text" placeholder="新增任務或提醒…" maxlength="100"
+                style="flex:1;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;outline:none;transition:border-color .2s"
+                onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"
+                onkeydown="if(event.key==='Enter')addClassTask()">
+              <button onclick="addClassTask()"
+                style="padding:9px 18px;background:var(--blue);color:white;border:none;border-radius:8px;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">
+                ＋ 新增
+              </button>
+            </div>
+            <div id="task-add-error" style="font-size:.78rem;color:var(--red);font-weight:700;min-height:18px;margin-top:4px"></div>
           </div>
         </div>
       </div>
@@ -757,7 +741,21 @@
       <div class="student-detail-header">
         <div class="student-avatar" id="detail-avatar"></div>
         <div class="student-name-wrap">
-          <div class="name" id="detail-name"></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="name" id="detail-name"></div>
+            <button id="btn-edit-name" onclick="startEditStudentName()"
+              style="background:none;border:none;cursor:pointer;font-size:.95rem;padding:2px 4px;line-height:1;opacity:.6;transition:opacity .15s"
+              onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6" title="編輯姓名">✏️</button>
+          </div>
+          <div id="detail-name-edit" style="display:none;align-items:center;gap:6px;margin-top:4px">
+            <input id="detail-name-input" type="text" maxlength="20"
+              style="padding:5px 10px;border:2px solid var(--blue);border-radius:8px;font-size:.95rem;font-family:inherit;outline:none;width:140px"
+              onkeydown="if(event.key==='Enter')saveStudentName();if(event.key==='Escape')cancelEditStudentName()">
+            <button onclick="saveStudentName()"
+              style="padding:5px 12px;background:var(--blue);color:white;border:none;border-radius:7px;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit">儲存</button>
+            <button onclick="cancelEditStudentName()"
+              style="padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">取消</button>
+          </div>
           <div class="sub" id="detail-sub"></div>
         </div>
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -775,11 +773,8 @@
         </div>
       </div>
 
-      <!-- APP 頁籤列 -->
-      <div class="app-tabs-mini" id="student-app-tabs" style="margin-bottom:16px">
-        <button class="app-tab-mini active" onclick="switchStudentTab('chinese', this)">📖 識字趣</button>
-        <button class="app-tab-mini" onclick="switchStudentTab('multiply', this)">✖️ 乘法趣</button>
-      </div>
+      <!-- APP 頁籤列（由 JS 動態產生） -->
+      <div class="app-tabs-mini" id="student-app-tabs" style="margin-bottom:16px"></div>
 
       <!-- 識字趣面板 -->
       <div id="student-panel-chinese">
@@ -970,7 +965,177 @@
   flex-shrink:0; transition:background .15s,color .15s;
 }
 .wi-search-btn:hover { background:var(--blue,#3182ce); color:white; }
+/* ── 模式切換列 ── */
+.wi-mode-bar {
+  display:flex; gap:8px; margin-bottom:18px;
+  border-bottom:2px solid var(--border); padding-bottom:12px;
+}
+.wi-mode-tab {
+  padding:8px 18px; border-radius:10px;
+  border:2px solid var(--border); background:white;
+  font-family:inherit; font-size:.88rem; font-weight:800;
+  cursor:pointer; color:var(--muted); transition:all .15s;
+}
+.wi-mode-tab.active {
+  background:var(--blue); border-color:var(--blue); color:white;
+}
+.wi-mode-tab:not(.active):hover { border-color:var(--blue); color:var(--blue); }
+/* ── 自訂類別列表 ── */
+.wi-cat-list { display:flex; flex-direction:column; gap:8px; }
+.wi-cat-item {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; padding:10px 14px;
+  background:white; border:1.5px solid var(--border);
+  border-radius:12px;
+}
+.wi-cat-item-name { font-size:.95rem; font-weight:800; color:var(--text); flex:1; min-width:0; }
+.wi-cat-item-btns { display:flex; gap:6px; flex-shrink:0; }
+.wi-cat-add-btn {
+  padding:7px 14px; border-radius:8px;
+  border:1.5px solid var(--blue); background:var(--blue-lt,#eef5fc);
+  color:var(--blue); font-family:inherit; font-size:.82rem; font-weight:800;
+  cursor:pointer; transition:all .15s; white-space:nowrap;
+}
+.wi-cat-add-btn:hover { background:var(--blue); color:white; }
+.wi-cat-enter-btn {
+  padding:5px 12px; border-radius:7px;
+  border:1.5px solid var(--border); background:white;
+  font-family:inherit; font-size:.8rem; font-weight:800;
+  cursor:pointer; color:var(--text); transition:all .15s; white-space:nowrap;
+}
+.wi-cat-enter-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-lt,#eef5fc); }
+.wi-cat-assign-btn {
+  padding:5px 12px; border-radius:7px;
+  border:1.5px solid var(--border); background:white;
+  font-family:inherit; font-size:.8rem; font-weight:800;
+  cursor:pointer; color:var(--muted); transition:all .15s; white-space:nowrap;
+}
+.wi-cat-assign-btn:hover { border-color:var(--blue); color:var(--blue); }
+.wi-cat-del-icon {
+  width:30px; height:30px; border-radius:7px;
+  border:1.5px solid var(--border); background:white;
+  font-size:.85rem; cursor:pointer; display:flex;
+  align-items:center; justify-content:center; transition:all .15s;
+}
+.wi-cat-del-icon:hover { background:var(--red-lt,#fde8e6); border-color:var(--red,#e53e3e); }
+.wi-cat-empty { color:var(--muted); padding:12px 0; font-weight:600; }
+/* ── 麵包屑 ── */
+.wi-cat-breadcrumb {
+  display:flex; align-items:center; flex-wrap:wrap;
+  gap:4px; margin-bottom:14px; font-size:.88rem;
+}
+.wi-cat-bc-btn {
+  padding:3px 8px; border-radius:6px;
+  border:none; background:none; cursor:pointer;
+  color:var(--blue); font-weight:700; font-family:inherit; font-size:.88rem;
+  transition:background .15s;
+}
+.wi-cat-bc-btn:hover { background:var(--blue-lt,#eef5fc); }
+.wi-cat-bc-curr { font-weight:900; color:var(--text); }
+.wi-cat-bc-sep { color:var(--muted); }
+/* ── 自訂類別區塊 ── */
+.wi-cat-section { margin-bottom:22px; }
+.wi-cat-section-hd {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:10px;
+}
+.wi-cat-section-title { font-size:.88rem; font-weight:800; color:var(--muted); }
+.wi-cat-del-word-btn {
+  margin:0 10px 10px; padding:4px 10px;
+  border:1.5px solid var(--muted); border-radius:6px;
+  background:white; color:var(--muted);
+  font-size:.72rem; font-weight:800; cursor:pointer; font-family:inherit;
+  align-self:flex-start; transition:all .15s;
+}
+.wi-cat-del-word-btn:hover { border-color:var(--red,#e53e3e); color:var(--red,#e53e3e); background:var(--red-lt,#fde8e6); }
+/* ── 指派班級列表 ── */
+.wi-assign-row {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:10px; cursor:pointer;
+  font-size:.9rem; font-weight:700; transition:background .12s;
+}
+.wi-assign-row:hover { background:var(--blue-lt,#eef5fc); }
+.wi-assign-row input { width:18px; height:18px; cursor:pointer; }
+.wi-batch-list { max-height:200px; overflow-y:auto; border:1px solid var(--border,#e0e0e0); border-radius:8px; }
+.wi-batch-row { display:flex; align-items:center; gap:8px; padding:5px 10px; border-bottom:1px solid var(--border,#eee); font-size:.85rem; }
+.wi-batch-row:last-child { border-bottom:none; }
+.wi-batch-dup { opacity:.45; }
+.wi-batch-word { font-weight:900; min-width:56px; flex-shrink:0; }
+.wi-batch-def { color:var(--muted); flex:1; font-size:.82rem; }
+.wi-batch-def em { font-style:normal; }
+.wi-batch-tag { font-size:.72rem; color:#c0392b; background:#ffeef0; border-radius:4px; padding:1px 6px; flex-shrink:0; }
 </style>
+
+<!-- ══ 自訂類別：新增詞語 Modal ══ -->
+<div id="wi-cat-word-modal" style="display:none;position:fixed;inset:0;z-index:601;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:440px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div style="font-size:1.05rem;font-weight:900;margin-bottom:18px">＋ 新增詞語</div>
+
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">詞語</label>
+    <input id="wi-cat-word-input" type="text" placeholder="例如：蘋果" maxlength="20"
+      style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:1.1rem;font-family:inherit;outline:none;margin-bottom:14px;box-sizing:border-box">
+
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">解釋</label>
+    <input id="wi-cat-def-input" type="text" placeholder="例如：一種紅色的水果" maxlength="60"
+      style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:18px;box-sizing:border-box">
+
+    <div style="display:flex;gap:10px">
+      <button onclick="_wiCatCloseWordModal()"
+        style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt,#f5f5f5);font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;color:var(--muted)">
+        取消
+      </button>
+      <button onclick="_wiCatConfirmAddWord()"
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-family:inherit;font-size:.9rem;font-weight:900;cursor:pointer">
+        確認新增
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 自訂類別：批次匯入詞語 Modal ══ -->
+<div id="wi-cat-batch-modal" style="display:none;position:fixed;inset:0;z-index:601;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:500px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div style="font-size:1.05rem;font-weight:900;margin-bottom:6px">📋 批次匯入詞語</div>
+    <div style="font-size:.78rem;color:var(--muted);margin-bottom:14px;line-height:1.65">
+      每行一個詞語，格式：<code style="background:var(--bg,#f5f5f5);padding:1px 5px;border-radius:4px">詞語,解釋</code>
+      或 <code style="background:var(--bg,#f5f5f5);padding:1px 5px;border-radius:4px">詞語[Tab]解釋</code><br>
+      解釋可省略；重複詞語自動跳過。
+    </div>
+    <textarea id="wi-cat-batch-input" rows="7"
+      placeholder="蘋果,一種紅色的水果&#10;香蕉,黃色彎曲的水果&#10;西瓜"
+      oninput="_wiCatParseBatchInput()"
+      style="width:100%;border:2px solid var(--border,#ddd);border-radius:10px;padding:10px 12px;font-size:.9rem;font-family:inherit;outline:none;resize:vertical;box-sizing:border-box;line-height:1.65"></textarea>
+    <div id="wi-cat-batch-preview"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button onclick="_wiCatCloseBatchWord()"
+        style="flex:1;padding:11px;border:2px solid var(--border,#ddd);border-radius:10px;background:var(--gray-lt,#f5f5f5);font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;color:var(--muted)">
+        取消
+      </button>
+      <button id="wi-cat-batch-confirm-btn" onclick="_wiCatConfirmBatch()" disabled
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-family:inherit;font-size:.9rem;font-weight:900;cursor:pointer">
+        確認匯入
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 自訂類別：指派班級 Modal ══ -->
+<div id="wi-cat-assign-modal" style="display:none;position:fixed;inset:0;z-index:601;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:440px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div id="wi-cat-assign-title" style="font-size:1.05rem;font-weight:900;margin-bottom:18px">指派給班級</div>
+    <div id="wi-cat-assign-list" style="max-height:300px;overflow-y:auto;margin-bottom:18px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="_wiCatCloseAssign()"
+        style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt,#f5f5f5);font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;color:var(--muted)">
+        取消
+      </button>
+      <button onclick="_wiCatSaveAssign()"
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-family:inherit;font-size:.9rem;font-weight:900;cursor:pointer">
+        儲存指派
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ 音檔錄製 Modal ══ -->
 <div id="ac-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
@@ -1022,8 +1187,8 @@
 <script src="init.js"></script>
 <script src="classes.js"></script>
 <script src="teacher-school.js"></script>
-<script src="name-manager.js"></script>
 <script src="overview.js"></script>
+<script src="tasks.js"></script>
 <script src="students.js"></script>
 <script src="quiz-bank.js"></script>
 <script src="quiz-sessions.js"></script>
