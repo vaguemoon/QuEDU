@@ -220,8 +220,9 @@ function _qsRenderList() {
     }
     html += '<div style="font-size:.78rem;font-weight:700;color:var(--muted);margin-top:2px">' +
       (metaParts.length ? metaParts.join('　') : '') + '</div>';
+    var matchCount  = counts.match || (d.matchSections || []).reduce(function(s, m){ return s + (m.pairCount || 0); }, 0);
     var countDetail = d.type === 'exam'
-      ? '共 ' + total + ' 題'
+      ? '共 ' + total + ' 題' + (matchCount ? '　詞圖配對 ' + matchCount + ' 組' : '')
       : '解釋 ' + (counts.explain || 0) + '／填空 ' + (counts.fillIn || 0) + '／選擇 ' + (counts.mc || 0) + '　共 ' + total + ' 題';
     html += '<div style="font-size:.75rem;color:var(--muted);margin-top:2px">建立：' + date + '　' + countDetail + '</div>';
 

@@ -176,6 +176,7 @@ async function startSharedQuiz(sessionId) {
       }
     };
     if (d.questionIds && d.questionIds.length) settings.questionIds = d.questionIds;
+    if (d.matchSections && d.matchSections.length) settings.matchSections = d.matchSections;
     sessionStorage.setItem('quiz_settings', JSON.stringify(settings));
     window.location.href = 'quiz.html';
   } catch(e) {

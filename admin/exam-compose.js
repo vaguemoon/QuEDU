@@ -19,6 +19,7 @@ var _ecSections   = [];        // [{ title, key, collapsed, questions:[{id,label
 var _ecAllQ       = [];        // 從 Firestore 讀入（含 id）
 var _ecAllQSub    = '';        // _ecAllQ 對應的 subject（快取判斷用）
 var _ecSelected   = {};        // { docId: true }
+var _ecMatchSections = [];   // [{title,source,gradeLesson,categoryId,pairCount,wordIds:[],words:[]}]
 
 /* 中文數字排序表 */
 var _CN_MAP = {
@@ -58,9 +59,10 @@ function _ecNewDraft() {
   _ecVolume     = '';
   _ecLesson     = '';
   _ecLessonName = '';
-  _ecSections   = [];
-  _ecSelected   = {};
-  _ecAllQ       = [];
+  _ecSections      = [];
+  _ecSelected      = {};
+  _ecAllQ          = [];
+  _ecMatchSections = [];
   _ecOpenWizard(1);
 }
 
@@ -78,9 +80,10 @@ function _ecEditSession(sessionId) {
     _ecVolume     = d.volume     || '';
     _ecLesson     = d.lesson     || '';
     _ecLessonName = d.lessonName || '';
-    _ecSelected   = {};
-    _ecSections   = [];
-    _ecAllQ       = [];
+    _ecSelected      = {};
+    _ecSections      = [];
+    _ecAllQ          = [];
+    _ecMatchSections = (d.matchSections || []).slice();
 
     var questionIds = d.questionIds || [];
     questionIds.forEach(function(id) { _ecSelected[id] = true; });
@@ -498,7 +501,7 @@ function _ecDeselectAll() {
 function _ecValidateStep2() {
   var cnt = Object.keys(_ecSelected).length;
   var err = document.getElementById('ec-step2-err');
-  if (!cnt) { if (err) err.textContent = '請至少選擇一道題目'; return false; }
+  if (!cnt && !_ecMatchSections.length) { if (err) err.textContent = '請至少選擇一道題目'; return false; }
   if (err) err.textContent = '';
   _ecBuildSections();
   return true;
@@ -593,10 +596,11 @@ function _ecRenderLayout() {
 
   var totalQ = 0;
   _ecSections.forEach(function(sec) { totalQ += (sec.questions || []).length; });
+  _ecMatchSections.forEach(function(msec) { totalQ += msec.pairCount || 0; });
   var cntEl = document.getElementById('ec-layout-count');
   if (cntEl) cntEl.textContent = totalQ;
 
-  if (!_ecSections.length) {
+  if (!_ecSections.length && !_ecMatchSections.length) {
     wrap.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:12px">尚未選擇任何題目</p>';
     return;
   }
@@ -604,7 +608,7 @@ function _ecRenderLayout() {
   var bs = 'padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:white;' +
            'cursor:pointer;font-size:.75rem;font-family:inherit';
 
-  wrap.innerHTML = _ecSections.map(function(sec, si) {
+  var textHtml = _ecSections.map(function(sec, si) {
     var qCount    = (sec.questions || []).length;
     var collapsed = !!sec.collapsed;
     var arrow     = collapsed ? '▶' : '▼';
@@ -639,6 +643,26 @@ function _ecRenderLayout() {
 
     return '<div style="margin-bottom:10px">' + header + body + '</div>';
   }).join('');
+
+  var matchHtml = _ecMatchSections.map(function(msec, i) {
+    var secNum    = _EC_CN[_ecSections.length + i] || String(_ecSections.length + i + 1);
+    var fullTitle = secNum + '、' + _ecEsc(msec.title);
+    var srcDesc   = msec.source === 'curriculum'
+      ? _ecEsc(msec.gradeLesson.replace('_', ' 第') + ' 課')
+      : '自訂類別';
+    return '<div style="margin-bottom:10px">' +
+      '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;' +
+      'background:var(--orange-lt,#fff7ed);border-radius:10px;border:1.5px solid var(--orange,#f97316)">' +
+        '<span style="font-size:.92rem;font-weight:900;color:var(--orange-dk,#c2410c);flex:1">🖼 ' + fullTitle + '</span>' +
+        '<span style="font-size:.75rem;color:var(--muted);margin-right:4px">' +
+          msec.pairCount + ' 組 · ' + srcDesc + '</span>' +
+        '<button onclick="_ecEditMatchSectionTitle(' + i + ')" style="' + bs + ';color:var(--orange,#f97316)">改標題</button>' +
+        '<button onclick="_ecRemoveMatchSection(' + i + ')" style="' + bs + ';color:var(--red);border-color:#fecaca">✕</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  wrap.innerHTML = textHtml + matchHtml;
 }
 
 function _ecToggleSection(si) {
@@ -685,22 +709,32 @@ function _ecRemoveQ(si, qi) {
 function _ecRenderPreview() {
   var totalQ = 0;
   _ecSections.forEach(function(sec) { totalQ += (sec.questions || []).length; });
+  var matchTotal = 0;
+  _ecMatchSections.forEach(function(msec) { matchTotal += msec.pairCount || 0; });
   var el = document.getElementById('ec-preview-summary');
   if (!el) return;
   var metaStr = _ecSubject === 'math' ? '數學' : '語文';
   if (_ecGrade)     metaStr += ' · ' + _ecEsc(_ecGrade);
   if (_ecLesson)    metaStr += ' · 第 ' + _ecEsc(_ecLesson) + ' 課' + (_ecLessonName ? '　' + _ecEsc(_ecLessonName) : '');
   else if (_ecGrade) metaStr += ' · 全冊／跨課次';
-  metaStr += ' · 共 ' + _ecSections.length + ' 大題，' + totalQ + ' 題';
+  var totalSec = _ecSections.length + _ecMatchSections.length;
+  metaStr += ' · 共 ' + totalSec + ' 大題，' + (totalQ + matchTotal) + ' 題';
+
+  var textSecHtml = _ecSections.map(function(sec) {
+    return '<span style="display:inline-block;margin-right:12px">▪ ' + _ecEsc(sec.title) +
+           '（' + (sec.questions || []).length + ' 題）</span>';
+  }).join('');
+  var matchSecHtml = _ecMatchSections.map(function(msec, i) {
+    var secNum = _EC_CN[_ecSections.length + i] || String(_ecSections.length + i + 1);
+    return '<span style="display:inline-block;margin-right:12px">🖼 ' + secNum + '、' +
+           _ecEsc(msec.title) + '（' + msec.pairCount + ' 組）</span>';
+  }).join('');
 
   el.innerHTML =
     '<div style="font-size:1.08rem;font-weight:900;color:var(--text)">' + _ecEsc(_ecName) + '</div>' +
     '<div style="font-size:.82rem;color:var(--muted);margin-top:4px">' + metaStr + '</div>' +
-    (_ecSections.length ? '<div style="margin-top:8px;font-size:.8rem;color:var(--muted);line-height:1.8">' +
-      _ecSections.map(function(sec) {
-        return '<span style="display:inline-block;margin-right:12px">▪ ' + _ecEsc(sec.title) +
-               '（' + (sec.questions || []).length + ' 題）</span>';
-      }).join('') + '</div>' : '');
+    (totalSec ? '<div style="margin-top:8px;font-size:.8rem;color:var(--muted);line-height:1.8">' +
+      textSecHtml + matchSecHtml + '</div>' : '');
 }
 
 /* ── 發布／更新線上測驗 ── */
@@ -710,7 +744,17 @@ function _ecPublishOnline() {
   _ecSections.forEach(function(sec) {
     (sec.questions || []).forEach(function(q) { questionIds.push(q.id); totalQ++; });
   });
-  if (!totalQ) { showToast('試卷中尚無題目'); return; }
+  var matchTotal = 0;
+  _ecMatchSections.forEach(function(msec) { matchTotal += msec.pairCount || 0; });
+  if (!totalQ && !matchTotal) { showToast('試卷中尚無題目'); return; }
+
+  var matchSectionsData = _ecMatchSections.map(function(msec) {
+    return {
+      title: msec.title, source: msec.source,
+      gradeLesson: msec.gradeLesson || '', categoryId: msec.categoryId || '',
+      pairCount: msec.pairCount, wordIds: msec.wordIds || [], words: msec.words || []
+    };
+  });
 
   var isUpdate = !!_ecSessionId;
   var confirmMsg = isUpdate
@@ -729,11 +773,12 @@ function _ecPublishOnline() {
   if (isUpdate) {
     /* 更新既有測驗，保留 code / active / createdAt */
     var updateData = Object.assign(
-      { name: _ecName, grade: _ecGrade, questionIds: questionIds, updatedAt: new Date().toISOString() },
+      { name: _ecName, grade: _ecGrade, questionIds: questionIds,
+        matchSections: matchSectionsData, updatedAt: new Date().toISOString() },
       lessonFields
     );
     if (_ecSubject === 'math') updateData.totalQuestions = totalQ;
-    else                       updateData.counts = { total: totalQ };
+    else                       updateData.counts = { total: totalQ, match: matchTotal };
     p = db.collection(coll).doc(_ecSessionId).update(updateData)
           .then(function() { return { id: _ecSessionId, isUpdate: true }; });
   } else {
@@ -743,8 +788,9 @@ function _ecPublishOnline() {
           grade: _ecGrade, questionIds: questionIds, totalQuestions: totalQ,
           active: true, createdAt: new Date().toISOString() }, lessonFields)
       : Object.assign({ type: 'exam', name: _ecName, code: code, teacherUid: currentTeacher.uid,
-          grade: _ecGrade, questionIds: questionIds,
-          counts: { total: totalQ }, active: true, createdAt: new Date().toISOString() }, lessonFields);
+          grade: _ecGrade, questionIds: questionIds, matchSections: matchSectionsData,
+          counts: { total: totalQ, match: matchTotal },
+          active: true, createdAt: new Date().toISOString() }, lessonFields);
     p = db.collection(coll).add(newData)
           .then(function(ref) { return { id: ref.id, code: code, isUpdate: false }; });
   }
@@ -831,4 +877,203 @@ function _ecBtn(color) {
     (color === 'red'  ? 'border:1.5px solid #fecaca;color:var(--red)'
     : color === 'blue' ? 'border:1.5px solid var(--blue);color:var(--blue)'
     :                    'border:1.5px solid var(--border);color:var(--text)');
+}
+
+/* ════════════════════════════════
+   詞圖配對 modal
+   ════════════════════════════════ */
+function _ecOpenMatchModal() {
+  var modal = document.getElementById('ec-match-modal');
+  if (!modal) return;
+  var titleEl = document.getElementById('ec-match-title');
+  var pairsEl = document.getElementById('ec-match-pairs');
+  var prevEl  = document.getElementById('ec-match-preview');
+  if (titleEl) titleEl.value = '';
+  if (pairsEl) pairsEl.value = '6';
+  if (prevEl)  prevEl.textContent = '';
+  var radCurr = document.querySelector('input[name="ec-match-source"][value="curriculum"]');
+  if (radCurr) { radCurr.checked = true; _ecMatchSourceChange('curriculum'); }
+  _ecMatchLoadCustomCategories();
+  modal.style.display = 'flex';
+}
+
+function _ecCloseMatchModal() {
+  var modal = document.getElementById('ec-match-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function _ecMatchSourceChange(source) {
+  var currRow = document.getElementById('ec-match-curriculum-row');
+  var custRow = document.getElementById('ec-match-custom-row');
+  if (currRow) currRow.style.display = source === 'curriculum' ? '' : 'none';
+  if (custRow) custRow.style.display = source === 'custom'     ? '' : 'none';
+  var prevEl = document.getElementById('ec-match-preview');
+  if (prevEl) prevEl.textContent = '';
+}
+
+function _ecMatchLoadCustomCategories() {
+  if (!db || !currentTeacher) return;
+  var catSel = document.getElementById('ec-match-category');
+  if (!catSel) return;
+  db.collection('wordImages').where('teacherUid', '==', currentTeacher.uid).get()
+    .then(function(snap) {
+      var cats = {};
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        if (d.customCategoryId) cats[d.customCategoryId] = d.customCategoryName || d.customCategoryId;
+      });
+      catSel.innerHTML = '<option value="">選擇類別…</option>' +
+        Object.keys(cats).sort().map(function(id) {
+          return '<option value="' + _ecEscA(id) + '">' + _ecEsc(cats[id]) + '</option>';
+        }).join('');
+    }).catch(function() {});
+}
+
+function _ecMatchUpdateGrade() {
+  var gradeNum  = ((document.getElementById('ec-match-grade-num') || {}).value || '');
+  var semester  = ((document.getElementById('ec-match-version')   || {}).value || '');
+  var lessonSel = document.getElementById('ec-match-lesson');
+  var prevEl    = document.getElementById('ec-match-preview');
+  if (!lessonSel) return;
+  if (prevEl) prevEl.textContent = '';
+  if (!gradeNum || !semester) {
+    lessonSel.innerHTML = '<option value="">課次</option>';
+    return;
+  }
+  var gradeKey = gradeNum + semester;
+  lessonSel.innerHTML = '<option value="">載入中…</option>';
+  db.collection('wordImages')
+    .where('gradeLesson', '>=', gradeKey + '_')
+    .where('gradeLesson', '<',  gradeKey + '_')
+    .get()
+    .then(function(snap) {
+      var lessons = {};
+      snap.forEach(function(doc) {
+        var gl = doc.data().gradeLesson || '';
+        var us = gl.indexOf('_');
+        if (us >= 0) lessons[gl.slice(us + 1)] = true;
+      });
+      var list = Object.keys(lessons).sort(function(a, b) {
+        var na = _CN_MAP[a], nb = _CN_MAP[b];
+        if (na !== undefined && nb !== undefined) return na - nb;
+        return String(a).localeCompare(String(b));
+      });
+      if (!list.length) {
+        lessonSel.innerHTML = '<option value="">（此年級無圖庫）</option>';
+        return;
+      }
+      lessonSel.innerHTML = '<option value="">選擇課次…</option>' +
+        list.map(function(l) {
+          return '<option value="' + _ecEscA(l) + '">第 ' + _ecEsc(l) + ' 課</option>';
+        }).join('');
+    }).catch(function() { lessonSel.innerHTML = '<option value="">課次</option>'; });
+}
+
+function _ecMatchLoadPreview() {
+  var srcEl   = document.querySelector('input[name="ec-match-source"]:checked');
+  var prevEl  = document.getElementById('ec-match-preview');
+  var pairsEl = document.getElementById('ec-match-pairs');
+  if (!srcEl || !prevEl) return;
+  var src        = srcEl.value;
+  var pairCount  = parseInt((pairsEl || {}).value || '6', 10);
+  var query;
+
+  if (src === 'curriculum') {
+    var gradeNum = ((document.getElementById('ec-match-grade-num') || {}).value || '');
+    var semester = ((document.getElementById('ec-match-version')   || {}).value || '');
+    var lesson   = ((document.getElementById('ec-match-lesson')    || {}).value || '');
+    if (!gradeNum || !semester || !lesson) return;
+    query = db.collection('wordImages').where('gradeLesson', '==', gradeNum + semester + '_' + lesson);
+  } else {
+    var catId = ((document.getElementById('ec-match-category') || {}).value || '');
+    if (!catId) return;
+    query = db.collection('wordImages')
+      .where('teacherUid', '==', currentTeacher.uid)
+      .where('customCategoryId', '==', catId);
+  }
+
+  prevEl.textContent = '讀取中…';
+  query.get().then(function(snap) {
+    var total = snap.size;
+    if (!total) { prevEl.textContent = '此來源尚無圖片'; return; }
+    var words = [];
+    snap.forEach(function(doc) { words.push(doc.data().word || ''); });
+    var pc = Math.min(pairCount, total);
+    prevEl.textContent = '共 ' + total + ' 張圖片，將隨機選取 ' + pc + ' 組。' +
+      '範例詞語：' + words.slice(0, 4).join('、') + (total > 4 ? '…' : '');
+  }).catch(function() { prevEl.textContent = '載入失敗'; });
+}
+
+function _ecConfirmMatchSection() {
+  var title     = ((document.getElementById('ec-match-title')   || {}).value || '').trim();
+  var pairCount = parseInt(((document.getElementById('ec-match-pairs') || {}).value || '6'), 10);
+  var srcEl     = document.querySelector('input[name="ec-match-source"]:checked');
+  var src       = srcEl ? srcEl.value : 'curriculum';
+  var confirmBtn = document.getElementById('ec-match-confirm-btn');
+
+  if (!title) { showToast('請輸入題組標題'); return; }
+  if (isNaN(pairCount) || pairCount < 1) pairCount = 4;
+  if (pairCount > 8) pairCount = 8;
+
+  var gradeLesson = '', categoryId = '', query;
+  if (src === 'curriculum') {
+    var gradeNum = ((document.getElementById('ec-match-grade-num') || {}).value || '');
+    var semester = ((document.getElementById('ec-match-version')   || {}).value || '');
+    var lesson   = ((document.getElementById('ec-match-lesson')    || {}).value || '');
+    if (!gradeNum || !semester || !lesson) { showToast('請選擇年級、學期和課次'); return; }
+    gradeLesson = gradeNum + semester + '_' + lesson;
+    query = db.collection('wordImages').where('gradeLesson', '==', gradeLesson);
+  } else {
+    categoryId = ((document.getElementById('ec-match-category') || {}).value || '');
+    if (!categoryId) { showToast('請選擇自訂類別'); return; }
+    query = db.collection('wordImages')
+      .where('teacherUid', '==', currentTeacher.uid)
+      .where('customCategoryId', '==', categoryId);
+  }
+
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '載入中…'; }
+
+  query.get().then(function(snap) {
+    var docs = [];
+    snap.forEach(function(doc) { docs.push({ id: doc.id, word: doc.data().word || '' }); });
+    if (!docs.length) {
+      showToast('此來源尚無圖片，請先至圖庫上傳');
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '加入'; }
+      return;
+    }
+    /* Fisher-Yates shuffle */
+    for (var i = docs.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = docs[i]; docs[i] = docs[j]; docs[j] = tmp;
+    }
+    var selected = docs.slice(0, pairCount);
+    _ecMatchSections.push({
+      title: title, source: src,
+      gradeLesson: gradeLesson, categoryId: categoryId,
+      pairCount: selected.length,
+      wordIds: selected.map(function(d) { return d.id; }),
+      words:   selected.map(function(d) { return d.word; })
+    });
+    _ecCloseMatchModal();
+    _ecRenderLayout();
+    showToast('已加入詞圖配對大題：' + title);
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '加入'; }
+  }).catch(function(e) {
+    showToast('載入失敗：' + e.message);
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '加入'; }
+  });
+}
+
+function _ecRemoveMatchSection(i) {
+  _ecMatchSections.splice(i, 1);
+  _ecRenderLayout();
+}
+
+function _ecEditMatchSectionTitle(i) {
+  var msec = _ecMatchSections[i];
+  if (!msec) return;
+  var text = prompt('請輸入大題標題', msec.title || '');
+  if (text === null || !text.trim()) return;
+  msec.title = text.trim();
+  _ecRenderLayout();
 }

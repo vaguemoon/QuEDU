@@ -917,3 +917,90 @@ body {
 .shared-quiz-meta  { font-size: .75rem; color: var(--ink-lt); font-weight: 600; margin-top: 3px; }
 .shared-quiz-arrow { font-size: 1.3rem; color: #bbb; margin-left: auto; flex-shrink: 0; }
 
+/* ═══ 詞圖配對 ═══ */
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  padding: 0 4px;
+}
+
+.match-pair {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 8px 6px;
+  background: var(--paper);
+  border: 1.5px solid var(--rule);
+}
+.match-pair.graded-correct { border-color: var(--correct); background: var(--correct-lt); }
+.match-pair.graded-wrong   { border-color: var(--wrong);   background: var(--wrong-lt);   }
+
+.match-image {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.match-slot {
+  width: 100%;
+  min-height: 36px;
+  border: 1.5px dashed var(--rule);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--ink-lt);
+  background: rgba(255,255,255,.6);
+  padding: 4px 6px;
+  text-align: center;
+  position: relative;
+  touch-action: none;
+}
+.match-slot.drag-over {
+  border-color: var(--accent);
+  background: rgba(45,111,168,.08);
+}
+.match-slot.match-slot-filled {
+  border-style: solid;
+  border-color: var(--rule);
+  color: var(--ink);
+  background: white;
+  padding-right: 20px;
+}
+.match-slot.graded-correct { border-color: var(--correct); color: var(--correct); }
+.match-slot.graded-wrong   { border-color: var(--wrong);   color: var(--wrong);   }
+
+.match-slot-hint {
+  font-size: .68rem;
+  color: var(--correct);
+  margin-top: 2px;
+  font-weight: 700;
+}
+
+.match-word {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--accent);
+  background: white;
+  color: var(--accent);
+  font-size: .88rem;
+  font-weight: 800;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.match-word:active { transform: scale(.96); }
+

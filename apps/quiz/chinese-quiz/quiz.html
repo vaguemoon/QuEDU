@@ -108,6 +108,8 @@ var pendingDrag     = null; /* pre-threshold: { word, poolKey, fromQIdx, sx, sy 
 var _dragY          = 0;    /* last known drag clientY — used by auto-scroll loop */
 var _scrollRAF      = null; /* rAF id for drag auto-scroll */
 var _countUpRAF     = null; /* rAF id for score count-up animation */
+var matchData       = [];   /* [{title,pairs:[{wordId,word,imageUrl}],slotOrder:[],wordPoolOrder:[]}] */
+var matchSlots      = {};   /* {'si_pos': word} */
 
 /* ════════════ Utilities ════════════ */
 function escHtml(s) {
@@ -142,7 +144,8 @@ function returnToHub() {
 function confirmBack() {
   window.speechSynthesis && window.speechSynthesis.cancel();
   var hasInput = Object.keys(blanks).some(function(k){ return blanks[k]; }) ||
-                 Object.keys(mcAnswers).length > 0;
+                 Object.keys(mcAnswers).length > 0 ||
+                 Object.keys(matchSlots).some(function(k){ return matchSlots[k]; });
   if (!graded && hasInput && !confirm('作答尚未完成，確定要離開嗎？')) return;
   returnToHub();
 }
@@ -228,16 +231,15 @@ function loadQuestions() {
   var settings;
   try { settings = JSON.parse(sessionStorage.getItem('quiz_settings')); } catch(e) {}
 
-  var hasIds = settings && settings.questionIds && settings.questionIds.length;
+  var hasIds   = settings && settings.questionIds && settings.questionIds.length;
+  var hasMatch = settings && settings.matchSections && settings.matchSections.length;
 
-  /* 試卷編製發布的 session 有 questionIds 但無 lesson，需先跳過 lesson 判斷 */
-  if (!settings || (!hasIds && (!settings.grade || !settings.lesson))) {
+  if (!settings || (!hasIds && !hasMatch && (!settings.grade || !settings.lesson))) {
     currentSession = null;
-    startQuiz(FALLBACK, null);
+    startQuiz(FALLBACK, null, []);
     return;
   }
 
-  /* 儲存 session 資訊，供 saveScore() 寫入 quizResults */
   currentSession = {
     sessionId:   settings.sessionId   || '',
     sessionCode: settings.sessionCode || '',
@@ -245,15 +247,46 @@ function loadQuestions() {
     teacherUid:  settings.teacherUid  || ''
   };
 
-  /* ── 固定題組（隨機出題已鎖定 / 自選測驗 / 試卷編製）：依指定 ID 直接讀取題目 ── */
-  if (hasIds) {
-    if (!db) { startQuiz(FALLBACK, null); return; }
-    Promise.all(settings.questionIds.map(function(id) {
-      return db.collection('questions').doc(id).get();
-    }))
-    .then(function(docs) {
+  /* ── 固定題組 + 詞圖配對 ── */
+  if (hasIds || hasMatch) {
+    if (!db) { startQuiz(hasIds ? FALLBACK : [], settings, []); return; }
+
+    var textPromise = hasIds
+      ? Promise.all(settings.questionIds.map(function(id) {
+          return db.collection('questions').doc(id).get();
+        }))
+      : Promise.resolve([]);
+
+    var matchRaw = settings.matchSections || [];
+    var matchPromise = matchRaw.length
+      ? Promise.all(matchRaw.map(function(msec) {
+          var wordIds = msec.wordIds || [];
+          return Promise.all(wordIds.map(function(wid) {
+            return db.collection('wordImages').doc(wid).get();
+          })).then(function(wdocs) {
+            var pairs = wordIds.map(function(wid, i) {
+              var wd = wdocs[i];
+              return {
+                wordId:   wid,
+                word:     (msec.words && msec.words[i]) || (wd.exists ? wd.data().word : ''),
+                imageUrl: wd.exists ? (wd.data().imageUrl || '') : ''
+              };
+            });
+            var indices = pairs.map(function(_, i) { return i; });
+            return {
+              title:         msec.title,
+              pairs:         pairs,
+              slotOrder:     shuffle(indices.slice()),
+              wordPoolOrder: shuffle(indices.slice())
+            };
+          });
+        }))
+      : Promise.resolve([]);
+
+    Promise.all([textPromise, matchPromise]).then(function(results) {
+      var qdocs = results[0], matchLoaded = results[1];
       var questions = [];
-      docs.forEach(function(doc) {
+      qdocs.forEach(function(doc) {
         if (!doc.exists) return;
         var d = doc.data();
         if (d.type && d.question && d.answer) {
@@ -261,10 +294,12 @@ function loadQuestions() {
                            options: d.options || [], grade: d.grade, lesson: d.lesson });
         }
       });
-      startQuiz(questions.length ? questions : FALLBACK,
-                questions.length ? settings  : null);
-    })
-    .catch(function() { startQuiz(FALLBACK, null); });
+      if (!questions.length && !matchLoaded.length) {
+        startQuiz(FALLBACK, null, []);
+      } else {
+        startQuiz(questions, settings, matchLoaded);
+      }
+    }).catch(function() { startQuiz(FALLBACK, null, []); });
     return;
   }
 
@@ -302,7 +337,7 @@ function loadQuestions() {
         });
       });
 
-      if (!all.length) { startQuiz(FALLBACK, null); return; }
+      if (!all.length) { startQuiz(FALLBACK, null, []); return; }
 
       var sampled = [];
       TYPE_ORDER.forEach(function(type) {
@@ -313,9 +348,9 @@ function loadQuestions() {
       });
 
       startQuiz(sampled.length ? sampled : FALLBACK,
-                sampled.length ? settings : null);
+                sampled.length ? settings : null, []);
     })
-    .catch(function() { startQuiz(FALLBACK, null); });
+    .catch(function() { startQuiz(FALLBACK, null, []); });
 }
 
 /* ════════════════════════════════════════
@@ -337,10 +372,12 @@ function _normMCQuestion(q) {
            options: clean, grade: q.grade, lesson: q.lesson };
 }
 
-function startQuiz(qs, settings) {
+function startQuiz(qs, settings, matchLoaded) {
   quizData        = qs.map(_normMCQuestion);
+  matchData       = matchLoaded || [];
   blanks          = {};
   mcAnswers       = {};
+  matchSlots      = {};
   graded          = false;
   pendingDrag     = null;
   currentSettings = settings || null;
@@ -405,7 +442,88 @@ function renderSections() {
     sn++;
   });
 
+  html += '<div id="match-sections-container"></div>';
   document.getElementById('sections-container').innerHTML = html;
+  renderMatchSections();
+}
+
+/* ════════════ Match section rendering ════════════ */
+function _textSectionCount() {
+  return TYPE_ORDER.filter(function(t) {
+    return quizData.some(function(q) { return q.type === t; });
+  }).length;
+}
+
+function renderMatchSections() {
+  var el = document.getElementById('match-sections-container');
+  if (!el) return;
+  el.innerHTML = matchData.map(function(_, si) { return renderMatchSection(si); }).join('');
+}
+
+function renderMatchSection(si) {
+  var msec   = matchData[si];
+  if (!msec) return '';
+  var secNum = SECTION_NUMS[_textSectionCount() + si] || String(_textSectionCount() + si + 1);
+
+  /* word pool — stable order from wordPoolOrder, minus placed/dragging words */
+  var placed = {};
+  (msec.slotOrder || []).forEach(function(_, pos) {
+    var w = matchSlots[si + '_' + pos];
+    if (w) placed[w] = true;
+  });
+  var isDraggingThis = dragging && dragging.dragKind === 'match' && dragging.matchSecIdx === si;
+  var wordPool = (msec.wordPoolOrder || [])
+    .map(function(i) { return msec.pairs[i].word; })
+    .filter(function(w) { return !placed[w] && !(isDraggingThis && dragging.word === w); });
+
+  var poolHtml = wordPool.length
+    ? wordPool.map(function(w) {
+        return '<div class="match-word" data-msec="' + si + '" data-word="' + escHtml(w) + '">'
+          + escHtml(w) + '</div>';
+      }).join('')
+    : '<span class="pool-empty">（詞語牌已全部填入）</span>';
+
+  /* image + slot grid */
+  var gridHtml = (msec.slotOrder || []).map(function(pairIdx, pos) {
+    var pair  = msec.pairs[pairIdx];
+    var key   = si + '_' + pos;
+    var word  = matchSlots[key];
+    var slotHtml;
+    if (graded) {
+      var isRight = word === pair.word;
+      slotHtml = '<div class="match-slot match-slot-filled ' + (isRight ? 'graded-correct' : 'graded-wrong') +
+        '" data-msec="' + si + '" data-pos="' + pos + '">' +
+        escHtml(word || '—') +
+        (!isRight ? '<div class="match-slot-hint">正確：' + escHtml(pair.word) + '</div>' : '') +
+        '</div>';
+    } else if (word) {
+      slotHtml = '<div class="match-slot match-slot-filled" data-msec="' + si + '" data-pos="' + pos + '">' +
+        escHtml(word) +
+        '<button class="blank-remove" onpointerdown="event.stopPropagation()" ' +
+          'onclick="event.stopPropagation();removeMatchSlotWord(' + si + ',' + pos + ')" title="移除">×</button>' +
+        '</div>';
+    } else {
+      slotHtml = '<div class="match-slot" data-msec="' + si + '" data-pos="' + pos + '"></div>';
+    }
+    var pairClass = !graded ? 'match-pair' :
+      (word === pair.word ? 'match-pair graded-correct' : 'match-pair graded-wrong');
+    return '<div class="' + pairClass + '">' +
+      '<img class="match-image" src="' + escHtml(pair.imageUrl || '') + '" alt="">' +
+      slotHtml +
+    '</div>';
+  }).join('');
+
+  return '<div class="q-section">' +
+    '<div class="section-header">' +
+      '<span class="section-num">'  + escHtml(secNum)     + '、</span>' +
+      '<span class="section-type">' + escHtml(msec.title) + '</span>' +
+    '</div>' +
+    '<div class="pool-area">' +
+      '<div class="pool-label">詞語牌　請拖曳至對應圖片下方</div>' +
+      '<div class="pool-words">' + poolHtml + '</div>' +
+    '</div>' +
+    '<div class="match-grid">' + gridHtml + '</div>' +
+  '</div>';
 }
 
 function renderQuestion(q, qIdx, num) {
@@ -468,6 +586,7 @@ function renderAll() {
   if (graded) return;
   renderPools();
   renderBlanks();
+  renderMatchSections();
 }
 
 function renderPools() {
@@ -556,8 +675,8 @@ function onDelegatedPointerDown(e) {
   var card = e.target.closest('.pool-word');
   if (card) {
     e.preventDefault(); /* suppress click on ancestors */
-    pendingDrag = { word: card.dataset.word, poolKey: card.dataset.pool, fromQIdx: null,
-                    sx: e.clientX, sy: e.clientY };
+    pendingDrag = { dragKind: 'text', word: card.dataset.word, poolKey: card.dataset.pool,
+                    fromQIdx: null, sx: e.clientX, sy: e.clientY };
     _addPendingListeners();
     return;
   }
@@ -569,9 +688,35 @@ function onDelegatedPointerDown(e) {
     var word = blanks[qIdx];
     if (!word) return;
     e.preventDefault();
-    pendingDrag = { word: word, poolKey: POOL_KEY[quizData[qIdx].type], fromQIdx: qIdx,
+    pendingDrag = { dragKind: 'text', word: word, poolKey: POOL_KEY[quizData[qIdx].type],
+                    fromQIdx: qIdx, sx: e.clientX, sy: e.clientY };
+    _addPendingListeners();
+    return;
+  }
+
+  /* Match word card (from pool) */
+  var matchWord = e.target.closest('.match-word');
+  if (matchWord && !graded) {
+    e.preventDefault();
+    pendingDrag = { dragKind: 'match', word: matchWord.dataset.word,
+                    matchSecIdx: parseInt(matchWord.dataset.msec), fromSlotPos: null,
                     sx: e.clientX, sy: e.clientY };
     _addPendingListeners();
+    return;
+  }
+
+  /* Match slot (already filled — drag out) */
+  var matchSlotEl = e.target.closest('.match-slot.match-slot-filled');
+  if (matchSlotEl && !graded) {
+    var msi  = parseInt(matchSlotEl.dataset.msec);
+    var pos  = parseInt(matchSlotEl.dataset.pos);
+    var slotWord = matchSlots[msi + '_' + pos];
+    if (!slotWord) return;
+    e.preventDefault();
+    pendingDrag = { dragKind: 'match', word: slotWord, matchSecIdx: msi, fromSlotPos: pos,
+                    sx: e.clientX, sy: e.clientY };
+    _addPendingListeners();
+    return;
   }
 }
 
@@ -596,7 +741,7 @@ function _onPendingMove(e) {
     var p = pendingDrag;
     pendingDrag = null;
     _removePendingListeners();
-    startDrag(e, p.word, p.poolKey, p.fromQIdx);
+    startDrag(e, p);
   }
 }
 
@@ -615,15 +760,15 @@ function _onPendingCancel() {
 }
 
 /* ════════════ Drag — core ════════════ */
-function startDrag(e, word, poolKey, fromQIdx) {
+function startDrag(e, p) {
   var ghost = document.createElement('div');
   ghost.className = 'drag-ghost';
-  ghost.textContent = word;
+  ghost.textContent = p.word;
   document.body.appendChild(ghost);
   posGhost(ghost, e.clientX, e.clientY);
 
   _dragY   = e.clientY;
-  dragging = { word: word, poolKey: poolKey, fromQIdx: fromQIdx, ghost: ghost };
+  dragging = Object.assign({}, p, { ghost: ghost });
   renderAll();
 
   document.addEventListener('pointermove',   onDragMove,   { passive: false });
@@ -655,9 +800,15 @@ function onDragMove(e) {
   if (!dragging) return;
   _dragY = e.clientY;
   posGhost(dragging.ghost, e.clientX, e.clientY);
-  document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
-  var target = findDropBlank(e.clientX, e.clientY, dragging);
-  if (target) target.classList.add('drag-over');
+  if (dragging.dragKind === 'match') {
+    document.querySelectorAll('.match-slot').forEach(function(b){ b.classList.remove('drag-over'); });
+    var t = findDropMatchSlot(e.clientX, e.clientY, dragging.matchSecIdx, dragging.fromSlotPos);
+    if (t) t.classList.add('drag-over');
+  } else {
+    document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
+    var t = findDropBlank(e.clientX, e.clientY, dragging);
+    if (t) t.classList.add('drag-over');
+  }
 }
 
 function onDragEnd(e) {
@@ -668,11 +819,17 @@ function onDragEnd(e) {
   if (!dragging) return;
   var info = dragging;
   dragging = null;
-  document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
+  document.querySelectorAll('.q-blank, .match-slot').forEach(function(b){ b.classList.remove('drag-over'); });
   info.ghost.remove();
-  var target = findDropBlank(e.clientX, e.clientY, info);
-  target ? doPlace(info.word, info.fromQIdx, parseInt(target.dataset.qidx))
-         : renderAll();
+  if (info.dragKind === 'match') {
+    var target = findDropMatchSlot(e.clientX, e.clientY, info.matchSecIdx, info.fromSlotPos);
+    target ? doPlaceMatch(info.word, info.matchSecIdx, info.fromSlotPos, parseInt(target.dataset.pos))
+           : renderAll();
+  } else {
+    var target = findDropBlank(e.clientX, e.clientY, info);
+    target ? doPlace(info.word, info.fromQIdx, parseInt(target.dataset.qidx))
+           : renderAll();
+  }
 }
 
 /* ════════════ Drop detection (expanded hit area) ════════════ */
@@ -700,6 +857,36 @@ function doPlace(word, fromQIdx, toQIdx) {
   renderAll();
 }
 
+/* ════════════ Match slot helpers ════════════ */
+function findDropMatchSlot(x, y, msi, fromPos) {
+  var best = null, bestDist = Infinity;
+  document.querySelectorAll('.match-slot[data-msec="' + msi + '"]').forEach(function(el) {
+    var pos = parseInt(el.dataset.pos);
+    if (pos === fromPos) return;
+    var key = msi + '_' + pos;
+    if (matchSlots[key]) return; /* already filled */
+    var r = el.getBoundingClientRect();
+    if (x < r.left - DROP_TOL || x > r.right  + DROP_TOL ||
+        y < r.top  - DROP_TOL || y > r.bottom + DROP_TOL) return;
+    var dist = Math.sqrt(Math.pow(x - (r.left + r.width / 2), 2) +
+                         Math.pow(y - (r.top  + r.height / 2), 2));
+    if (dist < bestDist) { bestDist = dist; best = el; }
+  });
+  return best;
+}
+
+function doPlaceMatch(word, msi, fromSlotPos, toSlotPos) {
+  if (fromSlotPos !== null) delete matchSlots[msi + '_' + fromSlotPos];
+  matchSlots[msi + '_' + toSlotPos] = word;
+  renderMatchSections();
+}
+
+function removeMatchSlotWord(msi, pos) {
+  if (graded) return;
+  delete matchSlots[msi + '_' + pos];
+  renderMatchSections();
+}
+
 /* ════════════ Submit / Grade ════════════ */
 function submitQuiz() {
   if (graded) return;
@@ -716,12 +903,21 @@ function submitQuiz() {
     el.style.opacity       = '.4';
   });
 
-  /* Pre-calculate totals so showResult has them ready */
+  /* Pre-calculate text question totals */
   var correct = 0, wrongIndices = [];
   quizData.forEach(function(q, i) {
     var ua      = getAnswer(i);
     var isRight = ua !== undefined && ua === q.answer;
     if (isRight) correct++; else wrongIndices.push(i);
+  });
+
+  /* Pre-calculate match totals */
+  var matchCorrect = 0, matchTotal = 0;
+  matchData.forEach(function(msec, si) {
+    (msec.slotOrder || []).forEach(function(pairIdx, pos) {
+      matchTotal++;
+      if (matchSlots[si + '_' + pos] === msec.pairs[pairIdx].word) matchCorrect++;
+    });
   });
 
   /* Staggered per-question reveal: 120 ms between each */
@@ -731,14 +927,20 @@ function submitQuiz() {
     var isRight = ua !== undefined && ua === q.answer;
     setTimeout(function() { _applyGradeVisual(q, i, ua, isRight); }, i * STAGGER + 160);
   });
+  /* Match sections reveal after text questions */
+  var matchDelay = quizData.length * STAGGER + 160;
+  setTimeout(function() { if (graded) renderMatchSections(); }, matchDelay);
 
   /* Show result after all animations complete */
-  var totalDelay = quizData.length * STAGGER + 480;
-  var snapCorrect = correct, snapWrong = wrongIndices.slice();
+  var totalDelay = (quizData.length + (matchData.length ? 1 : 0)) * STAGGER + 480;
+  var snapCorrect = correct, snapMatchCorrect = matchCorrect;
+  var snapWrong = wrongIndices.slice();
+  var snapTotal  = quizData.length + matchTotal;
   setTimeout(function() {
-    if (!graded) return; /* guard: user retried before animation completed */
-    saveScore(Math.round((snapCorrect / quizData.length) * 100), snapCorrect, quizData.length);
-    showResult(snapCorrect, quizData.length, snapWrong);
+    if (!graded) return;
+    var score = snapTotal ? Math.round((snapCorrect + snapMatchCorrect) / snapTotal * 100) : 100;
+    saveScore(score, snapCorrect + snapMatchCorrect, snapTotal);
+    showResult(snapCorrect, quizData.length, snapWrong, snapMatchCorrect, matchTotal);
   }, totalDelay);
 }
 
@@ -786,8 +988,10 @@ function _countUp(el, target, duration) {
 }
 
 /* ════════════ Result screen ════════════ */
-function showResult(correct, total, wrongIndices) {
-  var score = Math.round((correct / total) * 100);
+function showResult(correct, total, wrongIndices, matchCorrect, matchTotal) {
+  var allCorrect = correct + (matchCorrect || 0);
+  var allTotal   = total   + (matchTotal   || 0);
+  var score = allTotal ? Math.round(allCorrect / allTotal * 100) : 100;
   document.getElementById('quiz-screen').style.display = 'none';
   document.getElementById('result-screen').classList.add('show');
   var scoreEl = document.getElementById('result-score');
@@ -796,8 +1000,9 @@ function showResult(correct, total, wrongIndices) {
   document.getElementById('result-title').textContent =
     score >= 90 ? '太厲害了！🎉' : score >= 70 ? '做得很好！👍' :
     score >= 50 ? '繼續加油！💪' : '多多練習吧！📖';
-  document.getElementById('result-sub').textContent =
-    '共答對 ' + correct + ' 題，答錯 ' + (total - correct) + ' 題';
+  var subParts = ['共答對 ' + allCorrect + ' 題，答錯 ' + (allTotal - allCorrect) + ' 題'];
+  if (matchTotal) subParts.push('詞圖配對 ' + (matchCorrect || 0) + '/' + matchTotal + ' 組');
+  document.getElementById('result-sub').textContent = subParts.join('　');
   document.getElementById('review-container').innerHTML =
     wrongIndices.length ? buildReviewHtml(wrongIndices) : '';
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -874,6 +1079,7 @@ function saveScore(score, correct, total) {
 /* ════════════ Retry ════════════ */
 function retryQuiz() {
   window.speechSynthesis && window.speechSynthesis.cancel();
+  matchSlots = {};
   loadQuestions(); /* re-reads quiz_settings → fresh random sample from same lesson */
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }

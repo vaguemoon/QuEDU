@@ -43,57 +43,96 @@ function _applyTeacherRole(role) {
   if (tab) tab.style.display = role === 'school-admin' ? '' : 'none';
 }
 
+/* ── 教師資料快取（sessionStorage，當次瀏覽器工作階段有效）── */
+function _saveTeacherCache(uid, schoolId, schoolName, role) {
+  try {
+    sessionStorage.setItem('admin_tc', JSON.stringify({
+      uid: uid, schoolId: schoolId, schoolName: schoolName, role: role
+    }));
+  } catch(e) {}
+}
+function _loadTeacherCache(uid) {
+  try {
+    var c = JSON.parse(sessionStorage.getItem('admin_tc'));
+    return (c && c.uid === uid) ? c : null;
+  } catch(e) { return null; }
+}
+function _clearTeacherCache() {
+  try { sessionStorage.removeItem('admin_tc'); } catch(e) {}
+}
+
 window.addEventListener('load', function() {
   var btn = document.getElementById('dark-mode-btn');
   if (btn && document.body.classList.contains('dark')) btn.textContent = '☀️ 亮色模式';
 
   initFirebase();
 
-  // 等 auth 初始化後，監聽登入狀態
   (function waitAuth() {
     if (!auth) { setTimeout(waitAuth, 150); return; }
     auth.onAuthStateChanged(function(user) {
       if (!user) {
-        // 未登入 → 回登入頁
+        _clearTeacherCache();
         window.location.href = '../index.html';
         return;
       }
       currentTeacher = user;
-      // 更新後台頂列顯示教師 Email
       var emailEl = document.getElementById('teacher-email-display');
       if (emailEl) emailEl.textContent = user.email;
-      // 等 Firestore 就緒
+
       (function waitDb() {
         if (!db) { setTimeout(waitDb, 150); return; }
-        // 檢查是否被管理者封鎖
+
+        /* ── 快速路徑：有快取就立刻啟動，不等 Firestore ── */
+        var cache = _loadTeacherCache(user.uid);
+        if (cache && cache.schoolId) {
+          currentTeacherRole = cache.role || 'teacher';
+          currentSchoolId    = cache.schoolId;
+          currentSchoolName  = cache.schoolName || '';
+          _applyTeacherRole(currentTeacherRole);
+          onFirebaseReady();
+        }
+
+        /* ── 背景驗證（快取命中時為背景，未命中時為主路徑）── */
         db.collection('teachers').doc(user.uid).get().then(function(doc) {
           if (doc.exists && doc.data().blocked) {
-            auth.signOut().then(function() {
-              window.location.href = '../index.html';
-            });
+            _clearTeacherCache();
+            auth.signOut().then(function() { window.location.href = '../index.html'; });
             return;
           }
-          currentTeacherRole = (doc.exists && doc.data().role) || 'teacher';
-          // 記錄教師登入資料（供管理者後台帳號管理使用）
+          var role      = (doc.exists && doc.data().role) || 'teacher';
+          var schoolId  = doc.exists ? (doc.data().schoolId  || '') : '';
+          var schoolName = doc.exists ? (doc.data().schoolName || '') : '';
+
+          // 更新快取
+          if (schoolId) _saveTeacherCache(user.uid, schoolId, schoolName, role);
+
+          // 記錄登入時間（fire-and-forget）
           db.collection('teachers').doc(user.uid).set({
-            uid:          user.uid,
-            email:        user.email || '',
-            displayName:  user.displayName || '',
-            lastLoginAt:  new Date().toISOString()
+            uid: user.uid, email: user.email || '',
+            displayName: user.displayName || '',
+            lastLoginAt: new Date().toISOString()
           }, { merge: true }).catch(function() {});
-          // 強制設定學校：若教師尚未選擇學校則顯示必填 overlay
-          var hasSchool = doc.exists && !!doc.data().schoolId;
-          if (!hasSchool) {
-            showSchoolRequiredOverlay();
+
+          if (!cache) {
+            // 首次載入（無快取）— 正常流程
+            currentTeacherRole = role;
+            if (!schoolId) {
+              showSchoolRequiredOverlay();
+            } else {
+              currentSchoolId   = schoolId;
+              currentSchoolName = schoolName || '（未知學校）';
+              _applyTeacherRole(currentTeacherRole);
+              onFirebaseReady();
+            }
           } else {
-            // 直接從已讀取的 doc 設定學校變數，避免 loadTeacherSchool 再做第二次讀取時碰到競態
-            currentSchoolId   = doc.data().schoolId;
-            currentSchoolName = doc.data().schoolName || '（未知學校）';
-            onFirebaseReady();
+            // 快取已啟動 — 若角色變了就更新 UI
+            if (role !== currentTeacherRole) {
+              currentTeacherRole = role;
+              _applyTeacherRole(role);
+            }
           }
         }).catch(function() {
-          // Firestore 讀取失敗時仍允許進入，不中斷教師工作
-          onFirebaseReady();
+          if (!cache) onFirebaseReady();
         });
       })();
     });

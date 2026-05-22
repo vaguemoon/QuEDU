@@ -26,12 +26,28 @@ function copyCode(code) {
   }
 }
 
+/* ── 班級列表快取（sessionStorage）── */
+function _saveClassesCache(classes) {
+  try { sessionStorage.setItem('admin_classes', JSON.stringify(classes)); } catch(e) {}
+}
+function _loadClassesCache() {
+  try { return JSON.parse(sessionStorage.getItem('admin_classes')) || null; } catch(e) { return null; } }
+
 /* ── 載入此教師的所有班級 ── */
 function loadClasses() {
   var wrap = document.getElementById('classes-wrap');
   if (!wrap || !currentTeacher) return;
-  wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
+  /* 有快取就先秒出，不顯示 spinner */
+  var cached = _loadClassesCache();
+  if (cached && cached.length) {
+    currentClasses = cached;
+    renderClasses();
+  } else {
+    wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+  }
+
+  /* 永遠背景重抓最新資料 */
   db.collection('classes')
     .where('teacherUid', '==', currentTeacher.uid)
     .get()
@@ -45,10 +61,13 @@ function loadClasses() {
       currentClasses.sort(function(a, b) {
         return (a.createdAt || '') < (b.createdAt || '') ? 1 : -1;
       });
+      _saveClassesCache(currentClasses);
       renderClasses();
     })
     .catch(function(e) {
-      wrap.innerHTML = '<div style="color:var(--red);padding:20px">載入失敗：' + e.message + '</div>';
+      if (!cached) {
+        wrap.innerHTML = '<div style="color:var(--red);padding:20px">載入失敗：' + e.message + '</div>';
+      }
     });
 }
 
