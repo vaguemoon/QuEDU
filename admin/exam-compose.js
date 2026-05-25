@@ -883,14 +883,14 @@ function _ecBtn(color) {
    詞圖配對 modal
    ════════════════════════════════ */
 function _ecOpenMatchModal() {
-  var modal = document.getElementById('ec-match-modal');
+  var modal  = document.getElementById('ec-match-modal');
   if (!modal) return;
-  var titleEl = document.getElementById('ec-match-title');
-  var pairsEl = document.getElementById('ec-match-pairs');
-  var prevEl  = document.getElementById('ec-match-preview');
-  if (titleEl) titleEl.value = '';
-  if (pairsEl) pairsEl.value = '6';
-  if (prevEl)  prevEl.textContent = '';
+  var listEl = document.getElementById('ec-match-word-list');
+  if (listEl) listEl.innerHTML = '<span style="color:var(--muted)">請先選擇來源</span>';
+  var pubSel    = document.getElementById('ec-match-publisher');
+  var lessonSel = document.getElementById('ec-match-lesson');
+  if (pubSel)    pubSel.value    = '';
+  if (lessonSel) lessonSel.innerHTML = '<option value="">課次</option>';
   var radCurr = document.querySelector('input[name="ec-match-source"][value="curriculum"]');
   if (radCurr) { radCurr.checked = true; _ecMatchSourceChange('curriculum'); }
   _ecMatchLoadCustomCategories();
@@ -907,40 +907,40 @@ function _ecMatchSourceChange(source) {
   var custRow = document.getElementById('ec-match-custom-row');
   if (currRow) currRow.style.display = source === 'curriculum' ? '' : 'none';
   if (custRow) custRow.style.display = source === 'custom'     ? '' : 'none';
-  var prevEl = document.getElementById('ec-match-preview');
-  if (prevEl) prevEl.textContent = '';
+  var listEl = document.getElementById('ec-match-word-list');
+  if (listEl) listEl.innerHTML = '<span style="color:var(--muted)">請先選擇來源</span>';
 }
 
 function _ecMatchLoadCustomCategories() {
   if (!db || !currentTeacher) return;
   var catSel = document.getElementById('ec-match-category');
   if (!catSel) return;
-  db.collection('wordImages').where('teacherUid', '==', currentTeacher.uid).get()
+  db.collection('customCategories').where('teacherUid', '==', currentTeacher.uid).get()
     .then(function(snap) {
-      var cats = {};
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        if (d.customCategoryId) cats[d.customCategoryId] = d.customCategoryName || d.customCategoryId;
-      });
+      if (!snap.size) {
+        catSel.innerHTML = '<option value="">（尚無自訂類別）</option>';
+        return;
+      }
       catSel.innerHTML = '<option value="">選擇類別…</option>' +
-        Object.keys(cats).sort().map(function(id) {
-          return '<option value="' + _ecEscA(id) + '">' + _ecEsc(cats[id]) + '</option>';
+        snap.docs.map(function(doc) {
+          return '<option value="' + _ecEscA(doc.id) + '">' + _ecEsc(doc.data().name || doc.id) + '</option>';
         }).join('');
     }).catch(function() {});
 }
 
 function _ecMatchUpdateGrade() {
+  var publisher = ((document.getElementById('ec-match-publisher') || {}).value || '');
   var gradeNum  = ((document.getElementById('ec-match-grade-num') || {}).value || '');
   var semester  = ((document.getElementById('ec-match-version')   || {}).value || '');
   var lessonSel = document.getElementById('ec-match-lesson');
-  var prevEl    = document.getElementById('ec-match-preview');
+  var listEl    = document.getElementById('ec-match-word-list');
   if (!lessonSel) return;
-  if (prevEl) prevEl.textContent = '';
-  if (!gradeNum || !semester) {
+  if (listEl) listEl.innerHTML = '<span style="color:var(--muted)">請先選擇來源</span>';
+  if (!publisher || !gradeNum || !semester) {
     lessonSel.innerHTML = '<option value="">課次</option>';
     return;
   }
-  var gradeKey = gradeNum + semester;
+  var gradeKey = publisher + gradeNum + semester;
   lessonSel.innerHTML = '<option value="">載入中…</option>';
   db.collection('wordImages')
     .where('gradeLesson', '>=', gradeKey + '_')
@@ -959,7 +959,7 @@ function _ecMatchUpdateGrade() {
         return String(a).localeCompare(String(b));
       });
       if (!list.length) {
-        lessonSel.innerHTML = '<option value="">（此年級無圖庫）</option>';
+        lessonSel.innerHTML = '<option value="">（此版本無圖庫）</option>';
         return;
       }
       lessonSel.innerHTML = '<option value="">選擇課次…</option>' +
@@ -969,99 +969,96 @@ function _ecMatchUpdateGrade() {
     }).catch(function() { lessonSel.innerHTML = '<option value="">課次</option>'; });
 }
 
-function _ecMatchLoadPreview() {
-  var srcEl   = document.querySelector('input[name="ec-match-source"]:checked');
-  var prevEl  = document.getElementById('ec-match-preview');
-  var pairsEl = document.getElementById('ec-match-pairs');
-  if (!srcEl || !prevEl) return;
-  var src        = srcEl.value;
-  var pairCount  = parseInt((pairsEl || {}).value || '6', 10);
+function _ecMatchLoadWordList() {
+  var srcEl  = document.querySelector('input[name="ec-match-source"]:checked');
+  var listEl = document.getElementById('ec-match-word-list');
+  if (!srcEl || !listEl) return;
+  var src = srcEl.value;
   var query;
 
   if (src === 'curriculum') {
-    var gradeNum = ((document.getElementById('ec-match-grade-num') || {}).value || '');
-    var semester = ((document.getElementById('ec-match-version')   || {}).value || '');
-    var lesson   = ((document.getElementById('ec-match-lesson')    || {}).value || '');
-    if (!gradeNum || !semester || !lesson) return;
-    query = db.collection('wordImages').where('gradeLesson', '==', gradeNum + semester + '_' + lesson);
+    var publisher = ((document.getElementById('ec-match-publisher') || {}).value || '');
+    var gradeNum  = ((document.getElementById('ec-match-grade-num') || {}).value || '');
+    var semester  = ((document.getElementById('ec-match-version')   || {}).value || '');
+    var lesson    = ((document.getElementById('ec-match-lesson')    || {}).value || '');
+    if (!publisher || !gradeNum || !semester || !lesson) {
+      listEl.innerHTML = '<span style="color:var(--muted)">請先選擇版本、年級、冊次和課次</span>';
+      return;
+    }
+    query = db.collection('wordImages').where('gradeLesson', '==', publisher + gradeNum + semester + '_' + lesson);
   } else {
     var catId = ((document.getElementById('ec-match-category') || {}).value || '');
-    if (!catId) return;
+    if (!catId) {
+      listEl.innerHTML = '<span style="color:var(--muted)">請先選擇自訂類別</span>';
+      return;
+    }
     query = db.collection('wordImages')
       .where('teacherUid', '==', currentTeacher.uid)
       .where('customCategoryId', '==', catId);
   }
 
-  prevEl.textContent = '讀取中…';
+  listEl.innerHTML = '<span style="color:var(--muted)">讀取中…</span>';
   query.get().then(function(snap) {
-    var total = snap.size;
-    if (!total) { prevEl.textContent = '此來源尚無圖片'; return; }
-    var words = [];
-    snap.forEach(function(doc) { words.push(doc.data().word || ''); });
-    var pc = Math.min(pairCount, total);
-    prevEl.textContent = '共 ' + total + ' 張圖片，將隨機選取 ' + pc + ' 組。' +
-      '範例詞語：' + words.slice(0, 4).join('、') + (total > 4 ? '…' : '');
-  }).catch(function() { prevEl.textContent = '載入失敗'; });
+    if (!snap.size) {
+      listEl.innerHTML = '<span style="color:var(--muted)">此來源尚無圖片，請先至圖庫上傳</span>';
+      return;
+    }
+    var html = '';
+    snap.forEach(function(doc) {
+      var d   = doc.data();
+      var id  = doc.id;
+      var w   = d.word     || '';
+      var img = d.imageUrl || '';
+      html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer;' +
+        'border-bottom:1px solid var(--border,#e0e0e0)">' +
+        '<input type="checkbox" class="ec-match-word-cb" value="' + _ecEscA(id) +
+          '" data-word="' + _ecEscA(w) + '" style="flex-shrink:0">' +
+        '<img src="' + _ecEsc(img) + '" style="width:36px;height:36px;object-fit:cover;border-radius:5px;flex-shrink:0">' +
+        '<span style="font-size:.88rem;font-weight:700">' + _ecEsc(w) + '</span>' +
+      '</label>';
+    });
+    listEl.innerHTML = html;
+  }).catch(function() {
+    listEl.innerHTML = '<span style="color:var(--wrong,#c62828)">載入失敗</span>';
+  });
 }
 
 function _ecConfirmMatchSection() {
-  var title     = ((document.getElementById('ec-match-title')   || {}).value || '').trim();
-  var pairCount = parseInt(((document.getElementById('ec-match-pairs') || {}).value || '6'), 10);
-  var srcEl     = document.querySelector('input[name="ec-match-source"]:checked');
-  var src       = srcEl ? srcEl.value : 'curriculum';
+  var listEl     = document.getElementById('ec-match-word-list');
   var confirmBtn = document.getElementById('ec-match-confirm-btn');
+  var checked    = listEl ? listEl.querySelectorAll('.ec-match-word-cb:checked') : [];
 
-  if (!title) { showToast('請輸入題組標題'); return; }
-  if (isNaN(pairCount) || pairCount < 1) pairCount = 4;
-  if (pairCount > 8) pairCount = 8;
+  if (checked.length < 2) { showToast('請至少勾選 2 個詞語'); return; }
 
-  var gradeLesson = '', categoryId = '', query;
+  var srcEl = document.querySelector('input[name="ec-match-source"]:checked');
+  var src   = srcEl ? srcEl.value : 'curriculum';
+  var gradeLesson = '', categoryId = '';
+
   if (src === 'curriculum') {
-    var gradeNum = ((document.getElementById('ec-match-grade-num') || {}).value || '');
-    var semester = ((document.getElementById('ec-match-version')   || {}).value || '');
-    var lesson   = ((document.getElementById('ec-match-lesson')    || {}).value || '');
-    if (!gradeNum || !semester || !lesson) { showToast('請選擇年級、學期和課次'); return; }
-    gradeLesson = gradeNum + semester + '_' + lesson;
-    query = db.collection('wordImages').where('gradeLesson', '==', gradeLesson);
+    var publisher = ((document.getElementById('ec-match-publisher') || {}).value || '');
+    var gradeNum  = ((document.getElementById('ec-match-grade-num') || {}).value || '');
+    var semester  = ((document.getElementById('ec-match-version')   || {}).value || '');
+    var lesson    = ((document.getElementById('ec-match-lesson')    || {}).value || '');
+    gradeLesson   = publisher + gradeNum + semester + '_' + lesson;
   } else {
     categoryId = ((document.getElementById('ec-match-category') || {}).value || '');
-    if (!categoryId) { showToast('請選擇自訂類別'); return; }
-    query = db.collection('wordImages')
-      .where('teacherUid', '==', currentTeacher.uid)
-      .where('customCategoryId', '==', categoryId);
   }
 
-  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '載入中…'; }
-
-  query.get().then(function(snap) {
-    var docs = [];
-    snap.forEach(function(doc) { docs.push({ id: doc.id, word: doc.data().word || '' }); });
-    if (!docs.length) {
-      showToast('此來源尚無圖片，請先至圖庫上傳');
-      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '加入'; }
-      return;
-    }
-    /* Fisher-Yates shuffle */
-    for (var i = docs.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = docs[i]; docs[i] = docs[j]; docs[j] = tmp;
-    }
-    var selected = docs.slice(0, pairCount);
-    _ecMatchSections.push({
-      title: title, source: src,
-      gradeLesson: gradeLesson, categoryId: categoryId,
-      pairCount: selected.length,
-      wordIds: selected.map(function(d) { return d.id; }),
-      words:   selected.map(function(d) { return d.word; })
-    });
-    _ecCloseMatchModal();
-    _ecRenderLayout();
-    showToast('已加入詞圖配對大題：' + title);
-    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '加入'; }
-  }).catch(function(e) {
-    showToast('載入失敗：' + e.message);
-    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '加入'; }
+  var wordIds = [], words = [];
+  [].forEach.call(checked, function(cb) {
+    wordIds.push(cb.value);
+    words.push(cb.dataset.word || '');
   });
+
+  _ecMatchSections.push({
+    title: '連連看', source: src,
+    gradeLesson: gradeLesson, categoryId: categoryId,
+    pairCount: wordIds.length,
+    wordIds: wordIds, words: words
+  });
+  _ecCloseMatchModal();
+  _ecRenderLayout();
+  showToast('已加入連連看：共 ' + wordIds.length + ' 組詞語圖片');
 }
 
 function _ecRemoveMatchSection(i) {

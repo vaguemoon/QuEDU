@@ -102,7 +102,8 @@
 .cat-card-weight { border-color: #e67e22; }
 .cat-card-volume { border-color: #16a085; }
 .cat-card-time   { border-color: var(--green); }
-.cat-card-money  { border-color: #e6b800; }
+.cat-card-money   { border-color: #e6b800; }
+.cat-card-percent { border-color: #8e44ad; }
 
 /* ══════════════════════════════════════
    選擇頁
@@ -151,6 +152,33 @@
 }
 .game-layout-single {
   grid-template-columns: 1fr;
+}
+
+/* 全寬模式（無右側沙盒）：居中並擴大利用率 */
+.game-layout-single .game-left {
+  border-right: none;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+/* 題目區放大字體並置中，填空鍵盤寬度限制在 560px（超過會太稀疏），按鈕放大並全寬 */
+.game-layout-single .q-area {
+  justify-content: center;
+  font-size: 2rem;
+  min-height: 100px;
+}
+.game-layout-single .fill-pad {
+  max-width: 400px;
+}
+/* 按鈕放大並全寬 */
+.game-layout-single .fill-btn {
+  font-size: 1.8rem;
+  min-height: 66px;
+}
+.game-layout-single .btn-next-q,
+.game-layout-single .btn-end-practice {
+  max-width: 400px;
+  width: 100%;
 }
 
 /* 左欄：題目 + 鍵盤 */
@@ -666,6 +694,47 @@
   .q-area    { font-size: 1.3rem; padding: 12px 14px; }
   .fill-box  { font-size: 1.6rem; min-width: 52px; padding: 10px 8px; }
   .fill-btn  { font-size: 1.3rem; padding: 9px 4px; min-height: 44px; }
+}
+
+/* ══════════════════════════════════════
+   時間換算項目選擇
+   ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   百分率換算 — 分數題顯示與輸入
+   ══════════════════════════════════════ */
+
+/* 題目中顯示的分數（frac-to-pct 題目前方） */
+.q-frac {
+  display: inline-flex; flex-direction: column; align-items: center;
+  gap: 0; vertical-align: middle; margin: 0 4px;
+}
+.q-frac-num,
+.q-frac-den {
+  font-size: 1.4rem; font-weight: 900; color: var(--text);
+  line-height: 1.2; text-align: center; padding: 0 6px;
+}
+.q-frac-line {
+  width: 100%; height: 3px; background: var(--text); border-radius: 2px;
+}
+
+/* 分數答案輸入區（pct-to-frac：分子上、分母下） */
+.frac-input-wrap {
+  display: inline-flex; flex-direction: column; align-items: center;
+  gap: 0; vertical-align: middle; margin: 0 4px;
+}
+.frac-input-line {
+  width: 100%; height: 3px; background: var(--border); border-radius: 2px;
+  margin: 2px 0;
+}
+.frac-input-wrap .fill-box {
+  min-width: 64px;
+}
+
+/* 小數點按鍵 */
+.fill-dot {
+  font-size: 2rem; font-weight: 900; font-family: 'Courier New', monospace;
+  background: #f5f0ff; color: #8e44ad; border-color: #d4b8f0;
+  flex: 0.7;
 }
 
 /* ══════════════════════════════════════

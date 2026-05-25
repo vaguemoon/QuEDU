@@ -917,90 +917,115 @@ body {
 .shared-quiz-meta  { font-size: .75rem; color: var(--ink-lt); font-weight: 600; margin-top: 3px; }
 .shared-quiz-arrow { font-size: 1.3rem; color: #bbb; margin-left: auto; flex-shrink: 0; }
 
-/* ═══ 詞圖配對 ═══ */
-.match-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-  padding: 0 4px;
-}
-
-.match-pair {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  border-radius: 10px;
-  padding: 8px 6px;
-  background: var(--paper);
-  border: 1.5px solid var(--rule);
-}
-.match-pair.graded-correct { border-color: var(--correct); background: var(--correct-lt); }
-.match-pair.graded-wrong   { border-color: var(--wrong);   background: var(--wrong-lt);   }
-
-.match-image {
-  width: 88px;
-  height: 88px;
-  object-fit: cover;
-  border-radius: 8px;
-  display: block;
-  flex-shrink: 0;
-}
-
-.match-slot {
-  width: 100%;
-  min-height: 36px;
-  border: 1.5px dashed var(--rule);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: .85rem;
-  font-weight: 700;
+/* ═══ 連連看 ═══ */
+.match-hint {
+  font-size: .75rem;
   color: var(--ink-lt);
-  background: rgba(255,255,255,.6);
-  padding: 4px 6px;
-  text-align: center;
+  margin: 4px 0 8px;
+}
+
+.match-connect-wrap {
+  display: flex;
+  align-items: stretch;
   position: relative;
-  touch-action: none;
+  min-height: 100px;
 }
-.match-slot.drag-over {
-  border-color: var(--accent);
-  background: rgba(45,111,168,.08);
+
+.match-col-left,
+.match-col-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
 }
-.match-slot.match-slot-filled {
-  border-style: solid;
-  border-color: var(--rule);
-  color: var(--ink);
+.match-col-right {
+  align-items: flex-end;
+}
+
+.match-item {
+  position: relative;
+  border-radius: 10px;
+  border: 1.5px solid var(--rule);
   background: white;
-  padding-right: 20px;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+  transition: border-color .15s, box-shadow .15s;
 }
-.match-slot.graded-correct { border-color: var(--correct); color: var(--correct); }
-.match-slot.graded-wrong   { border-color: var(--wrong);   color: var(--wrong);   }
-
-.match-slot-hint {
-  font-size: .68rem;
-  color: var(--correct);
-  margin-top: 2px;
-  font-weight: 700;
+.match-item:not(.graded-correct):not(.graded-wrong):hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(45,111,168,.12);
 }
 
-.match-word {
-  display: inline-flex;
+.match-item-img {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px;
+}
+
+.match-img {
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  pointer-events: none;
+}
+
+.match-item-word {
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: 1.5px solid var(--accent);
-  background: white;
+  text-align: center;
+  padding: 6px 16px;
+  min-height: 36px;
+  min-width: 4em;
+  border-color: var(--accent);
   color: var(--accent);
-  font-size: .88rem;
   font-weight: 800;
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
+  font-size: .9rem;
 }
-.match-word:active { transform: scale(.96); }
+
+/* endpoint dots */
+.match-ep {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: background .15s, transform .15s;
+  z-index: 2;
+}
+.match-ep-right { right: -6px; }
+.match-ep-left  { left:  -6px; }
+.match-ep.match-ep-hover {
+  background: var(--correct);
+  transform: translateY(-50%) scale(1.5);
+}
+
+/* SVG overlay */
+.match-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  overflow: visible;
+  z-index: 1;
+}
+
+/* graded states */
+.match-item.graded-correct {
+  border-color: var(--correct);
+  background: var(--correct-lt);
+}
+.match-item.graded-wrong {
+  border-color: var(--wrong);
+  background: var(--wrong-lt);
+}
+.match-item-word.graded-correct { color: var(--correct); }
+.match-item-word.graded-wrong   { color: var(--wrong); }
 

@@ -393,15 +393,108 @@ function _makeMoneyQuestions(subtype, difficulty) {
 }
 
 // ════════════════════════════════════════
+//  百分率換算
+// ════════════════════════════════════════
+
+var _PERCENT_DEC_VALS = [
+  { pct: 10, dec: 0.1  }, { pct: 20, dec: 0.2  }, { pct: 30, dec: 0.3  },
+  { pct: 40, dec: 0.4  }, { pct: 50, dec: 0.5  }, { pct: 60, dec: 0.6  },
+  { pct: 70, dec: 0.7  }, { pct: 80, dec: 0.8  }, { pct: 90, dec: 0.9  },
+  { pct: 5,  dec: 0.05 }, { pct: 15, dec: 0.15 }, { pct: 25, dec: 0.25 },
+  { pct: 35, dec: 0.35 }, { pct: 45, dec: 0.45 }, { pct: 55, dec: 0.55 },
+  { pct: 65, dec: 0.65 }, { pct: 75, dec: 0.75 }, { pct: 85, dec: 0.85 },
+  { pct: 95, dec: 0.95 }
+];
+
+var _PERCENT_FRAC_VALS = [
+  { num: 1, den: 2,  pct: 50 },
+  { num: 1, den: 4,  pct: 25 }, { num: 3, den: 4,  pct: 75 },
+  { num: 1, den: 5,  pct: 20 }, { num: 2, den: 5,  pct: 40 },
+  { num: 3, den: 5,  pct: 60 }, { num: 4, den: 5,  pct: 80 },
+  { num: 1, den: 10, pct: 10 }, { num: 3, den: 10, pct: 30 },
+  { num: 7, den: 10, pct: 70 }, { num: 9, den: 10, pct: 90 },
+  { num: 1,  den: 20, pct: 5  }, { num: 3,  den: 20, pct: 15 },
+  { num: 7,  den: 20, pct: 35 }, { num: 9,  den: 20, pct: 45 },
+  { num: 11, den: 20, pct: 55 }, { num: 13, den: 20, pct: 65 },
+  { num: 17, den: 20, pct: 85 }, { num: 19, den: 20, pct: 95 },
+  { num: 1,  den: 25, pct: 4  }, { num: 2,  den: 25, pct: 8  },
+  { num: 3,  den: 25, pct: 12 }, { num: 4,  den: 25, pct: 16 },
+  { num: 6,  den: 25, pct: 24 }, { num: 7,  den: 25, pct: 28 },
+  { num: 8,  den: 25, pct: 32 }, { num: 9,  den: 25, pct: 36 }
+];
+
+function _makePercentQuestions(subtype) {
+  var questions = [];
+  var doDec  = subtype === 'pct-to-dec'  || subtype === 'dec-to-pct'  || subtype === 'mixed';
+  var doFrac = subtype === 'pct-to-frac' || subtype === 'frac-to-pct' || subtype === 'mixed';
+  var doPctToDec  = subtype === 'pct-to-dec'  || subtype === 'mixed';
+  var doDecToPct  = subtype === 'dec-to-pct'  || subtype === 'mixed';
+  var doPctToFrac = subtype === 'pct-to-frac' || subtype === 'mixed';
+  var doFracToPct = subtype === 'frac-to-pct' || subtype === 'mixed';
+
+  if (doPctToDec) {
+    _PERCENT_DEC_VALS.forEach(function(v) {
+      questions.push({
+        prompt:       v.pct + '% = ？',
+        answerCount:  1,
+        answerFormat: 'decimal',
+        answer:       [v.dec],
+        correctText:  String(v.dec)
+      });
+    });
+  }
+
+  if (doDecToPct) {
+    _PERCENT_DEC_VALS.forEach(function(v) {
+      questions.push({
+        prompt:       v.dec + ' = ？%',
+        answerCount:  1,
+        answerFormat: 'integer',
+        answer:       [v.pct],
+        correctText:  v.pct + '%'
+      });
+    });
+  }
+
+  if (doPctToFrac) {
+    _PERCENT_FRAC_VALS.forEach(function(v) {
+      questions.push({
+        prompt:       v.pct + '%',
+        answerCount:  2,
+        answerFormat: 'fraction',
+        answer:       [v.num, v.den],
+        pctValue:     v.pct,
+        correctText:  v.num + '/' + v.den
+      });
+    });
+  }
+
+  if (doFracToPct) {
+    _PERCENT_FRAC_VALS.forEach(function(v) {
+      questions.push({
+        prompt:      '？ /100 = ？%',
+        answerCount: 2,
+        fracDisplay: { num: v.num, den: v.den },
+        answer:      [v.pct, v.pct],
+        correctText: v.pct + '/100 = ' + v.pct + '%'
+      });
+    });
+  }
+
+  return questions;
+}
+
+// ════════════════════════════════════════
 //  主入口
 // ════════════════════════════════════════
 
 function generateQuestionPool(category, subtype, difficulty) {
   var all = [];
-  if      (category === 'length') all = _makeLengthQuestions(subtype);
-  else if (category === 'weight') all = _makeWeightQuestions(subtype);
-  else if (category === 'volume') all = _makeVolumeQuestions(subtype);
-  else if (category === 'time')   all = _makeTimeQuestions(subtype, difficulty);
-  else if (category === 'money')  all = _makeMoneyQuestions(subtype, difficulty);
+  if      (category === 'length')  all = _makeLengthQuestions(subtype);
+  else if (category === 'weight')  all = _makeWeightQuestions(subtype);
+  else if (category === 'volume')  all = _makeVolumeQuestions(subtype);
+  else if (category === 'time')    all = _makeTimeQuestions(subtype, difficulty);
+  else if (category === 'money')   all = _makeMoneyQuestions(subtype, difficulty);
+  else if (category === 'percent') all = _makePercentQuestions(subtype);
   return shuffle(all).slice(0, ROUND_SIZE);
 }

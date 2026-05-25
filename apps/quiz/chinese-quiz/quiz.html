@@ -108,8 +108,9 @@ var pendingDrag     = null; /* pre-threshold: { word, poolKey, fromQIdx, sx, sy 
 var _dragY          = 0;    /* last known drag clientY — used by auto-scroll loop */
 var _scrollRAF      = null; /* rAF id for drag auto-scroll */
 var _countUpRAF     = null; /* rAF id for score count-up animation */
-var matchData       = [];   /* [{title,pairs:[{wordId,word,imageUrl}],slotOrder:[],wordPoolOrder:[]}] */
-var matchSlots      = {};   /* {'si_pos': word} */
+var matchData        = [];   /* [{title,pairs:[{wordId,word,imageUrl}],imgOrder:[],wordOrder:[]}] */
+var matchConnections = {};   /* {si: {imgPos: wordPos}} */
+var _matchConnDrag   = null; /* currently unused — drag state lives in `dragging` */
 
 /* ════════════ Utilities ════════════ */
 function escHtml(s) {
@@ -145,7 +146,7 @@ function confirmBack() {
   window.speechSynthesis && window.speechSynthesis.cancel();
   var hasInput = Object.keys(blanks).some(function(k){ return blanks[k]; }) ||
                  Object.keys(mcAnswers).length > 0 ||
-                 Object.keys(matchSlots).some(function(k){ return matchSlots[k]; });
+                 Object.keys(matchConnections).some(function(si){ return Object.keys(matchConnections[si] || {}).length > 0; });
   if (!graded && hasInput && !confirm('作答尚未完成，確定要離開嗎？')) return;
   returnToHub();
 }
@@ -274,10 +275,10 @@ function loadQuestions() {
             });
             var indices = pairs.map(function(_, i) { return i; });
             return {
-              title:         msec.title,
-              pairs:         pairs,
-              slotOrder:     shuffle(indices.slice()),
-              wordPoolOrder: shuffle(indices.slice())
+              title:     msec.title,
+              pairs:     pairs,
+              imgOrder:  shuffle(indices.slice()),
+              wordOrder: shuffle(indices.slice())
             };
           });
         }))
@@ -373,13 +374,13 @@ function _normMCQuestion(q) {
 }
 
 function startQuiz(qs, settings, matchLoaded) {
-  quizData        = qs.map(_normMCQuestion);
-  matchData       = matchLoaded || [];
-  blanks          = {};
-  mcAnswers       = {};
-  matchSlots      = {};
-  graded          = false;
-  pendingDrag     = null;
+  quizData         = qs.map(_normMCQuestion);
+  matchData        = matchLoaded || [];
+  blanks           = {};
+  mcAnswers        = {};
+  matchConnections = {};
+  graded           = false;
+  pendingDrag      = null;
   currentSettings = settings || null;
   if (_countUpRAF) { cancelAnimationFrame(_countUpRAF); _countUpRAF = null; }
 
@@ -458,58 +459,48 @@ function renderMatchSections() {
   var el = document.getElementById('match-sections-container');
   if (!el) return;
   el.innerHTML = matchData.map(function(_, si) { return renderMatchSection(si); }).join('');
+  requestAnimationFrame(updateAllMatchSvg);
 }
 
 function renderMatchSection(si) {
   var msec   = matchData[si];
   if (!msec) return '';
+  var n      = msec.pairs.length;
   var secNum = SECTION_NUMS[_textSectionCount() + si] || String(_textSectionCount() + si + 1);
+  var imgSz  = n <= 4 ? 90 : n <= 6 ? 76 : 62;
+  var conns  = matchConnections[si] || {};
 
-  /* word pool — stable order from wordPoolOrder, minus placed/dragging words */
-  var placed = {};
-  (msec.slotOrder || []).forEach(function(_, pos) {
-    var w = matchSlots[si + '_' + pos];
-    if (w) placed[w] = true;
-  });
-  var isDraggingThis = dragging && dragging.dragKind === 'match' && dragging.matchSecIdx === si;
-  var wordPool = (msec.wordPoolOrder || [])
-    .map(function(i) { return msec.pairs[i].word; })
-    .filter(function(w) { return !placed[w] && !(isDraggingThis && dragging.word === w); });
-
-  var poolHtml = wordPool.length
-    ? wordPool.map(function(w) {
-        return '<div class="match-word" data-msec="' + si + '" data-word="' + escHtml(w) + '">'
-          + escHtml(w) + '</div>';
-      }).join('')
-    : '<span class="pool-empty">（詞語牌已全部填入）</span>';
-
-  /* image + slot grid */
-  var gridHtml = (msec.slotOrder || []).map(function(pairIdx, pos) {
-    var pair  = msec.pairs[pairIdx];
-    var key   = si + '_' + pos;
-    var word  = matchSlots[key];
-    var slotHtml;
+  var leftHtml = (msec.imgOrder || []).map(function(pairIdx, imgPos) {
+    var pair = msec.pairs[pairIdx];
+    var gradeClass = '';
     if (graded) {
-      var isRight = word === pair.word;
-      slotHtml = '<div class="match-slot match-slot-filled ' + (isRight ? 'graded-correct' : 'graded-wrong') +
-        '" data-msec="' + si + '" data-pos="' + pos + '">' +
-        escHtml(word || '—') +
-        (!isRight ? '<div class="match-slot-hint">正確：' + escHtml(pair.word) + '</div>' : '') +
-        '</div>';
-    } else if (word) {
-      slotHtml = '<div class="match-slot match-slot-filled" data-msec="' + si + '" data-pos="' + pos + '">' +
-        escHtml(word) +
-        '<button class="blank-remove" onpointerdown="event.stopPropagation()" ' +
-          'onclick="event.stopPropagation();removeMatchSlotWord(' + si + ',' + pos + ')" title="移除">×</button>' +
-        '</div>';
-    } else {
-      slotHtml = '<div class="match-slot" data-msec="' + si + '" data-pos="' + pos + '"></div>';
+      var wp      = conns[imgPos];
+      var isRight = wp !== undefined && msec.wordOrder[wp] === pairIdx;
+      gradeClass  = isRight ? ' graded-correct' : ' graded-wrong';
     }
-    var pairClass = !graded ? 'match-pair' :
-      (word === pair.word ? 'match-pair graded-correct' : 'match-pair graded-wrong');
-    return '<div class="' + pairClass + '">' +
-      '<img class="match-image" src="' + escHtml(pair.imageUrl || '') + '" alt="">' +
-      slotHtml +
+    return '<div class="match-item match-item-img' + gradeClass + '" data-si="' + si +
+        '" data-side="img" data-pos="' + imgPos + '">' +
+      '<img class="match-img" src="' + escHtml(pair.imageUrl || '') + '" alt=""' +
+        ' style="width:' + imgSz + 'px;height:' + imgSz + 'px">' +
+      (!graded ? '<div class="match-ep match-ep-right"></div>' : '') +
+    '</div>';
+  }).join('');
+
+  var rightHtml = (msec.wordOrder || []).map(function(pairIdx, wordPos) {
+    var pair = msec.pairs[pairIdx];
+    var gradeClass = '';
+    if (graded) {
+      var connImgPos = null;
+      Object.keys(conns).forEach(function(ip) {
+        if (parseInt(conns[ip]) === wordPos) connImgPos = parseInt(ip);
+      });
+      var isRight = connImgPos !== null && msec.imgOrder[connImgPos] === pairIdx;
+      gradeClass  = isRight ? ' graded-correct' : ' graded-wrong';
+    }
+    return '<div class="match-item match-item-word' + gradeClass + '" data-si="' + si +
+        '" data-side="word" data-pos="' + wordPos + '">' +
+      (!graded ? '<div class="match-ep match-ep-left"></div>' : '') +
+      '<span class="match-word-label">' + escHtml(pair.word) + '</span>' +
     '</div>';
   }).join('');
 
@@ -518,12 +509,128 @@ function renderMatchSection(si) {
       '<span class="section-num">'  + escHtml(secNum)     + '、</span>' +
       '<span class="section-type">' + escHtml(msec.title) + '</span>' +
     '</div>' +
-    '<div class="pool-area">' +
-      '<div class="pool-label">詞語牌　請拖曳至對應圖片下方</div>' +
-      '<div class="pool-words">' + poolHtml + '</div>' +
+    '<p class="match-hint">請拖曳連接圖片與對應的詞語</p>' +
+    '<div class="match-connect-wrap" id="match-wrap-' + si + '">' +
+      '<div class="match-col-left" style="flex:0 0 auto;width:' + (imgSz + 8) + 'px">'  + leftHtml  + '</div>' +
+      '<svg class="match-svg" id="match-svg-' + si + '" pointer-events="none"></svg>' +
+      '<div class="match-col-right">' + rightHtml + '</div>' +
     '</div>' +
-    '<div class="match-grid">' + gridHtml + '</div>' +
   '</div>';
+}
+
+/* ── SVG connector helpers ── */
+
+function _epCenter(si, side, pos) {
+  var cls  = side === 'img' ? '.match-ep-right' : '.match-ep-left';
+  var ep   = document.querySelector(
+    '.match-item[data-si="' + si + '"][data-side="' + side + '"][data-pos="' + pos + '"] ' + cls);
+  var wrap = document.getElementById('match-wrap-' + si);
+  if (!ep || !wrap) return null;
+  var er = ep.getBoundingClientRect();
+  var wr = wrap.getBoundingClientRect();
+  return { x: er.left + er.width / 2 - wr.left, y: er.top + er.height / 2 - wr.top };
+}
+
+function updateMatchSvg(si, rubberband) {
+  var svgEl = document.getElementById('match-svg-' + si);
+  var msec  = matchData[si];
+  if (!svgEl || !msec) return;
+  var conns = matchConnections[si] || {};
+  var out   = '';
+
+  Object.keys(conns).forEach(function(ipStr) {
+    var imgPos  = parseInt(ipStr);
+    var wordPos = conns[imgPos];
+    var p1 = _epCenter(si, 'img',  imgPos);
+    var p2 = _epCenter(si, 'word', wordPos);
+    if (!p1 || !p2) return;
+
+    var pairIdx = msec.imgOrder[imgPos];
+    var isRight = msec.wordOrder[wordPos] === pairIdx;
+    var color   = !graded ? 'var(--accent)' : (isRight ? 'var(--correct)' : 'var(--wrong)');
+
+    out += '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y +
+      '" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round"></line>';
+
+    if (!graded) {
+      /* wide transparent hit-area for click-to-disconnect */
+      out += '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y +
+        '" stroke="transparent" stroke-width="20" pointer-events="stroke"' +
+        ' style="cursor:pointer" onclick="disconnectMatch(' + si + ',' + imgPos + ')"></line>';
+    }
+
+    if (graded && !isRight) {
+      /* dashed hint line to the correct word */
+      var correctWPos = null;
+      (msec.wordOrder || []).forEach(function(wpi, wp) {
+        if (wpi === pairIdx) correctWPos = wp;
+      });
+      if (correctWPos !== null) {
+        var p3 = _epCenter(si, 'word', correctWPos);
+        if (p3) out += '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p3.x + '" y2="' + p3.y +
+          '" stroke="var(--correct)" stroke-width="1.5" stroke-dasharray="6,4"' +
+          ' stroke-linecap="round" opacity="0.7"></line>';
+      }
+    }
+  });
+
+  if (graded) {
+    /* dashed hint for unconnected images */
+    (msec.imgOrder || []).forEach(function(pairIdx, imgPos) {
+      if (conns[imgPos] !== undefined) return;
+      var p1 = _epCenter(si, 'img', imgPos);
+      var correctWPos = null;
+      (msec.wordOrder || []).forEach(function(wpi, wp) { if (wpi === pairIdx) correctWPos = wp; });
+      if (!p1 || correctWPos === null) return;
+      var p3 = _epCenter(si, 'word', correctWPos);
+      if (p3) out += '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p3.x + '" y2="' + p3.y +
+        '" stroke="var(--correct)" stroke-width="1.5" stroke-dasharray="6,4"' +
+        ' stroke-linecap="round" opacity="0.7"></line>';
+    });
+  }
+
+  if (rubberband) {
+    out += '<line x1="' + rubberband.x1 + '" y1="' + rubberband.y1 +
+      '" x2="' + rubberband.x2 + '" y2="' + rubberband.y2 +
+      '" stroke="var(--accent)" stroke-width="2" stroke-dasharray="8,4"' +
+      ' stroke-linecap="round" opacity="0.75"></line>';
+  }
+
+  svgEl.innerHTML = out;
+}
+
+function updateAllMatchSvg() {
+  matchData.forEach(function(_, si) { updateMatchSvg(si); });
+}
+
+function disconnectMatch(si, imgPos) {
+  if (graded) return;
+  if (!matchConnections[si]) return;
+  delete matchConnections[si][imgPos];
+  updateMatchSvg(si);
+}
+
+function doConnect(si, imgPos, wordPos) {
+  if (!matchConnections[si]) matchConnections[si] = {};
+  var conns = matchConnections[si];
+  delete conns[imgPos];
+  Object.keys(conns).forEach(function(ip) { if (conns[ip] === wordPos) delete conns[ip]; });
+  conns[imgPos] = wordPos;
+  updateMatchSvg(si);
+}
+
+function findMatchEndpointAt(x, y, si, side) {
+  var best = null, bestDist = Infinity, TOL = 56;
+  document.querySelectorAll('.match-item[data-si="' + si + '"][data-side="' + side + '"]')
+    .forEach(function(el) {
+      var r = el.getBoundingClientRect();
+      if (x < r.left - TOL || x > r.right  + TOL ||
+          y < r.top  - TOL || y > r.bottom + TOL) return;
+      var dist = Math.sqrt(Math.pow(x - (r.left + r.width  / 2), 2) +
+                           Math.pow(y - (r.top  + r.height / 2), 2));
+      if (dist < bestDist) { bestDist = dist; best = parseInt(el.dataset.pos); }
+    });
+  return best;
 }
 
 function renderQuestion(q, qIdx, num) {
@@ -694,26 +801,24 @@ function onDelegatedPointerDown(e) {
     return;
   }
 
-  /* Match word card (from pool) */
-  var matchWord = e.target.closest('.match-word');
-  if (matchWord && !graded) {
+  /* Match item — start rubber-band connection drag */
+  var matchItem = e.target.closest('.match-item');
+  if (matchItem && !graded) {
+    var msi  = parseInt(matchItem.dataset.si);
+    var side = matchItem.dataset.side;
+    var pos  = parseInt(matchItem.dataset.pos);
     e.preventDefault();
-    pendingDrag = { dragKind: 'match', word: matchWord.dataset.word,
-                    matchSecIdx: parseInt(matchWord.dataset.msec), fromSlotPos: null,
-                    sx: e.clientX, sy: e.clientY };
-    _addPendingListeners();
-    return;
-  }
-
-  /* Match slot (already filled — drag out) */
-  var matchSlotEl = e.target.closest('.match-slot.match-slot-filled');
-  if (matchSlotEl && !graded) {
-    var msi  = parseInt(matchSlotEl.dataset.msec);
-    var pos  = parseInt(matchSlotEl.dataset.pos);
-    var slotWord = matchSlots[msi + '_' + pos];
-    if (!slotWord) return;
-    e.preventDefault();
-    pendingDrag = { dragKind: 'match', word: slotWord, matchSecIdx: msi, fromSlotPos: pos,
+    /* disconnect existing connection from this endpoint so a new one can start */
+    if (!matchConnections[msi]) matchConnections[msi] = {};
+    if (side === 'img') {
+      delete matchConnections[msi][pos];
+    } else {
+      Object.keys(matchConnections[msi]).forEach(function(ip) {
+        if (matchConnections[msi][ip] === pos) delete matchConnections[msi][ip];
+      });
+    }
+    updateMatchSvg(msi);
+    pendingDrag = { dragKind: 'match-connect', si: msi, side: side, pos: pos,
                     sx: e.clientX, sy: e.clientY };
     _addPendingListeners();
     return;
@@ -750,6 +855,14 @@ function _onPendingUp() {
   var p = pendingDrag;
   pendingDrag = null;
   _removePendingListeners();
+  if (p.dragKind === 'match-connect') {
+    /* Tap on word side → speak the word */
+    if (p.side === 'word') {
+      var msec = matchData[p.si];
+      if (msec) speakText(msec.pairs[msec.wordOrder[p.pos]].word);
+    }
+    return;
+  }
   /* Tap (small movement) → speak the word */
   speakText(p.word);
 }
@@ -761,15 +874,18 @@ function _onPendingCancel() {
 
 /* ════════════ Drag — core ════════════ */
 function startDrag(e, p) {
-  var ghost = document.createElement('div');
-  ghost.className = 'drag-ghost';
-  ghost.textContent = p.word;
-  document.body.appendChild(ghost);
-  posGhost(ghost, e.clientX, e.clientY);
+  var ghost = null;
+  if (p.dragKind !== 'match-connect') {
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.textContent = p.word;
+    document.body.appendChild(ghost);
+    posGhost(ghost, e.clientX, e.clientY);
+  }
 
   _dragY   = e.clientY;
   dragging = Object.assign({}, p, { ghost: ghost });
-  renderAll();
+  if (p.dragKind !== 'match-connect') renderAll();
 
   document.addEventListener('pointermove',   onDragMove,   { passive: false });
   document.addEventListener('pointerup',     onDragEnd);
@@ -799,16 +915,33 @@ function onDragMove(e) {
   e.preventDefault();
   if (!dragging) return;
   _dragY = e.clientY;
-  posGhost(dragging.ghost, e.clientX, e.clientY);
-  if (dragging.dragKind === 'match') {
-    document.querySelectorAll('.match-slot').forEach(function(b){ b.classList.remove('drag-over'); });
-    var t = findDropMatchSlot(e.clientX, e.clientY, dragging.matchSecIdx, dragging.fromSlotPos);
-    if (t) t.classList.add('drag-over');
-  } else {
-    document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
-    var t = findDropBlank(e.clientX, e.clientY, dragging);
-    if (t) t.classList.add('drag-over');
+
+  if (dragging.dragKind === 'match-connect') {
+    var si   = dragging.si;
+    var wrap = document.getElementById('match-wrap-' + si);
+    if (!wrap) return;
+    var p1 = _epCenter(si, dragging.side, dragging.pos);
+    if (!p1) return;
+    var wr = wrap.getBoundingClientRect();
+    var rb = { x1: p1.x, y1: p1.y, x2: e.clientX - wr.left, y2: e.clientY - wr.top };
+    /* highlight nearest opposite-side endpoint */
+    document.querySelectorAll('.match-ep').forEach(function(ep) { ep.classList.remove('match-ep-hover'); });
+    var oppSide   = dragging.side === 'img' ? 'word' : 'img';
+    var targetPos = findMatchEndpointAt(e.clientX, e.clientY, si, oppSide);
+    if (targetPos !== null) {
+      var epCls = oppSide === 'img' ? '.match-ep-right' : '.match-ep-left';
+      var tep   = document.querySelector(
+        '.match-item[data-si="' + si + '"][data-side="' + oppSide + '"][data-pos="' + targetPos + '"] ' + epCls);
+      if (tep) tep.classList.add('match-ep-hover');
+    }
+    updateMatchSvg(si, rb);
+    return;
   }
+
+  posGhost(dragging.ghost, e.clientX, e.clientY);
+  document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
+  var t = findDropBlank(e.clientX, e.clientY, dragging);
+  if (t) t.classList.add('drag-over');
 }
 
 function onDragEnd(e) {
@@ -819,20 +952,30 @@ function onDragEnd(e) {
   if (!dragging) return;
   var info = dragging;
   dragging = null;
-  document.querySelectorAll('.q-blank, .match-slot').forEach(function(b){ b.classList.remove('drag-over'); });
-  info.ghost.remove();
-  if (info.dragKind === 'match') {
-    var target = findDropMatchSlot(e.clientX, e.clientY, info.matchSecIdx, info.fromSlotPos);
-    target ? doPlaceMatch(info.word, info.matchSecIdx, info.fromSlotPos, parseInt(target.dataset.pos))
-           : renderAll();
-  } else {
-    var target = findDropBlank(e.clientX, e.clientY, info);
-    target ? doPlace(info.word, info.fromQIdx, parseInt(target.dataset.qidx))
-           : renderAll();
+  document.querySelectorAll('.match-ep').forEach(function(ep) { ep.classList.remove('match-ep-hover'); });
+
+  if (info.dragKind === 'match-connect') {
+    var si      = info.si;
+    var oppSide = info.side === 'img' ? 'word' : 'img';
+    var tPos    = findMatchEndpointAt(e.clientX || 0, e.clientY || 0, si, oppSide);
+    if (tPos !== null) {
+      var imgPos  = info.side === 'img' ? info.pos : tPos;
+      var wordPos = info.side === 'img' ? tPos : info.pos;
+      doConnect(si, imgPos, wordPos);
+    } else {
+      updateMatchSvg(si); /* clear rubber-band */
+    }
+    return;
   }
+
+  document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
+  if (info.ghost) info.ghost.remove();
+  var target = findDropBlank(e.clientX, e.clientY, info);
+  target ? doPlace(info.word, info.fromQIdx, parseInt(target.dataset.qidx))
+         : renderAll();
 }
 
-/* ════════════ Drop detection (expanded hit area) ════════════ */
+/* ════════════ Drop detection — text blanks ════════════ */
 function findDropBlank(x, y, info) {
   var best = null, bestDist = Infinity;
   document.querySelectorAll('.q-blank').forEach(function(el) {
@@ -857,41 +1000,20 @@ function doPlace(word, fromQIdx, toQIdx) {
   renderAll();
 }
 
-/* ════════════ Match slot helpers ════════════ */
-function findDropMatchSlot(x, y, msi, fromPos) {
-  var best = null, bestDist = Infinity;
-  document.querySelectorAll('.match-slot[data-msec="' + msi + '"]').forEach(function(el) {
-    var pos = parseInt(el.dataset.pos);
-    if (pos === fromPos) return;
-    var key = msi + '_' + pos;
-    if (matchSlots[key]) return; /* already filled */
-    var r = el.getBoundingClientRect();
-    if (x < r.left - DROP_TOL || x > r.right  + DROP_TOL ||
-        y < r.top  - DROP_TOL || y > r.bottom + DROP_TOL) return;
-    var dist = Math.sqrt(Math.pow(x - (r.left + r.width / 2), 2) +
-                         Math.pow(y - (r.top  + r.height / 2), 2));
-    if (dist < bestDist) { bestDist = dist; best = el; }
-  });
-  return best;
-}
-
-function doPlaceMatch(word, msi, fromSlotPos, toSlotPos) {
-  if (fromSlotPos !== null) delete matchSlots[msi + '_' + fromSlotPos];
-  matchSlots[msi + '_' + toSlotPos] = word;
-  renderMatchSections();
-}
-
-function removeMatchSlotWord(msi, pos) {
-  if (graded) return;
-  delete matchSlots[msi + '_' + pos];
-  renderMatchSections();
-}
 
 /* ════════════ Submit / Grade ════════════ */
 function submitQuiz() {
   if (graded) return;
   var unanswered = quizData.filter(function(q, i){ return getAnswer(i) === undefined; }).length;
-  if (unanswered > 0 && !confirm('還有 ' + unanswered + ' 題未作答，確定要送出嗎？')) return;
+  var matchUnanswered = 0;
+  matchData.forEach(function(msec, si) {
+    var conns = matchConnections[si] || {};
+    (msec.imgOrder || []).forEach(function(_, imgPos) {
+      if (conns[imgPos] === undefined) matchUnanswered++;
+    });
+  });
+  var totalUnanswered = unanswered + matchUnanswered;
+  if (totalUnanswered > 0 && !confirm('還有 ' + totalUnanswered + ' 題未作答，確定要送出嗎？')) return;
 
   graded = true;
   window.speechSynthesis && window.speechSynthesis.cancel();
@@ -914,9 +1036,11 @@ function submitQuiz() {
   /* Pre-calculate match totals */
   var matchCorrect = 0, matchTotal = 0;
   matchData.forEach(function(msec, si) {
-    (msec.slotOrder || []).forEach(function(pairIdx, pos) {
+    var conns = matchConnections[si] || {};
+    (msec.imgOrder || []).forEach(function(pairIdx, imgPos) {
       matchTotal++;
-      if (matchSlots[si + '_' + pos] === msec.pairs[pairIdx].word) matchCorrect++;
+      var wordPos = conns[imgPos];
+      if (wordPos !== undefined && msec.wordOrder[wordPos] === pairIdx) matchCorrect++;
     });
   });
 
@@ -927,7 +1051,7 @@ function submitQuiz() {
     var isRight = ua !== undefined && ua === q.answer;
     setTimeout(function() { _applyGradeVisual(q, i, ua, isRight); }, i * STAGGER + 160);
   });
-  /* Match sections reveal after text questions */
+  /* Match sections reveal after text questions — re-render with graded classes + SVG color */
   var matchDelay = quizData.length * STAGGER + 160;
   setTimeout(function() { if (graded) renderMatchSections(); }, matchDelay);
 
@@ -1079,7 +1203,7 @@ function saveScore(score, correct, total) {
 /* ════════════ Retry ════════════ */
 function retryQuiz() {
   window.speechSynthesis && window.speechSynthesis.cancel();
-  matchSlots = {};
+  matchConnections = {};
   loadQuestions(); /* re-reads quiz_settings → fresh random sample from same lesson */
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }

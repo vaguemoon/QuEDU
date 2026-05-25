@@ -48,6 +48,16 @@ var CAT_CONFIG = {
       { id: 'change-to-bill', label: '零錢換鈔' },
       { id: 'mixed',          label: '🎲 混合'  }
     ]
+  },
+  percent: {
+    icon: '📊', name: '百分率換算', noDifficulty: true,
+    subtypes: [
+      { id: 'pct-to-dec',  label: '百分率→小數' },
+      { id: 'dec-to-pct',  label: '小數→百分率' },
+      { id: 'pct-to-frac', label: '百分率→分數' },
+      { id: 'frac-to-pct', label: '分數→百分率' },
+      { id: 'mixed',       label: '🎲 混合'     }
+    ]
   }
 };
 
@@ -226,21 +236,44 @@ function renderQuestion() {
   var qaEl = document.getElementById('game-question-area');
   if (!qaEl) return;
 
-  var parts = q.prompt.split('？');
-  var html  = '';
+  var html = '';
 
-  if (q.answerCount === 1) {
-    html = '<span class="q-segment">' + parts[0] + '</span>' +
-           '<div class="fill-box" id="game-fill-box">＿</div>' +
-           (parts[1] ? '<span class="q-segment">' + parts[1] + '</span>' : '');
+  if (q.answerFormat === 'fraction') {
+    // 百分率→分數：垂直堆疊分子/分母輸入框
+    html = '<span class="q-segment">' + q.prompt + ' = </span>' +
+           '<div class="frac-input-wrap">' +
+           '<div class="fill-box fill-box-active" id="game-fill-box-0" onclick="setActiveFillBox(0)">＿</div>' +
+           '<div class="frac-input-line"></div>' +
+           '<div class="fill-box" id="game-fill-box-1" onclick="setActiveFillBox(1)">＿</div>' +
+           '</div>';
   } else {
-    for (var i = 0; i < q.answerCount; i++) {
-      html += '<span class="q-segment">' + (parts[i] || '') + '</span>';
-      html += '<div class="fill-box' + (i === 0 ? ' fill-box-active' : '') +
-              '" id="game-fill-box-' + i + '" onclick="setActiveFillBox(' + i + ')">＿</div>';
+    var parts = q.prompt.split('？');
+    var prefix = '';
+    if (q.fracDisplay) {
+      // 分數→百分率：在題目前方顯示分數
+      var fd = q.fracDisplay;
+      prefix = '<div class="q-frac">' +
+               '<div class="q-frac-num">' + fd.num + '</div>' +
+               '<div class="q-frac-line"></div>' +
+               '<div class="q-frac-den">' + fd.den + '</div>' +
+               '</div>' +
+               '<span class="q-segment"> = </span>';
     }
-    if (parts[q.answerCount]) {
-      html += '<span class="q-segment">' + parts[q.answerCount] + '</span>';
+    if (q.answerCount === 1) {
+      html = prefix +
+             '<span class="q-segment">' + parts[0] + '</span>' +
+             '<div class="fill-box" id="game-fill-box">＿</div>' +
+             (parts[1] ? '<span class="q-segment">' + parts[1] + '</span>' : '');
+    } else {
+      html = prefix;
+      for (var i = 0; i < q.answerCount; i++) {
+        html += '<span class="q-segment">' + (parts[i] || '') + '</span>';
+        html += '<div class="fill-box' + (i === 0 ? ' fill-box-active' : '') +
+                '" id="game-fill-box-' + i + '" onclick="setActiveFillBox(' + i + ')">＿</div>';
+      }
+      if (parts[q.answerCount]) {
+        html += '<span class="q-segment">' + parts[q.answerCount] + '</span>';
+      }
     }
   }
   qaEl.innerHTML = html;
@@ -250,6 +283,9 @@ function renderQuestion() {
   } else {
     updateSingleDisplay();
   }
+
+  var dotKey = document.getElementById('fill-dot-key');
+  if (dotKey) dotKey.classList.toggle('hidden', q.answerFormat !== 'decimal');
 
   var isMoney   = currentCategory === 'money';
   var isTime    = currentCategory === 'time';
@@ -311,6 +347,7 @@ function fillAppend(d) {
     updateMultiDisplay();
   } else {
     if (fillInputStr.length >= 6) return;
+    if (d === '.' && fillInputStr.indexOf('.') >= 0) return;
     fillInputStr += String(d);
     updateSingleDisplay();
   }
@@ -337,22 +374,35 @@ function onGameSubmit() {
       for (var i = 0; i < answerCount; i++) {
         if (fillInputArr[i] === '') { showToast('請填入全部答案！'); return; }
       }
-      var isCorrect = true;
-      for (var i = 0; i < answerCount; i++) {
-        if (parseInt(fillInputArr[i], 10) !== gameQ.answer[i]) { isCorrect = false; break; }
+      var isCorrect;
+      if (gameQ.answerFormat === 'fraction') {
+        var uNum = parseInt(fillInputArr[0], 10);
+        var uDen = parseInt(fillInputArr[1], 10);
+        isCorrect = uDen !== 0 && uNum * gameQ.answer[1] === uDen * gameQ.answer[0];
+      } else {
+        isCorrect = true;
+        for (var i = 0; i < answerCount; i++) {
+          if (parseInt(fillInputArr[i], 10) !== gameQ.answer[i]) { isCorrect = false; break; }
+        }
       }
       onGameResult(isCorrect);
     }
   } else {
     if (!fillInputStr) return;
-    var val = parseInt(fillInputStr, 10);
-    onGameResult(val === gameQ.answer[0]);
+    if (gameQ.answerFormat === 'decimal') {
+      var fVal = parseFloat(fillInputStr);
+      onGameResult(!isNaN(fVal) && Math.abs(fVal - gameQ.answer[0]) < 1e-9);
+    } else {
+      var val = parseInt(fillInputStr, 10);
+      onGameResult(val === gameQ.answer[0]);
+    }
   }
 }
 
 function handleFillKeydown(e) {
   if (currentPage !== 'game') return;
   if (e.key >= '0' && e.key <= '9') { fillAppend(e.key); return; }
+  if (e.key === '.' && gameQ && gameQ.answerFormat === 'decimal') { fillAppend('.'); return; }
   if (e.key === 'Backspace') { fillBackspace(); return; }
   if (e.key === 'Enter') { onGameSubmit(); }
 }
@@ -402,7 +452,12 @@ function _showCorrectAnswer() {
     for (var i = 0; i < answerCount; i++) {
       var el = document.getElementById('game-fill-box-' + i);
       if (el) {
-        el.textContent = gameQ.answer[i];
+        // 分數答錯：以 pctValue/100 形式顯示
+        if (gameQ.answerFormat === 'fraction') {
+          el.textContent = i === 0 ? gameQ.pctValue : 100;
+        } else {
+          el.textContent = gameQ.answer[i];
+        }
         el.classList.remove('fill-box-active');
         el.classList.add('fill-box-correct');
       }
