@@ -18,14 +18,15 @@ window.addEventListener('load', function() {
 });
 
 /* ── 從 Firestore 載入所有課程 wordImages ── */
+/* Firestore 的 where('field', '==', null) 只比對欄位存在且為 null 的文件，
+   不會比對欄位不存在的文件，所以改為 client-side 過濾。 */
 function _loadAllImages() {
-  db.collection('wordImages')
-    .where('customCategoryId', '==', null)
-    .get()
+  db.collection('wordImages').get()
     .then(function(snap) {
       _allByGL = {};
       snap.forEach(function(doc) {
-        var d  = doc.data();
+        var d = doc.data();
+        if (d.customCategoryId) return;
         var gl = d.gradeLesson || (d.grade + '_' + d.lesson);
         if (!gl || gl === '_') return;
         if (!_allByGL[gl]) _allByGL[gl] = [];
@@ -38,25 +39,7 @@ function _loadAllImages() {
       _renderEntryPage();
     })
     .catch(function() {
-      /* fallback: load all and filter client-side */
-      db.collection('wordImages').get().then(function(snap) {
-        _allByGL = {};
-        snap.forEach(function(doc) {
-          var d = doc.data();
-          if (d.customCategoryId) return; // skip custom-category words
-          var gl = d.gradeLesson || (d.grade + '_' + d.lesson);
-          if (!gl || gl === '_') return;
-          if (!_allByGL[gl]) _allByGL[gl] = [];
-          _allByGL[gl].push({
-            word:       d.word       || '',
-            definition: d.definition || '',
-            imageUrl:   d.imageUrl   || ''
-          });
-        });
-        _renderEntryPage();
-      }).catch(function() {
-        _renderEntryPage();
-      });
+      _renderEntryPage();
     });
 }
 
