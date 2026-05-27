@@ -264,6 +264,17 @@ function renderQuestion() {
              '<span class="q-segment">' + parts[0] + '</span>' +
              '<div class="fill-box" id="game-fill-box">＿</div>' +
              (parts[1] ? '<span class="q-segment">' + parts[1] + '</span>' : '');
+    } else if (q.fracDisplay) {
+      // frac-to-pct：fill-box-0 以上下格式呈現（分子輸入框 / 100）
+      html = prefix +
+             '<div class="frac-input-wrap">' +
+             '<div class="fill-box fill-box-active" id="game-fill-box-0" onclick="setActiveFillBox(0)">＿</div>' +
+             '<div class="frac-input-line"></div>' +
+             '<div class="q-frac-den">100</div>' +
+             '</div>' +
+             '<span class="q-segment"> = </span>' +
+             '<div class="fill-box" id="game-fill-box-1" onclick="setActiveFillBox(1)">＿</div>' +
+             '<span class="q-segment">%</span>';
     } else {
       html = prefix;
       for (var i = 0; i < q.answerCount; i++) {
