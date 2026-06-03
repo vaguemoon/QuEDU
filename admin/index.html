@@ -625,6 +625,16 @@
           <div class="tool-card-arrow">→</div>
         </button>
 
+        <!-- 列印工具卡片 -->
+        <button class="tool-card" onclick="openToolModal('print-cards')">
+          <div class="tool-card-icon">🖨️</div>
+          <div class="tool-card-body">
+            <div class="tool-card-name">列印工具</div>
+            <div class="tool-card-desc">產生生字圖卡，含注音、部首、田字格，供低年級著色練習</div>
+          </div>
+          <div class="tool-card-arrow">→</div>
+        </button>
+
       </div>
     </div>
 
@@ -1281,7 +1291,8 @@
 <script src="sa-bulk-import.js"></script>
 <script>
 var TOOL_CONFIG = {
-  reader: { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' }
+  reader:       { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' },
+  'print-cards': { title: '🖨️ 列印工具', src: '../apps/tools/print-cards/index.html' }
 };
 function openToolModal(id) {
   var cfg = TOOL_CONFIG[id];

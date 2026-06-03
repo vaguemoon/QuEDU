@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生字圖卡</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+<style>
+:root {
+  --card-border: #b8d4f0;
+  --text-dark:   #1a2c3e;
+  --text-muted:  #5a7a9a;
+  --blue:        #4a90d9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: #eef3f9;
+  color: var(--text-dark);
+}
+
+/* ── Screen header ── */
+#page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: white;
+  border-bottom: 1px solid #d0dcea;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+#lesson-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+#loading-status {
+  font-size: .8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+#btn-print {
+  flex-shrink: 0;
+  padding: 9px 22px;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: .92rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  opacity: .45;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+#btn-print.ready            { opacity: 1; pointer-events: auto; }
+#btn-print.ready:hover      { background: #2d6fa8; }
+
+/* ── Cards wrapper (screen) ── */
+#cards-wrapper {
+  padding: 28px 24px;
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── One A4 page (screen: 2×2 preview) ── */
+.print-page {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 14px;
+  background: white;
+  padding: 20px;
+  border-radius: 6px;
+  border: 1px solid #ccdaea;
+  box-shadow: 0 3px 12px rgba(0,0,0,.09);
+}
+
+/* ── Single card ── */
+.char-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1.5px solid var(--card-border);
+  border-radius: 10px;
+  background: white;
+}
+
+.card-label {
+  font-size: .62rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+/* Card body: side-info (left) + char-wrap (right) */
+.card-body {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Left side column: 注音 + 部首 */
+.card-side-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  width: 52px;
+  flex-shrink: 0;
+  align-self: stretch;
+  border-left: 1px solid #ddeaf8;
+  padding: 6px 2px;
+  gap: 6px;
+}
+
+.side-info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.info-label {
+  font-size: .55rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.info-value {
+  font-size: .92rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.1;
+}
+
+/* 注音：直排字母 + 橫排聲調符號 */
+.info-zhuyin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zy-wrapper {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1px;
+}
+
+.zy-body {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: .08em;
+  font-size: inherit;
+}
+
+/* 聲調符號不旋轉，維持橫向顯示，垂直位置由 JS 依聲調設定 */
+.zy-tone {
+  writing-mode: horizontal-tb;
+  font-size: .65em;
+  line-height: 1;
+}
+
+/* Char box with 田字格
+   CSS Grid stacking avoids position:absolute which breaks in some print engines. */
+.card-char-wrap {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template: 1fr / 1fr;
+  border: 1.5px solid var(--card-border);
+  border-radius: 7px;
+  overflow: hidden;
+  background: white;
+  min-width: 0;
+}
+
+/* Both stack in same grid cell */
+.hz-target {
+  grid-area: 1 / 1;
+  min-width: 0;
+  min-height: 0;
+}
+.hz-target svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.tian-svg {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  position: relative;
+}
+
+/* ── Practice row (3 writing boxes, full card width) ── */
+.practice-row {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.practice-box {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  border: 1.5px solid var(--card-border);
+  border-radius: 5px;
+  overflow: hidden;
+  background: white;
+  display: grid;
+  grid-template: 1fr / 1fr;
+}
+
+/* 第一格的仿寫底稿（HanziWriter 極淡字形） */
+.practice-hz {
+  grid-area: 1 / 1;
+  min-width: 0;
+  min-height: 0;
+}
+.practice-hz svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.practice-tian {
+  grid-area: 1 / 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  position: relative;
+}
+
+/* ════════════════════════
+   @media print
+════════════════════════ */
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+
+  body { background: white; }
+  #page-header { display: none; }
+
+  #cards-wrapper {
+    padding: 0;
+    max-width: none;
+    gap: 0;
+  }
+
+  .print-page {
+    width:   190mm;
+    height:  277mm;
+    padding: 0;
+    gap:     5mm;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows:    repeat(2, 1fr);
+    align-items: center;   /* center each card vertically in its grid cell */
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    min-height: unset;
+    page-break-after: always;
+    break-after: page;
+  }
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .char-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    padding: 4mm;
+    gap: 3mm;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .card-body  { gap: 4mm; }
+
+  .card-side-info {
+    width: 16mm;
+    padding: 3mm 1mm;
+    border-left: 0.5pt solid #ddeaf8;
+  }
+
+  .practice-row { gap: 3mm; margin-top: 2mm; }
+  .practice-box { border-width: 0.5pt; border-radius: 3pt; }
+
+  .card-label { font-size: 7pt; }
+  .info-label { font-size: 6.5pt; }
+  .info-value { font-size: 11pt; }
+}
+</style>
+</head>
+<body>
+
+<div id="page-header">
+  <div>
+    <div id="lesson-title">生字圖卡</div>
+    <div id="loading-status">載入中…</div>
+  </div>
+  <button id="btn-print" onclick="window.print()">⏳ 載入中…</button>
+</div>
+
+<div id="cards-wrapper"></div>
+
+<script src="cards.js"></script>
+</body>
+</html>

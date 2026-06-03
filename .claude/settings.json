@@ -4,7 +4,9 @@
       "Bash(ls /d/githubdesk/QuEDU/icon-*.png)",
       "Bash(wc -l d:/githubdesk/QuEDU/chinese/js/*.js)",
       "Bash(ls -lh /d/githubdesk/QuEDU/icon-*)",
-      "Bash(node --check *)"
+      "Bash(node --check *)",
+      "PowerShell(Move-Item \"d:\\\\github\\\\QuEDU\\\\admin\\\\print-cards.html\" \"d:\\\\github\\\\QuEDU\\\\super-admin\\\\print-cards.html\")",
+      "PowerShell(Move-Item \"d:\\\\github\\\\QuEDU\\\\admin\\\\print-cards.js\"   \"d:\\\\github\\\\QuEDU\\\\super-admin\\\\print-cards.js\")"
     ]
   }
 }

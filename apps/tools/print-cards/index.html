@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>列印生字圖卡</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:    #4a90d9;
+  --blue-dk: #2d6fa8;
+  --blue-lt: #eef5fc;
+  --border:  #d0dcea;
+  --text:    #1a2c3e;
+  --muted:   #5a7a9a;
+  --bg:      #f4f7fb;
+  --card-bg: white;
+  --green:   #27ae60;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* ── 工具標題列 ── */
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.tool-title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: var(--text);
+}
+.tool-sub {
+  font-size: .78rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── 卡片 ── */
+.card {
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+.card-label {
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: .04em;
+  margin-bottom: 8px;
+}
+
+/* ── 三層選課 ── */
+.curr-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.curr-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.curr-step-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--blue-lt);
+  color: var(--blue-dk);
+  font-size: .72rem;
+  font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.curr-step-num.done { background: var(--blue); color: white; }
+.curr-select {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  font-size: .88rem;
+  font-family: inherit;
+  color: var(--text);
+  background: white;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+.curr-select:focus { border-color: var(--blue); }
+.curr-select:disabled { opacity: .45; cursor: not-allowed; background: #f8f8f8; }
+
+/* ── 選課結果 ── */
+.lesson-result {
+  display: none;
+  padding: 10px 14px;
+  background: var(--blue-lt);
+  border: 1.5px solid #b8d4f0;
+  border-radius: 9px;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--blue-dk);
+  margin-top: 4px;
+}
+
+/* ── 字 / 標籤欄位 ── */
+.field-label {
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.field-label .badge {
+  font-size: .65rem;
+  background: var(--blue-lt);
+  color: var(--blue-dk);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-weight: 700;
+}
+textarea, input[type="text"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  font-size: .92rem;
+  font-family: 'Noto Sans TC', sans-serif;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+  resize: vertical;
+}
+textarea:focus, input[type="text"]:focus { border-color: var(--blue); }
+
+.chars-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 36px;
+}
+.char-chip {
+  width: 36px; height: 36px;
+  border-radius: 7px;
+  background: var(--blue-lt);
+  border: 1.5px solid #b8d4f0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--blue-dk);
+}
+.chars-count {
+  font-size: .72rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ── 產生按鈕 ── */
+.btn-generate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white;
+  border: none;
+  border-radius: 11px;
+  font-size: .95rem;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .15s, transform .12s;
+  margin-top: 4px;
+}
+.btn-generate:hover { opacity: .9; }
+.btn-generate:active { transform: scale(.98); }
+.btn-generate:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* ── 載入動畫 ── */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── 分隔線 ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Dark mode from parent */
+body.dark {
+  --bg: #1a1f2e;
+  --card-bg: #242938;
+  --border: #35405a;
+  --text: #e2e8f0;
+  --muted: #7a8da8;
+  --blue-lt: #1e2d45;
+}
+body.dark textarea,
+body.dark input[type="text"],
+body.dark .curr-select { background: #1e2535; color: #e2e8f0; border-color: #35405a; }
+body.dark .char-chip { background: #1e2d45; border-color: #2d4060; }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <div>
+    <div class="tool-title">🖨️ 列印生字圖卡</div>
+    <div class="tool-sub">為低年級製作著色用的生字圖卡（含注音、部首、田字格）</div>
+  </div>
+</div>
+
+<!-- 選課區 -->
+<div class="card">
+  <div class="card-label">選擇課程</div>
+  <div class="curr-steps">
+
+    <div class="curr-row">
+      <div class="curr-step-num" id="sn1">1</div>
+      <select class="curr-select" id="sel-version" onchange="onVersionChange()">
+        <option value="">── 載入課程版本中… ──</option>
+      </select>
+    </div>
+
+    <div class="curr-row">
+      <div class="curr-step-num" id="sn2">2</div>
+      <select class="curr-select" id="sel-grade" disabled onchange="onGradeChange()">
+        <option value="">── 先選版本 ──</option>
+      </select>
+    </div>
+
+    <div class="curr-row">
+      <div class="curr-step-num" id="sn3">3</div>
+      <select class="curr-select" id="sel-lesson" disabled onchange="onLessonChange()">
+        <option value="">── 先選冊次 ──</option>
+      </select>
+    </div>
+
+  </div>
+  <div class="lesson-result" id="lesson-result"></div>
+</div>
+
+<!-- 生字欄 -->
+<div class="card">
+  <div class="field-label">
+    生字
+    <span class="badge" id="chars-badge">0 字</span>
+  </div>
+  <textarea id="chars-input" rows="2" placeholder="從課程選取後自動填入，也可直接輸入或修改"
+    oninput="onCharsInput()"></textarea>
+  <div class="chars-preview" id="chars-preview"></div>
+  <div class="chars-count" id="chars-count"></div>
+</div>
+
+<!-- 標籤欄 -->
+<div class="card">
+  <div class="field-label">圖卡標籤（課次名稱）</div>
+  <input type="text" id="label-input" placeholder="例：二上 第3課 山川・風景" maxlength="40">
+</div>
+
+<!-- 選項 -->
+<div style="display:flex;align-items:center;gap:10px;padding:10px 4px 4px;">
+  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:var(--text-dark)">
+    <input type="checkbox" id="practice-check"
+      style="width:17px;height:17px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">
+    含生字練習格（每字附 3 格田字練習格）
+  </label>
+</div>
+
+<!-- 產生按鈕 -->
+<button class="btn-generate" id="btn-generate" onclick="generate()" disabled>
+  <div class="spinner" id="btn-spinner"></div>
+  <span id="btn-label">請先輸入生字</span>
+</button>
+
+<script>
+'use strict';
+
+/* ── 取得父視窗的 db（同源 iframe）── */
+var db = null;
+try { db = window.parent.db; } catch(e) {}
+
+/* ── 暗色模式同步 ── */
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'admin-dark') {
+    document.body.classList.toggle('dark', !!e.data.dark);
+  }
+});
+try {
+  if (window.parent.document.body.classList.contains('dark')) {
+    document.body.classList.add('dark');
+  }
+} catch(e) {}
+
+/* ── 課程資料 ── */
+var _versions = []; // [{ id, name, grades: { grade: [lesson...] } }]
+
+function loadVersions() {
+  if (!db) {
+    var sel = document.getElementById('sel-version');
+    sel.innerHTML = '<option value="">── 無法連線，請直接輸入生字 ──</option>';
+    return;
+  }
+  db.collection('curriculum').get().then(function(snap) {
+    var sel = document.getElementById('sel-version');
+    sel.innerHTML = '<option value="">── 選擇版本 ──</option>';
+    snap.forEach(function(doc) {
+      _versions.push({ id: doc.id, name: doc.data().name || doc.id, grades: {} });
+      var opt = document.createElement('option');
+      opt.value = doc.id;
+      opt.textContent = doc.data().name || doc.id;
+      sel.appendChild(opt);
+    });
+  }).catch(function() {
+    document.getElementById('sel-version').innerHTML =
+      '<option value="">── 載入失敗，請直接輸入 ──</option>';
+  });
+}
+
+function onVersionChange() {
+  var vId = document.getElementById('sel-version').value;
+  var sn1 = document.getElementById('sn1');
+  var grSel = document.getElementById('sel-grade');
+  var lsSel = document.getElementById('sel-lesson');
+
+  grSel.innerHTML = '<option value="">── 載入冊次中… ──</option>';
+  grSel.disabled = true;
+  lsSel.innerHTML = '<option value="">── 先選冊次 ──</option>';
+  lsSel.disabled = true;
+  clearLesson();
+
+  if (!vId) { sn1.classList.remove('done'); return; }
+  sn1.classList.add('done');
+
+  var ver = _versions.find(function(v) { return v.id === vId; });
+  if (ver && Object.keys(ver.grades).length) {
+    populateGrades(ver.grades);
+    return;
+  }
+
+  db.collection('curriculum').doc(vId).collection('lessons').get().then(function(snap) {
+    var grades = {};
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      var g = d.grade || d.bookNum || '未知';
+      if (!grades[g]) grades[g] = [];
+      grades[g].push(Object.assign({ id: doc.id }, d));
+    });
+    Object.keys(grades).forEach(function(g) {
+      grades[g].sort(function(a, b) { return (a.lessonNum || 0) - (b.lessonNum || 0); });
+    });
+    if (ver) ver.grades = grades;
+    populateGrades(grades);
+  });
+}
+
+function populateGrades(grades) {
+  var sel = document.getElementById('sel-grade');
+  var keys = Object.keys(grades);
+  sel.innerHTML = '<option value="">── 選擇冊次 ──</option>';
+  keys.forEach(function(g) {
+    var opt = document.createElement('option');
+    opt.value = g;
+    opt.textContent = g;
+    sel.appendChild(opt);
+  });
+  sel.disabled = false;
+}
+
+function onGradeChange() {
+  var vId   = document.getElementById('sel-version').value;
+  var grade = document.getElementById('sel-grade').value;
+  var sn2   = document.getElementById('sn2');
+  var lsSel = document.getElementById('sel-lesson');
+
+  lsSel.innerHTML = '<option value="">── 先選冊次 ──</option>';
+  lsSel.disabled = true;
+  clearLesson();
+
+  if (!grade) { sn2.classList.remove('done'); return; }
+  sn2.classList.add('done');
+
+  var ver = _versions.find(function(v) { return v.id === vId; });
+  var lessons = (ver && ver.grades[grade]) || [];
+  lsSel.innerHTML = '<option value="">── 選擇課次 ──</option>';
+  lessons.forEach(function(lesson, idx) {
+    var opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = '第 ' + lesson.lessonNum + ' 課　' + lesson.name;
+    lsSel.appendChild(opt);
+  });
+  lsSel.disabled = false;
+  lsSel._lessons = lessons;
+}
+
+function onLessonChange() {
+  var sn3   = document.getElementById('sn3');
+  var lsSel = document.getElementById('sel-lesson');
+  var idx   = lsSel.value;
+
+  clearLesson();
+  if (idx === '') { sn3.classList.remove('done'); return; }
+  sn3.classList.add('done');
+
+  var lesson = lsSel._lessons[parseInt(idx)];
+  if (!lesson) return;
+
+  var grade = document.getElementById('sel-grade').value;
+  var chars = (lesson.chars || []).join('');
+
+  document.getElementById('chars-input').value = chars;
+  document.getElementById('label-input').value =
+    grade + '　第 ' + lesson.lessonNum + ' 課　' + lesson.name;
+
+  var res = document.getElementById('lesson-result');
+  res.textContent = grade + '　第 ' + lesson.lessonNum + ' 課「' + lesson.name + '」— ' + lesson.chars.length + ' 個生字';
+  res.style.display = '';
+
+  updateCharsPreview();
+}
+
+function clearLesson() {
+  document.getElementById('lesson-result').style.display = 'none';
+}
+
+/* ── 生字輸入 ── */
+function onCharsInput() { updateCharsPreview(); }
+
+function updateCharsPreview() {
+  var raw   = document.getElementById('chars-input').value;
+  var chars = Array.from(new Set(Array.from(raw).filter(function(c) { return c.trim(); })));
+  var preview = document.getElementById('chars-preview');
+  var count   = document.getElementById('chars-count');
+  var badge   = document.getElementById('chars-badge');
+  var btn     = document.getElementById('btn-generate');
+  var lbl     = document.getElementById('btn-label');
+
+  preview.innerHTML = chars.map(function(c) {
+    return '<div class="char-chip">' + c + '</div>';
+  }).join('');
+
+  badge.textContent = chars.length + ' 字';
+  count.textContent = chars.length ? '共 ' + chars.length + ' 字（每頁 4 張，共 ' + Math.ceil(chars.length / 4) + ' 頁）' : '';
+
+  if (chars.length) {
+    btn.disabled = false;
+    lbl.textContent = '產生圖卡（開新分頁）';
+  } else {
+    btn.disabled = true;
+    lbl.textContent = '請先輸入生字';
+  }
+}
+
+/* ── 產生圖卡 ── */
+function generate() {
+  var raw   = document.getElementById('chars-input').value;
+  var chars = Array.from(new Set(Array.from(raw).filter(function(c) { return c.trim(); })));
+  var label = document.getElementById('label-input').value.trim();
+  if (!chars.length) return;
+
+  var practice = document.getElementById('practice-check').checked ? '1' : '0';
+  var params = new URLSearchParams({ label: label, chars: chars.join(''), practice: practice });
+  window.open('cards.html?' + params.toString(), '_blank');
+}
+
+/* ── 初始化 ── */
+loadVersions();
+</script>
+
+</body>
+</html>
