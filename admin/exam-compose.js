@@ -126,25 +126,29 @@ function _ecPrintSession(sessionId) {
         var type  = qdata.type || '其他';
         var label = qdata.question || qdata.word || '';
         if (!grouped[type]) grouped[type] = [];
-        grouped[type].push({ id: qd.id, label: label });
+        grouped[type].push({ id: qd.id, label: label, type: type,
+                              answer: qdata.answer || qdata.word || '',
+                              options: qdata.options || null });
       });
 
       var sections = [];
       var idx      = 0;
       _EC_TYPE_ORDER.forEach(function(type) {
         if (grouped[type] && grouped[type].length) {
-          sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type, questions: grouped[type] });
+          sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
+                          key: type, questions: grouped[type] });
           idx++;
         }
       });
       Object.keys(grouped).forEach(function(type) {
         if (_EC_TYPE_ORDER.indexOf(type) === -1 && grouped[type].length) {
-          sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type, questions: grouped[type] });
+          sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
+                          key: type, questions: grouped[type] });
           idx++;
         }
       });
 
-      _ecDoPrint(d.name || '試卷', sections, d.subject || 'chinese');
+      _ecDoPrint(d.name || '試卷', sections, d.subject || 'chinese', d.matchSections || []);
     }).catch(function(e) { showToast('載入失敗：' + e.message); });
   }).catch(function(e) { showToast('載入失敗：' + e.message); });
 }
@@ -533,14 +537,16 @@ function _ecBuildSections() {
       if (!_ecSelected[q.id] || placed[q.id]) return;
       var key   = q[groupKey] || '其他';
       var label = q.question || q.word || '';
+      var qobj  = { id: q.id, label: label, type: q.type || key,
+                    answer: q.answer || q.word || '', options: q.options || null };
       var sec   = null;
       for (var i = 0; i < _ecSections.length; i++) {
         if (_ecSections[i].key === key) { sec = _ecSections[i]; break; }
       }
       if (sec) {
-        sec.questions.push({ id: q.id, label: label });
+        sec.questions.push(qobj);
       } else {
-        _ecSections.push({ title: key, key: key, collapsed: false, questions: [{ id: q.id, label: label }] });
+        _ecSections.push({ title: key, key: key, collapsed: false, questions: [qobj] });
       }
     });
 
@@ -554,7 +560,9 @@ function _ecBuildSections() {
     if (!_ecSelected[q.id]) return;
     var key = q[groupKey] || '其他';
     if (!groups[key]) { groups[key] = []; order.push(key); }
-    groups[key].push({ id: q.id, label: q.question || q.word || '' });
+    groups[key].push({ id: q.id, label: q.question || q.word || '',
+                       type: q.type || key, answer: q.answer || q.word || '',
+                       options: q.options || null });
   });
 
   /* 排序大題 */
@@ -816,48 +824,253 @@ function _ecPublishOnline() {
 
 /* ── 列印（從精靈 Step 4，先預覽再列印）── */
 function _ecPrint() {
-  if (!_ecSections.length) { showToast('試卷內容為空'); return; }
-  _ecDoPrint(_ecName, _ecSections, _ecSubject);
+  if (!_ecSections.length && !_ecMatchSections.length) { showToast('試卷內容為空'); return; }
+  _ecDoPrint(_ecName, _ecSections, _ecSubject, _ecMatchSections);
 }
-/* 產生列印用的 HTML，並開新視窗載入後觸發瀏覽器列印 */
-function _ecDoPrint(name, sections, subject) {
+
+/* 列印入口：若有配對大題則先非同步抓圖片 URL，再開印刷視窗 */
+function _ecDoPrint(name, sections, subject, matchSections) {
+  matchSections = matchSections || [];
+  var allWordIds = [];
+  matchSections.forEach(function(ms) {
+    (ms.wordIds || []).forEach(function(id) { allWordIds.push(id); });
+  });
+
+  if (allWordIds.length && db) {
+    Promise.all(allWordIds.map(function(wid) {
+      return db.collection('wordImages').doc(wid).get();
+    })).then(function(wdocs) {
+      var imgMap = {};
+      wdocs.forEach(function(wd) { if (wd.exists) imgMap[wd.id] = wd.data().imageUrl || ''; });
+      _ecOpenPrintWindow(name, sections, subject, matchSections, imgMap);
+    }).catch(function() {
+      _ecOpenPrintWindow(name, sections, subject, matchSections, {});
+    });
+  } else {
+    _ecOpenPrintWindow(name, sections, subject, matchSections, {});
+  }
+}
+
+function _ecOpenPrintWindow(name, sections, subject, matchSections, imgMap) {
   var win = window.open('', '_blank');
   if (!win) { showToast('請允許瀏覽器彈出視窗後再試'); return; }
-
-  var qNum  = 0;
-  var lines = sections.map(function(sec) {
-    var secLines = [
-      '<h3 style="margin:20px 0 6px;font-size:13pt;border-left:3px solid #333;padding-left:8px">' +
-        _ecEsc(sec.title || '') + '</h3>'
-    ];
-    (sec.questions || []).forEach(function(q) {
-      qNum++;
-      var text = subject === 'math'
-        ? _ecEsc(q.label || q.id) + '　＝　__________'
-        : _ecEsc(q.label || q.id);
-      secLines.push('<p style="margin:7px 0;font-size:12pt">' + qNum + '．' + text + '</p>');
-    });
-    return secLines.join('');
-  }).join('');
-
-  win.document.write(
-    '<!doctype html><html><head><meta charset="utf-8">' +
-    '<title>' + _ecEsc(name) + '</title>' +
-    '<style>' +
-      'body{font-family:"Noto Sans TC",sans-serif;margin:40px;line-height:2.2}' +
-      'h1{font-size:17pt;margin-bottom:4px}' +
-      'h3{border-left:3px solid #333;padding-left:8px;font-size:13pt;margin:20px 0 6px}' +
-      '@media print{body{margin:15mm}button{display:none}}' +
-    '</style></head><body>' +
-    '<h1>' + _ecEsc(name) + '</h1>' +
-    '<p style="font-size:10pt;color:#555;border-bottom:1px solid #ccc;padding-bottom:8px;margin-bottom:16px">' +
-      '班級：__________________　姓名：__________________　得分：__________</p>' +
-    lines +
-    '<p style="margin-top:30px;text-align:center">' +
-      '<button onclick="window.print()" style="padding:8px 24px;font-size:11pt;cursor:pointer">🖨 列印</button>' +
-    '</p></body></html>'
-  );
+  win.document.write(_ecBuildPrintHtml(name, sections, subject, matchSections, imgMap));
   win.document.close();
+}
+
+/* 產生完整列印 HTML */
+function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
+  var CN = ['一','二','三','四','五','六','七','八','九','十'];
+  var DRAG_TYPES = ['詞語填空', '詞語解釋'];
+
+  /* ─── 大題 HTML ─── */
+  var body = '';
+  var sn   = 0;
+
+  sections.forEach(function(sec) {
+    var key    = sec.key || '';
+    var isDrag = DRAG_TYPES.indexOf(key) >= 0;
+    var isMC   = key === '選擇題';
+    var qs     = sec.questions || [];
+
+    body += '<div class="sec-block">';
+    body += '<div class="sec-header">' + _ecEsc(sec.title || '') + '</div>';
+
+    /* 答案池（拖曳型大題） */
+    if (isDrag && qs.length) {
+      var poolWords = qs.map(function(q) {
+        return q.answer || _ecExtractFillAnswer(q.label);
+      }).filter(Boolean);
+      /* Fisher-Yates shuffle */
+      for (var pi = poolWords.length - 1; pi > 0; pi--) {
+        var pj = Math.floor(Math.random() * (pi + 1));
+        var pt = poolWords[pi]; poolWords[pi] = poolWords[pj]; poolWords[pj] = pt;
+      }
+      body += '<div class="pool-box">';
+      body += '<span class="pool-label">答案池</span>';
+      poolWords.forEach(function(w) {
+        body += '<span class="pool-chip">' + _ecEsc(w) + '</span>';
+      });
+      body += '</div>';
+    }
+
+    /* 題目列表 */
+    body += '<ol class="q-list">';
+    qs.forEach(function(q, j) {
+      body += '<li class="q-item"><span class="q-num">' + (j + 1) + '.</span><span class="q-body">';
+
+      if (key === '詞語解釋') {
+        var ans    = q.answer || '';
+        var blankW = Math.max(ans.length * 1.6, 3).toFixed(1) + 'em';
+        body += _ecEsc(q.label) +
+                '<span class="q-uline" style="width:' + blankW + '"></span>';
+
+      } else if (key === '詞語填空') {
+        body += _ecRenderFillBlank(q.label);
+
+      } else if (isMC) {
+        body += '<span class="q-text">' + _ecEsc(q.label) + '</span>';
+        body += '<div class="mc-opts">';
+        (q.options || []).forEach(function(opt) {
+          body += '<div class="mc-opt">○ ' + _ecEsc(opt) + '</div>';
+        });
+        body += '</div>';
+
+      } else if (subject === 'math') {
+        body += _ecEsc(q.label) + '<span class="q-uline" style="width:5em"></span>＝<span class="q-uline" style="width:5em"></span>';
+
+      } else {
+        body += _ecEsc(q.label);
+      }
+
+      body += '</span></li>';
+    });
+    body += '</ol></div>';
+    sn++;
+  });
+
+  /* ─── 配對大題 ─── */
+  matchSections.forEach(function(ms) {
+    var secTitle = (CN[sn] || String(sn + 1)) + '、' + (ms.title || '連連看');
+    var wids   = ms.wordIds || [];
+    var wwords = ms.words   || [];
+
+    /* 左欄（圖片，保持原序）；右欄（詞語，隨機排列） */
+    var rightWords = wwords.slice();
+    for (var ri = rightWords.length - 1; ri > 0; ri--) {
+      var rj = Math.floor(Math.random() * (ri + 1));
+      var rt = rightWords[ri]; rightWords[ri] = rightWords[rj]; rightWords[rj] = rt;
+    }
+
+    body += '<div class="sec-block">';
+    body += '<div class="sec-header">' + _ecEsc(secTitle) + '</div>';
+    body += '<p class="match-hint">請以直線連接左方圖片與右方對應詞語</p>';
+    body += '<div class="match-wrap">';
+
+    /* 左欄 */
+    body += '<div class="match-col match-col-l">';
+    wids.forEach(function(wid, i) {
+      var imgSrc = imgMap[wid] || '';
+      body += '<div class="match-item">';
+      if (imgSrc) body += '<img class="match-img" src="' + _ecEscA(imgSrc) + '" alt="">';
+      else        body += '<div class="match-img match-img-empty">' + _ecEsc(wwords[i] || '') + '</div>';
+      body += '<span class="match-ep match-ep-r">●</span>';
+      body += '</div>';
+    });
+    body += '</div>';
+
+    /* 中間空白連線區 */
+    body += '<div class="match-col match-col-mid"></div>';
+
+    /* 右欄 */
+    body += '<div class="match-col match-col-r">';
+    rightWords.forEach(function(w) {
+      body += '<div class="match-item">';
+      body += '<span class="match-ep match-ep-l">●</span>';
+      body += '<span class="match-word">' + _ecEsc(w) + '</span>';
+      body += '</div>';
+    });
+    body += '</div>';
+
+    body += '</div></div>';
+    sn++;
+  });
+
+  /* ─── CSS ─── */
+  var css = [
+    '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap");',
+    '*{box-sizing:border-box}',
+    'body{font-family:"Noto Sans TC",sans-serif;color:#1a1a2e;background:#fff;',
+         'margin:0;padding:18mm 20mm;font-size:12pt;line-height:1.9}',
+    '.sheet-title{font-size:17pt;font-weight:900;text-align:center;letter-spacing:.3em;margin-bottom:4px}',
+    '.sheet-lesson{font-size:11pt;text-align:center;color:#3d3d5c;margin-bottom:14px}',
+    '.sheet-meta{display:flex;gap:2.5em;font-size:11pt;padding-bottom:10px;',
+                'border-bottom:2px solid #1a1a2e;margin-bottom:22px;flex-wrap:wrap}',
+    '.sheet-meta-item{display:inline-flex;gap:.4em;align-items:baseline}',
+    '.sheet-meta-line{display:inline-block;border-bottom:1.5px solid #1a1a2e;min-width:7em}',
+    '.sec-block{margin-bottom:18px}',
+    '.sec-header{border-left:4px solid #1a1a2e;padding:2px 0 2px 10px;',
+                'font-size:13pt;font-weight:900;margin-bottom:10px}',
+    /* 答案池 */
+    '.pool-box{border:1.5px dashed #d4cfc0;border-radius:8px;',
+              'padding:8px 12px;margin-bottom:12px;',
+              'display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#ede8e0}',
+    '.pool-label{font-size:9pt;font-weight:700;color:#3d3d5c;margin-right:4px;flex-shrink:0}',
+    '.pool-chip{font-size:11pt;font-weight:700;border:1.5px solid #d4cfc0;',
+               'border-radius:6px;padding:2px 10px;background:#fff}',
+    /* 題目列表 */
+    '.q-list{list-style:none;padding:0;margin:0}',
+    '.q-item{display:flex;gap:6px;align-items:baseline;padding:6px 0;',
+             'border-bottom:1px solid #ede8e0;flex-wrap:wrap}',
+    '.q-num{font-weight:700;flex-shrink:0;min-width:1.8em}',
+    '.q-body{flex:1;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px;line-height:2}',
+    '.q-text{width:100%}',
+    /* 底線空格 */
+    '.q-uline{display:inline-block;border-bottom:1.5px solid #1a1a2e;',
+              'min-width:3em;height:1.3em;vertical-align:baseline;margin:0 2px}',
+    /* 選擇題 */
+    '.mc-opts{width:100%;padding-left:.5em;margin-top:2px}',
+    '.mc-opt{line-height:1.9;font-size:11pt}',
+    /* 配對題 */
+    '.match-hint{font-size:10pt;color:#3d3d5c;margin:0 0 12px}',
+    '.match-wrap{display:flex;align-items:flex-start;gap:0}',
+    '.match-col{display:flex;flex-direction:column}',
+    '.match-col-l{gap:8px;align-items:flex-end}',
+    '.match-col-mid{flex:1;min-width:40px}',
+    '.match-col-r{gap:8px;align-items:flex-start}',
+    '.match-item{display:flex;align-items:center;gap:6px;height:104px}',
+    '.match-img{width:93px;height:93px;object-fit:cover;border-radius:6px;border:1px solid #d4cfc0}',
+    '.match-img-empty{width:93px;height:93px;display:flex;align-items:center;justify-content:center;',
+                      'font-size:11pt;font-weight:700;border:1px solid #d4cfc0;border-radius:6px}',
+    '.match-ep{font-size:8pt;color:#aaa;line-height:1}',
+    '.match-ep-r{margin-left:4px}',
+    '.match-ep-l{margin-right:4px}',
+    '.match-word{font-size:12pt;font-weight:700}',
+    /* 列印按鈕列 */
+    '.print-bar{text-align:center;margin-top:28px}',
+    '.print-btn{padding:9px 28px;font-size:11pt;cursor:pointer;font-weight:700;',
+                'font-family:inherit;border:1.5px solid #1a1a2e;border-radius:8px;background:#fff}',
+    '@media print{',
+      '@page{size:A4 portrait;margin:15mm}',
+      'body{padding:0}',
+      '.print-bar{display:none}',
+      '.sec-block{break-inside:avoid}',
+    '}'
+  ].join('');
+
+  /* ─── 頁首 ─── */
+  var header =
+    '<div class="sheet-title">' + _ecEsc(name) + '</div>' +
+    '<div class="sheet-meta">' +
+      '<span class="sheet-meta-item">班級：<span class="sheet-meta-line"></span></span>' +
+      '<span class="sheet-meta-item">姓名：<span class="sheet-meta-line"></span></span>' +
+      '<span class="sheet-meta-item">得分：<span class="sheet-meta-line" style="min-width:4em"></span></span>' +
+    '</div>';
+
+  return '<!doctype html><html lang="zh-TW"><head>' +
+    '<meta charset="utf-8">' +
+    '<title>' + _ecEsc(name) + '</title>' +
+    '<style>' + css + '</style>' +
+    '</head><body>' +
+    header + body +
+    '<div class="print-bar"><button class="print-btn" onclick="window.print()">🖨 列印</button></div>' +
+    '</body></html>';
+}
+
+/* 將 詞語填空 題目的（答案）替換成底線空格 */
+function _ecRenderFillBlank(label) {
+  var m      = label.match(/[（(]([^）)]+)[）)]/);
+  var ans    = m ? m[1].trim() : '';
+  var blankW = ans ? Math.max(ans.length * 1.6, 3).toFixed(1) + 'em' : '4em';
+  var blank  = '<span class="q-uline" style="width:' + blankW + '"></span>';
+  var parts  = label.split(/[（(][^）)]*[）)]/);
+  return parts.map(function(p) { return _ecEsc(p); }).join(blank);
+}
+
+/* 從 詞語填空 題目文字中提取括號內的答案 */
+function _ecExtractFillAnswer(label) {
+  var m = (label || '').match(/[（(]([^）)]+)[）)]/);
+  return m ? m[1].trim() : '';
 }
 
 /* ════════════════════════════════

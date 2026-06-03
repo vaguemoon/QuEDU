@@ -467,7 +467,7 @@ function renderMatchSection(si) {
   if (!msec) return '';
   var n      = msec.pairs.length;
   var secNum = SECTION_NUMS[_textSectionCount() + si] || String(_textSectionCount() + si + 1);
-  var imgSz  = n <= 4 ? 90 : n <= 6 ? 76 : 62;
+  var imgSz  = n <= 4 ? 135 : n <= 6 ? 114 : 93;
   var conns  = matchConnections[si] || {};
 
   var leftHtml = (msec.imgOrder || []).map(function(pairIdx, imgPos) {
