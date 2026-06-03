@@ -1033,15 +1033,27 @@ function submitQuiz() {
     if (isRight) correct++; else wrongIndices.push(i);
   });
 
-  /* Pre-calculate match totals */
+  /* Pre-calculate match totals and wrong pairs */
   var matchCorrect = 0, matchTotal = 0;
+  var wrongMatchSections = [];
   matchData.forEach(function(msec, si) {
     var conns = matchConnections[si] || {};
+    var wrongPairs = [];
     (msec.imgOrder || []).forEach(function(pairIdx, imgPos) {
       matchTotal++;
       var wordPos = conns[imgPos];
-      if (wordPos !== undefined && msec.wordOrder[wordPos] === pairIdx) matchCorrect++;
+      var isCorrect = wordPos !== undefined && msec.wordOrder[wordPos] === pairIdx;
+      if (isCorrect) {
+        matchCorrect++;
+      } else {
+        wrongPairs.push({
+          imageUrl:  msec.pairs[pairIdx].imageUrl,
+          word:      msec.pairs[pairIdx].word,
+          connected: wordPos !== undefined ? msec.pairs[msec.wordOrder[wordPos]].word : '未作答'
+        });
+      }
     });
+    if (wrongPairs.length) wrongMatchSections.push({ title: msec.title, wrong: wrongPairs });
   });
 
   /* Staggered per-question reveal: 120 ms between each */
@@ -1060,11 +1072,12 @@ function submitQuiz() {
   var snapCorrect = correct, snapMatchCorrect = matchCorrect;
   var snapWrong = wrongIndices.slice();
   var snapTotal  = quizData.length + matchTotal;
+  var snapWrongMatchSections = wrongMatchSections;
   setTimeout(function() {
     if (!graded) return;
     var score = snapTotal ? Math.round((snapCorrect + snapMatchCorrect) / snapTotal * 100) : 100;
     saveScore(score, snapCorrect + snapMatchCorrect, snapTotal);
-    showResult(snapCorrect, quizData.length, snapWrong, snapMatchCorrect, matchTotal);
+    showResult(snapCorrect, quizData.length, snapWrong, snapMatchCorrect, matchTotal, snapWrongMatchSections);
   }, totalDelay);
 }
 
@@ -1112,7 +1125,7 @@ function _countUp(el, target, duration) {
 }
 
 /* ════════════ Result screen ════════════ */
-function showResult(correct, total, wrongIndices, matchCorrect, matchTotal) {
+function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wrongMatchSections) {
   var allCorrect = correct + (matchCorrect || 0);
   var allTotal   = total   + (matchTotal   || 0);
   var score = allTotal ? Math.round(allCorrect / allTotal * 100) : 100;
@@ -1127,8 +1140,10 @@ function showResult(correct, total, wrongIndices, matchCorrect, matchTotal) {
   var subParts = ['共答對 ' + allCorrect + ' 題，答錯 ' + (allTotal - allCorrect) + ' 題'];
   if (matchTotal) subParts.push('詞圖配對 ' + (matchCorrect || 0) + '/' + matchTotal + ' 組');
   document.getElementById('result-sub').textContent = subParts.join('　');
-  document.getElementById('review-container').innerHTML =
-    wrongIndices.length ? buildReviewHtml(wrongIndices) : '';
+  var reviewHtml = '';
+  if (wrongIndices.length) reviewHtml += buildReviewHtml(wrongIndices);
+  if (wrongMatchSections && wrongMatchSections.length) reviewHtml += buildMatchReviewHtml(wrongMatchSections);
+  document.getElementById('review-container').innerHTML = reviewHtml;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1165,6 +1180,25 @@ function buildReviewHtml(wrongIndices) {
         ansHtml + '</div>';
     }).join('') +
   '</div>';
+}
+
+function buildMatchReviewHtml(wrongMatchSections) {
+  return wrongMatchSections.map(function(sec) {
+    return '<div class="review-section">' +
+      '<div class="review-header">連連看：' + escHtml(sec.title) + '</div>' +
+      sec.wrong.map(function(pair) {
+        return '<div class="review-item">' +
+          '<div class="review-match-pair">' +
+            '<img class="review-match-img" src="' + escHtml(pair.imageUrl) + '" alt="">' +
+            '<div class="review-match-answers">' +
+              '<div><span class="review-wrong-ans">你連的：' + escHtml(pair.connected) + '</span></div>' +
+              '<div><span class="review-correct-ans">正確答案：' + escHtml(pair.word) + '</span></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }).join('');
 }
 
 /* ════════════ Save to Firestore ════════════ */
