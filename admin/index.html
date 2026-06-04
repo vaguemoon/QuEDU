@@ -9,6 +9,135 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="admin.css">
 <style>
+/* ══ 列印工具 panel ══ */
+.print-config-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.pm-cat-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--gray-lt);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-family: inherit;
+  font-size: .88rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+  transition: background .12s;
+  color: var(--text);
+}
+.pm-cat-btn:hover { background: #eef2ff; }
+.pm-cat-btn.active { background: #e8f0fe; color: var(--blue); }
+.pm-cat-arrow { font-size: .75rem; color: var(--muted); flex-shrink: 0; }
+.pm-cat-btn.active .pm-cat-arrow { color: var(--blue); }
+.pm-subtype-panel {
+  display: none;
+  padding: 8px 16px 4px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+}
+.pm-subtype-panel.open { display: block; }
+.pm-subtype-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: .92rem;
+  border-bottom: 1px dashed var(--border);
+}
+.pm-subtype-row:last-child { border-bottom: none; }
+.pm-subtype-label { font-weight: 700; color: var(--text); }
+.pm-count-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.pm-count-input {
+  width: 52px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: .85rem;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  color: var(--blue);
+  font-weight: 800;
+  outline: none;
+}
+.pm-count-input:focus { border-color: var(--blue); }
+.pm-count-max { font-size: .72rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.pm-count-stepper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+.pm-step-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .8rem;
+  color: var(--blue);
+  padding: 1px 6px;
+  font-family: inherit;
+  line-height: 1.2;
+}
+.pm-step-btn:hover { opacity: .65; }
+.pm-count-display {
+  font-size: .92rem;
+  font-weight: 900;
+  color: var(--text);
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  letter-spacing: .5px;
+}
+.pm-actions {
+  padding: 14px 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pm-btn-generate {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white;
+  font-size: .88rem;
+  font-weight: 900;
+  cursor: pointer;
+  font-family: inherit;
+}
+.pm-btn-generate:hover { opacity: .9; }
+.pm-btn-q, .pm-btn-a {
+  flex: 1;
+  padding: 9px 12px;
+  border: 2px solid;
+  border-radius: 8px;
+  font-size: .84rem;
+  font-weight: 900;
+  cursor: pointer;
+  font-family: inherit;
+  background: white;
+}
+.pm-btn-q { border-color: var(--blue); color: var(--blue); }
+.pm-btn-q:hover { background: var(--blue-lt); }
+.pm-btn-a { border-color: var(--green); color: var(--green); }
+.pm-btn-a:hover { background: var(--green-lt); }
+.pm-status {
+  padding: 0 16px 12px;
+  font-size: .78rem;
+  color: var(--muted);
+  font-weight: 700;
+  min-height: 1.4em;
+}
+
 /* ══ 教學工具 ══ */
 .tools-grid {
   display: grid;
@@ -58,6 +187,7 @@
       <button class="admin-tab" id="tab-database"          onclick="switchTab('database')">📁 資料庫</button>
       <button class="admin-tab" id="tab-quiz-zone"         onclick="switchTab('quiz-zone')">📋 測驗區</button>
       <button class="admin-tab" id="tab-tools"             onclick="switchTab('tools')">🎧 教學工具</button>
+      <button class="admin-tab" id="tab-print"             onclick="switchTab('print')">🖨️ 列印工具</button>
       <button class="admin-tab" id="tab-school-admin"    onclick="switchTab('school-admin')" style="display:none">🏛 校務管理</button>
     </nav>
     <div class="sidebar-footer">
@@ -636,6 +766,202 @@
         </button>
 
       </div>
+    </div>
+
+    <!-- 列印工具 -->
+    <div id="panel-print" style="display:none">
+
+      <!-- 主視圖：卡片列表 -->
+      <div id="print-main-view">
+        <div class="card-title" style="margin-bottom:16px">🖨️ 列印工具</div>
+        <div class="tools-grid">
+
+          <button class="tool-card" onclick="openToolModal('print-cards')">
+            <div class="tool-card-icon">✍️</div>
+            <div class="tool-card-body">
+              <div class="tool-card-name">生字圖卡</div>
+              <div class="tool-card-desc">產生生字圖卡，含注音、部首、田字格，供低年級著色練習</div>
+            </div>
+            <div class="tool-card-arrow">→</div>
+          </button>
+
+          <button class="tool-card" onclick="openPrintSubView('math')">
+            <div class="tool-card-icon">🔢</div>
+            <div class="tool-card-body">
+              <div class="tool-card-name">列印換算趣</div>
+              <div class="tool-card-desc">選擇換算類型和題數，產生題目卷與解答卷供列印</div>
+            </div>
+            <div class="tool-card-arrow">→</div>
+          </button>
+
+          <button class="tool-card" onclick="openPrintSubView('fractions')">
+            <div class="tool-card-icon">🍰</div>
+            <div class="tool-card-body">
+              <div class="tool-card-name">列印分數趣</div>
+              <div class="tool-card-desc">擴分、約分、假分數與帶分數互換練習題</div>
+            </div>
+            <div class="tool-card-arrow">→</div>
+          </button>
+
+          <button class="tool-card" onclick="openPrintSubView('transpose')">
+            <div class="tool-card-icon">⚖️</div>
+            <div class="tool-card-body">
+              <div class="tool-card-name">列印移項趣</div>
+              <div class="tool-card-desc">加減、乘除移項方程式練習題</div>
+            </div>
+            <div class="tool-card-arrow">→</div>
+          </button>
+
+          <button class="tool-card" onclick="openPrintSubView('multiply')">
+            <div class="tool-card-icon">✖️</div>
+            <div class="tool-card-body">
+              <div class="tool-card-name">列印乘法趣</div>
+              <div class="tool-card-desc">乘法填空與積的拆解練習題</div>
+            </div>
+            <div class="tool-card-arrow">→</div>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- 換算趣設定視圖 -->
+      <div id="print-math-view" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+          <button onclick="closePrintSubView()"
+            style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">
+            ← 返回
+          </button>
+          <div class="card-title" style="margin-bottom:0">🔢 列印換算趣</div>
+        </div>
+        <div class="print-config-card" style="max-width:560px">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);white-space:nowrap">題目卷標題</label>
+            <input id="pm-sheet-title" type="text" placeholder="換算趣練習題"
+              style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
+          </div>
+          <div id="print-math-categories"></div>
+          <div class="pm-actions">
+            <button class="pm-btn-generate" onclick="generatePrintQuestions()">⚙️ 生成題目</button>
+          </div>
+          <div id="print-math-status" class="pm-status"></div>
+          <div id="print-math-print-btns" class="pm-actions" style="display:none;padding-top:0">
+            <button class="pm-btn-q" onclick="printMathSheet('question')">🖨️ 列印題目卷</button>
+            <button class="pm-btn-a" onclick="printMathSheet('answer')">🖨️ 列印解答卷</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 分數趣設定視圖 -->
+      <div id="print-fractions-view" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+          <button onclick="closePrintSubView()"
+            style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">
+            ← 返回
+          </button>
+          <div class="card-title" style="margin-bottom:0">🍰 列印分數趣</div>
+        </div>
+        <div class="print-config-card" style="max-width:560px">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);white-space:nowrap">題目卷標題</label>
+            <input id="pm-fractions-title" type="text" placeholder="分數趣練習題"
+              style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
+          </div>
+          <div id="pm-fractions-rows"></div>
+          <div class="pm-actions">
+            <button class="pm-btn-generate" onclick="generateFractionsQuestions()">⚙️ 生成題目</button>
+          </div>
+          <div id="pm-fractions-status" class="pm-status"></div>
+          <div id="pm-fractions-print-btns" class="pm-actions" style="display:none;padding-top:0">
+            <button class="pm-btn-q" onclick="printMathSheet('question')">🖨️ 列印題目卷</button>
+            <button class="pm-btn-a" onclick="printMathSheet('answer')">🖨️ 列印解答卷</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 移項趣設定視圖 -->
+      <div id="print-transpose-view" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+          <button onclick="closePrintSubView()"
+            style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">
+            ← 返回
+          </button>
+          <div class="card-title" style="margin-bottom:0">⚖️ 列印移項趣</div>
+        </div>
+        <div class="print-config-card" style="max-width:560px">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);white-space:nowrap">題目卷標題</label>
+            <input id="pm-transpose-title" type="text" placeholder="移項趣練習題"
+              style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
+          </div>
+          <div id="pm-transpose-rows"></div>
+          <div class="pm-actions">
+            <button class="pm-btn-generate" onclick="generateTransposeQuestions()">⚙️ 生成題目</button>
+          </div>
+          <div id="pm-transpose-status" class="pm-status"></div>
+          <div id="pm-transpose-print-btns" class="pm-actions" style="display:none;padding-top:0">
+            <button class="pm-btn-q" onclick="printMathSheet('question')">🖨️ 列印題目卷</button>
+            <button class="pm-btn-a" onclick="printMathSheet('answer')">🖨️ 列印解答卷</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 乘法趣設定視圖 -->
+      <div id="print-multiply-view" style="display:none">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+          <button onclick="closePrintSubView()"
+            style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">
+            ← 返回
+          </button>
+          <div class="card-title" style="margin-bottom:0">✖️ 列印乘法趣</div>
+        </div>
+        <div class="print-config-card" style="max-width:560px">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+            <label style="font-size:.78rem;font-weight:800;color:var(--muted);white-space:nowrap">題目卷標題</label>
+            <input id="pm-multiply-title" type="text" placeholder="乘法趣練習題"
+              style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
+          </div>
+          <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:.82rem;font-weight:800;color:var(--muted)">選擇乘法表</div>
+              <div style="display:flex;gap:6px">
+                <button onclick="pmToggleAllTables(true)"
+                  style="padding:3px 10px;border:1.5px solid var(--border);border-radius:6px;background:white;font-size:.76rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--blue)">全選</button>
+                <button onclick="pmToggleAllTables(false)"
+                  style="padding:3px 10px;border:1.5px solid var(--border);border-radius:6px;background:white;font-size:.76rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">全清</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-0" checked style="accent-color:var(--blue)"> 0 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-1" checked style="accent-color:var(--blue)"> 1 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-2" checked style="accent-color:var(--blue)"> 2 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-3" checked style="accent-color:var(--blue)"> 3 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-4" checked style="accent-color:var(--blue)"> 4 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-5" checked style="accent-color:var(--blue)"> 5 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-6" checked style="accent-color:var(--blue)"> 6 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-7" checked style="accent-color:var(--blue)"> 7 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-8" checked style="accent-color:var(--blue)"> 8 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-9" checked style="accent-color:var(--blue)"> 9 ×</label>
+              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-10" checked style="accent-color:var(--blue)"> 10 ×</label>
+            </div>
+          </div>
+          <div class="pm-subtype-row" style="padding:12px 16px;border-bottom:none">
+            <label class="pm-subtype-label">總題數（填空 + 逆推各半）</label>
+            <div class="pm-count-wrap">
+              <input class="pm-count-input" id="pmm-count" type="number" min="1" value="20">
+              <span class="pm-count-max" style="min-width:1em">題</span>
+            </div>
+          </div>
+          <div class="pm-actions">
+            <button class="pm-btn-generate" onclick="generateMultiplyQuestions()">⚙️ 生成題目</button>
+          </div>
+          <div id="pm-multiply-status" class="pm-status"></div>
+          <div id="pm-multiply-print-btns" class="pm-actions" style="display:none;padding-top:0">
+            <button class="pm-btn-q" onclick="printMathSheet('question')">🖨️ 列印題目卷</button>
+            <button class="pm-btn-a" onclick="printMathSheet('answer')">🖨️ 列印解答卷</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- 課程管理已移至管理者後台 (super-admin.html) -->
@@ -1289,6 +1615,7 @@
 <script src="exam-compose.js"></script>
 <script src="school-admin.js"></script>
 <script src="sa-bulk-import.js"></script>
+<script src="print-math.js"></script>
 <script>
 var TOOL_CONFIG = {
   reader:       { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' },

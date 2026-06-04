@@ -208,7 +208,7 @@ function doLogout() {
 
 function switchTab(tab) {
   if (document.getElementById('tool-modal').style.display === 'flex') closeToolModal();
-  ['classes', 'database', 'quiz-zone', 'tools', 'school-admin'].forEach(function(t) {
+  ['classes', 'database', 'quiz-zone', 'tools', 'print', 'school-admin'].forEach(function(t) {
     var panel  = document.getElementById('panel-' + t);
     var tabBtn = document.getElementById('tab-' + t);
     if (panel)  panel.style.display = t === tab ? '' : 'none';
