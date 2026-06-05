@@ -80,10 +80,13 @@ function startGame() {
   loadQuestion();
 }
 
+var _hintUsed = false;
+
 function loadQuestion() {
   if (gamePoolIdx >= gamePool.length) { showResult(); return; }
   gameQ = gamePool[gamePoolIdx];
   fillInputStr = '';
+  _hintUsed = false;
   clearHintTimers();
   renderQuestion();
   updateGameStats();
@@ -164,13 +167,20 @@ function onGameResult(isCorrect) {
   gameTotal++;
   disableGameInput();
   var fillEl = document.getElementById('game-fill-box');
-  if (isCorrect) {
+  if (isCorrect && !_hintUsed) {
     gameCorrect++;
     sfxCorrect();
     if (fillEl) { fillEl.textContent = gameQ.answer; fillEl.classList.add('fill-box-correct'); }
     updateGameStats();
     gamePoolIdx++;
     setTimeout(loadQuestion, 700);
+  } else if (isCorrect && _hintUsed) {
+    /* 看過提示後答對：顯示正確但不計分 */
+    if (fillEl) { fillEl.textContent = gameQ.answer; fillEl.classList.add('fill-box-correct'); }
+    updateGameStats();
+    showToast('答案正確，但已看提示，不計分');
+    gamePoolIdx++;
+    setTimeout(loadQuestion, 1200);
   } else {
     sfxWrong();
     if (fillEl) { fillEl.textContent = gameQ.answer; fillEl.classList.add('fill-box-correct'); }
@@ -221,6 +231,7 @@ function initSandbox(q) {
 
 function playHint() {
   if (!gameQ) return;
+  _hintUsed = true;
   clearHintTimers();
   _animStopped = false;
   if (gameQ.module === 'area')    areaPlayHint(gameQ);
