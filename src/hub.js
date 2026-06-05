@@ -72,6 +72,14 @@ var SUBJECTS = [
     activity: function() { return Promise.resolve(null); }
   },
   {
+    id: 'geometry', file: 'apps/learn/math/geometry/index.html',
+    icon: '📐', name: '幾何趣', desc: '面積・體積・表面積計算',
+    type: 'learn', category: 'math',
+    theme: 'theme-teal', badge: '幾何趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('幾何趣'); },
+    activity: function() { return Promise.resolve(null); }
+  },
+  {
     id: 'multiply', file: 'apps/learn/math/multiply/index.html',
     icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
     type: 'learn', category: 'math',
@@ -236,8 +244,10 @@ var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','�
 
 var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
-  'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub'];
-var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout'];
+  'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
+  'geometry-back-to-hub'];
+var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
+  'geometry-logout'];
 
 // ── Hub 渲染 ──
 
