@@ -42,7 +42,8 @@ var categoryStats  = {
   volume:  { rounds: 0, stars: 0 },
   time:    { rounds: 0, stars: 0 },
   money:   { rounds: 0, stars: 0 },
-  percent: { rounds: 0, stars: 0 }
+  percent: { rounds: 0, stars: 0 },
+  decimal: { rounds: 0, stars: 0 }
 };
 
 // ════════════════════════════════════════

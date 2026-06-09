@@ -918,6 +918,63 @@
   flex: 1; font-size: 1rem; font-weight: 900; color: var(--blue-dk);
 }
 
+/* ══════════════════════════════════════
+   小數沙盒
+   ══════════════════════════════════════ */
+#dc-container {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+
+.dc-scene {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 14px 18px; gap: 14px; background: var(--bg);
+  overflow-y: auto;
+}
+
+.dc-hint {
+  font-size: .88rem; font-weight: 800; color: var(--muted); text-align: center;
+}
+
+.dc-whole {
+  display: flex; justify-content: center; align-items: center;
+  flex-shrink: 0; width: 100%;
+}
+
+/* SVGs scale to container width */
+.dc-whole svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+.dc-grid {
+  display: grid; gap: 6px;
+  width: 100%; max-width: 360px;
+  /* columns set inline by JS via style attribute */
+}
+
+.dc-cell {
+  aspect-ratio: 1; border: 2.5px solid var(--border); border-radius: 10px;
+  background: white; display: flex; align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 900; color: var(--muted);
+  cursor: pointer; user-select: none;
+  transition: background .12s, border-color .12s, color .12s, transform .1s;
+  min-height: 36px;
+}
+.dc-cell:active { transform: scale(.88); }
+.dc-cell.dc-cell-on {
+  background: var(--blue); border-color: var(--blue-dk); color: white;
+  box-shadow: 0 2px 8px rgba(74,144,217,.35);
+}
+
+.dc-statusbar {
+  height: 48px; background: white; border-top: 2px solid var(--border);
+  display: flex; align-items: center; gap: 14px; padding: 0 16px; flex-shrink: 0;
+}
+.dc-status {
+  flex: 1; font-size: 1rem; font-weight: 900; color: var(--blue-dk);
+}
+
+/* 首頁卡片色 */
+.cat-card-decimal { border-color: #16a085; }
+
 /* 時間沙盒彈窗按鈕：icon + 文字橫排 */
 .ts-popup-opt {
   flex-direction: row;

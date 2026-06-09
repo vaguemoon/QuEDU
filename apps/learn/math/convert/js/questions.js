@@ -485,6 +485,89 @@ function _makePercentQuestions(subtype) {
 }
 
 // ════════════════════════════════════════
+//  部分與整體（小數 + 分數）
+// ════════════════════════════════════════
+
+var _PARTIAL_CONTEXTS = [
+  { large: '瓶', small: '杯' },
+  { large: '條', small: '片' },
+  { large: '個', small: '份' }
+];
+
+// ── 小數：分母固定 10 ──
+function _makeDecimalQuestions(subtype) {
+  var questions = [];
+  var doP2W = subtype === 'dec-p2w' || subtype === 'dec-mixed';
+  var doW2P = subtype === 'dec-w2p' || subtype === 'dec-mixed';
+
+  _PARTIAL_CONTEXTS.forEach(function(ctx) {
+    for (var n = 1; n <= 9; n++) {
+      var dec    = n / 10;
+      var decStr = dec.toFixed(1);
+      if (doP2W) {
+        questions.push({
+          prompt:       n + ' ' + ctx.small + ' = ？' + ctx.large,
+          answerCount:  1,
+          answerFormat: 'decimal',
+          answer:       [dec],
+          correctText:  decStr,
+          decVisual:    { large: ctx.large, small: ctx.small, denominator: 10 }
+        });
+      }
+      if (doW2P) {
+        questions.push({
+          prompt:      decStr + ' ' + ctx.large + ' = ？' + ctx.small,
+          answerCount: 1,
+          answer:      [n],
+          correctText: String(n),
+          decVisual:   { large: ctx.large, small: ctx.small, denominator: 10 }
+        });
+      }
+    }
+  });
+
+  return questions;
+}
+
+// ── 分數：分母 2–12 ──
+var _FRAC_DENOMS = [2, 3, 4, 5, 6, 8, 10, 12];
+
+function _makeFractionQuestions(subtype) {
+  var questions = [];
+  var doP2W = subtype === 'frac-p2w' || subtype === 'frac-mixed';
+  var doW2P = subtype === 'frac-w2p' || subtype === 'frac-mixed';
+
+  _PARTIAL_CONTEXTS.forEach(function(ctx) {
+    _FRAC_DENOMS.forEach(function(N) {
+      for (var M = 1; M < N; M++) {
+        if (doP2W) {
+          questions.push({
+            prompt:       '1 ' + ctx.large + '分成' + N + ctx.small + '，' + M + ' ' + ctx.small,
+            answerCount:  2,
+            answerFormat: 'fraction',
+            fracUnit:     ctx.large,
+            answer:       [M, N],
+            correctText:  M + '/' + N,
+            decVisual:    { large: ctx.large, small: ctx.small, denominator: N }
+          });
+        }
+        if (doW2P) {
+          questions.push({
+            prompt:      '1 ' + ctx.large + '分成' + N + ctx.small + '，' + M + '/' + N + ' ' + ctx.large + ' = ？' + ctx.small,
+            answerCount: 1,
+            answer:      [M],
+            correctText: String(M),
+            decVisual:   { large: ctx.large, small: ctx.small, denominator: N, preset: M }
+          });
+        }
+      }
+    });
+  });
+
+  return questions;
+}
+
+// ════════════════════════════════════════
 //  主入口
 // ════════════════════════════════════════
 
@@ -496,5 +579,12 @@ function generateQuestionPool(category, subtype, difficulty) {
   else if (category === 'time')    all = _makeTimeQuestions(subtype, difficulty);
   else if (category === 'money')   all = _makeMoneyQuestions(subtype, difficulty);
   else if (category === 'percent') all = _makePercentQuestions(subtype);
+  else if (category === 'decimal') {
+    if (subtype === 'frac-p2w' || subtype === 'frac-w2p' || subtype === 'frac-mixed') {
+      all = _makeFractionQuestions(subtype);
+    } else {
+      all = _makeDecimalQuestions(subtype);
+    }
+  }
   return shuffle(all).slice(0, ROUND_SIZE);
 }

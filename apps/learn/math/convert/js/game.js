@@ -58,6 +58,17 @@ var CAT_CONFIG = {
       { id: 'frac-to-pct', label: '分數→百分率' },
       { id: 'mixed',       label: '🎲 混合'     }
     ]
+  },
+  decimal: {
+    icon: '🥛', name: '部分與整體', noDifficulty: true,
+    subtypes: [
+      { id: 'dec-p2w',    label: '小數：小份→整體' },
+      { id: 'dec-w2p',    label: '小數：整體→小份' },
+      { id: 'dec-mixed',  label: '小數：🎲 混合'   },
+      { id: 'frac-p2w',   label: '分數：小份→分數' },
+      { id: 'frac-w2p',   label: '分數：分數→小份' },
+      { id: 'frac-mixed', label: '分數：🎲 混合'   }
+    ]
   }
 };
 
@@ -88,14 +99,43 @@ function renderSelectPage() {
 
   var html = '';
 
-  html += '<div class="select-section">';
-  html += '<div class="select-label">換算類型</div>';
-  html += '<div class="type-btn-group">';
-  cfg.subtypes.forEach(function(st) {
-    html += '<button id="st-' + st.id + '" class="type-btn' + (st.id === selectSubtype ? ' active' : '') +
-      '" onclick="setSubtype(\'' + st.id + '\')">' + st.label + '</button>';
-  });
-  html += '</div></div>';
+  if (currentCategory === 'decimal') {
+    // ── 部分與整體：兩層選擇 ──
+    var _dcType = selectSubtype.indexOf('-') >= 0 ? selectSubtype.split('-')[0] : 'dec';
+    var _dcDir  = selectSubtype.indexOf('-') >= 0 ? selectSubtype.slice(selectSubtype.indexOf('-') + 1) : 'p2w';
+    var _isDecType = _dcType === 'dec';
+
+    html += '<div class="select-section">';
+    html += '<div class="select-label">表示方式</div>';
+    html += '<div class="type-btn-group">';
+    [['dec', '小數'], ['frac', '分數']].forEach(function(pair) {
+      html += '<button class="type-btn' + (pair[0] === _dcType ? ' active' : '')
+            + '" onclick="setDecType(\'' + pair[0] + '\')">' + pair[1] + '</button>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="select-section">';
+    html += '<div class="select-label">方向</div>';
+    html += '<div class="type-btn-group">';
+    var _dirDefs = _isDecType
+      ? [['p2w','小份→小數'],['w2p','小數→小份'],['mixed','🎲 混合']]
+      : [['p2w','小份→分數'],['w2p','分數→小份'],['mixed','🎲 混合']];
+    _dirDefs.forEach(function(pair) {
+      var stId = _dcType + '-' + pair[0];
+      html += '<button id="st-' + stId + '" class="type-btn' + (pair[0] === _dcDir ? ' active' : '')
+            + '" onclick="setSubtype(\'' + stId + '\')">' + pair[1] + '</button>';
+    });
+    html += '</div></div>';
+  } else {
+    html += '<div class="select-section">';
+    html += '<div class="select-label">換算類型</div>';
+    html += '<div class="type-btn-group">';
+    cfg.subtypes.forEach(function(st) {
+      html += '<button id="st-' + st.id + '" class="type-btn' + (st.id === selectSubtype ? ' active' : '') +
+        '" onclick="setSubtype(\'' + st.id + '\')">' + st.label + '</button>';
+    });
+    html += '</div></div>';
+  }
 
   if (!cfg.noDifficulty) {
     html += '<div class="select-section">';
@@ -147,6 +187,13 @@ function renderSelectPage() {
 function setSubtype(st) {
   sfxTap();
   selectSubtype = st;
+  renderSelectPage();
+}
+
+function setDecType(type) {
+  sfxTap();
+  var dir = selectSubtype.indexOf('-') >= 0 ? selectSubtype.slice(selectSubtype.indexOf('-') + 1) : 'p2w';
+  selectSubtype = type + '-' + dir;
   renderSelectPage();
 }
 
@@ -229,6 +276,9 @@ function loadQuestion() {
   if (isMeasure && typeof msInitForQuestion === 'function') {
     setTimeout(function() { msInitForQuestion(gameQ); }, 60);
   }
+  if (currentCategory === 'decimal' && typeof dcInitForQuestion === 'function') {
+    setTimeout(function() { dcInitForQuestion(gameQ); }, 60);
+  }
 }
 
 function renderQuestion() {
@@ -239,13 +289,14 @@ function renderQuestion() {
   var html = '';
 
   if (q.answerFormat === 'fraction') {
-    // 百分率→分數：垂直堆疊分子/分母輸入框
+    // 分數輸入：垂直堆疊分子/分母，尾端可帶單位標籤
     html = '<span class="q-segment">' + q.prompt + ' = </span>' +
            '<div class="frac-input-wrap">' +
            '<div class="fill-box fill-box-active" id="game-fill-box-0" onclick="setActiveFillBox(0)">＿</div>' +
            '<div class="frac-input-line"></div>' +
            '<div class="fill-box" id="game-fill-box-1" onclick="setActiveFillBox(1)">＿</div>' +
-           '</div>';
+           '</div>' +
+           (q.fracUnit ? '<span class="q-segment">' + q.fracUnit + '</span>' : '');
   } else {
     var parts = q.prompt.split('？');
     var prefix = '';
@@ -301,7 +352,8 @@ function renderQuestion() {
   var isMoney   = currentCategory === 'money';
   var isTime    = currentCategory === 'time';
   var isMeasure = (currentCategory === 'length' || currentCategory === 'weight' || currentCategory === 'volume');
-  var isRightPanel = isMoney || isTime || isMeasure;
+  var isDecimal = currentCategory === 'decimal';
+  var isRightPanel = isMoney || isTime || isMeasure || isDecimal;
   var gameRight  = document.getElementById('game-right');
   var gameLayout = document.getElementById('game-layout');
   if (gameRight)  gameRight.classList.toggle('hidden', !isRightPanel);
@@ -309,9 +361,11 @@ function renderQuestion() {
   var sbContainer = document.getElementById('sb-container');
   var tsContainer = document.getElementById('ts-container');
   var msContainer = document.getElementById('ms-container');
+  var dcContainer = document.getElementById('dc-container');
   if (sbContainer) sbContainer.classList.toggle('hidden', !isMoney);
   if (tsContainer) tsContainer.classList.toggle('hidden', !isTime);
   if (msContainer) msContainer.classList.toggle('hidden', !isMeasure);
+  if (dcContainer) dcContainer.classList.toggle('hidden', !isDecimal);
 }
 
 function updateSingleDisplay() {
@@ -386,7 +440,7 @@ function onGameSubmit() {
         if (fillInputArr[i] === '') { showToast('請填入全部答案！'); return; }
       }
       var isCorrect;
-      if (gameQ.answerFormat === 'fraction') {
+      if (gameQ.answerFormat === 'fraction' || gameQ.answerFormat === 'fraction-inline') {
         var uNum = parseInt(fillInputArr[0], 10);
         var uDen = parseInt(fillInputArr[1], 10);
         isCorrect = uDen !== 0 && uNum * gameQ.answer[1] === uDen * gameQ.answer[0];
@@ -463,8 +517,7 @@ function _showCorrectAnswer() {
     for (var i = 0; i < answerCount; i++) {
       var el = document.getElementById('game-fill-box-' + i);
       if (el) {
-        // 分數答錯：以 pctValue/100 形式顯示
-        if (gameQ.answerFormat === 'fraction') {
+        if (gameQ.answerFormat === 'fraction' && gameQ.pctValue != null) {
           el.textContent = i === 0 ? gameQ.pctValue : 100;
         } else {
           el.textContent = gameQ.answer[i];

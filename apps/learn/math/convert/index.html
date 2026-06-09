@@ -80,6 +80,13 @@
           <div class="cat-card-sub">鈔換零錢・零錢換鈔</div>
         </div>
       </button>
+      <button class="cat-card cat-card-decimal" onclick="openCategory('decimal')">
+        <div class="cat-card-icon">🥛</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">部分與整體</div>
+          <div class="cat-card-sub">小數・分數・生活情境</div>
+        </div>
+      </button>
       <button class="cat-card cat-card-percent" onclick="openCategory('percent')">
         <div class="cat-card-icon">📊</div>
         <div class="cat-card-info">
@@ -209,6 +216,9 @@
         </div>
       </div>
 
+      <!-- 小數沙盒 -->
+      <div id="dc-container" class="hidden"></div>
+
       <!-- 彈窗（貨幣與時間沙盒共用） -->
       <div id="sb-popup" class="sb-popup hidden"></div>
     </div>
@@ -264,6 +274,7 @@
 <script src="js/sandbox.js"></script>
 <script src="js/timesandbox.js"></script>
 <script src="js/measuresandbox.js"></script>
+<script src="js/decimalsandbox.js"></script>
 <script src="js/init.js"></script>
 <link rel="stylesheet" href="../../../../shared/report.css">
 <script src="../../../../shared/report.js"></script>
