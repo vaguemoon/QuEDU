@@ -465,31 +465,25 @@
                 style="margin-left:auto;padding:8px 18px;font-size:.82rem">＋ 新增測驗</button>
               <button class="btn btn-secondary" onclick="loadQuizSessions()"
                 style="padding:6px 14px;font-size:.78rem">重新整理</button>
+              <button id="qs-select-mode-btn" class="btn btn-secondary" onclick="qsToggleSelectMode()"
+                style="padding:6px 14px;font-size:.78rem">批次選取</button>
             </div>
-            <div id="qs-filter-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1.5px solid var(--border);margin-bottom:14px">
-              <select id="qs-filter-status" onchange="_qsFilterChanged()"
-                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
-                <option value="">全部狀態</option>
-                <option value="active">進行中</option>
-                <option value="closed">已關閉</option>
-              </select>
-              <select id="qs-filter-grade" onchange="_qsFilterGradeChanged()"
-                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
-                <option value="">全部年級</option>
-              </select>
-              <select id="qs-filter-lesson" onchange="_qsFilterChanged()"
-                style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-weight:700;font-family:inherit;background:white;cursor:pointer">
-                <option value="">全部課次</option>
-              </select>
-              <div style="flex:1;min-width:160px;position:relative">
-                <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.88rem;color:var(--muted);pointer-events:none">🔍</span>
-                <input id="qs-filter-search" type="text" placeholder="搜尋測驗名稱…" oninput="_qsFilterChanged()"
-                  style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;outline:none;box-sizing:border-box">
+            <!-- 批次工具列（選取模式時顯示） -->
+            <div id="qs-batch-toolbar" style="display:none;align-items:center;gap:8px;padding:8px 0 12px;border-bottom:1.5px solid var(--border);margin-bottom:12px">
+              <button onclick="qsSelectAll()" style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit">全選</button>
+              <span id="qs-select-count" style="font-size:.82rem;font-weight:700;color:var(--muted)">已選 0 張</span>
+              <div style="flex:1"></div>
+              <button onclick="qsBatchMove()" style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--text)">📁 移至資料夾</button>
+              <button onclick="qsBatchDelete()" style="padding:5px 14px;border:1.5px solid var(--red);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--red)">🗑 刪除</button>
+              <button onclick="qsToggleSelectMode()" style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+            </div>
+            <!-- sidebar + 列表 -->
+            <div id="qs-main-layout">
+              <div id="qs-sidebar"></div>
+              <div id="qs-list-wrap" style="flex:1;min-width:0">
+                <div class="loading-wrap"><div class="spinner"></div></div>
               </div>
-              <span id="qs-filter-count" style="font-size:.78rem;font-weight:700;color:var(--muted);white-space:nowrap"></span>
-            </div>
-            <div id="qs-list-wrap">
-              <div class="loading-wrap"><div class="spinner"></div></div>
+              <div id="qs-detail-panel"></div>
             </div>
           </div>
         </div><!-- /qz-sessions-quiz -->
