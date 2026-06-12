@@ -20,6 +20,19 @@ window.addEventListener('load', function() {
       (function autoLogin() {
         if (!db) { setTimeout(autoLogin, 200); return; }
 
+        if (hubStudent.isGuest) {
+          currentStudent = {
+            name: hubStudent.name, pin: null, id: 'guest',
+            nickname: hubStudent.nickname || '訪客', avatar: hubStudent.avatar || '👤', isGuest: true
+          };
+          var avEl0 = document.getElementById('topbar-avatar');
+          var nmEl0 = document.getElementById('topbar-name');
+          if (avEl0) avEl0.textContent = currentStudent.avatar;
+          if (nmEl0) nmEl0.textContent = currentStudent.nickname;
+          setTimeout(loadCurriculumVersions, 300);
+          return;
+        }
+
         var id = hubStudent.id;
         Promise.all([
           db.collection('students').doc(id).get(),

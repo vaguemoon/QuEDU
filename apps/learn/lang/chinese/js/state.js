@@ -42,7 +42,7 @@ var charInfoCache  = {};      // 萌典 API 快取 { '字': { zhuyin, radical, s
  * 將 charStatus 寫入 Firestore（students/{id}/progress/hanzi）
  */
 function saveProgress() {
-  if (!db || !currentStudent) return;
+  if (!db || !currentStudent || currentStudent.isGuest) return;
   db.collection('students').doc(currentStudent.id)
     .collection('progress').doc('hanzi')
     .set({ charStatus: charStatus, lastStudied: new Date().toISOString() }, { merge: true })
@@ -55,7 +55,7 @@ function saveProgress() {
  * @param {Array}  strokes 正規化後的筆畫座標陣列
  */
 function saveStroke(char, strokes) {
-  if (!db || !currentStudent) return;
+  if (!db || !currentStudent || currentStudent.isGuest) return;
   charStrokes[char] = strokes;
   db.collection('students').doc(currentStudent.id)
     .collection('strokes').doc(char)

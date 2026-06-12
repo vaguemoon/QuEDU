@@ -69,7 +69,7 @@ function getLessonMasteredState(lesson) {
 }
 
 function saveProgress() {
-  if (!db || !currentStudent) return;
+  if (!db || !currentStudent || currentStudent.isGuest) return;
   db.collection('students').doc(currentStudent.id)
     .collection('progress').doc('recognize')
     .set({ charStatus: charStatus, wordStatus: wordStatus, lastStudied: new Date().toISOString() }, { merge: true })

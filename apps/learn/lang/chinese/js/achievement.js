@@ -149,7 +149,7 @@ function updateTopbarStars() {
 
 /** 將 achStats 寫入 Firestore */
 function saveAchStats() {
-  if (!db || !currentStudent) return;
+  if (!db || !currentStudent || currentStudent.isGuest) return;
   db.collection('students').doc(currentStudent.id)
     .collection('stats').doc('profile')
     .set({
@@ -169,7 +169,7 @@ function saveAchStats() {
 
 /** 從 Firestore 載入 achStats，完成後呼叫 callback */
 function loadAchStats(callback) {
-  if (!db || !currentStudent) { if (callback) callback(); return; }
+  if (!db || !currentStudent || currentStudent.isGuest) { if (callback) callback(); return; }
   db.collection('students').doc(currentStudent.id)
     .collection('stats').doc('profile')
     .get().then(function(doc) {
