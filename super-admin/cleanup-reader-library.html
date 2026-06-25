@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>報讀庫殘留清除｜上學趣管理</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="../admin/admin.css">
+<style>
+:root {
+  --red:      #ef4444;
+  --red-lt:   #fef2f2;
+  --green:    #22c55e;
+  --green-lt: #f0fdf4;
+  --blue:     #3b82f6;
+  --blue-lt:  #eff6ff;
+  --border:   #e2e8f0;
+  --text:     #1e293b;
+  --muted:    #94a3b8;
+  --gray:     #475569;
+}
+body { font-family:'Noto Sans TC',sans-serif; background:#f1f5f9; margin:0; padding:24px; }
+.card {
+  background:white; border-radius:16px; border:1.5px solid var(--border);
+  padding:28px; max-width:900px; margin:0 auto 20px;
+}
+h1 { font-size:1.25rem; font-weight:900; color:var(--text); margin:0 0 6px; }
+.sub { font-size:.85rem; color:var(--muted); font-weight:600; margin-bottom:24px; }
+.btn-primary {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:9px 20px; border-radius:9px; border:none;
+  background:var(--blue); color:white; font-size:.88rem; font-weight:700;
+  cursor:pointer; font-family:inherit; transition:opacity .15s;
+}
+.btn-primary:hover { opacity:.88; }
+.btn-primary:disabled { opacity:.45; cursor:default; }
+.btn-danger {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:6px 14px; border-radius:7px; border:1.5px solid #fecaca;
+  background:var(--red-lt); color:var(--red); font-size:.8rem; font-weight:700;
+  cursor:pointer; font-family:inherit; transition:background .15s;
+}
+.btn-danger:hover { background:#fee2e2; }
+.btn-danger:disabled { opacity:.4; cursor:default; }
+.result-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 16px; border:1.5px solid var(--border);
+  border-radius:10px; margin-bottom:8px; background:#fafafa;
+}
+.result-info { flex:1; }
+.result-title { font-size:.92rem; font-weight:800; color:var(--text); }
+.result-meta  { font-size:.78rem; color:var(--muted); font-weight:600; margin-top:2px; }
+.result-done  { border-color:#86efac; background:var(--green-lt); }
+.result-done .result-title { color:#15803d; }
+.status-box {
+  padding:12px 16px; border-radius:10px; font-size:.85rem; font-weight:700;
+  margin-top:16px;
+}
+.status-info  { background:var(--blue-lt);  color:#1d4ed8; border:1.5px solid #bfdbfe; }
+.status-ok    { background:var(--green-lt); color:#15803d; border:1.5px solid #86efac; }
+.status-empty { background:#f8fafc; color:var(--muted);  border:1.5px solid var(--border); }
+#login-wall { text-align:center; padding:60px 20px; }
+#login-wall .msg { font-size:1rem; font-weight:700; color:var(--gray); margin-bottom:16px; }
+.spinner {
+  display:inline-block; width:18px; height:18px; border:2.5px solid #cbd5e1;
+  border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="login-wall" style="display:none">
+  <div class="msg">⚠️ 請先以管理員帳號登入</div>
+  <button class="btn-primary" onclick="doLogin()">🔑 Google 登入</button>
+</div>
+
+<div id="main" style="display:none">
+  <div class="card">
+    <h1>🧹 報讀庫殘留文件清除工具</h1>
+    <p class="sub">掃描所有班級的「班級共享報讀文件」集合，找出並刪除殘留的異常文件。</p>
+
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px">
+      <button class="btn-primary" id="scan-btn" onclick="startScan()">🔍 掃描所有班級</button>
+      <button class="btn-danger"  id="del-all-btn" onclick="deleteAll()" style="display:none">🗑 刪除所有找到的文件</button>
+      <span id="spinner" style="display:none"><span class="spinner"></span><span id="spinner-text"> 掃描中…</span></span>
+    </div>
+
+    <div id="scan-filter" style="display:none;margin-bottom:16px">
+      <label style="font-size:.83rem;font-weight:700;color:var(--gray)">關鍵字篩選（留空 = 顯示全部）：</label>
+      <input id="filter-input" type="text" placeholder="例：酌減班級人數"
+        style="margin-left:8px;padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:.85rem;font-family:inherit"
+        oninput="applyFilter()">
+    </div>
+
+    <div id="results"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
+  authDomain:        'tainping-hanzi-app.firebaseapp.com',
+  projectId:         'tainping-hanzi-app',
+  messagingSenderId: '158917910126',
+  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
+};
+
+var db   = null;
+var auth = null;
+var _allItems = [];   /* { classId, className, docId, title, teacherUid, sharedAt, ref, deleted } */
+
+(function init() {
+  if (typeof firebase === 'undefined') { setTimeout(init, 150); return; }
+  if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+  db   = firebase.firestore();
+  auth = firebase.auth();
+  auth.onAuthStateChanged(function(user) {
+    if (!user) {
+      document.getElementById('login-wall').style.display = '';
+      document.getElementById('main').style.display = 'none';
+      return;
+    }
+    /* 確認是 superAdmin */
+    var emailKey = user.email.replace(/[@.]/g, '_');
+    db.collection('superAdmins').doc(emailKey).get().then(function(doc) {
+      if (!doc.exists || doc.data().enabled === false) {
+        document.getElementById('login-wall').style.display = '';
+        document.getElementById('login-wall').querySelector('.msg').textContent =
+          '⛔ 您的帳號沒有管理員權限：' + user.email;
+        document.getElementById('main').style.display = 'none';
+        return;
+      }
+      document.getElementById('login-wall').style.display = 'none';
+      document.getElementById('main').style.display = '';
+    });
+  });
+})();
+
+function doLogin() {
+  if (!auth) return;
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(e) {
+    alert('登入失敗：' + e.message);
+  });
+}
+
+async function startScan() {
+  var btn = document.getElementById('scan-btn');
+  var spinner = document.getElementById('spinner');
+  var results = document.getElementById('results');
+  btn.disabled = true;
+  spinner.style.display = '';
+  results.innerHTML = '';
+  document.getElementById('scan-filter').style.display = 'none';
+  document.getElementById('del-all-btn').style.display = 'none';
+  _allItems = [];
+
+  try {
+    var classesSnap = await db.collection('classes').get();
+    var total = classesSnap.docs.length;
+    var scanned = 0;
+
+    for (var i = 0; i < classesSnap.docs.length; i++) {
+      var cls = classesSnap.docs[i];
+      var clsData = cls.data();
+      var clsName = clsData.name || cls.id;
+      document.getElementById('spinner-text').textContent =
+        ' 掃描中… (' + (i + 1) + '/' + total + ') ' + clsName;
+
+      var docsSnap = await db.collection('classes').doc(cls.id)
+        .collection('sharedReaderDocs').get();
+
+      docsSnap.docs.forEach(function(d) {
+        var data = d.data();
+        _allItems.push({
+          classId:    cls.id,
+          className:  clsName,
+          docId:      d.id,
+          title:      data.title || '（無標題）',
+          teacherUid: data.teacherUid || '',
+          sharedAt:   data.sharedAt ? data.sharedAt.toDate().toLocaleDateString('zh-TW') : '—',
+          ref:        d.ref,
+          deleted:    false
+        });
+      });
+      scanned++;
+    }
+
+    spinner.style.display = 'none';
+    btn.disabled = false;
+
+    if (_allItems.length === 0) {
+      results.innerHTML = '<div class="status-box status-empty">✅ 所有班級都沒有共享報讀文件。</div>';
+      return;
+    }
+
+    document.getElementById('scan-filter').style.display = '';
+    document.getElementById('del-all-btn').style.display = '';
+    document.getElementById('filter-input').value = '酌減班級人數';
+    renderList(_allItems.filter(matchFilter));
+  } catch(e) {
+    spinner.style.display = 'none';
+    btn.disabled = false;
+    results.innerHTML = '<div class="status-box" style="background:#fef2f2;color:var(--red);border:1.5px solid #fecaca">⚠️ 掃描失敗：' + esc(e.message) + '</div>';
+  }
+}
+
+function matchFilter(item) {
+  var kw = (document.getElementById('filter-input') || {}).value || '';
+  kw = kw.trim();
+  if (!kw) return true;
+  return item.title.includes(kw) || item.docId.includes(kw);
+}
+
+function applyFilter() {
+  renderList(_allItems.filter(matchFilter));
+}
+
+function renderList(items) {
+  var results = document.getElementById('results');
+  if (!items.length) {
+    results.innerHTML = '<div class="status-box status-empty">沒有符合條件的文件。</div>';
+    return;
+  }
+
+  var html = '<div class="status-box status-info" style="margin-bottom:12px">找到 ' + items.length + ' 筆文件（符合篩選條件）</div>';
+  items.forEach(function(item, idx) {
+    var doneClass = item.deleted ? ' result-done' : '';
+    html += '<div class="result-item' + doneClass + '" id="item-' + idx + '">' +
+      '<div class="result-info">' +
+        '<div class="result-title">' + esc(item.title) + '</div>' +
+        '<div class="result-meta">班級：' + esc(item.className) + '　文件ID：' + esc(item.docId) + '　分享日期：' + item.sharedAt + '</div>' +
+      '</div>' +
+      (item.deleted
+        ? '<span style="color:#15803d;font-size:.8rem;font-weight:800">✅ 已刪除</span>'
+        : '<button class="btn-danger" onclick="deleteSingle(' + idx + ', this)">🗑 刪除</button>') +
+    '</div>';
+  });
+  results.innerHTML = html;
+
+  /* 把篩選結果的 indices 存回以便 deleteAll 使用 */
+  results._filteredItems = items;
+}
+
+async function deleteSingle(idx, btn) {
+  var items = document.getElementById('results')._filteredItems;
+  if (!items) return;
+  var item = items[idx];
+  if (!item || item.deleted) return;
+  btn.disabled = true;
+  btn.textContent = '刪除中…';
+  try {
+    await item.ref.delete();
+    item.deleted = true;
+    var row = document.getElementById('item-' + idx);
+    if (row) {
+      row.classList.add('result-done');
+      btn.outerHTML = '<span style="color:#15803d;font-size:.8rem;font-weight:800">✅ 已刪除</span>';
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🗑 刪除';
+    alert('刪除失敗：' + e.message);
+  }
+}
+
+async function deleteAll() {
+  var results = document.getElementById('results');
+  var items = (results._filteredItems || []).filter(function(i) { return !i.deleted; });
+  if (!items.length) { alert('沒有待刪除的文件。'); return; }
+  if (!confirm('確定要刪除這 ' + items.length + ' 筆共享報讀文件？\n（此操作無法復原）')) return;
+
+  var btn = document.getElementById('del-all-btn');
+  btn.disabled = true;
+  btn.textContent = '刪除中…';
+
+  var ok = 0, fail = 0;
+  for (var i = 0; i < items.length; i++) {
+    try {
+      await items[i].ref.delete();
+      items[i].deleted = true;
+      ok++;
+    } catch(e) { fail++; }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🗑 刪除所有找到的文件';
+  renderList(results._filteredItems);
+
+  var msg = '✅ 已刪除 ' + ok + ' 筆';
+  if (fail) msg += '，' + fail + ' 筆失敗';
+  results.insertAdjacentHTML('afterbegin',
+    '<div class="status-box status-ok" style="margin-bottom:12px">' + msg + '</div>');
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
