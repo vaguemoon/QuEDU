@@ -977,10 +977,12 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
   });
 
   /* ─── CSS ─── */
+  var _fontUrl = window.location.origin + '/assets/BPMFZIHIKAISTD-REGULAR.TTF';
   var css = [
     '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap");',
+    '@font-face{font-family:"BpmfZihiKai";src:url("' + _fontUrl + '") format("truetype")}',
     '*{box-sizing:border-box}',
-    'body{font-family:"書法中楷（注音一）",serif;color:#1a1a2e;background:#fff;',
+    'body{font-family:"BpmfZihiKai",serif;color:#1a1a2e;background:#fff;',
          'margin:0;padding:18mm 20mm;font-size:12pt;line-height:2.8}',
     'html.hide-ruby body{font-family:"Noto Sans TC",sans-serif;line-height:1.9}',
     '.sheet-title{font-size:17pt;font-weight:900;text-align:center;letter-spacing:.3em;margin-bottom:4px}',
