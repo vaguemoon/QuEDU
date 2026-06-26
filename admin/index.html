@@ -470,9 +470,9 @@
             </div>
             <!-- 批次工具列（選取模式時顯示） -->
             <div id="qs-batch-toolbar" style="display:none;align-items:center;gap:8px;padding:8px 0 12px;border-bottom:1.5px solid var(--border);margin-bottom:12px">
-              <button onclick="qsSelectAll()" style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit">全選</button>
               <span id="qs-select-count" style="font-size:.82rem;font-weight:700;color:var(--muted)">已選 0 張</span>
               <div style="flex:1"></div>
+              <button id="qs-select-all-btn" onclick="qsSelectAll()" style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit">全選</button>
               <button onclick="qsBatchMove()" style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--text)">📁 移至資料夾</button>
               <button onclick="qsBatchDelete()" style="padding:5px 14px;border:1.5px solid var(--red);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--red)">🗑 刪除</button>
               <button onclick="qsToggleSelectMode()" style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
@@ -806,11 +806,11 @@
             <div class="tool-card-arrow">→</div>
           </button>
 
-          <button class="tool-card" onclick="openPrintSubView('multiply')">
-            <div class="tool-card-icon">✖️</div>
+          <button class="tool-card" onclick="openPrintSubView('arithmetic')">
+            <div class="tool-card-icon">🔢</div>
             <div class="tool-card-body">
-              <div class="tool-card-name">列印乘法趣</div>
-              <div class="tool-card-desc">乘法填空與積的拆解練習題</div>
+              <div class="tool-card-name">列印四則運算</div>
+              <div class="tool-card-desc">加減乘除混合練習題，可設定位數與進退位</div>
             </div>
             <div class="tool-card-arrow">→</div>
           </button>
@@ -834,6 +834,11 @@
               style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
           </div>
           <div id="print-math-categories"></div>
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:800">
+              <input type="checkbox" id="pm-math-calc-space" style="accent-color:var(--blue)"> 附計算空間
+            </label>
+          </div>
           <div class="pm-actions">
             <button class="pm-btn-generate" onclick="generatePrintQuestions()">⚙️ 生成題目</button>
           </div>
@@ -861,6 +866,11 @@
               style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
           </div>
           <div id="pm-fractions-rows"></div>
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:800">
+              <input type="checkbox" id="pm-fractions-calc-space" style="accent-color:var(--blue)"> 附計算空間
+            </label>
+          </div>
           <div class="pm-actions">
             <button class="pm-btn-generate" onclick="generateFractionsQuestions()">⚙️ 生成題目</button>
           </div>
@@ -888,6 +898,11 @@
               style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
           </div>
           <div id="pm-transpose-rows"></div>
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:800">
+              <input type="checkbox" id="pm-transpose-calc-space" style="accent-color:var(--blue)"> 附計算空間
+            </label>
+          </div>
           <div class="pm-actions">
             <button class="pm-btn-generate" onclick="generateTransposeQuestions()">⚙️ 生成題目</button>
           </div>
@@ -899,59 +914,192 @@
         </div>
       </div>
 
-      <!-- 乘法趣設定視圖 -->
-      <div id="print-multiply-view" style="display:none">
+      <!-- 四則運算設定視圖 -->
+      <div id="print-arithmetic-view" style="display:none">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
           <button onclick="closePrintSubView()"
             style="display:flex;align-items:center;gap:5px;padding:7px 13px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">
             ← 返回
           </button>
-          <div class="card-title" style="margin-bottom:0">✖️ 列印乘法趣</div>
+          <div class="card-title" style="margin-bottom:0">🔢 列印四則運算</div>
         </div>
-        <div class="print-config-card" style="max-width:560px">
+        <div class="print-config-card" style="max-width:600px">
           <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
             <label style="font-size:.78rem;font-weight:800;color:var(--muted);white-space:nowrap">題目卷標題</label>
-            <input id="pm-multiply-title" type="text" placeholder="乘法趣練習題"
+            <input id="pa-title" type="text" placeholder="四則運算練習題"
               style="flex:1;border:1.5px solid var(--border);border-radius:7px;padding:6px 10px;font-size:.88rem;font-family:inherit;outline:none;color:var(--text)">
           </div>
+
+          <!-- 運算勾選 -->
           <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div style="font-size:.82rem;font-weight:800;color:var(--muted)">選擇乘法表</div>
-              <div style="display:flex;gap:6px">
-                <button onclick="pmToggleAllTables(true)"
-                  style="padding:3px 10px;border:1.5px solid var(--border);border-radius:6px;background:white;font-size:.76rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--blue)">全選</button>
-                <button onclick="pmToggleAllTables(false)"
-                  style="padding:3px 10px;border:1.5px solid var(--border);border-radius:6px;background:white;font-size:.76rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">全清</button>
+            <div style="font-size:.82rem;font-weight:800;color:var(--muted);margin-bottom:10px">選擇運算（可複選）</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800">
+                <input type="checkbox" id="pa-op-add" checked onchange="paToggleOp()" style="accent-color:var(--blue)"> 加法 ＋
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800">
+                <input type="checkbox" id="pa-op-sub" onchange="paToggleOp()" style="accent-color:var(--blue)"> 減法 −
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800">
+                <input type="checkbox" id="pa-op-mul" onchange="paToggleOp()" style="accent-color:var(--blue)"> 乘法 ×
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800">
+                <input type="checkbox" id="pa-op-div" onchange="paToggleOp()" style="accent-color:var(--blue)"> 除法 ÷
+              </label>
+            </div>
+          </div>
+
+          <!-- 加法設定 -->
+          <div id="pa-section-add" style="padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-size:.8rem;font-weight:900;color:var(--blue);margin-bottom:11px">➕ 加法設定</div>
+            <div style="display:grid;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">被加數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-augend" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-augend" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-augend" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">加數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-addend" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-addend" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-addend" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">進位</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-carry" value="no" checked style="accent-color:var(--blue)"> 不進位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-carry" value="yes" style="accent-color:var(--blue)"> 進位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-add-carry" value="mix" style="accent-color:var(--blue)"> 混合</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">題數</span>
+                <input class="pm-count-input" id="pa-add-count" type="number" min="1" value="10">
+                <span style="font-size:.79rem;color:var(--muted);font-weight:700">題</span>
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-0" checked style="accent-color:var(--blue)"> 0 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-1" checked style="accent-color:var(--blue)"> 1 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-2" checked style="accent-color:var(--blue)"> 2 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-3" checked style="accent-color:var(--blue)"> 3 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-4" checked style="accent-color:var(--blue)"> 4 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-5" checked style="accent-color:var(--blue)"> 5 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-6" checked style="accent-color:var(--blue)"> 6 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-7" checked style="accent-color:var(--blue)"> 7 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-8" checked style="accent-color:var(--blue)"> 8 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-9" checked style="accent-color:var(--blue)"> 9 ×</label>
-              <label style="display:flex;align-items:center;gap:6px;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:800"><input type="checkbox" id="pmm-table-10" checked style="accent-color:var(--blue)"> 10 ×</label>
+          </div>
+
+          <!-- 減法設定 -->
+          <div id="pa-section-sub" style="display:none;padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-size:.8rem;font-weight:900;color:var(--blue);margin-bottom:11px">➖ 減法設定</div>
+            <div style="display:grid;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">被減數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-minuend" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-minuend" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-minuend" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">減數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-subtrahend" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-subtrahend" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-subtrahend" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">借位</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-borrow" value="no" checked style="accent-color:var(--blue)"> 不借位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-borrow" value="yes" style="accent-color:var(--blue)"> 借位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-sub-borrow" value="mix" style="accent-color:var(--blue)"> 混合</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">題數</span>
+                <input class="pm-count-input" id="pa-sub-count" type="number" min="1" value="10">
+                <span style="font-size:.79rem;color:var(--muted);font-weight:700">題</span>
+              </div>
             </div>
           </div>
-          <div class="pm-subtype-row" style="padding:12px 16px;border-bottom:none">
-            <label class="pm-subtype-label">總題數（填空 + 逆推各半）</label>
-            <div class="pm-count-wrap">
-              <input class="pm-count-input" id="pmm-count" type="number" min="1" value="20">
-              <span class="pm-count-max" style="min-width:1em">題</span>
+
+          <!-- 乘法設定 -->
+          <div id="pa-section-mul" style="display:none;padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-size:.8rem;font-weight:900;color:var(--blue);margin-bottom:11px">✖️ 乘法設定</div>
+            <div style="display:grid;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">被乘數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-multiplicand" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-multiplicand" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-multiplicand" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">乘數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-multiplier" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-multiplier" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-multiplier" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">進位</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-carry" value="no" checked style="accent-color:var(--blue)"> 不進位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-carry" value="yes" style="accent-color:var(--blue)"> 進位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-mul-carry" value="mix" style="accent-color:var(--blue)"> 混合</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">題數</span>
+                <input class="pm-count-input" id="pa-mul-count" type="number" min="1" value="10">
+                <span style="font-size:.79rem;color:var(--muted);font-weight:700">題</span>
+              </div>
             </div>
           </div>
+
+          <!-- 除法設定 -->
+          <div id="pa-section-div" style="display:none;padding:14px 16px;border-bottom:1px solid var(--border)">
+            <div style="font-size:.8rem;font-weight:900;color:var(--blue);margin-bottom:11px">➗ 除法設定</div>
+            <div style="display:grid;gap:9px">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">被除數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-dividend" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-dividend" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-dividend" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">除數位數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-divisor" value="1" checked style="accent-color:var(--blue)"> 1位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-divisor" value="2" style="accent-color:var(--blue)"> 2位</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-divisor" value="3" style="accent-color:var(--blue)"> 3位</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">餘數</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-remainder" value="no" checked style="accent-color:var(--blue)"> 整除</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-remainder" value="yes" style="accent-color:var(--blue)"> 有餘數</label>
+                  <label style="display:flex;align-items:center;gap:4px;padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;font-size:.8rem;font-weight:800"><input type="radio" name="pa-div-remainder" value="mix" style="accent-color:var(--blue)"> 混合</label>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:.79rem;font-weight:800;color:var(--muted);white-space:nowrap;min-width:68px;flex-shrink:0">題數</span>
+                <input class="pm-count-input" id="pa-div-count" type="number" min="1" value="10">
+                <span style="font-size:.79rem;color:var(--muted);font-weight:700">題</span>
+              </div>
+            </div>
+          </div>
+
           <div class="pm-actions">
-            <button class="pm-btn-generate" onclick="generateMultiplyQuestions()">⚙️ 生成題目</button>
+            <button class="pm-btn-generate" onclick="generateArithmeticQuestions()">⚙️ 生成題目</button>
           </div>
-          <div id="pm-multiply-status" class="pm-status"></div>
-          <div id="pm-multiply-print-btns" class="pm-actions" style="display:none;padding-top:0">
-            <button class="pm-btn-q" onclick="printMathSheet('question')">🖨️ 列印題目卷</button>
-            <button class="pm-btn-a" onclick="printMathSheet('answer')">🖨️ 列印解答卷</button>
+          <div id="pa-status" class="pm-status"></div>
+          <div id="pa-print-btns" class="pm-actions" style="display:none;padding-top:0">
+            <button class="pm-btn-q" onclick="printArithmeticSheet('question')">🖨️ 列印題目卷</button>
+            <button class="pm-btn-a" onclick="printArithmeticSheet('answer')">🖨️ 列印解答卷</button>
           </div>
         </div>
       </div>

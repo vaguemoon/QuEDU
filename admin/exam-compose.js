@@ -980,8 +980,9 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
   var css = [
     '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap");',
     '*{box-sizing:border-box}',
-    'body{font-family:"Noto Sans TC",sans-serif;color:#1a1a2e;background:#fff;',
-         'margin:0;padding:18mm 20mm;font-size:12pt;line-height:1.9}',
+    'body{font-family:"書法中楷（注音一）",serif;color:#1a1a2e;background:#fff;',
+         'margin:0;padding:18mm 20mm;font-size:12pt;line-height:2.8}',
+    'html.hide-ruby body{font-family:"Noto Sans TC",sans-serif;line-height:1.9}',
     '.sheet-title{font-size:17pt;font-weight:900;text-align:center;letter-spacing:.3em;margin-bottom:4px}',
     '.sheet-lesson{font-size:11pt;text-align:center;color:#3d3d5c;margin-bottom:14px}',
     '.sheet-meta{display:flex;gap:2.5em;font-size:11pt;padding-bottom:10px;',
@@ -1010,7 +1011,7 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
               'min-width:3em;height:1.3em;vertical-align:baseline;margin:0 2px}',
     /* 選擇題 */
     '.mc-opts{width:100%;padding-left:.5em;margin-top:2px}',
-    '.mc-opt{line-height:1.9;font-size:11pt}',
+    '.mc-opt{line-height:1.9}',
     /* 配對題 */
     '.match-hint{font-size:10pt;color:#3d3d5c;margin:0 0 12px}',
     '.match-wrap{display:flex;align-items:flex-start;gap:0}',
@@ -1027,9 +1028,12 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     '.match-ep-l{margin-right:4px}',
     '.match-word{font-size:12pt;font-weight:700}',
     /* 列印按鈕列 */
-    '.print-bar{text-align:center;margin-top:28px}',
-    '.print-btn{padding:9px 28px;font-size:11pt;cursor:pointer;font-weight:700;',
+    '.print-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px}',
+    '.print-btn{padding:9px 24px;font-size:11pt;cursor:pointer;font-weight:700;',
                 'font-family:inherit;border:1.5px solid #1a1a2e;border-radius:8px;background:#fff}',
+    '.print-sz-label{font-size:11pt;display:flex;align-items:center;gap:4px;font-family:inherit}',
+    '.print-sz-input{width:3.8em;font-size:11pt;text-align:center;font-family:inherit;',
+                    'border:1.5px solid #1a1a2e;border-radius:6px;padding:6px 4px}',
     '@media print{',
       '@page{size:A4 portrait;margin:15mm}',
       'body{padding:0}',
@@ -1047,13 +1051,34 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
       '<span class="sheet-meta-item">得分：<span class="sheet-meta-line" style="min-width:4em"></span></span>' +
     '</div>';
 
+  var toggleJs = [
+    '<script>',
+    'function _toggleRuby(btn){',
+    '  var on=document.documentElement.classList.toggle("hide-ruby");',
+    '  btn.textContent=on?"📖 顯示注音":"📖 隱藏注音";',
+    '}',
+    'function _setFontSize(v){',
+    '  var pt=Math.min(Math.max(parseInt(v)||12,8),36);',
+    '  document.body.style.fontSize=pt+"pt";',
+    '}',
+    '<\/script>'
+  ].join('');
+
   return '<!doctype html><html lang="zh-TW"><head>' +
     '<meta charset="utf-8">' +
     '<title>' + _ecEsc(name) + '</title>' +
     '<style>' + css + '</style>' +
     '</head><body>' +
     header + body +
-    '<div class="print-bar"><button class="print-btn" onclick="window.print()">🖨 列印</button></div>' +
+    '<div class="print-bar">' +
+      '<label class="print-sz-label">字體大小' +
+        '<input id="sz-input" class="print-sz-input" type="number" value="12" min="8" max="36"' +
+               ' oninput="_setFontSize(this.value)">pt' +
+      '</label>' +
+      '<button class="print-btn" onclick="_toggleRuby(this)">📖 隱藏注音</button>' +
+      '<button class="print-btn" onclick="window.print()">🖨 列印</button>' +
+    '</div>' +
+    toggleJs +
     '</body></html>';
 }
 
@@ -1067,6 +1092,16 @@ function _ecRenderFillBlank(label) {
   return parts.map(function(p) { return _ecEsc(p); }).join(blank);
 }
 
+/* 同上，但各段文字用 _zhToRuby 標注音 */
+function _ecRenderFillBlankRuby(label) {
+  var m      = label.match(/[（(]([^）)]+)[）)]/);
+  var ans    = m ? m[1].trim() : '';
+  var blankW = ans ? Math.max(ans.length * 1.6, 3).toFixed(1) + 'em' : '4em';
+  var blank  = '<span class="q-uline" style="width:' + blankW + '"></span>';
+  var parts  = label.split(/[（(][^）)]*[）)]/);
+  return parts.map(function(p) { return _zhToRuby(p); }).join(blank);
+}
+
 /* 從 詞語填空 題目文字中提取括號內的答案 */
 function _ecExtractFillAnswer(label) {
   var m = (label || '').match(/[（(]([^）)]+)[）)]/);
@@ -1078,6 +1113,16 @@ function _ecExtractFillAnswer(label) {
    ════════════════════════════════ */
 function _ecEsc(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _ecEscA(s) { return String(s).replace(/"/g,'&quot;'); }
+
+/* 將字串轉成帶 <ruby> 標記的 HTML（逐字查注音字典）*/
+function _zhToRuby(s) {
+  var dict = window._zhDict;
+  return String(s).split('').map(function(ch) {
+    var zy = dict && dict[ch];
+    if (zy) return '<ruby>' + _ecEsc(ch) + '<rt>' + zy + '</rt></ruby>';
+    return _ecEsc(ch);
+  }).join('');
+}
 /* 產生 6 位隨機碼（不含易混淆字元） */
 function _ecGenCode() {
   var c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = '';

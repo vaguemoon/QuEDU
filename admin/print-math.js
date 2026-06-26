@@ -454,46 +454,28 @@ function initPrintMathUI() {
   if (!container) return;
   var html = '';
   PM_CATEGORIES.forEach(function(cat) {
-    html += '<button class="pm-cat-btn" id="pm-cat-' + cat.id + '" onclick="togglePmCategory(\'' + cat.id + '\')">' +
-            '<span>' + cat.label + '</span><span class="pm-cat-arrow">▶</span></button>';
-    html += '<div class="pm-subtype-panel" id="pm-panel-' + cat.id + '">';
+    html += '<div style="padding:14px 16px;border-bottom:1px solid var(--border)">';
+    html += '<div style="font-size:.8rem;font-weight:900;color:var(--blue);margin-bottom:10px">' + cat.label + '</div>';
+    html += '<div style="display:grid;gap:7px">';
     cat.subtypes.forEach(function(st) {
-      html += '<div class="pm-subtype-row" style="padding:7px 16px">' +
-              '<label class="pm-subtype-label">' + st.label + '</label>' +
-              '<div class="pm-count-wrap">' +
-              _pmStepper('pm-count-' + st.id, st.pool) +
-              '<span class="pm-count-max">/' + st.pool + '</span>' +
-              '</div></div>';
+      html += '<div style="display:flex;align-items:center;gap:10px">';
+      html += '<span style="font-size:.79rem;font-weight:800;color:var(--muted);flex:1">' + st.label + '</span>';
+      html += '<input class="pm-count-input" id="pm-count-' + st.id + '" type="number" min="0" value="0">';
+      html += '<span style="font-size:.79rem;color:var(--muted);font-weight:700">題</span>';
+      html += '</div>';
     });
-    html += '</div>';
+    html += '</div></div>';
   });
   container.innerHTML = html;
-}
-
-function togglePmCategory(catId) {
-  var panel  = document.getElementById('pm-panel-' + catId);
-  var btn    = document.getElementById('pm-cat-' + catId);
-  var isOpen = panel.classList.contains('open');
-  PM_CATEGORIES.forEach(function(c) {
-    var p = document.getElementById('pm-panel-' + c.id);
-    var b = document.getElementById('pm-cat-' + c.id);
-    p.classList.remove('open');
-    b.classList.remove('active');
-    b.querySelector('.pm-cat-arrow').textContent = '▶';
-  });
-  if (!isOpen) {
-    panel.classList.add('open');
-    btn.classList.add('active');
-    btn.querySelector('.pm-cat-arrow').textContent = '▼';
-  }
 }
 
 // ════════════════════════════════════════
 //  生成 & 列印
 // ════════════════════════════════════════
 
-var _pmQuestions    = null;
-var _pmCurrentTitle = '練習題';
+var _pmQuestions      = null;
+var _pmCurrentTitle   = '練習題';
+var _pmCurrentCalcSpace = false;
 
 function _pmFinishGenerate(questions, statusId, printBtnsId) {
   var statusEl  = document.getElementById(statusId);
@@ -512,6 +494,8 @@ function _pmFinishGenerate(questions, statusId, printBtnsId) {
 function generatePrintQuestions() {
   var el = document.getElementById('pm-sheet-title');
   _pmCurrentTitle = (el && el.value.trim()) ? el.value.trim() : '換算趣練習題';
+  var cb = document.getElementById('pm-math-calc-space');
+  _pmCurrentCalcSpace = cb ? cb.checked : false;
 
   var questions = [];
   PM_CATEGORIES.forEach(function(cat) {
@@ -538,14 +522,40 @@ var _PM_BASE_CSS = [
   '.pm-blank, .pm-fblank { }'
 ].join('\n');
 
-var _PM_Q_CSS = _PM_BASE_CSS + '\n' + [
-  '.sheet-header { border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:14px; }',
-  '.sheet-title { font-size:15pt; font-weight:900; margin-bottom:10px; }',
-  '.header-fields { display:flex; gap:30px; }',
-  '.header-field { font-size:10pt; font-weight:700; display:flex; align-items:center; gap:6px; }',
-  '.field-line { display:inline-block; border-bottom:1.5px solid #111; width:76px; }',
-  '.question-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 28px; margin-top:12px; }',
-  '.question-item { display:flex; align-items:center; gap:7px; padding:7px 0; border-bottom:1px dashed #ccc; font-weight:600; font-size:13pt; min-height:40px; }',
+var _PM_Q_CSS_WITHSPACE = [
+  '@page { size: A4; margin: 12mm 16mm; }',
+  '* { margin:0; padding:0; box-sizing:border-box; }',
+  'body { font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif; color:#111; }',
+  '.pm-frac { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 2px; line-height:1.3; }',
+  '.pm-frac-top { border-bottom:1.5px solid #111; padding:0 4px; min-width:2.5em; text-align:center; }',
+  '.pm-frac-bot { padding:0 4px; min-width:2.5em; text-align:center; }',
+  '.question-page { height:273mm; display:flex; flex-direction:column; page-break-after:always; }',
+  '.question-page:last-child { page-break-after:auto; }',
+  '.sheet-header { border-bottom:2px solid #111; padding-bottom:5px; margin-bottom:5mm; flex-shrink:0; }',
+  '.sheet-title { font-size:15pt; font-weight:900; margin-bottom:6px; }',
+  '.header-fields { display:flex; gap:56px; }',
+  '.header-field { font-size:10pt; font-weight:700; display:flex; align-items:center; gap:5px; }',
+  '.question-grid { flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(4,1fr); gap:3mm 6mm; }',
+  '.question-item { border:1.5px solid #bbb; border-radius:5px; padding:3mm; display:flex; flex-direction:column; overflow:hidden; }',
+  '.q-prompt { display:flex; align-items:center; gap:6px; font-weight:600; font-size:12pt; flex-shrink:0; flex-wrap:wrap; }',
+  '.q-num { font-family:"Courier New",monospace; font-weight:900; min-width:2em; color:#555; flex-shrink:0; }',
+  '.q-calc-area { flex:1; margin-top:3mm; border:1px dashed #ccc; border-radius:3px; }'
+].join('\n');
+
+var _PM_Q_CSS_NOSPACE = [
+  '@page { size: A4; margin: 12mm 16mm; }',
+  '* { margin:0; padding:0; box-sizing:border-box; }',
+  'body { font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif; padding:12mm 16mm; color:#111; }',
+  '.pm-frac { display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; margin:0 2px; line-height:1.3; }',
+  '.pm-frac-top { border-bottom:1.5px solid #111; padding:0 4px; min-width:2.5em; text-align:center; }',
+  '.pm-frac-bot { padding:0 4px; min-width:2.5em; text-align:center; }',
+  '.sheet-header { border-bottom:2px solid #111; padding-bottom:5px; margin-bottom:5mm; }',
+  '.sheet-title { font-size:15pt; font-weight:900; margin-bottom:6px; }',
+  '.header-fields { display:flex; gap:56px; }',
+  '.header-field { font-size:10pt; font-weight:700; display:flex; align-items:center; gap:5px; }',
+  '.question-grid { display:grid; grid-template-columns:1fr 1fr; gap:2mm 6mm; }',
+  '.question-item { border:1.5px solid #bbb; border-radius:5px; padding:3mm 4mm; display:flex; align-items:center; gap:6px; min-height:10mm; }',
+  '.q-prompt { display:flex; align-items:center; gap:6px; font-weight:600; font-size:12pt; flex-wrap:wrap; }',
   '.q-num { font-family:"Courier New",monospace; font-weight:900; min-width:2em; color:#555; flex-shrink:0; }'
 ].join('\n');
 
@@ -557,27 +567,113 @@ var _PM_A_CSS = _PM_BASE_CSS + '\n' + [
   '.a-text { color:#1d4ed8; font-weight:900; font-size:10pt; }'
 ].join('\n');
 
-function printMathSheet(type) {
+var _PA_Q_CSS = [
+  '@page { size: A4; margin: 12mm 16mm; }',
+  '* { margin:0; padding:0; box-sizing:border-box; }',
+  'body { font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif; color:#111; }',
+  '.question-page { height:273mm; display:flex; flex-direction:column; page-break-after:always; }',
+  '.question-page:last-child { page-break-after:auto; }',
+  '.sheet-header { border-bottom:2px solid #111; padding-bottom:5px; margin-bottom:5mm; flex-shrink:0; }',
+  '.sheet-title { font-size:15pt; font-weight:900; margin-bottom:6px; }',
+  '.header-fields { display:flex; gap:56px; }',
+  '.header-field { font-size:10pt; font-weight:700; display:flex; align-items:center; gap:5px; }',
+  '.field-line { display:inline-block; border-bottom:1.5px solid #111; width:72px; }',
+  '.question-grid { flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:repeat(4,1fr); gap:3mm 6mm; }',
+  '.question-item { border:1.5px solid #bbb; border-radius:5px; padding:3mm; display:flex; flex-direction:column; overflow:hidden; }',
+  '.q-prompt { display:flex; align-items:center; gap:6px; font-weight:600; font-size:13pt; flex-shrink:0; }',
+  '.q-num { font-family:"Courier New",monospace; font-weight:900; min-width:2em; color:#555; flex-shrink:0; }',
+  '.q-calc-area { flex:1; margin-top:3mm; border:1px dashed #ccc; border-radius:3px; position:relative; }',
+  '.q-calc-label { position:absolute; top:2px; right:5px; font-size:6pt; color:#ccc; font-weight:900; letter-spacing:1px; }'
+].join('\n');
+
+function printArithmeticSheet(type) {
   if (!_pmQuestions) return;
   var title = _pmCurrentTitle;
   var html;
 
   if (type === 'question') {
     html  = '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">';
-    html += '<title>' + title + ' 題目卷</title><style>' + _PM_Q_CSS + '</style></head><body>';
-    html += '<div class="sheet-header"><div class="sheet-title">' + title + '</div>';
-    html += '<div class="header-fields">';
-    html += '<div class="header-field">班級：<span class="field-line"></span></div>';
-    html += '<div class="header-field">姓名：<span class="field-line"></span></div>';
-    html += '<div class="header-field">日期：<span class="field-line"></span></div>';
-    html += '</div></div><div class="question-grid">';
-    _pmQuestions.forEach(function(q) {
-      html += '<div class="question-item"><span class="q-num">' + q.num + '.</span><span>' + q.promptHtml + '</span></div>';
-    });
-    html += '</div></body></html>';
+    html += '<title>' + title + '</title><style>' + _PA_Q_CSS + '</style></head><body>';
+    var PER_PAGE = 8;
+    for (var start = 0; start < _pmQuestions.length; start += PER_PAGE) {
+      var pageQs = _pmQuestions.slice(start, start + PER_PAGE);
+      var isLast = start + PER_PAGE >= _pmQuestions.length;
+      html += '<div class="question-page' + (isLast ? ' question-page-last' : '') + '">';
+      html += '<div class="sheet-header"><div class="sheet-title">' + title + '</div>';
+      html += '<div class="header-fields">';
+      html += '<div class="header-field">班級：</div>';
+      html += '<div class="header-field">姓名：</div>';
+      html += '</div></div>';
+      html += '<div class="question-grid">';
+      pageQs.forEach(function(q) {
+        html += '<div class="question-item">';
+        html += '<div class="q-prompt"><span class="q-num">' + q.num + '.</span><span>' + q.promptHtml + '</span></div>';
+        html += '<div class="q-calc-area"><span class="q-calc-label">直式</span></div>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    }
+    html += '</body></html>';
   } else {
     html  = '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">';
-    html += '<title>' + title + ' 解答卷</title><style>' + _PM_A_CSS + '</style></head><body>';
+    html += '<title>' + title + '【解答】</title><style>' + _PM_A_CSS + '</style></head><body>';
+    html += '<div class="sheet-title">' + title + '【解答】</div>';
+    html += '<div class="answer-grid">';
+    _pmQuestions.forEach(function(q) {
+      html += '<div class="answer-item"><span class="a-num">' + q.num + '.</span><span class="a-text">' + q.answerText + '</span></div>';
+    });
+    html += '</div></body></html>';
+  }
+
+  var win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(function() { win.print(); }, 400);
+}
+
+function printMathSheet(type) {
+  if (!_pmQuestions) return;
+  var title = _pmCurrentTitle;
+  var html;
+
+  if (type === 'question') {
+    if (_pmCurrentCalcSpace) {
+      html  = '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">';
+      html += '<title>' + title + '</title><style>' + _PM_Q_CSS_WITHSPACE + '</style></head><body>';
+      var PER_PAGE = 8;
+      for (var start = 0; start < _pmQuestions.length; start += PER_PAGE) {
+        var pageQs = _pmQuestions.slice(start, start + PER_PAGE);
+        var isLast = start + PER_PAGE >= _pmQuestions.length;
+        html += '<div class="question-page' + (isLast ? ' question-page-last' : '') + '">';
+        html += '<div class="sheet-header"><div class="sheet-title">' + title + '</div>';
+        html += '<div class="header-fields"><div class="header-field">班級：</div><div class="header-field">姓名：</div></div></div>';
+        html += '<div class="question-grid">';
+        pageQs.forEach(function(q) {
+          html += '<div class="question-item">';
+          html += '<div class="q-prompt"><span class="q-num">' + q.num + '.</span><span>' + q.promptHtml + '</span></div>';
+          html += '<div class="q-calc-area"></div>';
+          html += '</div>';
+        });
+        html += '</div></div>';
+      }
+      html += '</body></html>';
+    } else {
+      html  = '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">';
+      html += '<title>' + title + '</title><style>' + _PM_Q_CSS_NOSPACE + '</style></head><body>';
+      html += '<div class="sheet-header"><div class="sheet-title">' + title + '</div>';
+      html += '<div class="header-fields"><div class="header-field">班級：</div><div class="header-field">姓名：</div></div></div>';
+      html += '<div class="question-grid">';
+      _pmQuestions.forEach(function(q) {
+        html += '<div class="question-item">';
+        html += '<div class="q-prompt"><span class="q-num">' + q.num + '.</span><span>' + q.promptHtml + '</span></div>';
+        html += '</div>';
+      });
+      html += '</div></body></html>';
+    }
+  } else {
+    html  = '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8">';
+    html += '<title>' + title + '【解答】</title><style>' + _PM_A_CSS + '</style></head><body>';
     html += '<div class="sheet-title">' + title + '【解答】</div>';
     html += '<div class="answer-grid">';
     _pmQuestions.forEach(function(q) {
@@ -595,7 +691,7 @@ function printMathSheet(type) {
 
 // ── View 切換（共用） ──
 
-var _PM_SUB_VIEWS = ['math', 'fractions', 'transpose', 'multiply'];
+var _PM_SUB_VIEWS = ['math', 'fractions', 'transpose', 'arithmetic'];
 
 function openPrintSubView(viewId) {
   document.getElementById('print-main-view').style.display = 'none';
@@ -683,6 +779,8 @@ var PM_FRACTIONS_MODULES = [
 function generateFractionsQuestions() {
   var el = document.getElementById('pm-fractions-title');
   _pmCurrentTitle = (el && el.value.trim()) ? el.value.trim() : '分數趣練習題';
+  var cb = document.getElementById('pm-fractions-calc-space');
+  _pmCurrentCalcSpace = cb ? cb.checked : false;
   var fns = { expand: _pmExpandQ, reduce: _pmReduceQ, imp2mix: _pmImp2MixQ, mix2imp: _pmMix2ImpQ };
   var questions = [];
   PM_FRACTIONS_MODULES.forEach(function(m) {
@@ -748,6 +846,8 @@ var PM_TRANSPOSE_MODULES = [
 function generateTransposeQuestions() {
   var el = document.getElementById('pm-transpose-title');
   _pmCurrentTitle = (el && el.value.trim()) ? el.value.trim() : '移項趣練習題';
+  var cb = document.getElementById('pm-transpose-calc-space');
+  _pmCurrentCalcSpace = cb ? cb.checked : false;
   var fns = { addSub: _pmTransposeAddSubQ, mulDiv: _pmTransposeMulDivQ };
   var questions = [];
   PM_TRANSPOSE_MODULES.forEach(function(m) {
@@ -762,64 +862,185 @@ function generateTransposeQuestions() {
 }
 
 // ════════════════════════════════════════
-//  乘法趣
+//  四則運算
 // ════════════════════════════════════════
 
-function _pmMultiplyPool(tables, count) {
-  var pool = [];
+function _pmDigitRange(d) {
+  if (d === 1) return { lo: 1, hi: 9 };
+  if (d === 2) return { lo: 10, hi: 99 };
+  return { lo: 100, hi: 999 };
+}
+
+function _pmAddHasCarry(a, b) {
+  var aD = String(a).split('').map(Number).reverse();
+  var bD = String(b).split('').map(Number).reverse();
+  var carry = 0, len = Math.max(aD.length, bD.length);
+  for (var i = 0; i < len; i++) {
+    var s = (aD[i] || 0) + (bD[i] || 0) + carry;
+    if (s >= 10) return true;
+    carry = 0;
+  }
+  return false;
+}
+
+function _pmSubHasBorrow(a, b) {
+  var aD = String(a).split('').map(Number).reverse();
+  var bD = String(b).split('').map(Number).reverse();
+  var borrow = 0;
+  for (var i = 0; i < aD.length; i++) {
+    var d = aD[i] - (bD[i] || 0) - borrow;
+    if (d < 0) return true;
+    borrow = 0;
+  }
+  return false;
+}
+
+function _pmMulHasCarry(a, b) {
+  var aD = String(a).split('').map(Number).reverse();
+  var bD = String(b).split('').map(Number).reverse();
+  var cols = new Array(aD.length + bD.length).fill(0);
+  for (var bi = 0; bi < bD.length; bi++)
+    for (var ai = 0; ai < aD.length; ai++)
+      cols[ai + bi] += aD[ai] * bD[bi];
+  for (var ci = 0; ci < cols.length; ci++) if (cols[ci] >= 10) return true;
+  return false;
+}
+
+function _pmArithAddPool(augendD, addendD, carry, count) {
+  var ar = _pmDigitRange(augendD), br = _pmDigitRange(addendD);
+  var bList = [], bv;
+  for (bv = br.lo; bv <= br.hi; bv++) bList.push(bv);
+  _pmShuffle(bList);
+  var pool = [], MAX = 150;
   for (var i = 0; i < count; i++) {
-    var a = tables[Math.floor(Math.random() * tables.length)];
-    var b = _pmRand(0, 10);
-    var useReverse = Math.random() < 0.5 && a !== 0;
-    if (useReverse) {
-      pool.push({ promptHtml: a + ' × ' + _pmBlank() + ' = ' + (a * b), answerText: String(b) });
-    } else {
-      pool.push({ promptHtml: a + ' × ' + b + ' = ' + _pmBlank(), answerText: String(a * b) });
-    }
+    var b = bList[i % bList.length], a, ok, t = 0;
+    do {
+      a = _pmRand(ar.lo, ar.hi);
+      var c = _pmAddHasCarry(a, b);
+      ok = carry === 'mix' || (carry === 'yes' ? c : !c);
+      t++;
+    } while (!ok && t < MAX);
+    pool.push({ promptHtml: a + ' + ' + b + ' = ' + _pmBlank(), answerText: String(a + b) });
   }
   return pool;
 }
 
-function pmToggleAllTables(on) {
-  for (var t = 0; t <= 10; t++) {
-    var cb = document.getElementById('pmm-table-' + t);
-    if (cb) cb.checked = on;
+function _pmArithSubPool(minuendD, subtrahendD, borrow, count) {
+  var ar = _pmDigitRange(minuendD), br = _pmDigitRange(subtrahendD);
+  var bList = [], bv;
+  for (bv = br.lo; bv <= br.hi; bv++) bList.push(bv);
+  _pmShuffle(bList);
+  var pool = [], MAX = 150;
+  for (var i = 0; i < count; i++) {
+    var b = bList[i % bList.length];
+    var aLo = Math.min(Math.max(ar.lo, b), ar.hi);
+    var a, ok, t = 0;
+    do {
+      a = _pmRand(aLo, ar.hi);
+      var bw = _pmSubHasBorrow(a, b);
+      ok = borrow === 'mix' || (borrow === 'yes' ? bw : !bw);
+      t++;
+    } while (!ok && t < MAX);
+    if (a < b) a = b;
+    pool.push({ promptHtml: a + ' − ' + b + ' = ' + _pmBlank(), answerText: String(a - b) });
   }
+  return pool;
 }
 
-function generateMultiplyQuestions() {
-  var el = document.getElementById('pm-multiply-title');
-  _pmCurrentTitle = (el && el.value.trim()) ? el.value.trim() : '乘法趣練習題';
-
-  var tables = [];
-  for (var t = 0; t <= 10; t++) {
-    var cb = document.getElementById('pmm-table-' + t);
-    if (cb && cb.checked) tables.push(t);
+function _pmArithMulPool(multiplicandD, multiplierD, carry, count) {
+  var ar = _pmDigitRange(multiplicandD), br = _pmDigitRange(multiplierD);
+  var bList = [], bv;
+  for (bv = br.lo; bv <= br.hi; bv++) bList.push(bv);
+  _pmShuffle(bList);
+  var pool = [], MAX = 150;
+  for (var i = 0; i < count; i++) {
+    var b = bList[i % bList.length], a, ok, t = 0;
+    do {
+      a = _pmRand(ar.lo, ar.hi);
+      var c = _pmMulHasCarry(a, b);
+      ok = carry === 'mix' || (carry === 'yes' ? c : !c);
+      t++;
+    } while (!ok && t < MAX);
+    pool.push({ promptHtml: a + ' × ' + b + ' = ' + _pmBlank(), answerText: String(a * b) });
   }
-  var countEl = document.getElementById('pmm-count');
-  var total   = countEl ? (parseInt(countEl.value) || 0) : 0;
+  return pool;
+}
 
-  var statusEl  = document.getElementById('pm-multiply-status');
-  var printBtns = document.getElementById('pm-multiply-print-btns');
+function _pmArithDivPool(dividendD, divisorD, remainder, count) {
+  var ar = _pmDigitRange(dividendD), br = _pmDigitRange(divisorD);
+  var pool = [], MAX = 300;
+  for (var i = 0; i < count; i++) {
+    var wantRem = remainder === 'mix' ? Math.random() < 0.5 : remainder === 'yes';
+    var a, b, ok, tries = 0;
+    do {
+      b = _pmRand(Math.max(br.lo, 2), br.hi);
+      a = _pmRand(Math.max(ar.lo, b), ar.hi);
+      ok = wantRem ? a % b !== 0 : a % b === 0;
+      tries++;
+    } while (!ok && tries < MAX);
+    if (!ok) {
+      b = Math.max(br.lo, 2);
+      if (wantRem) {
+        a = ar.lo; while (a <= ar.hi && a % b === 0) a++;
+        if (a > ar.hi) a = ar.lo + 1;
+      } else {
+        a = b * Math.ceil(ar.lo / b);
+        if (a > ar.hi) a = b;
+      }
+    }
+    var qt = Math.floor(a / b), r = a % b;
+    var prompt = r === 0
+      ? a + ' ÷ ' + b + ' = ' + _pmBlank()
+      : a + ' ÷ ' + b + ' = ' + _pmBlank() + ' … ' + _pmBlank();
+    pool.push({ promptHtml: prompt, answerText: r === 0 ? String(qt) : qt + ' 餘 ' + r });
+  }
+  return pool;
+}
 
-  if (!tables.length) {
-    statusEl.textContent = '⚠️ 請至少選擇一個乘法表';
-    printBtns.style.display = 'none';
+function paToggleOp() {
+  ['add', 'sub', 'mul', 'div'].forEach(function(op) {
+    var on = document.getElementById('pa-op-' + op).checked;
+    document.getElementById('pa-section-' + op).style.display = on ? '' : 'none';
+  });
+}
+
+function generateArithmeticQuestions() {
+  var el = document.getElementById('pa-title');
+  _pmCurrentTitle = (el && el.value.trim()) ? el.value.trim() : '四則運算練習題';
+  var questions = [];
+
+  function push(pool) {
+    pool.forEach(function(q) {
+      questions.push({ num: questions.length + 1, promptHtml: q.promptHtml, answerText: q.answerText });
+    });
+  }
+  function getR(name) { var n = document.querySelector('input[name="' + name + '"]:checked'); return n ? n.value : '1'; }
+  function getN(id) { return parseInt(document.getElementById(id).value) || 0; }
+
+  if (document.getElementById('pa-op-add').checked) {
+    var cnt = getN('pa-add-count');
+    if (cnt) push(_pmArithAddPool(+getR('pa-add-augend'), +getR('pa-add-addend'), getR('pa-add-carry'), cnt));
+  }
+  if (document.getElementById('pa-op-sub').checked) {
+    var cnt = getN('pa-sub-count');
+    if (cnt) push(_pmArithSubPool(+getR('pa-sub-minuend'), +getR('pa-sub-subtrahend'), getR('pa-sub-borrow'), cnt));
+  }
+  if (document.getElementById('pa-op-mul').checked) {
+    var cnt = getN('pa-mul-count');
+    if (cnt) push(_pmArithMulPool(+getR('pa-mul-multiplicand'), +getR('pa-mul-multiplier'), getR('pa-mul-carry'), cnt));
+  }
+  if (document.getElementById('pa-op-div').checked) {
+    var cnt = getN('pa-div-count');
+    if (cnt) push(_pmArithDivPool(+getR('pa-div-dividend'), +getR('pa-div-divisor'), getR('pa-div-remainder'), cnt));
+  }
+
+  if (!questions.length) {
+    document.getElementById('pa-status').textContent = '⚠️ 請至少勾選一種運算並輸入題數';
+    document.getElementById('pa-print-btns').style.display = 'none';
     _pmQuestions = null;
     return;
   }
-  if (!total) {
-    statusEl.textContent = '⚠️ 請輸入題數';
-    printBtns.style.display = 'none';
-    _pmQuestions = null;
-    return;
-  }
-
-  var pool = _pmMultiplyPool(tables, total);
-  _pmFinishGenerate(
-    pool.map(function(q, i) { return { num: i + 1, promptHtml: q.promptHtml, answerText: q.answerText }; }),
-    'pm-multiply-status', 'pm-multiply-print-btns'
-  );
+  _pmFinishGenerate(questions, 'pa-status', 'pa-print-btns');
 }
 
 // ════════════════════════════════════════
@@ -847,7 +1068,8 @@ function _pmStepper(id, maxVal) {
 
 function _pmReadCount(id) {
   var el = document.getElementById(id);
-  return el ? (parseInt(el.dataset.count) || 0) : 0;
+  if (!el) return 0;
+  return Math.max(0, parseInt(el.value !== undefined ? el.value : el.dataset.count) || 0);
 }
 
 function _pmBuildModuleRows(containerId, modules, prefix) {
@@ -855,15 +1077,15 @@ function _pmBuildModuleRows(containerId, modules, prefix) {
   if (!el) return;
   var html = '';
   modules.forEach(function(m) {
-    html += '<div class="pm-subtype-row" style="padding:8px 16px">' +
-            '<div>' +
-            '<div class="pm-subtype-label">' + m.label + '</div>' +
-            '<div style="font-size:.72rem;color:var(--muted);font-weight:600;margin-top:2px">' + m.example + '</div>' +
-            '</div>' +
-            '<div class="pm-count-wrap">' +
-            _pmStepper(prefix + '-count-' + m.id) +
-            '<span class="pm-count-max" style="min-width:1.2em">題</span>' +
-            '</div></div>';
+    html += '<div style="padding:12px 16px;border-bottom:1px solid var(--border)">';
+    html += '<div style="display:flex;align-items:center;gap:10px">';
+    html += '<div style="flex:1">';
+    html += '<div style="font-size:.8rem;font-weight:900;color:var(--blue)">' + m.label + '</div>';
+    if (m.example) html += '<div style="font-size:.72rem;color:var(--muted);font-weight:600;margin-top:2px">範例：' + m.example + '</div>';
+    html += '</div>';
+    html += '<input class="pm-count-input" id="' + prefix + '-count-' + m.id + '" type="number" min="0" value="0">';
+    html += '<span style="font-size:.79rem;color:var(--muted);font-weight:700">題</span>';
+    html += '</div></div>';
   });
   el.innerHTML = html;
 }

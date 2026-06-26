@@ -116,7 +116,7 @@ function _msLoadVisual(v) {
   if (hintEl) {
     hintEl.textContent = v.mode === 'split'
       ? '點擊，選擇「' + cfg.splitText + '」'
-      : '點擊任一物件，選擇「合併」';
+      : '點擊大單位，選擇「展開」';
   }
 
   _msUpdateLegend();
@@ -260,8 +260,8 @@ function _msRenderWeight() {
   var total     = msGetTotal();
   if (total === 0) return;
 
-  var largeSize = 90;
-  var smallSize = 52;
+  var largeSize = 135;
+  var smallSize = 78;
   var largeIdx  = 0;
 
   msBlocks.forEach(function(b) {
@@ -343,8 +343,8 @@ function _msRenderVolume() {
   var total    = msGetTotal();
   if (total === 0) return;
 
-  var largeCupW = 72, largeCupH = 120;
-  var smallCupW = 46, smallCupH =  78;
+  var largeCupW = 108, largeCupH = 180;
+  var smallCupW =  69, smallCupH = 117;
   var largeIdx  = 0;
 
   msBlocks.forEach(function(b) {
@@ -384,26 +384,25 @@ function msShowPopup(id) {
   var cfg = _MS_CFG[msCurrentPair];
   if (!cfg) return;
 
-  var canSplit = !block.isLarge && block.amount >= cfg.factor;
-  var canMerge = msBlocks.length > 1;
-  if (!canSplit && !canMerge) return;
+  var canSplit  = !block.isLarge && block.amount >= cfg.factor;
+  var canExpand = block.isLarge;
+  if (!canSplit && !canExpand) return;
 
   var popup    = document.getElementById('sb-popup');
   var targetEl = document.getElementById('msb-' + id);
   if (!popup || !targetEl) return;
 
-  var total = msGetTotal();
-  var html  = '';
+  var html = '';
+  if (canExpand) {
+    html += '<button class="sb-popup-opt ts-popup-opt" onclick="msDoExpand(' + id + ')">' +
+            '<span class="ts-pop-icon">⊕</span>' +
+            '<span class="ts-pop-label">展開（換成' + cfg.factor + cfg.smallLabel + '）</span>' +
+            '</button>';
+  }
   if (canSplit) {
     html += '<button class="sb-popup-opt ts-popup-opt" onclick="msDoSplit(' + id + ')">' +
             '<span class="ts-pop-icon">✂</span>' +
             '<span class="ts-pop-label">' + cfg.splitText + '</span>' +
-            '</button>';
-  }
-  if (canMerge) {
-    html += '<button class="sb-popup-opt ts-popup-opt" onclick="msDoMerge()">' +
-            '<span class="ts-pop-icon">⊞</span>' +
-            '<span class="ts-pop-label">合併（共' + total + cfg.smallLabel + '）</span>' +
             '</button>';
   }
   popup.innerHTML = html;
@@ -432,14 +431,16 @@ function msDoSplit(id) {
   msUpdateStats();
 }
 
-function msDoMerge() {
+function msDoExpand(id) {
+  var block = msFindBlock(id);
+  var cfg   = _MS_CFG[msCurrentPair];
+  if (!block || !cfg || !block.isLarge) return;
   sbClosePopup();
   if (typeof sfxTap === 'function') sfxTap();
-  var cfg = _MS_CFG[msCurrentPair];
-  if (!cfg) return;
 
-  var total = msGetTotal();
-  msBlocks  = [{ id: _msNextId(), amount: total, isLarge: false }];
+  var idx = msBlocks.indexOf(block);
+  msBlocks.splice(idx, 1, { id: _msNextId(), amount: cfg.factor, isLarge: false });
+
   msRenderSandbox();
   msUpdateStats();
 }

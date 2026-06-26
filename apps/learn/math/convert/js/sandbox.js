@@ -294,14 +294,21 @@ function sbEndDrag(cx, cy) {
     return;
   }
 
-  // 落在錢庫 → 刪除
-  var bank = document.getElementById('sb-bank');
-  if (bank && sbIsOver(cx, cy, bank)) {
+  // 脫離沙盒範圍或拖到錢庫 → 刪除
+  var bank  = document.getElementById('sb-bank');
+  var scene = document.getElementById('sb-scene');
+  var sr    = scene ? scene.getBoundingClientRect() : null;
+  var isBillC = coin && sbIsBill(coin.denom);
+  var halfW   = isBillC ? 60 : 32;
+  var halfH   = isBillC ? 30 : 32;
+  var outside = coin && sr && (
+    coin.x + halfW < 0      || coin.x + halfW > sr.width  ||
+    coin.y + halfH < 0      || coin.y + halfH > sr.height
+  );
+  if ((bank && sbIsOver(cx, cy, bank)) || outside) {
     sbRemoveCoin(id);
-    sbUpdateStats();
-  } else {
-    sbUpdateStats();
   }
+  sbUpdateStats();
 }
 
 // ════════════════════════════════════════

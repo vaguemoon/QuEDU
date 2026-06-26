@@ -478,6 +478,14 @@ function qsToggleCard(id) {
 function _qsUpdateSelectCount() {
   var el = document.getElementById('qs-select-count');
   if (el) el.textContent = '已選 ' + _qsSelectedIds.length + ' 張';
+
+  var btn = document.getElementById('qs-select-all-btn');
+  if (btn) {
+    var filtered   = _qsGetFilteredSessions();
+    var allChosen  = filtered.length > 0 &&
+                     filtered.every(function(s) { return _qsSelectedIds.indexOf(s.id) !== -1; });
+    btn.textContent = allChosen ? '取消全選' : '全選';
+  }
 }
 
 function qsBatchMove() {
@@ -615,11 +623,25 @@ async function _qsDeleteSessionFull(id) {
     .where('sessionId', '==', id).get()
     .catch(function() { return { docs: [] }; });
 
+  /* 先刪 quizResults（允許失敗，不阻斷主流程）*/
+  if (resultsSnap.docs.length) {
+    try {
+      var BATCH_SIZE = 400;
+      for (var ri = 0; ri < resultsSnap.docs.length; ri += BATCH_SIZE) {
+        var rb = db.batch();
+        resultsSnap.docs.slice(ri, ri + BATCH_SIZE).forEach(function(doc) { rb.delete(doc.ref); });
+        await rb.commit();
+      }
+    } catch(e) {
+      console.warn('_qsDeleteSessionFull: quizResults 刪除失敗（忽略）', e);
+    }
+  }
+
+  /* 刪 sharedQuizSessions subcollection + 主 session 文件 */
   var refs = [];
   sharedClassIds.forEach(function(classId) {
     refs.push(db.collection('classes').doc(classId).collection('sharedQuizSessions').doc(id));
   });
-  resultsSnap.docs.forEach(function(doc) { refs.push(doc.ref); });
   refs.push(db.collection('quizSessions').doc(id));
 
   var BATCH_SIZE = 400;
