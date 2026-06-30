@@ -180,6 +180,26 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'english', file: 'apps/learn/lang/english/index.html',
+    icon: '🌐', name: '英文趣', desc: '英文發音・常用語・生字',
+    type: 'learn', category: 'english',
+    theme: 'theme-teal', badge: '英文趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('英文趣'); },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('english').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var d = doc.data();
+          var total = 0;
+          Object.keys(d).forEach(function(k) {
+            var v = d[k];
+            if (v && typeof v.correct === 'number') total += v.correct;
+          });
+          return total ? { sub: '累計答對 ' + total + ' 題', score: total + ' 題' } : null;
+        }).catch(function() { return null; });
+    }
+  },
+  {
     id: 'math-quiz', file: 'apps/quiz/math-quiz/index.html',
     icon: '🔢', name: '數學測驗', desc: '四則運算練習測驗',
     type: 'quiz', studentMode: true,
@@ -245,9 +265,9 @@ var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','�
 var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
-  'geometry-back-to-hub'];
+  'geometry-back-to-hub','english-back'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
-  'geometry-logout'];
+  'geometry-logout','english-logout'];
 
 // ── Hub 渲染 ──
 
@@ -277,11 +297,12 @@ function renderHub() {
   var learnSubjects = SUBJECTS.filter(function(s) { return s.type !== 'quiz'; });
   var quizSubjects  = SUBJECTS.filter(function(s) { return s.type === 'quiz'; });
 
-  // 學習區分國語／數學兩個區塊
+  // 學習區分國語／英文／數學三個區塊
   var learnGrid = document.getElementById('subjects-grid');
   learnGrid.style.gridTemplateColumns = ''; // 由子 grid 自行控制
   var groups = [
     { key: 'chinese', label: '📖 國語' },
+    { key: 'english', label: '🌐 英文' },
     { key: 'math',    label: '🔢 數學' }
   ];
   learnGrid.innerHTML = groups.map(function(g) {

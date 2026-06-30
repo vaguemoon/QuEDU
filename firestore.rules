@@ -111,6 +111,18 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // 英文圖庫 —— 學生（無 Auth）可讀，教師（已登入）可寫
+    match /englishImages/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 英文單元設定（發音組合清單）—— 學生可讀，教師可寫
+    match /englishUnits/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
     // 自訂詞語類別（教師自建，無版本依存）—— 學生可讀，教師可寫
     match /customCategories/{doc} {
       allow read:  if true;

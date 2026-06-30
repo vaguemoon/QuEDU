@@ -287,6 +287,7 @@
             <div class="db-nav-label">語文</div>
             <button class="db-nav-btn active" id="dbnav-chinese-bank" onclick="switchDbView('chinese-bank',this)">📚 題庫</button>
             <button class="db-nav-btn" id="dbnav-word-image"    onclick="switchDbView('word-image',this)">🖼️ 詞語圖庫</button>
+            <button class="db-nav-btn" id="dbnav-english"       onclick="switchDbView('english',this)">🇺🇸 英文圖庫</button>
             <button class="db-nav-btn" id="dbnav-audio-chinese" onclick="switchDbView('audio-chinese',this)">🎵 音檔(施工中)</button>
           </div>
           <div class="db-nav-group">
@@ -373,6 +374,11 @@
           <!-- 語文 › 詞語圖庫 -->
           <div id="dbview-word-image" style="display:none">
             <div id="wi-main"><div class="loading-wrap"><div class="spinner"></div></div></div>
+          </div>
+
+          <!-- 語文 › 英文圖庫 -->
+          <div id="dbview-english" style="display:none">
+            <div id="en-main"><div class="loading-wrap"><div class="spinner"></div></div></div>
           </div>
 
           <!-- 語文 › 音檔 -->
@@ -1404,6 +1410,63 @@
 </div>
 
 
+<!-- ══ 英文圖庫：上傳圖片 Modal ══ -->
+<div id="en-upload-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:520px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div style="font-size:1.05rem;font-weight:900;margin-bottom:16px" id="en-modal-title">上傳圖片</div>
+
+    <!-- 發音組合選擇（phonics 才顯示） -->
+    <div id="en-modal-groups" style="display:none;margin-bottom:14px">
+      <div style="font-size:.75rem;font-weight:800;color:var(--muted);margin-bottom:6px">發音組合</div>
+      <div id="en-modal-group-chips" style="display:flex;gap:7px;flex-wrap:wrap"></div>
+    </div>
+
+    <!-- 英文單字（新增時才顯示） -->
+    <div id="en-modal-word-wrap" style="margin-bottom:14px">
+      <div style="font-size:.75rem;font-weight:800;color:var(--muted);margin-bottom:6px">英文單字</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="en-modal-word" type="text" placeholder="shell"
+          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem;font-family:'Courier New',monospace;outline:none">
+        <button onclick="_enModalSearch()"
+          style="padding:8px 13px;border:1.5px solid var(--border);border-radius:8px;background:white;
+                 font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--blue-dk);
+                 white-space:nowrap">🔍 搜圖</button>
+      </div>
+    </div>
+
+    <div id="en-paste-area" tabindex="0"
+      style="border:3px dashed var(--border);border-radius:14px;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:border-color .15s;outline:none;margin-bottom:16px;overflow:hidden;position:relative"
+      ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
+      ondragleave="this.style.borderColor=''"
+      ondrop="_enHandleDrop(event)"
+      onclick="document.getElementById('en-file-input').click()">
+      <img id="en-preview-img" src="" alt=""
+        style="display:none;max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;pointer-events:none">
+      <div id="en-paste-hint" style="text-align:center;padding:16px;pointer-events:none">
+        <div style="font-size:2rem;margin-bottom:8px">📋</div>
+        <div style="font-size:.85rem;font-weight:700;color:var(--muted)">
+          貼上 Ctrl+V　或拖放圖片<br>或點擊選擇檔案
+        </div>
+      </div>
+    </div>
+    <input id="en-file-input" type="file" accept="image/*" style="display:none"
+      onchange="_enFileSelected(this)">
+
+    <div id="en-size-warn" style="display:none;color:var(--orange);font-size:.8rem;font-weight:700;margin-bottom:10px"></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="_enCloseUpload()"
+        style="padding:10px 20px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit">
+        取消
+      </button>
+      <button id="en-confirm-btn" disabled onclick="_enConfirmUpload()"
+        style="padding:10px 20px;background:var(--blue);color:white;border:none;border-radius:10px;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit">
+        確認上傳
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ 詞語圖庫：上傳圖片 Modal ══ -->
 <div id="wi-upload-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:520px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
@@ -1752,6 +1815,7 @@
 <script src="quiz-sessions.js"></script>
 <script src="math-quiz.js"></script>
 <script src="word-image.js"></script>
+<script src="english.js"></script>
 <script src="math-bank.js"></script>
 <script src="audio-clips.js"></script>
 <script src="exam-compose.js"></script>
