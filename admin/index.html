@@ -343,7 +343,8 @@
                 <input type="hidden" id="qb-grade">
                 <div style="flex:2;min-width:220px">
                   <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">選擇 .xlsx 檔案</label>
-                  <input type="file" id="qb-file" accept=".xlsx" onchange="previewQuizBank()" style="font-size:.88rem">
+                  <input type="file" id="qb-file" accept=".xlsx" onchange="previewQuizBank()" disabled style="font-size:.88rem">
+                  <div id="qb-file-hint" style="font-size:.75rem;color:var(--orange);font-weight:700;margin-top:4px">請先選擇版本與冊次</div>
                 </div>
               </div>
               <div id="qb-errors" style="display:none;margin-bottom:12px"></div>

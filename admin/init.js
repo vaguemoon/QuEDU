@@ -225,7 +225,13 @@ function switchTab(tab) {
 function updateQbGrade() {
   var v = document.getElementById('qb-version').value;
   var s = document.getElementById('qb-volume').value;
-  document.getElementById('qb-grade').value = (v && s) ? v + s : '';
+  var ready = !!(v && s);
+  document.getElementById('qb-grade').value = ready ? v + s : '';
+
+  var fileEl = document.getElementById('qb-file');
+  var hintEl = document.getElementById('qb-file-hint');
+  if (fileEl) fileEl.disabled = !ready;
+  if (hintEl) hintEl.style.display = ready ? 'none' : '';
 }
 
 /* ── 資料庫：初始化（切換至資料庫 tab 時呼叫）── */

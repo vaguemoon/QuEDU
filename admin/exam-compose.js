@@ -977,7 +977,7 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
   });
 
   /* ─── CSS ─── */
-  var _fontUrl = window.location.origin + '/assets/BPMFZIHIKAISTD-REGULAR.TTF';
+  var _fontUrl = window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF';
   var css = [
     '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap");',
     '@font-face{font-family:"BpmfZihiKai";src:url("' + _fontUrl + '") format("truetype")}',
