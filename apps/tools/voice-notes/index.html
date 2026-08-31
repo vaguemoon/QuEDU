@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>即時語音轉文字</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:    #4a90d9;
+  --blue-dk: #2d6fa8;
+  --blue-lt: #eef5fc;
+  --border:  #d0dcea;
+  --text:    #1a2c3e;
+  --muted:   #5a7a9a;
+  --bg:      #f4f7fb;
+  --card-bg: white;
+  --green:   #27ae60;
+  --red:     #dc3545;
+  --red-lt:  #fdecea;
+  --orange:  #e67e22;
+  --orange-lt: #fdf1e6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 工具標題列 ── */
+.tool-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.tool-title { font-size: 1.05rem; font-weight: 900; color: var(--text); }
+.tool-sub { font-size: .78rem; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+/* ── 卡片 ── */
+.card {
+  background: var(--card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+/* ── 提示橫幅 ── */
+.banner {
+  border-radius: 10px;
+  padding: 11px 14px;
+  margin-bottom: 14px;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.banner.orange { background: var(--orange-lt); border: 1.5px solid var(--orange); color: #8a4a12; }
+
+/* ── 麥克風狀態列 ── */
+.mic-status-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.pulse-wrap {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: var(--blue-lt);
+}
+.pulse-dot {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: transform .08s ease-out, background-color .2s;
+}
+.pulse-dot.listening { background: var(--red); }
+.pulse-dot.error { background: var(--orange); }
+.mic-status-text { font-size: .92rem; font-weight: 800; color: var(--text); }
+
+.mic-error {
+  display: none;
+  background: var(--red-lt);
+  border: 1.5px solid var(--red);
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-size: .8rem;
+  font-weight: 700;
+  color: #8a1a24;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+/* ── 按鈕 ── */
+.btn-toggle {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white;
+  border: none;
+  border-radius: 11px;
+  font-size: .95rem;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .15s, transform .12s;
+}
+.btn-toggle:hover { opacity: .9; }
+.btn-toggle:active { transform: scale(.98); }
+.btn-toggle:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.btn-toggle.listening { background: linear-gradient(135deg, var(--red), #b0202f); }
+
+/* ── 逐字稿區 ── */
+.transcript-card { flex: 1; display: flex; flex-direction: column; }
+.field-label {
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.btn-clear {
+  padding: 5px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: white;
+  color: var(--muted);
+  font-size: .74rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+.interim-line {
+  min-height: 20px;
+  font-size: .85rem;
+  font-style: italic;
+  color: var(--muted);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+#transcript {
+  width: 100%;
+  flex: 1;
+  min-height: 320px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: 'Noto Sans TC', sans-serif;
+  color: var(--text);
+  line-height: 1.9;
+  outline: none;
+  resize: vertical;
+  transition: border-color .15s;
+}
+#transcript:focus { border-color: var(--blue); }
+
+/* Dark mode from parent */
+body.dark {
+  --bg: #1a1f2e;
+  --card-bg: #242938;
+  --border: #35405a;
+  --text: #e2e8f0;
+  --muted: #7a8da8;
+  --blue-lt: #1e2d45;
+  --red-lt: #3a1f22;
+  --orange-lt: #3a2c1a;
+}
+body.dark #transcript,
+body.dark .btn-clear { background: #1e2535; color: #e2e8f0; border-color: #35405a; }
+</style>
+</head>
+<body>
+
+<div class="tool-header">
+  <div>
+    <div class="tool-title">🗣️ 即時語音轉文字</div>
+    <div class="tool-sub">口述筆記／速記工具：說話內容即時轉成文字，可直接修改；切換或關閉工具後文字不會保留</div>
+  </div>
+</div>
+
+<div id="banner-unsupported" class="banner orange" style="display:none">
+  ⚠️ 此功能目前僅支援 Chrome 或 Edge 瀏覽器的語音辨識功能，請更換瀏覽器後再試。
+</div>
+<div id="banner-insecure" class="banner orange" style="display:none">
+  ⚠️ 使用麥克風需要安全連線（https），請透過正式網址開啟本頁面。
+</div>
+
+<div class="card">
+  <div class="mic-status-row">
+    <div class="pulse-wrap"><div class="pulse-dot" id="pulse-dot"></div></div>
+    <div class="mic-status-text" id="mic-status-text">尚未開始</div>
+  </div>
+  <div class="mic-error" id="mic-error"></div>
+  <button class="btn-toggle" id="btn-toggle" onclick="toggleListening()">🎙️ 開始聽寫</button>
+</div>
+
+<div class="card transcript-card">
+  <div class="field-label">
+    逐字稿
+    <button class="btn-clear" id="btn-clear" onclick="clearTranscript()">🗑 清除文字</button>
+  </div>
+  <div class="interim-line" id="interim-line"></div>
+  <textarea id="transcript" placeholder="按「開始聽寫」後，說話內容會即時顯示在這裡，也可以直接點擊修改文字…"></textarea>
+</div>
+
+<script>
+'use strict';
+
+/* ── 暗色模式同步（與其他工具頁相同模式） ── */
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'admin-dark') {
+    document.body.classList.toggle('dark', !!e.data.dark);
+  }
+});
+try {
+  if (window.parent.document.body.classList.contains('dark')) {
+    document.body.classList.add('dark');
+  }
+} catch (e) {}
+
+/* ── 元件參照 ── */
+var elToggleBtn         = document.getElementById('btn-toggle');
+var elStatusText        = document.getElementById('mic-status-text');
+var elPulseDot          = document.getElementById('pulse-dot');
+var elError             = document.getElementById('mic-error');
+var elTranscript        = document.getElementById('transcript');
+var elInterim           = document.getElementById('interim-line');
+var elBannerUnsupported = document.getElementById('banner-unsupported');
+var elBannerInsecure    = document.getElementById('banner-insecure');
+
+var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+var recognition  = null;
+var micStream    = null;
+var audioCtx     = null;
+var analyser     = null;
+var rafId        = null;
+var listening    = false;
+var userStopped  = true; /* true = 使用者主動停止／尚未開始，不應自動重啟 */
+
+/* ── 狀態顯示 ── */
+function setStatus(text, state) {
+  elStatusText.textContent = text;
+  elPulseDot.className = 'pulse-dot' + (state ? ' ' + state : '');
+}
+function showError(msg) {
+  elError.textContent = msg;
+  elError.style.display = '';
+}
+function clearError() {
+  elError.style.display = 'none';
+  elError.textContent = '';
+}
+
+/* ── 麥克風錯誤訊息對照 ── */
+function handleMicError(err) {
+  var name = err && err.name;
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    showError('找不到麥克風裝置，請確認電腦／裝置已連接麥克風。');
+  } else if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+    showError('麥克風權限被拒絕。請點瀏覽器網址列左側的鎖頭（或麥克風）圖示，允許麥克風權限後重新整理頁面再試一次。');
+  } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+    showError('麥克風正被其他程式使用中，請先關閉其他正在使用麥克風的軟體（例如視訊會議）後再試。');
+  } else {
+    showError('無法啟用麥克風：' + (err && err.message ? err.message : '未知錯誤'));
+  }
+  setStatus('麥克風無法使用', 'error');
+}
+
+/* ── 事先偵測是否有麥克風裝置（不保證準確，僅作提早提示） ── */
+function checkDevicesUpfront() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  navigator.mediaDevices.enumerateDevices().then(function(devices) {
+    var hasMic = devices.some(function(d) { return d.kind === 'audioinput'; });
+    if (!hasMic) {
+      showError('目前偵測不到麥克風裝置，請確認電腦／裝置已連接麥克風。');
+      setStatus('未偵測到麥克風', 'error');
+    }
+  }).catch(function() {});
+}
+
+/* ── 開始／停止 ── */
+function toggleListening() {
+  if (listening) {
+    userStopped = true;
+    stopAll();
+  } else {
+    userStopped = false;
+    startAll();
+  }
+}
+
+function startAll() {
+  clearError();
+  elToggleBtn.disabled = true;
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    micStream = stream;
+    setupVolumeMeter(stream);
+    startRecognition();
+    listening = true;
+    elToggleBtn.disabled = false;
+    elToggleBtn.textContent = '⏹ 停止聽寫';
+    elToggleBtn.classList.add('listening');
+    setStatus('正在聆聽…', 'listening');
+  }).catch(function(err) {
+    elToggleBtn.disabled = false;
+    handleMicError(err);
+  });
+}
+
+function stopAll() {
+  listening = false;
+  elToggleBtn.textContent = '🎙️ 開始聽寫';
+  elToggleBtn.classList.remove('listening');
+  if (!elError.textContent) setStatus('已停止', 'idle');
+  elInterim.textContent = '';
+  elPulseDot.style.transform = 'scale(1)';
+
+  if (recognition) {
+    try { recognition.stop(); } catch (e) {}
+    recognition = null;
+  }
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; }
+  if (micStream) {
+    micStream.getTracks().forEach(function(t) { t.stop(); });
+    micStream = null;
+  }
+}
+
+/* ── 音量視覺化（獨立於語音辨識，直接讀取麥克風串流） ── */
+function setupVolumeMeter(stream) {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  var source = audioCtx.createMediaStreamSource(stream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  source.connect(analyser);
+  var data = new Uint8Array(analyser.frequencyBinCount);
+
+  function tick() {
+    analyser.getByteTimeDomainData(data);
+    var sum = 0;
+    for (var i = 0; i < data.length; i++) {
+      var v = (data[i] - 128) / 128;
+      sum += v * v;
+    }
+    var rms = Math.sqrt(sum / data.length);
+    var scale = 1 + Math.min(rms * 4, 1.4);
+    elPulseDot.style.transform = 'scale(' + scale.toFixed(2) + ')';
+    rafId = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+/* ── 語音辨識 ── */
+function startRecognition() {
+  recognition = new SpeechRecognitionCtor();
+  recognition.lang = 'zh-TW';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = function(e) {
+    var interim = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      var transcript = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        appendFinalText(transcript);
+      } else {
+        interim += transcript;
+      }
+    }
+    elInterim.textContent = interim;
+  };
+
+  recognition.onerror = function(e) {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+      userStopped = true;
+      handleMicError({ name: 'NotAllowedError' });
+    } else if (e.error === 'audio-capture') {
+      userStopped = true;
+      handleMicError({ name: 'NotFoundError' });
+    } else if (e.error === 'network') {
+      showError('語音辨識連線發生問題，請確認網路連線。');
+    }
+    /* 'no-speech' 等暫時性錯誤交給 onend 自動重啟即可 */
+  };
+
+  recognition.onend = function() {
+    if (!userStopped && listening) {
+      try { recognition.start(); } catch (e) { /* 已在啟動中則忽略 */ }
+    }
+  };
+
+  recognition.start();
+}
+
+function appendFinalText(text) {
+  text = text.trim();
+  if (!text) return;
+  var cur = elTranscript.value;
+  elTranscript.value = cur ? (cur + '\n' + text) : text;
+  elTranscript.scrollTop = elTranscript.scrollHeight;
+}
+
+function clearTranscript() {
+  elTranscript.value = '';
+  elTranscript.focus();
+}
+
+/* ── 離開／關閉工具時務必釋放麥克風 ── */
+window.addEventListener('beforeunload', function() {
+  userStopped = true;
+  stopAll();
+});
+window.addEventListener('pagehide', function() {
+  userStopped = true;
+  stopAll();
+});
+
+/* ── 初始化 ── */
+(function init() {
+  if (!window.isSecureContext) elBannerInsecure.style.display = '';
+  if (!SpeechRecognitionCtor) {
+    elBannerUnsupported.style.display = '';
+    elToggleBtn.disabled = true;
+    setStatus('瀏覽器不支援語音辨識', 'error');
+    return;
+  }
+  checkDevicesUpfront();
+})();
+</script>
+
+</body>
+</html>

@@ -756,12 +756,12 @@
           <div class="tool-card-arrow">→</div>
         </button>
 
-        <!-- 列印工具卡片 -->
-        <button class="tool-card" onclick="openToolModal('print-cards')">
-          <div class="tool-card-icon">🖨️</div>
+        <!-- 即時語音轉文字卡片 -->
+        <button class="tool-card" onclick="openToolModal('voice-notes')">
+          <div class="tool-card-icon">🗣️</div>
           <div class="tool-card-body">
-            <div class="tool-card-name">列印工具</div>
-            <div class="tool-card-desc">產生生字圖卡，含注音、部首、田字格，供低年級著色練習</div>
+            <div class="tool-card-name">即時語音轉文字</div>
+            <div class="tool-card-desc">口述筆記／速記，說話內容即時轉成文字</div>
           </div>
           <div class="tool-card-arrow">→</div>
         </button>
@@ -1371,7 +1371,7 @@
 
   <!-- 教學工具面板（報讀工具等，與 sidebar 並排） -->
   <div id="tool-modal" style="display:none;flex:1;flex-direction:column;overflow:hidden">
-    <iframe id="tool-modal-frame" src="" style="flex:1;border:none;width:100%;display:block;height:100%" title="教學工具" allow="speech-synthesis; fullscreen"></iframe>
+    <iframe id="tool-modal-frame" src="" style="flex:1;border:none;width:100%;display:block;height:100%" title="教學工具" allow="speech-synthesis; microphone; fullscreen"></iframe>
   </div>
 
 </div>
@@ -1825,8 +1825,9 @@
 <script src="print-math.js"></script>
 <script>
 var TOOL_CONFIG = {
-  reader:       { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' },
-  'print-cards': { title: '🖨️ 列印工具', src: '../apps/tools/print-cards/index.html' }
+  reader:        { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' },
+  'print-cards': { title: '🖨️ 列印工具', src: '../apps/tools/print-cards/index.html' },
+  'voice-notes': { title: '🗣️ 即時語音轉文字', src: '../apps/tools/voice-notes/index.html' }
 };
 function openToolModal(id) {
   var cfg = TOOL_CONFIG[id];
