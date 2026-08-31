@@ -1,0 +1,394 @@
+/* recognize.css — 認字趣 app 專屬樣式 */
+
+/* ── 頂端列 ── */
+#page-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 52px; display: flex; align-items: center; gap: 6px;
+  background: var(--white); border-bottom: 1.5px solid var(--border);
+  padding: 0 10px; box-shadow: 0 2px 8px rgba(44,100,160,.08);
+}
+.btn-back-hub {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back-hub:active { background: var(--blue); color: white; }
+.btn-back {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: transparent; color: var(--muted);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap;
+}
+.btn-back:active { background: var(--blue-lt); color: var(--blue-dk); }
+.btn-back.hidden { display: none; }
+#topbar-title {
+  flex: 1; text-align: center; font-size: .95rem; font-weight: 900;
+  color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#topbar-title span { color: var(--text); }
+#topbar-title.hidden { display: none; }
+#topbar-breadcrumb {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 2px; overflow: hidden; min-width: 0;
+}
+#topbar-breadcrumb.hidden { display: none; }
+.tb-crumb {
+  font-size: .78rem; font-weight: 800; color: var(--muted);
+  padding: 4px 10px; border-radius: 14px; white-space: nowrap;
+  max-width: 80px; overflow: hidden; text-overflow: ellipsis;
+  transition: all .15s; cursor: default;
+}
+.tb-crumb.tb-active { color: var(--blue-dk); background: var(--blue-lt); }
+.tb-crumb.tb-link   { cursor: pointer; }
+.tb-crumb.tb-link:hover  { background: var(--blue-lt); color: var(--blue-dk); }
+.tb-crumb.tb-link:active { background: var(--blue); color: white; }
+.tb-sep { color: var(--border); font-size: .85rem; flex-shrink: 0; }
+#topbar-student {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 20px; cursor: pointer;
+  background: var(--blue-lt); border: 1.5px solid var(--border);
+  font-size: .82rem; font-weight: 700; color: var(--blue-dk);
+  position: relative; user-select: none;
+}
+#topbar-avatar { font-size: 1.1rem; line-height: 1; }
+#topbar-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow); z-index: 300;
+  display: flex; flex-direction: column; min-width: 130px; overflow: hidden;
+}
+.logout-menu.hidden { display: none; }
+.lm-btn {
+  padding: 11px 16px; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: .88rem; font-weight: 800;
+  text-align: left; color: var(--text); transition: background .12s;
+}
+.lm-btn:hover { background: var(--blue-lt); }
+.lm-logout { color: var(--red); }
+
+/* ── 頁面基礎（全畫面使用） ── */
+.page {
+  display: none; 
+  position: fixed;
+  inset: 0; overflow-y: auto;
+  padding: 60px 0 0;
+}
+.page.active { display: block; }
+
+/* ── 課程選擇：樣式由 shared/curriculum.css 提供 ── */
+
+/* ── 字詞列表（全畫面） ── */
+#page-menu { padding-bottom: 88px; }
+.menu-progress-bar {
+  padding: 10px 14px 12px;
+  background: var(--white); border-bottom: 1px solid var(--border);
+}
+.menu-progress-title { font-size: .78rem; font-weight: 800; color: var(--muted); margin-bottom: 6px; }
+.progress-track {
+  height: 10px; border-radius: 10px; overflow: hidden;
+  background: var(--border); display: flex;
+}
+.progress-seg { height: 100%; transition: width .4s; }
+.progress-seg.mastered  { background: var(--green); }
+.progress-seg.practiced { background: var(--blue); }
+.progress-seg.new       { background: var(--border); }
+.progress-counts { font-size: .75rem; font-weight: 700; color: var(--muted); margin-top: 5px; }
+
+/* 字詞列表內容 */
+.menu-body { padding: 14px; }
+.menu-section { margin-bottom: 22px; }
+.menu-section-title {
+  font-size: .82rem; font-weight: 900; color: var(--muted);
+  margin-bottom: 12px; letter-spacing: .5px;
+}
+/* 字詞卡片列表：使用 grid 或 flex，確保響應式和間距 */
+.menu-item-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 2fr));
+  gap: 12px;
+}
+.menu-word-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* 生字卡片 — 放大且可點擊 */
+.menu-item-btn {
+  padding: 22px 8px; border-radius: 16px; border: 2.5px solid var(--border);
+  background: var(--white); font-size: 4rem; font-weight: 900;
+  cursor: pointer; font-family: 'Noto Serif TC', 'LXGW WenKai TC', serif;
+  text-align: center; transition: all .12s; position: relative;
+  box-shadow: 0 2px 8px rgba(44,100,160,.07);
+}
+.menu-item-btn:active { transform: scale(.93); }
+.menu-word-btn { padding: 16px 20px; font-size: 1.6rem; min-width: 90px; }
+.menu-item-new      { border-color: var(--border); }
+.menu-item-practiced{
+  border-color: var(--blue); background: var(--blue-lt); color: var(--blue-dk);
+}
+.menu-item-mastered {
+  border-color: var(--green); background: #f0fbf5; color: #1e8449;
+  box-shadow: 0 0 0 3px rgba(82,201,122,.18), 0 2px 8px rgba(44,100,160,.07);
+}
+.menu-item-mastered::after {
+  content: '✓'; position: absolute; top: 3px; right: 6px;
+  font-size: .65rem; font-weight: 900; color: var(--green);
+}
+.menu-item-selected {
+  border-color: var(--blue) !important;
+  background: var(--blue-lt) !important;
+  color: var(--blue-dk) !important;
+  box-shadow: 0 0 0 3px rgba(74,144,217,.28), 0 2px 8px rgba(44,100,160,.07) !important;
+}
+.menu-select-mode .menu-item-btn:not(.menu-item-selected) { opacity: .4; }
+
+/* 注音：按鈕改為 flex 直排，注音顯示在字上方 */
+.menu-item-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.menu-item-zhuyin {
+  font-size: 1.1rem; font-weight: 700; color: var(--muted);
+  line-height: 1; min-height: 1.1em; font-family: inherit;
+}
+
+/* ── 手機（≤ 480px）：4 欄緊湊卡片 ── */
+@media (max-width: 480px) {
+  .menu-body { padding: 10px 12px 90px; }
+  .menu-item-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .menu-item-btn { padding: 8px 4px 6px; font-size: 2.2rem; border-radius: 12px; border-width: 2px; gap: 2px; }
+  .menu-item-zhuyin { font-size: .9rem; }
+}
+
+.menu-action-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; gap: 12px; padding: 12px 14px;
+  background: var(--white); border-top: 1.5px solid var(--border);
+  box-shadow: 0 -4px 16px rgba(44,100,160,.08);
+}
+.btn-action {
+  flex: 1; padding: 15px; border: none; border-radius: var(--radius);
+  font-size: 1rem; font-weight: 900; cursor: pointer; font-family: inherit;
+  transition: transform .12s;
+}
+.btn-action:active { transform: scale(.96); }
+.btn-practice {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white; box-shadow: 0 4px 16px rgba(74,144,217,.35);
+}
+.btn-exam {
+  background: linear-gradient(135deg, var(--green), #389959);
+  color: white; box-shadow: 0 4px 16px rgba(82,201,122,.35);
+}
+.btn-select-mode {
+  background: linear-gradient(135deg, var(--orange), #d4621a);
+  color: white; box-shadow: 0 4px 16px rgba(255,140,66,.35);
+}
+.btn-select-all {
+  background: var(--blue-lt); color: var(--blue-dk);
+  border: 2px solid var(--blue);
+}
+.btn-start-select {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white; box-shadow: 0 4px 16px rgba(74,144,217,.35);
+}
+.btn-cancel-select {
+  background: var(--bg); color: var(--muted);
+  border: 2px solid var(--border);
+}
+.menu-empty { color: var(--muted); font-size: .88rem; font-weight: 700; padding: 8px; }
+
+/* ── 進度條（練習/測驗頁頂部） ── */
+.q-progress-bar-wrap {
+  position: fixed; top: 52px; left: 0; right: 0; height: 5px;
+  background: var(--border); z-index: 100;
+}
+.q-progress-fill { height: 100%; background: var(--blue); transition: width .3s; width: 0; }
+
+/* ── 題目面板（全畫面） ── */
+#page-practice, #page-exam {
+  padding: 60px 0 0;
+  display: none; position: fixed; inset: 0; overflow-y: auto;
+}
+#page-practice.active, #page-exam.active { display: flex; flex-direction: column; }
+
+.q-panel {
+  flex: 1; display: flex; flex-direction: column; align-items: stretch;
+  padding: 16px 14px 16px; gap: 16px;
+}
+.q-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0;
+}
+.q-num   { font-size: .82rem; font-weight: 800; color: var(--muted); }
+.q-type  { font-size: .78rem; font-weight: 800; color: var(--blue-dk);
+           background: var(--blue-lt); padding: 3px 10px; border-radius: 20px; }
+.q-round { font-size: .78rem; font-weight: 800; color: white;
+           background: var(--orange); padding: 3px 10px; border-radius: 20px; }
+
+.play-btn-wrap { text-align: center; }
+/* 開始練習/測驗的大按鈕，放在題目面板頂部或空白時顯示 */
+.play-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 18px 40px; border: none; border-radius: 50px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white; font-size: 1.5rem; font-weight: 900;
+  cursor: pointer; font-family: inherit;
+  box-shadow: 0 6px 20px rgba(74,144,217,.4);
+  transition: transform .12s, box-shadow .12s; width: 100%;
+  justify-content: center;
+}
+.play-btn:active { transform: scale(.96); box-shadow: 0 3px 10px rgba(74,144,217,.3); }
+.play-btn-icon { font-size: 2rem; }
+
+/* ── 選項格（全畫面 2×2，大按鈕） ── */
+.option-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; flex: 1;
+}
+.option-btn {
+  width: 100%; min-height: 80px; border: 3px solid var(--border);
+  border-radius: 20px; background: var(--white);
+  font-size: 8rem; font-weight: 900; font-family: 'Noto Serif TC', 'LXGW WenKai TC', serif;
+  cursor: pointer; transition: all .12s; letter-spacing: 2px;
+  text-align: center; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(44,100,160,.07);
+}
+.option-btn:hover:not(:disabled) { background: var(--blue-lt); border-color: var(--blue); }
+.option-btn:active:not(:disabled) { transform: scale(.95); }
+.option-btn.correct {
+  background: #f0fbf5; border-color: var(--green); color: #1e8449;
+  animation: popIn .2s ease; box-shadow: 0 0 0 4px rgba(82,201,122,.2);
+}
+.option-btn.wrong {
+  background: #fff0f0; border-color: var(--red); color: var(--red);
+  animation: shake .35s ease;
+}
+.option-btn:disabled { cursor: default; }
+
+@keyframes shake {
+  0%,100%{ transform: translateX(0); }
+  20%    { transform: translateX(-10px); }
+  60%    { transform: translateX(10px); }
+}
+
+/* ── 每輪結算畫面 ── */
+#page-exam-round-result, #page-practice-result, #page-exam-result {
+  padding: 60px 14px 24px;
+}
+/* 結算面板：包含圖示、標題、副標題、詳細資訊等，置中排列 */
+.round-panel, .result-panel {
+  max-width: 100%; display: flex; flex-direction: column; align-items: center;
+  gap: 18px; padding: 8px 0;
+}
+.round-icon, .result-icon { font-size: 3.5rem; animation: popIn .4s ease; }
+.round-title, .result-title { font-size: 3rem; font-weight: 900; color: var(--text); }
+.round-sub, .result-sub { font-size: 2rem; font-weight: 800; color: var(--muted); text-align: center; }
+/* 顯示每輪的詳細資訊，如「本輪答對 3/5 題」，或「平均答對率 80%」等 */
+.result-detail { font-size: .85rem; font-weight: 700; color: var(--muted); text-align: center; }
+/* 每輪結算的詳細資訊區塊，包含標題和多個資訊項目，使用 flex 或 grid 排列 */
+.round-sections { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+.round-section { background: var(--white); border-radius: 16px; padding: 14px 16px; width: 100%; }
+.round-section-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 10px; }
+.round-pass-title { color: #1e8449; }
+.round-fail-title { color: var(--red); }
+.round-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 圓形標籤，用於顯示每個字詞的狀態，如「已掌握」「需加強」等，根據狀態使用不同顏色 */
+.round-chip {
+  padding: 8px 14px; border-radius: 12px; font-size: 2rem;
+  font-weight: 900; font-family: 'Noto Serif TC', 'LXGW WenKai TC', serif;
+  cursor: pointer; transition: transform .1s;
+}
+.round-chip:active { transform: scale(.92); }
+.round-pass { background: #f0fbf5; color: #1e8449; border: 2px solid var(--green); }
+.round-fail { background: #fff0f0; color: var(--red);  border: 2px solid var(--red); }
+
+.result-btns { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.btn-result {
+  padding: 15px; border: none; border-radius: var(--radius);
+  font-size: .98rem; font-weight: 900; cursor: pointer; font-family: inherit;
+  transition: transform .12s; width: 100%;
+}
+.btn-result:active { transform: scale(.97); }
+.btn-result-primary {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  color: white; box-shadow: 0 4px 16px rgba(74,144,217,.35);
+}
+.btn-result-secondary {
+  background: var(--blue-lt); color: var(--blue-dk);
+  border: 2px solid var(--border);
+}
+.btn-result-green {
+  background: linear-gradient(135deg, var(--green), #389959);
+  color: white; box-shadow: 0 4px 16px rgba(82,201,122,.35);
+}
+
+/* ── 練習精熟度橫條 ── */
+#prac-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--blue-lt); border: 2px solid var(--border);
+  border-radius: 16px; padding: 10px 12px; gap: 8px;
+}
+#prac-bar-left {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
+}
+#prac-bar-stars { display: flex; gap: 1px; flex-shrink: 0; }
+.prac-star {
+  font-size: 1.9rem; color: #c8d4e0; line-height: 1;
+  transition: color .35s, text-shadow .35s, transform .3s;
+  display: inline-block;
+}
+.prac-star.filled {
+  color: #f5c518;
+  text-shadow: 0 0 14px rgba(245,197,24,.65);
+  transform: scale(1.15);
+}
+.prac-star.pop { animation: starPop .4s ease; }
+@keyframes starPop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.55); }
+  100% { transform: scale(1.15); }
+}
+#prac-bar-info {
+  font-size: .8rem; font-weight: 800; color: var(--blue-dk);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#prac-audio-btn {
+  flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%;
+  border: 2px solid var(--border); background: var(--white);
+  font-size: 1.35rem; cursor: pointer; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, transform .12s;
+  box-shadow: 0 2px 6px rgba(44,100,160,.1);
+}
+#prac-audio-btn:active { background: var(--blue-lt); transform: scale(.9); }
+
+/* ── 設定頁 ── */
+#page-settings { padding: 68px 16px 24px; }
+.settings-body { max-width: 100%; }
+.settings-section-title {
+  font-size: .82rem; font-weight: 900; color: var(--muted);
+  margin: 20px 0 10px; letter-spacing: .5px;
+}
+#settings-avatar-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+#theme-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.avatar-btn {
+  width: 48px; height: 48px; border-radius: 12px;
+  border: 2px solid var(--border); background: var(--white);
+  font-size: 1.4rem; cursor: pointer; transition: all .12s;
+}
+.avatar-btn.selected { border-color: var(--blue); background: var(--blue-lt); }
+.sound-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 0;
+}
+.sound-label { font-size: .9rem; font-weight: 800; flex: 1; }
+.sound-toggle-btn {
+  width: 56px; height: 30px; border-radius: 15px;
+  border: none; background: #cbd5e1;
+  position: relative; cursor: pointer; transition: background .2s;
+}
+.sound-toggle-btn.on { background: var(--green); }
+.sound-toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: white; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  transition: left .2s;
+}
+.sound-toggle-knob.on { left: 29px; }

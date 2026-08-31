@@ -354,3 +354,45 @@ function injectStyle(id, rules) {
   s.textContent = rules.join('');
   document.head.appendChild(s);
 }
+
+/* ════════════════════════════════════════
+   共用工具函數
+   ════════════════════════════════════════ */
+
+/** HTML 跳脫（防 XSS），所有頁面共用 */
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** 中文數字轉整數（課次排序用），所有題庫頁面共用 */
+function cnNumToInt(s) {
+  var map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,
+              '十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15,
+              '十六':16,'十七':17,'十八':18 };
+  if (map[s] !== undefined) return map[s];
+  var n = parseInt(s, 10);
+  return isNaN(n) ? null : n;
+}
+
+/** 顯示題庫 xlsx 解析錯誤（admin 與 super-admin 題庫頁面共用） */
+function showQbErrors(errors) {
+  var el = document.getElementById('qb-errors');
+  if (!el) return;
+  var visible = errors.slice(0, 5);
+  var html = '<div style="background:var(--red-lt);border:1.5px solid var(--red);border-radius:8px;padding:10px 14px">' +
+    '<div style="font-size:.78rem;font-weight:800;color:var(--red);margin-bottom:6px">⚠️ ' + errors.length + ' 列格式有誤，已略過：</div>' +
+    '<ul style="padding-left:16px;font-size:.78rem;color:var(--red);line-height:1.7">';
+  visible.forEach(function(e) { html += '<li>' + escHtml(e) + '</li>'; });
+  if (errors.length > 5) html += '<li style="color:var(--muted)">…還有 ' + (errors.length - 5) + ' 筆</li>';
+  html += '</ul></div>';
+  el.innerHTML = html;
+  el.style.display = '';
+}
+
+/** 清除題庫錯誤提示 */
+function clearQbErrors() {
+  var el = document.getElementById('qb-errors');
+  if (el) { el.innerHTML = ''; el.style.display = 'none'; }
+}

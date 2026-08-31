@@ -14,9 +14,9 @@
  */
 var SUBJECTS = [
   {
-    id: 'chinese', file: 'chinese/index.html',
+    id: 'chinese', file: 'apps/learn/lang/chinese/index.html',
     icon: '國', name: '練字趣', desc: '國小國字筆順學習',
-    type: 'learn',
+    type: 'learn', category: 'chinese',
     theme: 'theme-blue', badge: '練字LV1', badgeClass: 'green',
     // 等級：讀自練字趣成就系統寫入的 stats/profile.title
     getLevel: function(sid) {
@@ -36,9 +36,53 @@ var SUBJECTS = [
     }
   },
   {
-    id: 'multiply', file: 'multiply/index.html',
+    id: 'convert', file: 'apps/learn/math/convert/index.html',
+    icon: '↔', name: '換算趣', desc: '各種單位換算',
+    type: 'learn', category: 'math',
+    theme: 'theme-green', badge: '換算LV1', badgeClass: 'green',
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('stats').doc('convertProfile').get()
+        .then(function(doc) {
+          return (doc.exists && doc.data().title) ? doc.data().title : '換算LV1';
+        }).catch(function() { return '換算LV1'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('convert').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var c = doc.data().totalCorrect || 0;
+          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
+        });
+    }
+  },
+  {
+    id: 'transpose', file: 'apps/learn/math/transpose/index.html',
+    icon: '↔', name: '移項趣', desc: '方程式移項練習',
+    type: 'learn', category: 'math',
+    theme: 'theme-green', badge: '移項趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('移項趣'); },
+    activity: function() { return Promise.resolve(null); }
+  },
+  {
+    id: 'fractions', file: 'apps/learn/math/Fractions/index.html',
+    icon: '➗', name: '分數趣', desc: '擴分、約分、通分與加減乘',
+    type: 'learn', category: 'math',
+    theme: 'theme-orange', badge: '分數趣', badgeClass: 'orange',
+    getLevel: function() { return Promise.resolve('分數趣'); },
+    activity: function() { return Promise.resolve(null); }
+  },
+  {
+    id: 'geometry', file: 'apps/learn/math/geometry/index.html',
+    icon: '📐', name: '幾何趣', desc: '面積・體積・表面積計算',
+    type: 'learn', category: 'math',
+    theme: 'theme-teal', badge: '幾何趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('幾何趣'); },
+    activity: function() { return Promise.resolve(null); }
+  },
+  {
+    id: 'multiply', file: 'apps/learn/math/multiply/index.html',
     icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
-    type: 'learn',
+    type: 'learn', category: 'math',
     theme: 'theme-orange', badge: '乘法LV1', badgeClass: 'green',
     // 等級：讀自乘法趣成就系統寫入的 stats/multiplyProfile.title
     getLevel: function(sid) {
@@ -58,7 +102,7 @@ var SUBJECTS = [
     }
   },
   {
-    id: 'exam-reader', file: 'word-to-reader/index.html',
+    id: 'exam-reader', file: 'apps/quiz/word-to-reader/index.html',
     icon: '🎧', name: '考卷報讀', desc: '老師分享的有聲考卷',
     type: 'quiz', studentMode: true,
     theme: 'theme-teal', badge: '考卷報讀', badgeClass: 'green',
@@ -74,23 +118,133 @@ var SUBJECTS = [
     }
   },
   {
-    id: 'chinese-quiz', file: 'chinese-quiz/index.html',
-    icon: '📝', name: '語文練習', desc: '詞語填空與選擇題練習',
-    type: 'quiz', studentMode: true,
-    theme: 'theme-purple', badge: '語文練習', badgeClass: 'blue',
+    id: 'word-image', file: 'apps/learn/lang/word-image/index.html',
+    icon: '🖼️', name: '詞語趣', desc: '圖像化學習詞語',
+    type: 'learn', category: 'chinese',
+    theme: 'theme-purple', badge: '詞語趣', badgeClass: 'blue',
     getLevel: function(sid) {
-      // 讀最近一次語文練習的分數當作標籤
+      return db.collection('students').doc(sid).collection('progress').doc('wordImage').get()
+        .then(function(doc) {
+          if (!doc.exists) return '詞語趣';
+          var words = doc.data().words || {};
+          var mastered = Object.keys(words).filter(function(k) {
+            var w = words[k];
+            return w.correct > 0 && w.correct >= w.wrong;
+          }).length;
+          if (mastered >= 50) return '詞語LV4';
+          if (mastered >= 20) return '詞語LV3';
+          if (mastered >= 5)  return '詞語LV2';
+          return '詞語LV1';
+        }).catch(function() { return '詞語趣'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('wordImage').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var words = doc.data().words || {};
+          var total = Object.keys(words).filter(function(k) {
+            return (words[k].correct || 0) + (words[k].wrong || 0) > 0;
+          }).length;
+          return total ? { sub: '已練習 ' + total + ' 個詞語', score: total + ' 詞' } : null;
+        }).catch(function() { return null; });
+    }
+  },
+  {
+    id: 'recognize', file: 'apps/learn/lang/recognize/index.html',
+    icon: '🔊', name: '認字趣', desc: '聽音辨字・選字選詞',
+    type: 'learn', category: 'chinese',
+    theme: 'theme-teal', badge: '認字LV1', badgeClass: 'green',
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('recognize').get()
+        .then(function(doc) {
+          if (!doc.exists) return '認字LV1';
+          var cs = doc.data().charStatus || {};
+          var ws = doc.data().wordStatus || {};
+          var m = Object.values(cs).concat(Object.values(ws)).filter(function(v){ return v === 'mastered'; }).length;
+          if (m >= 100) return '認字LV5';
+          if (m >= 50)  return '認字LV4';
+          if (m >= 20)  return '認字LV3';
+          if (m >= 5)   return '認字LV2';
+          return '認字LV1';
+        }).catch(function(){ return '認字LV1'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('recognize').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var cs = doc.data().charStatus || {};
+          var ws = doc.data().wordStatus || {};
+          var m = Object.values(cs).concat(Object.values(ws)).filter(function(v){ return v === 'mastered'; }).length;
+          return m ? { sub: '精熟 ' + m + ' 字詞', score: m + ' 字詞' } : null;
+        });
+    }
+  },
+  {
+    id: 'english', file: 'apps/learn/lang/english/index.html',
+    icon: '🌐', name: '英文趣', desc: '英文發音・常用語・生字',
+    type: 'learn', category: 'english',
+    theme: 'theme-teal', badge: '英文趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('英文趣'); },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('english').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var d = doc.data();
+          var total = 0;
+          Object.keys(d).forEach(function(k) {
+            var v = d[k];
+            if (v && typeof v.correct === 'number') total += v.correct;
+          });
+          return total ? { sub: '累計答對 ' + total + ' 題', score: total + ' 題' } : null;
+        }).catch(function() { return null; });
+    }
+  },
+  {
+    id: 'math-quiz', file: 'apps/quiz/math-quiz/index.html',
+    icon: '🔢', name: '數學測驗', desc: '四則運算練習測驗',
+    type: 'quiz', studentMode: true,
+    theme: 'theme-green', badge: '數學測驗', badgeClass: 'green',
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'math-quiz')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return '數學測驗';
+          var d = snap.docs[0].data();
+          return '最近 ' + d.score + ' 分';
+        })
+        .catch(function() { return '數學測驗'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'math-quiz')
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return null;
+          return { sub: '已完成 ' + snap.size + ' 次練習', score: snap.size + ' 次' };
+        });
+    }
+  },
+  {
+    id: 'chinese-quiz', file: 'apps/quiz/chinese-quiz/index.html',
+    icon: '📝', name: '語文測驗', desc: '詞語填空與選擇題練習',
+    type: 'quiz', studentMode: true,
+    theme: 'theme-purple', badge: '語文測驗', badgeClass: 'blue',
+    getLevel: function(sid) {
+      // 讀最近一次語文測驗的分數當作標籤
       return db.collection('students').doc(sid).collection('activities')
         .where('app', '==', 'chinese-quiz')
         .orderBy('timestamp', 'desc')
         .limit(1)
         .get()
         .then(function(snap) {
-          if (snap.empty) return '語文練習';
+          if (snap.empty) return '語文測驗';
           var d = snap.docs[0].data();
           return '最近 ' + d.score + ' 分';
         })
-        .catch(function() { return '語文練習'; });
+        .catch(function() { return '語文測驗'; });
     },
     activity: function(sid) {
       return db.collection('students').doc(sid).collection('activities')
@@ -107,6 +261,13 @@ var SUBJECTS = [
 
 var selectedAvatar = '🐣';
 var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','🐯','🐨','🐮','🐷','🐙','🦋','🌟','🌈','🎈','🚀','🎯'];
+
+var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
+  'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
+  'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
+  'geometry-back-to-hub','english-back'];
+var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
+  'geometry-logout','english-logout'];
 
 // ── Hub 渲染 ──
 
@@ -125,24 +286,52 @@ function renderHub() {
   document.getElementById('hub-avatar').textContent = currentStudent.avatar || '🐣';
   document.getElementById('hub-name').textContent   = currentStudent.nickname || currentStudent.name;
 
+  var bAvatar = document.getElementById('hub-bottom-avatar');
+  var bName   = document.getElementById('hub-bottom-name');
+  if (bAvatar) bAvatar.textContent = currentStudent.avatar || '🐣';
+  if (bName) {
+    var nm = currentStudent.nickname || currentStudent.name || '';
+    bName.textContent = nm.length > 5 ? nm.slice(0, 5) + '…' : (nm || '個人');
+  }
+
   var learnSubjects = SUBJECTS.filter(function(s) { return s.type !== 'quiz'; });
   var quizSubjects  = SUBJECTS.filter(function(s) { return s.type === 'quiz'; });
 
+  // 學習區分國語／英文／數學三個區塊
   var learnGrid = document.getElementById('subjects-grid');
-  learnGrid.style.gridTemplateColumns = learnSubjects.length === 1 ? '1fr' : '1fr 1fr';
-  learnGrid.innerHTML = _renderSubjectCards(learnSubjects);
+  learnGrid.style.gridTemplateColumns = ''; // 由子 grid 自行控制
+  var groups = [
+    { key: 'chinese', label: '📖 國語' },
+    { key: 'english', label: '🌐 英文' },
+    { key: 'math',    label: '🔢 數學' }
+  ];
+  learnGrid.innerHTML = groups.map(function(g) {
+    var subs = learnSubjects.filter(function(s) { return s.category === g.key; });
+    if (!subs.length) return '';
+    return '<div class="hub-subject-group">' +
+      '<div class="hub-group-title">' + g.label + '</div>' +
+      '<div class="subjects-grid" style="grid-template-columns:repeat(2,1fr)">' +
+      _renderSubjectCards(subs) + '</div></div>';
+  }).join('');
 
-  var quizSection = document.getElementById('quiz-section');
-  var quizGrid    = document.getElementById('quiz-grid');
-  if (quizSubjects.length > 0) {
-    quizSection.style.display = '';
-    quizGrid.style.gridTemplateColumns = quizSubjects.length === 1 ? '1fr' : '1fr 1fr';
-    quizGrid.innerHTML = _renderSubjectCards(quizSubjects);
-  } else {
-    quizSection.style.display = 'none';
-  }
+  var quizGrid = document.getElementById('quiz-grid');
+  quizGrid.style.gridTemplateColumns = quizSubjects.length === 1 ? '1fr' : '1fr 1fr';
+  quizGrid.innerHTML = _renderSubjectCards(quizSubjects);
 
   loadSubjectBadges();
+}
+
+function switchHubTab(tab) {
+  ['learn', 'quiz', 'profile'].forEach(function(t) {
+    var panel  = document.getElementById('hub-panel-' + t);
+    var tabBtn = document.getElementById('hub-tab-' + t);
+    var btmBtn = document.getElementById('hub-bottom-' + t);
+    var active = t === tab;
+    if (panel)  panel.classList.toggle('active', active);
+    if (tabBtn) tabBtn.classList.toggle('active', active);
+    if (btmBtn) btmBtn.classList.toggle('active', active);
+  });
+  if (tab === 'profile') _populateProfilePanel();
 }
 
 function loadSubjectBadges() {
@@ -161,12 +350,15 @@ function loadSubjectBadges() {
 function openSubject(id) {
   var s = SUBJECTS.find(function(x) { return x.id === id; });
   if (!s || !currentStudent) return;
-  if (s.studentMode && !currentStudent.classId) {
-    /* classId 可能因舊 session 未載入，先從 Firestore 補抓 */
+  var ids = currentStudent.classIds || [];
+  if (s.studentMode && !ids.length) {
+    /* classIds 可能因舊 session 未載入，先從 Firestore 補抓 */
     if (db) {
       db.collection('students').doc(currentStudent.id).get().then(function(doc) {
-        if (doc.exists && doc.data().classId) {
-          currentStudent.classId = doc.data().classId;
+        var d = doc.exists ? doc.data() : {};
+        var fetched = d.classIds || (d.classId ? [d.classId] : []);
+        if (fetched.length) {
+          currentStudent.classIds = fetched;
           sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
           openSubject(id);
         } else {
@@ -186,8 +378,8 @@ function openSubject(id) {
   showPanel('subject');
   setTimeout(function() {
     var url = s.file;
-    if (s.studentMode && currentStudent.classId) {
-      url += '?mode=student&classId=' + encodeURIComponent(currentStudent.classId);
+    if (s.studentMode && ids.length) {
+      url += '?mode=student&classIds=' + encodeURIComponent(ids.join(','));
     }
     document.getElementById('subject-frame').src = url;
   }, 380);
@@ -203,6 +395,7 @@ function returnToHub() {
 function loadActivity() {
   if (!db || !currentStudent) return;
   var list = document.getElementById('activity-list');
+  if (!list) return;
   list.innerHTML = '<div class="activity-empty">載入中…</div>';
   Promise.all(SUBJECTS.map(function(s) {
     return s.activity(currentStudent.id)
@@ -223,69 +416,82 @@ function loadActivity() {
 
 // ── 個人設定 ──
 
-function showProfile() {
+function _populateProfilePanel() {
   if (!currentStudent) return;
-  document.getElementById('profile-nickname').value     = currentStudent.nickname || '';
+  document.getElementById('profile-nickname').value          = currentStudent.nickname || '';
   document.getElementById('profile-avatar-big').textContent = currentStudent.avatar || '🐣';
-  document.getElementById('profile-header-name').textContent = currentStudent.nickname || currentStudent.name;
   selectedAvatar = currentStudent.avatar || '🐣';
   renderAvatarGrid(); _renderHubThemeGrid(); applySoundUI();
   loadStudentClass();
-  showPanel('profile');
 }
 
-// ── 班級加入 ──
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function showProfile() {
+  switchHubTab('profile');
 }
+
+// ── 班級加入（支援複數班級） ──
+
 function loadStudentClass() {
   if (!db || !currentStudent) return;
   var wrap = document.getElementById('class-join-wrap');
   if (!wrap) return;
+  wrap.innerHTML = '<div style="color:var(--muted);font-size:.85rem;font-weight:600">載入中…</div>';
+
   db.collection('students').doc(currentStudent.id).get().then(function(doc) {
-    var classId = doc.exists ? doc.data().classId : null;
-    if (classId) {
-      db.collection('classes').doc(classId).get().then(function(cdoc) {
-        if (cdoc.exists) {
-          var cls = cdoc.data();
-          wrap.innerHTML =
-            '<div class="class-joined-row">' +
-              '<div>' +
-                '<div class="class-joined-name">🏫 ' + escHtml(cls.name) + '</div>' +
-                '<div class="class-joined-code">邀請碼：' + cls.inviteCode + '</div>' +
-              '</div>' +
-              '<button class="btn-leave-class" onclick="leaveClass()">離開班級</button>' +
-            '</div>';
-        } else { renderJoinForm(wrap); }
-      }).catch(function() { renderJoinForm(wrap); });
-    } else { renderJoinForm(wrap); }
-  }).catch(function() { renderJoinForm(wrap); });
+    var d = doc.exists ? doc.data() : {};
+    var ids = d.classIds || (d.classId ? [d.classId] : []);
+    currentStudent.classIds = ids;
+    sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+
+    if (!ids.length) { _renderJoinUI(wrap, []); return; }
+
+    Promise.all(ids.map(function(cid) {
+      return db.collection('classes').doc(cid).get()
+        .then(function(cdoc) { return cdoc.exists ? { id: cid, data: cdoc.data() } : null; })
+        .catch(function() { return null; });
+    })).then(function(results) {
+      _renderJoinUI(wrap, results.filter(Boolean));
+    });
+  }).catch(function() { _renderJoinUI(wrap, []); });
 }
-function renderJoinForm(wrap) {
-  wrap.innerHTML =
-    '<div class="join-class-row">' +
+
+function _renderJoinUI(wrap, classes) {
+  var html = '';
+  classes.forEach(function(cls) {
+    html +=
+      '<div class="class-joined-row">' +
+        '<div>' +
+          '<div class="class-joined-name">🏫 ' + escHtml(cls.data.name) + '</div>' +
+          '<div class="class-joined-code">邀請碼：' + escHtml(cls.data.inviteCode) + '</div>' +
+        '</div>' +
+        '<button class="btn-leave-class" onclick="leaveClass(\'' + cls.id + '\')">離開</button>' +
+      '</div>';
+  });
+  html +=
+    '<div class="join-class-row" style="margin-top:' + (classes.length ? '12px' : '0') + '">' +
       '<input id="join-code-input" type="text" placeholder="輸入 6 碼邀請碼" maxlength="6"' +
-        ' class="join-code-input"' +
-        ' oninput="this.value=this.value.toUpperCase()">' +
+        ' class="join-code-input" oninput="this.value=this.value.toUpperCase()">' +
       '<button class="btn-join-class" onclick="joinClass()">加入</button>' +
     '</div>' +
     '<div id="join-class-error" class="join-class-error"></div>';
+  wrap.innerHTML = html;
 }
+
 function joinClass() {
   var input = document.getElementById('join-code-input');
   var code  = (input ? input.value.trim().toUpperCase() : '');
-  var errEl = document.getElementById('join-class-error');
-  if (errEl) errEl.textContent = '';
   if (code.length !== 6) { showJoinError('請輸入 6 碼邀請碼'); return; }
   if (!db || !currentStudent) return;
+  var existing = currentStudent.classIds || [];
   db.collection('classes').where('inviteCode','==',code).where('active','==',true).get()
     .then(function(snap) {
       if (snap.empty) { showJoinError('找不到這個邀請碼，請確認是否正確或班級已停用'); return; }
       var classId = snap.docs[0].id;
-      return db.collection('students').doc(currentStudent.id).set({ classId: classId }, { merge: true })
+      if (existing.indexOf(classId) !== -1) { showJoinError('你已經在這個班級了'); return; }
+      return db.collection('students').doc(currentStudent.id)
+        .update({ classIds: firebase.firestore.FieldValue.arrayUnion(classId) })
         .then(function() {
-          currentStudent.classId = classId;
+          currentStudent.classIds = existing.concat([classId]);
           sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
           showToast('✅ 已加入班級！');
           loadStudentClass();
@@ -293,17 +499,19 @@ function joinClass() {
     })
     .catch(function(e) { showJoinError('加入失敗：' + e.message); });
 }
+
 function showJoinError(msg) {
   var el = document.getElementById('join-class-error');
   if (el) el.textContent = msg;
 }
-function leaveClass() {
-  if (!confirm('確定要離開目前的班級嗎？')) return;
+
+function leaveClass(classId) {
+  if (!confirm('確定要離開這個班級嗎？')) return;
   if (!db || !currentStudent) return;
   db.collection('students').doc(currentStudent.id)
-    .update({ classId: firebase.firestore.FieldValue.delete() })
+    .update({ classIds: firebase.firestore.FieldValue.arrayRemove(classId) })
     .then(function() {
-      delete currentStudent.classId;
+      currentStudent.classIds = (currentStudent.classIds || []).filter(function(id) { return id !== classId; });
       sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
       showToast('已離開班級');
       loadStudentClass();
@@ -355,23 +563,157 @@ function toggleSoundUI() {
 // ── 儲存個人設定 ──
 
 function saveProfile() {
-  if (!currentStudent || !db) return;
+  if (!currentStudent) return;
   var nickname = document.getElementById('profile-nickname').value.trim();
   currentStudent.nickname = nickname;
   currentStudent.avatar   = selectedAvatar;
   sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+  if (currentStudent.isGuest || !db) {
+    showToast('✅ 已儲存（訪客模式，重新整理後重置）');
+    renderHub(); showPanel('hub'); return;
+  }
   db.collection('students').doc(currentStudent.id)
     .set({ nickname: nickname, avatar: selectedAvatar }, { merge: true })
     .then(function() { showToast('✅ 已儲存！'); renderHub(); showPanel('hub'); })
     .catch(function() { showToast('儲存失敗，請重試'); });
 }
 
+// ── 修改 PIN 碼 ──
+
+function changePIN() {
+  if (!currentStudent || currentStudent.isGuest || !db) {
+    showToast('訪客模式無法修改 PIN');
+    return;
+  }
+  var oldPin  = (document.getElementById('pin-old').value  || '').trim();
+  var newPin1 = (document.getElementById('pin-new1').value || '').trim();
+  var newPin2 = (document.getElementById('pin-new2').value || '').trim();
+  var status  = document.getElementById('pin-change-status');
+
+  if (oldPin.length !== 4 || newPin1.length !== 4 || newPin2.length !== 4) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'PIN 碼必須是 4 位數字';
+    return;
+  }
+  if (!/^\d{4}$/.test(oldPin) || !/^\d{4}$/.test(newPin1)) {
+    status.style.color = 'var(--red)';
+    status.textContent = '請只輸入數字';
+    return;
+  }
+  if (newPin1 !== newPin2) {
+    status.style.color = 'var(--red)';
+    status.textContent = '兩次新 PIN 碼不一致';
+    return;
+  }
+  if (oldPin !== currentStudent.pin) {
+    status.style.color = 'var(--red)';
+    status.textContent = '目前 PIN 碼不正確';
+    return;
+  }
+  status.style.color = 'var(--muted)';
+  status.textContent = '儲存中…';
+
+  db.collection('students').doc(currentStudent.id)
+    .update({ pin: newPin1 })
+    .then(function() {
+      currentStudent.pin = newPin1;
+      sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+      document.getElementById('pin-old').value  = '';
+      document.getElementById('pin-new1').value = '';
+      document.getElementById('pin-new2').value = '';
+      status.style.color = 'var(--green)';
+      status.textContent = '✅ PIN 碼已更新';
+    })
+    .catch(function(e) {
+      status.style.color = 'var(--red)';
+      status.textContent = '更新失敗：' + e.message;
+    });
+}
+
+// ── 老師公告 / 班級任務 ──
+
+var _hubTasksClasses   = [];
+var _hubCompletedTasks = {};
+
+function loadHubTasks() {
+  if (!db || !currentStudent || currentStudent.isGuest) return;
+  var ids = currentStudent.classIds || [];
+  if (ids.length) {
+    _doLoadHubTasks(ids);
+  } else {
+    db.collection('students').doc(currentStudent.id).get()
+      .then(function(doc) {
+        var d = doc.exists ? doc.data() : {};
+        var fetched = d.classIds || (d.classId ? [d.classId] : []);
+        currentStudent.classIds = fetched;
+        sessionStorage.setItem('hub_student', JSON.stringify(currentStudent));
+        _doLoadHubTasks(fetched);
+      }).catch(function() {});
+  }
+}
+
+function _doLoadHubTasks(classIds) {
+  if (!classIds.length) return;
+  Promise.all([
+    Promise.all(classIds.map(function(cid) {
+      return db.collection('classes').doc(cid).get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var d = doc.data();
+          return { id: cid, name: d.name || '', tasks: d.tasks || [] };
+        }).catch(function() { return null; });
+    })),
+    db.collection('students').doc(currentStudent.id).get()
+  ]).then(function(res) {
+    _hubTasksClasses   = res[0].filter(function(r) { return r && r.tasks.length; });
+    _hubCompletedTasks = (res[1].exists ? res[1].data().completedTasks : null) || {};
+    if (_hubTasksClasses.length) {
+      var section = document.getElementById('hub-tasks-section');
+      if (section) section.style.display = '';
+      renderHubTasks();
+    }
+  }).catch(function() {});
+}
+
+function renderHubTasks() {
+  var wrap = document.getElementById('hub-tasks-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = _hubTasksClasses.map(function(cls) {
+    return '<div class="hub-task-group">' +
+      '<div class="hub-task-class">' + escHtml(cls.name) + '</div>' +
+      cls.tasks.map(function(t) {
+        var done = !!_hubCompletedTasks[t.id];
+        var eid = t.id.replace(/['"]/g, '');
+        return '<div class="hub-task-row' + (done ? ' hub-task-done' : '') +
+          '" onclick="toggleHubTask(\'' + eid + '\')">' +
+          '<div class="hub-task-check">' + (done ? '✅' : '⬜') + '</div>' +
+          '<div class="hub-task-text">' + escHtml(t.text) + '</div>' +
+          '</div>';
+      }).join('') +
+      '</div>';
+  }).join('');
+}
+
+function toggleHubTask(taskId) {
+  if (!currentStudent || currentStudent.isGuest || !db) return;
+  var newVal = !_hubCompletedTasks[taskId];
+  if (newVal) { _hubCompletedTasks[taskId] = true; } else { delete _hubCompletedTasks[taskId]; }
+  renderHubTasks();
+  db.collection('students').doc(currentStudent.id).set(
+    { completedTasks: _hubCompletedTasks }, { merge: true }
+  ).catch(function(e) {
+    if (newVal) { delete _hubCompletedTasks[taskId]; } else { _hubCompletedTasks[taskId] = true; }
+    renderHubTasks();
+    showToast('儲存失敗：' + e.message);
+  });
+}
+
 // ── 接收 iframe 訊息 ──
 
 window.addEventListener('message', function(e) {
   if (!e.data) return;
-  if (e.data.type === 'hanzi-back-to-hub' || e.data.type === 'multiply-back-to-hub' || e.data.type === 'chinese-quiz-back-to-hub' || e.data.type === 'exam-reader-back-to-hub') returnToHub();
-  else if (e.data.type === 'hanzi-logout' || e.data.type === 'multiply-logout') doLogout();
+  if (_HUB_BACK_TYPES.indexOf(e.data.type) !== -1) returnToHub();
+  else if (_HUB_LOGOUT_TYPES.indexOf(e.data.type) !== -1) doLogout();
 });
 
 // ── 管理者隱藏入口：連點學校名稱 5 次 ──
@@ -387,43 +729,50 @@ window.addEventListener('message', function(e) {
   });
 })();
 
-// ── 系統設定（維護模式 / 公告） ──
-
-function checkSiteSettings() {
-  if (!db) { setTimeout(checkSiteSettings, 400); return; }
-  db.collection('siteSettings').doc('main').get()
-    .then(function(doc) {
-      if (!doc.exists) return;
-      var data = doc.data();
-      if (data.maintenanceMode) {
-        var overlay = document.getElementById('maintenance-overlay');
-        if (overlay) overlay.style.display = 'flex';
-      }
-      if (data.announcement && data.announcement.trim()) {
-        var banner = document.getElementById('announcement-banner');
-        var text   = document.getElementById('announcement-text');
-        if (banner && text) {
-          text.textContent = data.announcement.trim();
-          banner.style.display = 'flex';
-        }
-      }
-    })
-    .catch(function() {});
-}
-
 // ── 啟動 ──
 
 window.addEventListener('load', function() {
-  initFirebase(); applyTheme(currentTheme);
-  checkSiteSettings();
+  var saved = sessionStorage.getItem('hub_student');
+  if (!saved) { window.location.href = 'login.html'; return; }
   try {
-    var saved = sessionStorage.getItem('hub_student');
-    if (saved) {
-      var student = JSON.parse(saved);
-      currentStudent = student; selectedAvatar = student.avatar || '🐣';
-      currentPanel = 'login';
-      renderHub(); showPanel('hub');
-      (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); })();
-    }
-  } catch (e) {}
+    var student = JSON.parse(saved);
+    currentStudent = student;
+    selectedAvatar = student.avatar || '🐣';
+  } catch(e) { window.location.href = 'login.html'; return; }
+
+  currentPanel = 'hub';
+  renderHub();
+
+  var welcome = sessionStorage.getItem('hub_welcome');
+  if (welcome) {
+    sessionStorage.removeItem('hub_welcome');
+    setTimeout(function() { showToast(welcome); }, 200);
+  }
+
+  if (currentStudent.isPreview) {
+    var logoutBtn = document.querySelector('.btn-logout-hub');
+    if (logoutBtn) logoutBtn.textContent = '← 退出預覽';
+    var overlayTitle = document.querySelector('#logout-overlay .overlay-title');
+    var overlaySub   = document.querySelector('#logout-overlay .overlay-sub');
+    var overlayConfirm = document.querySelector('#logout-overlay .btn-confirm');
+    if (overlayTitle)   overlayTitle.textContent  = '要退出預覽嗎？';
+    if (overlaySub)     overlaySub.textContent    = '將返回教師後台。';
+    if (overlayConfirm) overlayConfirm.textContent = '退出預覽';
+    var pinSection = document.getElementById('pin-change-section');
+    if (pinSection) pinSection.style.display = 'none';
+    (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); loadHubTasks(); })();
+    return;
+  }
+
+  if (currentStudent.isGuest) {
+    /* 訪客：隱藏 PIN 修改與班級管理，不載入 Firestore 資料 */
+    var pinSection = document.getElementById('pin-change-section');
+    if (pinSection) pinSection.style.display = 'none';
+    var classWrap = document.getElementById('class-join-wrap');
+    if (classWrap) classWrap.innerHTML =
+      '<div style="color:var(--muted);font-size:.85rem;font-weight:600">訪客模式不支援班級功能。</div>';
+    return;
+  }
+
+  (function waitDb() { if (!db) { setTimeout(waitDb, 200); return; } loadActivity(); loadHubTasks(); })();
 });

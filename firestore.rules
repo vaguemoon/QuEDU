@@ -26,6 +26,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
+    // 學校 —— 登入頁選學校需公開讀，建立/停用僅限已登入（Super-Admin 在 UI 層管控）
+    match /schools/{schoolId} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
     // 班級 —— 學生 PIN 登入後需查詢班級，所以允許公開讀
     match /classes/{classId} {
       allow read:  if true;
@@ -72,14 +78,84 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
-    // 語文練習作答結果 —— 學生（無 Auth）可讀，create 需有基本欄位，禁止事後修改/刪除
+    // 語文練習作答結果 —— 學生（無 Auth）可讀，create 需有基本欄位，禁止事後修改；擁有者教師可刪除
     match /quizResults/{doc} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasAll(['sessionId', 'score', 'studentId'])
                     && request.resource.data.score is int
                     && request.resource.data.score >= 0
                     && request.resource.data.score <= 100;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
+    }
+
+    // 四則運算測驗代碼 —— 學生（無 Auth）可讀，教師可寫
+    match /mathQuizSessions/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 四則運算作答結果 —— 教師可讀，學生（無 Auth）可 create，禁止修改/刪除
+    match /mathQuizResults/{doc} {
+      allow read:   if request.auth != null;
+      allow create: if request.resource.data.keys().hasAll(['sessionId', 'score', 'studentId'])
+                    && request.resource.data.score is int
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score <= 100;
       allow update, delete: if false;
+    }
+
+    // 詞語圖庫 —— 學生（無 Auth）可讀，教師（已登入）可寫
+    match /wordImages/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 英文圖庫 —— 學生（無 Auth）可讀，教師（已登入）可寫
+    match /englishImages/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 英文單元設定（發音組合清單）—— 學生可讀，教師可寫
+    match /englishUnits/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 自訂詞語類別（教師自建，無版本依存）—— 學生可讀，教師可寫
+    match /customCategories/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 自訂詞語類別班級指派 —— 學生可讀，教師可寫
+    match /customCategoryAssignments/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 數學題組 —— 學生（無 Auth）可讀（測驗時需取題），教師可寫
+    match /mathQuestions/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 音檔庫 —— 學生（無 Auth）可讀（測驗時播音），教師可寫
+    match /audioClips/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 試卷草稿 —— 僅已登入教師可讀寫
+    match /examDrafts/{doc} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 用戶回報 —— 任何人可 create（含學生/訪客），已登入者可讀取與管理
+    match /reports/{reportId} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
     }
   }
 }

@@ -10,44 +10,6 @@ var qbParsedData = null;  /* 解析後的有效題目陣列 */
 var _qbDelKeys  = {};
 var _qbDelCount = 0;
 
-/* ── Helpers ── */
-function _qbEsc(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function _cnNumToInt(s) {
-  var map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,
-              '十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15,
-              '十六':16,'十七':17,'十八':18 };
-  if (map[s] !== undefined) return map[s];
-  var n = parseInt(s, 10);
-  return isNaN(n) ? null : n;
-}
-
-/* ════════════════════════════════════════
-   Inline error display
-   ════════════════════════════════════════ */
-function _showQbErrors(errors) {
-  var el = document.getElementById('qb-errors');
-  if (!el) return;
-  var visible = errors.slice(0, 5);
-  var html = '<div style="background:var(--red-lt);border:1.5px solid var(--red);border-radius:8px;padding:10px 14px">' +
-    '<div style="font-size:.78rem;font-weight:800;color:var(--red);margin-bottom:6px">⚠️ ' + errors.length + ' 列格式有誤，已略過：</div>' +
-    '<ul style="padding-left:16px;font-size:.78rem;color:var(--red);line-height:1.7">';
-  visible.forEach(function(e) { html += '<li>' + _qbEsc(e) + '</li>'; });
-  if (errors.length > 5) html += '<li style="color:var(--muted)">…還有 ' + (errors.length - 5) + ' 筆</li>';
-  html += '</ul></div>';
-  el.innerHTML = html;
-  el.style.display = '';
-}
-
-function _clearQbErrors() {
-  var el = document.getElementById('qb-errors');
-  if (el) { el.innerHTML = ''; el.style.display = 'none'; }
-}
-
 /* ════════════════════════════════════════
    xlsx 解析 & 預覽
    ════════════════════════════════════════ */
@@ -65,7 +27,7 @@ function previewQuizBank() {
   var file = fileEl.files[0];
   if (!file) return;
 
-  _clearQbErrors();
+  clearQbErrors();
 
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -158,7 +120,7 @@ function previewQuizBank() {
         });
       });
 
-      if (errors.length > 0) _showQbErrors(errors);
+      if (errors.length > 0) showQbErrors(errors);
 
       if (qbParsedData.length === 0) {
         showToast('❌ 無法解析任何有效題目，請確認格式。');
@@ -185,11 +147,11 @@ function renderQuizBankPreview() {
   qbParsedData.slice(0, 10).forEach(function(row, i) {
     var bg = i % 2 === 0 ? 'var(--gray-lt)' : '#fff';
     html += '<tr style="background:' + bg + '">';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.lesson) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.lessonName) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.type) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _qbEsc(row.question) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.answer) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.lesson) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.lessonName) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.type) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(row.question) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.answer) + '</td>';
     html += '</tr>';
   });
 
@@ -202,7 +164,7 @@ function clearQuizBankPreview() {
   document.getElementById('qb-file').value = '';
   document.getElementById('qb-preview-wrap').style.display = 'none';
   document.getElementById('qb-preview-table').innerHTML = '';
-  _clearQbErrors();
+  clearQbErrors();
 }
 
 /* ════════════════════════════════════════
@@ -307,7 +269,7 @@ function loadQuizBankStats() {
 
       /* Sort lessons by Chinese numeral / integer */
       var lessons = Object.keys(lessonMap).sort(function(a, b) {
-        var na = _cnNumToInt(a), nb = _cnNumToInt(b);
+        var na = cnNumToInt(a), nb = cnNumToInt(b);
         if (na !== null && nb !== null) return na - nb;
         return a.localeCompare(b, 'zh-TW');
       });
@@ -319,7 +281,7 @@ function loadQuizBankStats() {
       html += '<div style="margin-bottom:20px">';
       html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;' +
               'background:var(--gray-lt);border-radius:8px;border:1px solid var(--border);margin-bottom:8px">';
-      html += '<span style="font-weight:900;font-size:.95rem">' + _qbEsc(grade) + '</span>';
+      html += '<span style="font-weight:900;font-size:.95rem">' + escHtml(grade) + '</span>';
       html += '<span style="font-size:.78rem;color:var(--muted);font-weight:700">共 ' + gradeLessonCount + ' 課・' + gradeQCount + ' 題</span>';
       html += '</div>';
 
@@ -346,8 +308,8 @@ function loadQuizBankStats() {
           var col = s === '共用' ? 'var(--blue)' : 'var(--green)';
           return '<span style="font-size:.68rem;font-weight:800;color:white;background:' + col + ';border-radius:4px;padding:1px 5px;margin-right:3px">' + s + '</span>';
         }).join('');
-        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);font-weight:700">第 ' + _qbEsc(lesson) + ' 課 ' + srcBadge + '</td>';
-        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">' + _qbEsc(ld.lessonName) + '</td>';
+        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);font-weight:700">第 ' + escHtml(lesson) + ' 課 ' + srcBadge + '</td>';
+        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">' + escHtml(ld.lessonName) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語填空'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語解釋'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['選擇題']   || 0) + '</td>';

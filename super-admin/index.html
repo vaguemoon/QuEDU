@@ -11,9 +11,21 @@
 <style>
 /* ══ 管理者後台擴充樣式 ══ */
 
-/* tabs 捲動（行動版） */
-.admin-tabs { overflow-x:auto; flex-wrap:nowrap; }
-.admin-tab  { white-space:nowrap; }
+/* SUPERUSER 徽章 */
+.sa-role-badge {
+  display:inline-flex; align-items:center; gap:6px; align-self:flex-start;
+  margin:0 0 22px 6px; padding:3px 9px; border-radius:999px;
+  background:#fff4e6; color:#9a4a07;
+  font-size:.68rem; font-weight:900; letter-spacing:.5px;
+}
+.sa-role-badge .dot { width:6px; height:6px; border-radius:50%; background:#e67e22; }
+
+/* 系統運作中狀態（sidebar footer） */
+.sa-status-row { display:flex; align-items:center; gap:6px; }
+.sa-status-dot {
+  width:7px; height:7px; border-radius:50%; background:var(--green);
+  box-shadow:0 0 0 3px rgba(82,201,122,.18);
+}
 
 /* 4 欄統計（全校總覽） */
 .stats-row-4 {
@@ -85,6 +97,30 @@
 }
 .toggle-switch.on::after { left:27px; }
 
+/* 學校手風琴 */
+.school-accordion { border:1.5px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:12px; }
+.school-acc-header {
+  display:flex; align-items:center; gap:10px; padding:14px 16px;
+  background:#f8fafc; cursor:pointer; user-select:none;
+  transition:background .15s;
+}
+.school-acc-header:hover { background:#f0f4f8; }
+.school-acc-name  { font-size:.95rem; font-weight:900; color:var(--text); flex:1; }
+.school-acc-count { font-size:.78rem; font-weight:700; color:var(--muted); }
+.school-acc-arrow { font-size:.8rem; color:var(--muted); transition:transform .2s; flex-shrink:0; }
+.school-acc-arrow.open { transform:rotate(180deg); }
+.school-acc-body  { border-top:1.5px solid var(--border); padding:0; }
+
+/* 學校手風琴內頁籤 */
+.sa-tab-btn {
+  padding:7px 16px; border:none; border-bottom:3px solid transparent;
+  background:none; font-size:.82rem; font-weight:700; cursor:pointer;
+  font-family:inherit; color:var(--muted); transition:color .15s, border-color .15s;
+  margin-bottom:-2px;
+}
+.sa-tab-btn.active { color:var(--blue); border-bottom-color:var(--blue); }
+.sa-tab-btn:hover:not(.active) { color:var(--text); }
+
 /* 新增管理者表單 */
 .add-admin-form {
   display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:14px;
@@ -103,35 +139,44 @@
 <!-- ══ 管理者後台主畫面 ══ -->
 <div id="admin-screen">
 
-  <!-- 頂部列 -->
-  <div class="admin-topbar">
-    <div class="topbar-brand">
-      <div class="topbar-brand-icon">⚙️</div>
+  <!-- 側邊欄 -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">⚙️</div>
       <div>
-        <div class="topbar-brand-name">上學趣 管理者後台</div>
-        <div class="topbar-brand-sub">系統管理</div>
+        <div class="sidebar-brand-name">上學趣</div>
+        <div class="sidebar-brand-sub">系統管理者</div>
       </div>
     </div>
-    <div class="topbar-right">
-      <span id="admin-email-display" style="font-size:.78rem;font-weight:600;color:var(--muted)"></span>
-      <button class="btn-logout" onclick="doLogout()">登出</button>
-    </div>
-  </div>
 
+    <div class="sa-role-badge"><span class="dot"></span>SUPERUSER</div>
+
+    <nav class="sidebar-nav">
+      <button class="admin-tab active" id="tab-schools"    onclick="switchTab('schools')">🏫 學校管理</button>
+      <button class="admin-tab"        id="tab-curriculum" onclick="switchTab('curriculum')">📚 課程管理</button>
+      <button class="admin-tab"        id="tab-settings"   onclick="switchTab('settings')">⚙️ 系統設定</button>
+      <button class="admin-tab"        id="tab-reports"    onclick="switchTab('reports')">📬 用戶回報<span id="reports-badge" style="display:none;background:#ef4444;color:white;border-radius:999px;font-size:.63rem;font-weight:900;padding:1px 6px;margin-left:6px;vertical-align:middle"></span></button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-label sa-status-row">
+          <span class="sa-status-dot"></span>系統運作中
+        </div>
+        <div id="admin-email-display" class="sidebar-user-email"></div>
+        <div class="sidebar-last-update">系統管理員</div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">🚪 登出</button>
+    </div>
+  </aside>
+
+  <!-- 主內容 -->
+  <main class="admin-content">
   <div class="admin-main">
 
-    <!-- 分頁 -->
-    <div class="admin-tabs">
-      <button class="admin-tab active" id="tab-overview"    onclick="switchTab('overview')">📊 全校總覽</button>
-      <button class="admin-tab"        id="tab-accounts"    onclick="switchTab('accounts')">👤 帳號管理</button>
-      <button class="admin-tab"        id="tab-curriculum"  onclick="switchTab('curriculum')">📚 課程管理</button>
-      <button class="admin-tab"        id="tab-invites"     onclick="switchTab('invites')">🔑 邀請碼管理</button>
-      <button class="admin-tab"        id="tab-settings"    onclick="switchTab('settings')">⚙️ 系統設定</button>
-    </div>
-
-    <!-- ① 全校總覽 -->
-    <div id="panel-overview">
-      <div class="stats-row-4" id="overview-stats">
+    <!-- 學校管理 -->
+    <div id="panel-schools">
+      <div class="stats-row-4" style="margin-bottom:20px">
         <div class="stat-card stat-blue">
           <div class="stat-num" id="stat-teachers">—</div>
           <div class="stat-lbl">教師人數</div>
@@ -151,37 +196,25 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🏫 所有班級
-          <button onclick="loadOverview()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
-        </div>
-        <div id="overview-classes-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ② 帳號管理 -->
-    <div id="panel-accounts" style="display:none">
-      <div class="card">
-        <div class="card-title">👤 教師帳號列表
-          <button onclick="loadAccounts()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+        <div class="card-title">🏫 學校列表
+          <button onclick="loadSchools()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
         </div>
         <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-          教師首次登入後即自動記錄。封鎖後教師將無法進入後台。
+          停用學校後，該校教師仍可登入，但學生端「選擇學校」列表中不會顯示該校。
         </div>
-        <div id="accounts-wrap">
+        <div id="schools-wrap">
           <div class="loading-wrap"><div class="spinner"></div></div>
         </div>
       </div>
     </div>
 
-    <!-- ③ 課程管理（與教師後台共用 curriculum.js） -->
+    <!-- ④ 課程管理（與教師後台共用 curriculum.js） -->
     <div id="panel-curriculum" style="display:none">
 
       <!-- App 頁籤 -->
       <div class="app-tabs-mini" style="margin-bottom:20px">
         <button class="app-tab-mini active" onclick="switchCurrTab('chinese', this)">📖 識字趣</button>
-        <button class="app-tab-mini"        onclick="switchCurrTab('quiz',    this)">📝 語文練習</button>
+        <button class="app-tab-mini"        onclick="switchCurrTab('quiz',    this)">📝 語文測驗</button>
       </div>
 
       <!-- ── 識字趣 ── -->
@@ -249,6 +282,13 @@
             style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:1.1rem;font-family:'Noto Sans TC',sans-serif;letter-spacing:4px;outline:none"
             oninput="updateManualPreview()">
           <div id="manual-chars-preview" style="margin-top:8px;min-height:24px"></div>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">
+            詞語 <span style="font-weight:600;color:var(--blue)">（選填，認字趣題庫用，以空格或逗號分隔）</span>
+          </label>
+          <input id="manual-words" type="text" placeholder="例如：山水 水火 土木 火山"
+            style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:1rem;font-family:inherit;outline:none">
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <button class="btn-save-lesson" onclick="saveManualLesson()">
@@ -341,22 +381,10 @@
 
     </div><!-- /panel-curriculum -->
 
-    <!-- ④ 邀請碼管理 -->
-    <div id="panel-invites" style="display:none">
-      <div class="card">
-        <div class="card-title">🔑 所有班級邀請碼
-          <button onclick="loadInvites()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
-        </div>
-        <div style="font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
-          停用邀請碼後，學生無法用該邀請碼加入班級（已加入的學生不受影響）。
-        </div>
-        <div id="invites-wrap">
-          <div class="loading-wrap"><div class="spinner"></div></div>
-        </div>
-      </div>
-    </div>
+    <!-- 用戶回報 -->
+    <div id="panel-reports" style="display:none"></div>
 
-    <!-- ⑤ 系統設定 -->
+    <!-- 系統設定 -->
     <div id="panel-settings" style="display:none">
 
       <!-- 系統開關 -->
@@ -389,7 +417,50 @@
     </div>
 
   </div><!-- /admin-main -->
+  </main>
 </div><!-- /admin-screen -->
+
+<!-- 學生編輯 Modal -->
+<div id="sa-edit-student-modal" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:18px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div style="font-size:1rem;font-weight:900;margin-bottom:18px">✏️ 編輯學生資料</div>
+    <label style="font-size:.75rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">姓名</label>
+    <input id="sa-edit-student-name" type="text" maxlength="20" placeholder="留空表示未填"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.92rem;font-family:inherit;outline:none;margin-bottom:12px"
+      onkeydown="if(event.key==='Enter')saveSchoolStudent()">
+    <label style="font-size:.75rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">PIN 碼（4 位數字）</label>
+    <input id="sa-edit-student-pin" type="text" maxlength="4" placeholder="0000"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:1.1rem;font-family:'Courier New',monospace;outline:none;margin-bottom:6px;letter-spacing:4px"
+      onkeydown="if(event.key==='Enter')saveSchoolStudent()">
+    <div id="sa-edit-student-err" style="font-size:.78rem;font-weight:700;color:var(--red);min-height:18px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeStudentEditModal()"
+        style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:9px;background:white;font-size:.88rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="sa-edit-student-save" onclick="saveSchoolStudent()"
+        style="flex:2;padding:10px;border:none;border-radius:9px;background:var(--blue);color:white;font-size:.88rem;font-weight:900;cursor:pointer;font-family:inherit">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 全校名單匯入預覽 Modal -->
+<div id="bulk-preview-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.5);backdrop-filter:blur(5px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:0;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;display:flex;flex-direction:column">
+    <div style="padding:24px 24px 16px;border-bottom:1.5px solid var(--border)">
+      <div style="font-size:1.1rem;font-weight:900;margin-bottom:4px">📥 匯入預覽</div>
+      <div id="bulk-preview-summary" style="font-size:.82rem;color:var(--muted);font-weight:600"></div>
+    </div>
+    <div style="flex:1;overflow-y:auto">
+      <div id="bulk-preview-table" style="padding:4px 0"></div>
+    </div>
+    <div id="bulk-preview-warn" style="padding:10px 20px;font-size:.78rem;font-weight:700;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;display:none"></div>
+    <div style="padding:16px 24px;border-top:1.5px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeBulkPreview()"
+        style="padding:9px 18px;border:1.5px solid var(--border);border-radius:10px;background:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="bulk-confirm-btn" onclick="confirmBulkImport()"
+        style="padding:9px 22px;border:none;border-radius:10px;background:var(--blue);color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">✅ 確認匯入</button>
+    </div>
+  </div>
+</div>
 
 <div id="toast"></div>
 
@@ -398,10 +469,12 @@
 <script src="init.js"></script>
 <script src="overview.js"></script>
 <script src="accounts.js"></script>
+<script src="schools.js"></script>
 <script src="../admin/curriculum-ui.js"></script>
 <script src="../admin/curriculum-data.js"></script>
-<script src="invites.js"></script>
 <script src="settings.js"></script>
 <script src="quiz-bank.js"></script>
+<script src="bulk-import.js"></script>
+<script src="reports.js"></script>
 </body>
 </html>

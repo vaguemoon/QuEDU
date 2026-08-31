@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>分數趣｜上學趣</title>
+<link rel="manifest" href="/QuEDU/manifest.json">
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<link rel="stylesheet" href="fractions.css">
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goHome()">← 返回</button>
+  <div id="topbar-title">➗ <span>分數趣</span></div>
+  <div style="width:72px"></div>
+</div>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page page-fill active">
+  <div class="home-wrap">
+    <div class="home-title">➗ 分數趣</div>
+    <div class="home-sub">選擇練習模組，每回合 10 題</div>
+    <div class="module-grid" id="module-grid"></div>
+  </div>
+</div>
+
+<!-- GAME PAGE -->
+<div id="page-game" class="page">
+  <div class="game-wrap">
+
+    <!-- 進度條：全寬 -->
+    <div class="stats-row">
+      <div class="progress-bg"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="progress-lbl" id="prog-lbl">1 / 10</div>
+    </div>
+
+    <!-- 主體：除數欄（約分時顯示）＋ 右側欄 -->
+    <div class="game-body">
+
+      <!-- 左：除數按鈕（約分模組專用，其他模組隱藏） -->
+      <div class="div-col hidden" id="div-col">
+        <div class="div-col-label">除數</div>
+        <!-- 由 renderReduceQ() 動態填入 -->
+      </div>
+
+      <!-- 右：題目 + feedback + 鍵盤 -->
+      <div class="game-right">
+        <div class="q-card" id="q-card"></div>
+        <div class="feedback-row" id="fb-row"></div>
+        <div class="fill-pad" id="fill-pad">
+          <div class="fill-pad-row">
+            <button class="fill-btn" onclick="numPress('7')">7</button>
+            <button class="fill-btn" onclick="numPress('8')">8</button>
+            <button class="fill-btn" onclick="numPress('9')">9</button>
+          </div>
+          <div class="fill-pad-row">
+            <button class="fill-btn" onclick="numPress('4')">4</button>
+            <button class="fill-btn" onclick="numPress('5')">5</button>
+            <button class="fill-btn" onclick="numPress('6')">6</button>
+          </div>
+          <div class="fill-pad-row">
+            <button class="fill-btn" onclick="numPress('1')">1</button>
+            <button class="fill-btn" onclick="numPress('2')">2</button>
+            <button class="fill-btn" onclick="numPress('3')">3</button>
+          </div>
+          <div class="fill-pad-row">
+            <button class="fill-btn fill-del" onclick="numDel()">⌫</button>
+            <button class="fill-btn" onclick="numPress('0')">0</button>
+            <button class="fill-btn fill-ok" id="fill-ok-btn" onclick="submitAns()">✓</button>
+          </div>
+          <div class="fill-pad-row sym-row hidden" id="sym-row">
+            <button class="fill-btn fill-sym" onclick="symPress('<')">＜</button>
+            <button class="fill-btn fill-sym" onclick="symPress('=')">＝</button>
+            <button class="fill-btn fill-sym" onclick="symPress('>')">＞</button>
+          </div>
+        </div>
+        <button class="btn-next-q hidden" id="btn-next" onclick="nextQ()">下一題 →</button>
+      </div>
+
+    </div><!-- end game-body -->
+  </div>
+</div>
+
+<!-- RESULT PAGE -->
+<div id="page-result" class="page">
+  <div class="result-wrap">
+    <div class="result-icon" id="result-icon">🎉</div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="result-btns">
+      <button class="btn-result" onclick="startModule(currentModule)">再練一次</button>
+      <button class="btn-result btn-result-home" onclick="goHome()">回首頁</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ═══ Modules ═══ */
+var MODULES = [
+  { id: 'expand',      label: '擴分',         icon: '🔼', color: '#e74c3c', desc: '把分數擴大幾倍' },
+  { id: 'reduce',      label: '約分',         icon: '🔽', color: '#c0392b', desc: '化簡分數・分數乘法' },
+  { id: 'imp2mix',     label: '假分數→帶分數', icon: '🔽', color: '#8e44ad', desc: '假分數化成帶分數' },
+  { id: 'mix2imp',     label: '帶分數→假分數', icon: '🔼', color: '#6c3483', desc: '帶分數化成假分數' },
+  { id: 'common-cmp',  label: '通分 & 比大小',icon: '⚖️', color: '#2980b9', desc: '通分後比較大小' },
+  { id: 'add-sub',     label: '分數加減',     icon: '➕', color: '#27ae60', desc: '同分母與異分母加減' },
+  { id: 'mul-int',     label: '分數乘整數',   icon: '✖️', color: '#e67e22', desc: '分數乘以整數' }
+];
+
+var TOTAL_Q = 10;
+
+/* ═══ State ═══ */
+var currentModule = null;
+var questions     = [];
+var qIndex        = 0;
+var correctCount  = 0;
+var fields        = [];
+var activeField   = -1;
+var answered      = false;
+
+/* ═══ Math helpers ═══ */
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function lcm(a, b) { return (a / gcd(a, b)) * b; }
+function rand(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+function simplify(n, d) {
+  if (!d || !n) return { n: n || 0, d: d || 1 };
+  var g = gcd(Math.abs(n), Math.abs(d));
+  return { n: n / g, d: d / g };
+}
+
+/* ═══ Question generators ═══ */
+
+function genExpand() {
+  var qs = [];
+  for (var i = 0; i < TOTAL_Q; i++) {
+    var b, a, k;
+    do { b = rand(2, 10); a = rand(1, b - 1); } while (gcd(a, b) > 1);
+    k = rand(2, 9);
+    /* blank randomly in numerator or denominator */
+    var blank = Math.random() < 0.5 ? 'num' : 'den';
+    qs.push({ type: 'expand', a: a, b: b, k: k, blank: blank, ans: blank === 'num' ? a * k : b * k });
+  }
+  return qs;
+}
+
+/* ── 約分模組：單獨分數 + 乘法交叉約分 ── */
+
+function genReduceSolo() {
+  var b, a, k, r;
+  var att = 0;
+  do {
+    b = rand(2, 8); a = rand(1, b - 1);
+    while (gcd(a, b) > 1) { var g = gcd(a, b); a = a / g; b = b / g; }
+    k = rand(2, 9);
+    r = simplify(a * k, b * k);
+    att++;
+  } while ((r.d === 1 || a * k > 80 || b * k > 80) && att < 60);
+  return { type: 'rv2', sub: 'solo', n: a * k, d: b * k, gcf: k, ans: [a, b] };
+}
+
+function genReduceMult() {
+  var att = 0, q = null;
+  while (!q && att < 300) {
+    att++;
+    var d1 = rand(2, 9);
+    var bx = rand(1, 5), cy = rand(1, 5);
+    var b = d1 * bx, c = d1 * cy;
+    var a = rand(1, 8), t = 0;
+    while (gcd(a, b) > 1 && t < 20) { a = rand(1, 8); t++; }
+    if (gcd(a, b) > 1) continue;
+    var d = rand(1, 8); t = 0;
+    while (gcd(c, d) > 1 && t < 20) { d = rand(1, 8); t++; }
+    if (gcd(c, d) > 1) continue;
+
+    var pairs = [{ p1: 'b', p2: 'c', dv: d1 }];
+
+    /* try second cross pair a↔d */
+    if (Math.random() > 0.5) {
+      var d2 = rand(2, 5);
+      var a2 = a * d2, d2v = d * d2;
+      if (gcd(a2, b) === 1 && gcd(c, d2v) === 1 && a2 <= 30 && d2v <= 30) {
+        a = a2; d = d2v;
+        pairs.push({ p1: 'a', p2: 'd', dv: d2 });
+      }
+    }
+
+    if (a > 50 || b > 50 || c > 50 || d > 50) continue;
+
+    /* compute answer after all reductions */
+    var fA = a, fB = b, fC = c, fD = d;
+    pairs.forEach(function(p) {
+      if (p.p1 === 'b') { fB = fB / p.dv; fC = fC / p.dv; }
+      if (p.p1 === 'a') { fA = fA / p.dv; fD = fD / p.dv; }
+    });
+    var s = simplify(fA * fC, fB * fD);
+    q = { type: 'rv2', sub: 'mult', a: a, b: b, c: c, d: d, pairs: pairs, ans: [s.n, s.d] };
+  }
+  return q || { type: 'rv2', sub: 'mult', a: 1, b: 6, c: 4, d: 5, pairs: [{ p1: 'b', p2: 'c', dv: 2 }], ans: [2, 15] };
+}
+
+function genReduce() {
+  var qs = [];
+  for (var i = 0; i < 5; i++) qs.push(genReduceSolo());
+  for (var i = 0; i < 5; i++) qs.push(genReduceMult());
+  return qs;
+}
+
+function genImp2Mix() {
+  var qs = [];
+  for (var i = 0; i < TOTAL_Q; i++) {
+    var d = rand(2, 9), intPart = rand(1, 9), rem = rand(1, d - 1);
+    qs.push({ type: 'imp2mix', n: intPart * d + rem, d: d, ans: [intPart, rem] });
+  }
+  return qs;
+}
+
+function genMix2Imp() {
+  var qs = [];
+  for (var i = 0; i < TOTAL_Q; i++) {
+    var d = rand(2, 9), intPart = rand(1, 9), rem = rand(1, d - 1);
+    qs.push({ type: 'mix2imp', intPart: intPart, rem: rem, d: d, ans: [intPart * d + rem] });
+  }
+  return qs;
+}
+
+function genConvert() {
+  var qs = [];
+  for (var i = 0; i < TOTAL_Q; i++) {
+    var d = rand(2, 9), intPart = rand(1, 9), rem = rand(1, d - 1);
+    var num = intPart * d + rem;
+    if (i % 2 === 0) qs.push({ type: 'imp2mix', n: num, d: d, ans: [intPart, rem] });
+    else             qs.push({ type: 'mix2imp', intPart: intPart, rem: rem, d: d, ans: [num] });
+  }
+  return qs;
+}
+
+function genCommonCmp() {
+  var qs = [], tries;
+  while (qs.length < TOTAL_Q) {
+    tries = 0;
+    var b, d, l;
+    do { b = rand(2, 12); d = rand(2, 12); l = lcm(b, d); tries++; }
+    while ((b === d || l > 60) && tries < 100);
+    if (tries >= 100) continue;
+    var a = rand(1, b - 1), c = rand(1, d - 1);
+    var an = a * (l / b), cn = c * (l / d);
+    var sym = an > cn ? '>' : an < cn ? '<' : '=';
+    qs.push({ type: 'common-cmp', a: a, b: b, c: c, d: d, lcd: l, an: an, cn: cn, sym: sym });
+  }
+  return qs;
+}
+
+function genAddSub() {
+  var qs = [];
+  for (var i = 0; i < TOTAL_Q; i++) {
+    var isSub = i >= 5, isSame = i < 3 || (i >= 5 && i < 8);
+    var q = null, att = 0;
+    while (!q && att < 80) {
+      att++;
+      if (isSame) {
+        var d = rand(3, 12), a = rand(1, d - 1), c = rand(1, d - 1);
+        if (isSub && a === c) continue;
+        var bigA = isSub && a < c ? c : a, bigC = isSub && a < c ? a : c;
+        var rawN = isSub ? bigA - bigC : a + c;
+        if (!rawN) continue;
+        var s = simplify(rawN, d);
+        if (s.d === 1) continue;
+        q = { type: 'addsub', isSub: isSub, a: isSub ? bigA : a, b: d, c: isSub ? bigC : c, d: d, ans: [s.n, s.d], op: isSub ? '−' : '+' };
+      } else {
+        var b2 = rand(2, 10), d2;
+        do { d2 = rand(2, 10); } while (d2 === b2);
+        var l2 = lcm(b2, d2);
+        if (l2 > 36) continue;
+        var a2 = rand(1, b2 - 1), c2 = rand(1, d2 - 1);
+        var la = a2 * (l2 / b2), lc = c2 * (l2 / d2), rawN2;
+        if (!isSub) {
+          rawN2 = la + lc;
+        } else {
+          if (la === lc) continue;
+          if (la < lc) { var t = a2; a2 = c2; c2 = t; t = b2; b2 = d2; d2 = t; rawN2 = lc - la; }
+          else rawN2 = la - lc;
+        }
+        if (!rawN2) continue;
+        var s2 = simplify(rawN2, l2);
+        if (s2.d === 1) continue;
+        q = { type: 'addsub', isSub: isSub, a: a2, b: b2, c: c2, d: d2, ans: [s2.n, s2.d], op: isSub ? '−' : '+' };
+      }
+    }
+    qs.push(q || { type: 'addsub', isSub: isSub, a: isSub ? 5 : 1, b: 6, c: isSub ? 3 : 2, d: 6, ans: isSub ? [1, 3] : [1, 2], op: isSub ? '−' : '+' });
+  }
+  return qs;
+}
+
+function genMulInt() {
+  var qs = [];
+  for (var i = 0; i < TOTAL_Q; i++) {
+    var d, n, k, s, att = 0;
+    do { d = rand(2, 9); n = rand(1, d - 1); k = rand(2, 9); s = simplify(n * k, d); att++; }
+    while (s.d === 1 && att < 50);
+    qs.push({ type: 'mulint', n: n, d: d, k: k, ans: [s.n, s.d] });
+  }
+  return qs;
+}
+
+/* ═══ HTML helpers ═══ */
+function h(tag, cls, inner) { return '<' + tag + ' class="' + cls + '">' + inner + '</' + tag + '>'; }
+
+function fracHtml(n, d) {
+  return '<span class="frac">' +
+    '<span class="frac-num">' + n + '</span>' +
+    '<span class="frac-bar"></span>' +
+    '<span class="frac-den">' + d + '</span>' +
+  '</span>';
+}
+
+function inputFracHtml(numId, denId, fixedDen) {
+  var denPart = fixedDen !== undefined
+    ? '<span class="frac-den">' + fixedDen + '</span>'
+    : '<span class="frac-den fld" id="f-' + denId + '" onclick="tapField(' + denId + ')"></span>';
+  return '<span class="frac">' +
+    '<span class="frac-num fld" id="f-' + numId + '" onclick="tapField(' + numId + ')"></span>' +
+    '<span class="frac-bar"></span>' +
+    denPart +
+  '</span>';
+}
+
+function fldHtml(id, cls) {
+  return '<span class="fld ' + (cls || '') + '" id="f-' + id + '" onclick="tapField(' + id + ')"></span>';
+}
+
+/* ═══ Question HTML builders ═══ */
+function buildQHtml(q) {
+  switch (q.type) {
+    case 'expand': {
+      var resFrac = q.blank === 'num'
+        ? '<span class="frac"><span class="frac-num fld" id="f-0" onclick="tapField(0)"></span><span class="frac-bar"></span><span class="frac-den">' + (q.b * q.k) + '</span></span>'
+        : '<span class="frac"><span class="frac-num">' + (q.a * q.k) + '</span><span class="frac-bar"></span><span class="frac-den fld" id="f-0" onclick="tapField(0)"></span></span>';
+      return h('div', 'q-label', '擴分') +
+        h('div', 'q-body', fracHtml(q.a, q.b) + h('span', 'q-op', '＝') + resFrac);
+    }
+
+    case 'reduce':
+      return h('div', 'q-label', '約分') +
+        h('div', 'q-body', fracHtml(q.a, q.b) + h('span', 'q-op', '＝') + inputFracHtml(0, 1) + h('span', 'q-hint', '（最簡分數）'));
+
+    case 'imp2mix':
+      return h('div', 'q-label', '假分數 → 帶分數') +
+        h('div', 'q-body',
+          fracHtml(q.n, q.d) + h('span', 'q-op', '＝') +
+          fldHtml(0, 'fld-int') +
+          '<span class="frac">' +
+            '<span class="frac-num fld" id="f-1" onclick="tapField(1)"></span>' +
+            '<span class="frac-bar"></span>' +
+            '<span class="frac-den">' + q.d + '</span>' +
+          '</span>');
+
+    case 'mix2imp':
+      return h('div', 'q-label', '帶分數 → 假分數') +
+        h('div', 'q-body',
+          '<span class="mixed-static">' + h('span', 'frac-int-st', q.intPart) + h('span', 'q-word', '又') + fracHtml(q.rem, q.d) + '</span>' +
+          h('span', 'q-op', '＝') + inputFracHtml(0, null, q.d));
+
+    case 'common-cmp':
+      return h('div', 'q-label', '通分 &amp; 比大小') +
+        h('div', 'q-body q-body-cmp',
+          h('div', 'cmp-line', fracHtml(q.a, q.b) + h('span', 'q-op', '＝') + inputFracHtml(0, 1)) +
+          h('div', 'cmp-line', fracHtml(q.c, q.d) + h('span', 'q-op', '＝') + inputFracHtml(2, 3)) +
+          h('div', 'cmp-sym-line', fracHtml(q.a, q.b) + fldHtml(4, 'fld-sym') + fracHtml(q.c, q.d)));
+
+    case 'addsub':
+      return h('div', 'q-label', '分數' + (q.isSub ? '減法' : '加法')) +
+        h('div', 'q-body',
+          fracHtml(q.a, q.b) + h('span', 'q-op', q.op) + fracHtml(q.c, q.d) + h('span', 'q-op', '＝') + inputFracHtml(0, 1));
+
+    case 'mulint':
+      return h('div', 'q-label', '分數乘整數') +
+        h('div', 'q-body',
+          fracHtml(q.n, q.d) + h('span', 'q-op', '×') + h('span', 'q-int', q.k) + h('span', 'q-op', '＝') + inputFracHtml(0, 1));
+  }
+  return '';
+}
+
+/* ═══ Fields ═══ */
+function registerFields(q) {
+  fields = [];
+  switch (q.type) {
+    case 'expand':
+      fields = [{ id:0, role: q.blank, value:'' }]; break;
+    case 'reduce': case 'addsub': case 'mulint':
+      fields = [{ id:0, role:'num', value:'' }, { id:1, role:'den', value:'' }]; break;
+    case 'imp2mix':
+      fields = [{ id:0, role:'int', value:'' }, { id:1, role:'num', value:'' }]; break;
+    case 'mix2imp':
+      fields = [{ id:0, role:'num', value:'' }]; break;
+    case 'common-cmp':
+      fields = [
+        { id:0, role:'num', value:'' }, { id:1, role:'den', value:'' },
+        { id:2, role:'num', value:'' }, { id:3, role:'den', value:'' },
+        { id:4, role:'sym', value:'' }
+      ]; break;
+  }
+}
+
+function tapField(id) {
+  if (answered) return;
+  fields.forEach(function(f) { var el = document.getElementById('f-' + f.id); if (el) el.classList.remove('fld-active'); });
+  activeField = id;
+  var el = document.getElementById('f-' + id);
+  if (el) el.classList.add('fld-active');
+}
+
+function numPress(digit) {
+  /* reduce fill mode */
+  if (rv.q && rv.phase === 'fill' && rv.inpFocus) {
+    var s = rv.slots[rv.inpFocus];
+    if (s && s.inpVal.length < 3) {
+      s.inpVal += digit;
+      var ni = document.getElementById('ni-' + rv.inpFocus);
+      if (ni) { ni.textContent = s.inpVal; ni.classList.add('ni-focus'); }
+    }
+    return;
+  }
+  if (answered || activeField < 0) return;
+  var f = fields[activeField];
+  if (!f || f.role === 'sym') return;
+  if (f.value.length >= 3) return;
+  f.value += digit;
+  refreshFld(activeField);
+  if (f.value.length >= 2) {
+    for (var next = activeField + 1; next < fields.length; next++) {
+      if (fields[next].role !== 'sym') { tapField(next); break; }
+    }
+  }
+}
+
+function numDel() {
+  if (rv.q && rv.phase === 'fill' && rv.inpFocus) {
+    var s = rv.slots[rv.inpFocus];
+    if (s) {
+      s.inpVal = s.inpVal.slice(0, -1);
+      var ni = document.getElementById('ni-' + rv.inpFocus);
+      if (ni) ni.textContent = s.inpVal || '□';
+    }
+    return;
+  }
+  if (answered || activeField < 0) return;
+  var f = fields[activeField];
+  if (!f || f.role === 'sym') return;
+  f.value = f.value.slice(0, -1);
+  refreshFld(activeField);
+}
+
+function symPress(sym) {
+  if (answered) return;
+  var sf = null;
+  for (var i = 0; i < fields.length; i++) { if (fields[i].role === 'sym') { sf = fields[i]; break; } }
+  if (!sf) return;
+  sf.value = sym;
+  var el = document.getElementById('f-' + sf.id);
+  if (el) {
+    el.textContent = sym === '<' ? '＜' : sym === '>' ? '＞' : '＝';
+    el.classList.remove('fld-active');
+    el.classList.add('fld-filled');
+  }
+}
+
+function refreshFld(id) {
+  var f = fields[id], el = document.getElementById('f-' + id);
+  if (!el) return;
+  el.textContent = f.value || '';
+  f.value ? el.classList.add('fld-filled') : el.classList.remove('fld-filled');
+}
+
+/* ═══ Answer check ═══ */
+function submitAns() {
+  if (rv.q && (rv.phase === 'fill' || rv.phase === 'final')) { submitReduceAns(); return; }
+  if (answered) return;
+  var q = questions[qIndex];
+  var allFilled = true;
+  fields.forEach(function(f) {
+    if (f.value === '') {
+      allFilled = false;
+      var el = document.getElementById('f-' + f.id);
+      if (el) { el.classList.add('fld-shake'); setTimeout(function() { el.classList.remove('fld-shake'); }, 380); }
+    }
+  });
+  if (!allFilled) return;
+
+  var isCorrect = checkAns(q);
+  answered = true;
+  fields.forEach(function(f) {
+    var el = document.getElementById('f-' + f.id);
+    if (el) el.classList.add(isCorrect ? 'fld-correct' : 'fld-wrong');
+  });
+
+  var fb = document.getElementById('fb-row');
+  if (isCorrect) {
+    correctCount++;
+    playSound('correct');
+    fb.className = 'feedback-row fb-correct';
+    fb.textContent = '✓ 答對了！';
+    document.getElementById('fill-ok-btn').disabled = true;
+    setTimeout(nextQ, 1000);
+  } else {
+    playSound('wrong');
+    fb.className = 'feedback-row fb-wrong';
+    fb.innerHTML = '✗ 答錯！正確答案：<strong>' + correctStr(q) + '</strong>';
+    document.getElementById('fill-ok-btn').disabled = true;
+    document.getElementById('btn-next').classList.remove('hidden');
+  }
+}
+
+function checkAns(q) {
+  if (q.type === 'common-cmp') {
+    var n0 = +fields[0].value, d0 = +fields[1].value;
+    var n2 = +fields[2].value, d2 = +fields[3].value;
+    return d0 > 0 && d2 > 0 &&
+           n0 * q.b === q.a * d0 && n2 * q.d === q.c * d2 &&
+           d0 === d2 && fields[4].value === q.sym;
+  }
+  if (q.type === 'expand')  return +fields[0].value === q.ans;
+  if (q.type === 'mix2imp') return +fields[0].value === q.ans[0];
+  if (q.type === 'imp2mix') return +fields[0].value === q.ans[0] && +fields[1].value === q.ans[1];
+  return +fields[0].value === q.ans[0] && +fields[1].value === q.ans[1];
+}
+
+function correctStr(q) {
+  switch (q.type) {
+    case 'expand': return String(q.ans);
+    case 'reduce': case 'addsub': case 'mulint': return q.ans[0] + ' / ' + q.ans[1];
+    case 'imp2mix': return q.ans[0] + ' ' + q.ans[1] + '/' + q.d;
+    case 'mix2imp': return q.ans[0] + ' / ' + q.d;
+    case 'common-cmp':
+      return q.an + '/' + q.lcd + '　' + q.cn + '/' + q.lcd + '　' +
+             (q.sym === '<' ? '＜' : q.sym === '>' ? '＞' : '＝');
+  }
+  return '';
+}
+
+/* ═══ Navigation ═══ */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  var el = document.getElementById('page-' + id);
+  if (el) el.classList.add('active');
+  var backBtn = document.getElementById('topbar-back');
+  if (backBtn) backBtn.classList.toggle('hidden', id === 'home');
+}
+
+function goHome() { showPage('home'); }
+
+function backToHub() {
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'fractions-back-to-hub' }, '*');
+  } else {
+    window.location.href = '../../../../';
+  }
+}
+
+function startModule(moduleId) {
+  currentModule = moduleId;
+  qIndex = 0; correctCount = 0;
+  questions = (function(id) {
+    switch (id) {
+      case 'expand':      return genExpand();
+      case 'reduce':      return genReduce();
+      case 'imp2mix':     return genImp2Mix();
+      case 'mix2imp':     return genMix2Imp();
+      case 'common-cmp':  return genCommonCmp();
+      case 'add-sub':     return genAddSub();
+      case 'mul-int':     return genMulInt();
+    }
+    return [];
+  })(moduleId);
+  showPage('game');
+  renderQ();
+}
+
+function renderQ() {
+  rv.q = null; rv.phase = 'div';
+  document.getElementById('div-col').classList.add('hidden');
+  answered = false; fields = []; activeField = -1;
+  var q = questions[qIndex];
+  if (q.type === 'rv2') { renderReduceQ(q); return; }
+  document.getElementById('prog-fill').style.width = (qIndex / TOTAL_Q * 100) + '%';
+  document.getElementById('prog-lbl').textContent = (qIndex + 1) + ' / ' + TOTAL_Q;
+  var symRow = document.getElementById('sym-row');
+  q.type === 'common-cmp' ? symRow.classList.remove('hidden') : symRow.classList.add('hidden');
+  document.getElementById('btn-next').classList.add('hidden');
+  document.getElementById('fill-ok-btn').disabled = false;
+  var fb = document.getElementById('fb-row');
+  fb.className = 'feedback-row'; fb.textContent = '';
+  document.getElementById('q-card').innerHTML = buildQHtml(q);
+  registerFields(q);
+  if (fields.length > 0) tapField(0);
+}
+
+function nextQ() {
+  qIndex++;
+  if (qIndex >= TOTAL_Q) showResult();
+  else renderQ();
+}
+
+function showResult() {
+  showPage('result');
+  var pct = Math.round(correctCount / TOTAL_Q * 100);
+  var msgs = [[90,'太厲害了！'],[70,'做得很好！'],[50,'繼續加油！'],[0,'多多練習吧！']];
+  var icons = [[90,'🏆'],[70,'🎉'],[50,'💪'],[0,'📖']];
+  var msg = msgs[3][1], icon = icons[3][1];
+  for (var i = 0; i < msgs.length; i++) { if (pct >= msgs[i][0]) { msg = msgs[i][1]; icon = icons[i][1]; break; } }
+  document.getElementById('result-icon').textContent = icon;
+  document.getElementById('result-title').textContent = msg;
+  document.getElementById('result-sub').textContent = '答對 ' + correctCount + ' / ' + TOTAL_Q + ' 題　' + pct + '%';
+}
+
+/* ═══════════════════════════════════════
+   約分互動引擎
+   ═══════════════════════════════════════ */
+
+var rv = {
+  q: null,
+  divisor: 0,
+  pick1: null,          /* first tapped slot position */
+  slots: {},            /* pos → {val, orig, struck, inpVal} */
+  inpFocus: null,       /* slot position whose inp is active */
+  failed: false,
+  phase: 'div',         /* 'div'|'slot'|'fill'|'final'|'done' */
+  finalN: '', finalD: '',
+  finalFocus: null      /* 'n'|'d' */
+};
+
+function renderReduceQ(q) {
+  rv.q = q; rv.divisor = 0; rv.pick1 = null; rv.inpFocus = null;
+  rv.failed = false; rv.phase = 'div'; rv.finalN = ''; rv.finalD = ''; rv.finalFocus = null;
+
+  /* init slots */
+  rv.slots = {};
+  if (q.sub === 'solo') {
+    rv.slots.n = { val: q.n, orig: q.n, struck: false, inpVal: '' };
+    rv.slots.d = { val: q.d, orig: q.d, struck: false, inpVal: '' };
+  } else {
+    rv.slots.a = { val: q.a, orig: q.a, struck: false, inpVal: '' };
+    rv.slots.b = { val: q.b, orig: q.b, struck: false, inpVal: '' };
+    rv.slots.c = { val: q.c, orig: q.c, struck: false, inpVal: '' };
+    rv.slots.d = { val: q.d, orig: q.d, struck: false, inpVal: '' };
+  }
+
+  document.getElementById('prog-fill').style.width = (qIndex / TOTAL_Q * 100) + '%';
+  document.getElementById('prog-lbl').textContent = (qIndex + 1) + ' / ' + TOTAL_Q;
+  document.getElementById('sym-row').classList.add('hidden');
+  document.getElementById('btn-next').classList.add('hidden');
+  document.getElementById('fill-ok-btn').disabled = false;
+  var fb = document.getElementById('fb-row'); fb.className = 'feedback-row'; fb.textContent = '';
+  /* populate divisor column */
+  var divCol = document.getElementById('div-col');
+  divCol.classList.remove('hidden');
+  var btns = '<div class="div-col-label">除數</div>';
+  for (var i = 2; i <= 10; i++) {
+    btns += '<button class="div-btn" id="dvb-' + i + '" onclick="selDiv(' + i + ')">' + i + '</button>';
+  }
+  divCol.innerHTML = btns;
+
+  document.getElementById('q-card').innerHTML = buildReduceHtml();
+}
+
+function buildReduceHtml() {
+  var q = rv.q;
+  var eq = '';
+  if (q.sub === 'solo') {
+    eq = '<div class="eq-row">' + buildRFrac('n', 'd') + '</div>';
+  } else {
+    eq = '<div class="eq-row">' +
+      buildRFrac('a', 'b') +
+      '<span class="q-op" style="font-size:1.5rem">×</span>' +
+      buildRFrac('c', 'd') +
+    '</div>';
+    if (rv.phase === 'final') {
+      eq += '<div class="reduce-final"><span>=</span>' + inputFracHtml(0, 1) + '</div>';
+    }
+  }
+  return '<div class="eq-col">' + eq + '</div>';
+}
+
+function buildRFrac(numPos, denPos) {
+  return '<span class="frac">' +
+    buildNS(numPos) +
+    '<span class="frac-bar"></span>' +
+    buildNS(denPos) +
+  '</span>';
+}
+
+function buildNS(pos) {
+  var s = rv.slots[pos];
+  var canTap = (rv.phase === 'slot') ? ' ns-tap' : '';
+  var hi     = (rv.pick1 === pos)    ? ' ns-hi'  : '';
+  var struck = s.struck              ? ' ns-struck' : '';
+  var inp    = s.struck
+    ? '<span class="ns-inp" id="ni-' + pos + '" onclick="tapInp(\'' + pos + '\')">' + (s.inpVal || '') + '</span>'
+    : '';
+  return '<span class="ns' + canTap + hi + struck + '" id="ns-' + pos + '" onclick="tapSlot(\'' + pos + '\')">' +
+    '<span class="ns-val">' + s.val + '</span>' + inp +
+  '</span>';
+}
+
+/* ── Divisor button ── */
+function selDiv(val) {
+  for (var i = 2; i <= 10; i++) {
+    var b = document.getElementById('dvb-' + i);
+    if (b) b.classList.remove('dv-on', 'dv-shake');
+  }
+  rv.divisor = val; rv.pick1 = null;
+  var btn = document.getElementById('dvb-' + val);
+  if (btn) btn.classList.add('dv-on');
+
+  if (rv.q.sub === 'solo') {
+    var nOk = rv.slots.n.val % val === 0;
+    var dOk = rv.slots.d.val % val === 0;
+    if (!nOk || !dOk) {
+      if (btn) { btn.classList.add('dv-shake'); setTimeout(function(){ btn.classList.remove('dv-shake'); }, 380); }
+      rv.failed = true; playSound('wrong');
+      showFb('✗ ' + val + ' 無法同時整除分子和分母', false);
+      btn.classList.remove('dv-on');
+      rv.divisor = 0;
+      return;
+    }
+    showFb('', true);
+    rv.slots.n.struck = true;
+    rv.slots.d.struck = true;
+    rv.phase = 'fill';
+    focusFirstInp();
+  } else {
+    showFb('', true);
+    rv.phase = 'slot';
+  }
+  refreshReduceEq();
+}
+
+/* ── Slot tap ── */
+function tapSlot(pos) {
+  if (rv.phase !== 'slot') return;
+  var s = rv.slots[pos];
+  if (s.struck) return; /* already reduced in this display pass */
+  if (!rv.divisor) return;
+
+  /* check divisibility */
+  if (s.val % rv.divisor !== 0) {
+    /* wrong */
+    var el = document.getElementById('ns-' + pos);
+    if (el) { el.classList.add('dv-shake'); setTimeout(function(){ el.classList.remove('dv-shake'); }, 380); }
+    rv.failed = true; playSound('wrong');
+    showFb('✗ ' + s.val + ' 無法被 ' + rv.divisor + ' 整除', false);
+    return;
+  }
+
+  if (!rv.pick1) {
+    /* first pick */
+    /* validate cross-fraction rule for multiply */
+    if (rv.q.sub === 'mult') {
+      /* record first pick, wait for second */
+      rv.pick1 = pos;
+      refreshReduceEq();
+    } else {
+      /* solo: both n and d belong to same fraction — allow picking either first */
+      rv.pick1 = pos;
+      refreshReduceEq();
+    }
+  } else {
+    /* second pick */
+    if (rv.q.sub === 'mult') {
+      /* must be cross-fraction */
+      var crossOk = isCross(rv.pick1, pos);
+      if (!crossOk) {
+        var el2 = document.getElementById('ns-' + pos);
+        if (el2) { el2.classList.add('dv-shake'); setTimeout(function(){ el2.classList.remove('dv-shake'); }, 380); }
+        rv.failed = true; playSound('wrong');
+        showFb('✗ 請選跨分數的兩個數', false);
+        return;
+      }
+    } else {
+      /* solo: must be the other slot */
+      if (pos === rv.pick1) {
+        rv.pick1 = null; refreshReduceEq(); return;
+      }
+    }
+
+    /* check second divisibility */
+    if (rv.slots[pos].val % rv.divisor !== 0) {
+      var el3 = document.getElementById('ns-' + pos);
+      if (el3) { el3.classList.add('dv-shake'); setTimeout(function(){ el3.classList.remove('dv-shake'); }, 380); }
+      rv.failed = true;
+      showFb('✗ ' + rv.slots[pos].val + ' 無法被 ' + rv.divisor + ' 整除', false);
+      return;
+    }
+
+    /* strike both */
+    rv.slots[rv.pick1].struck = true;
+    rv.slots[pos].struck = true;
+    rv.pick1 = null;
+    rv.phase = 'fill';
+    refreshReduceEq();
+    /* show fill-pad */
+    /* fill-pad always visible */
+    /* auto-focus first fill input */
+    focusFirstInp();
+  }
+}
+
+function isCross(p1, p2) {
+  /* valid cross pairs: (a,d),(d,a),(b,c),(c,b) */
+  return (p1==='a'&&p2==='d')||(p1==='d'&&p2==='a')||
+         (p1==='b'&&p2==='c')||(p1==='c'&&p2==='b');
+}
+
+/* ── Fill input for reduced value ── */
+function tapInp(pos) {
+  if (rv.phase !== 'fill') return;
+  if (!rv.slots[pos].struck) return;
+  rv.inpFocus = pos;
+  /* update UI */
+  document.querySelectorAll('.ns-inp').forEach(function(el) { el.classList.remove('ni-focus'); });
+  var el = document.getElementById('ni-' + pos);
+  if (el) el.classList.add('ni-focus');
+}
+
+function focusFirstInp() {
+  var struckSlots = Object.keys(rv.slots).filter(function(p) { return rv.slots[p].struck && rv.slots[p].inpVal === ''; });
+  if (struckSlots.length) tapInp(struckSlots[0]);
+}
+
+function refreshReduceEq() {
+  var card = document.getElementById('q-card');
+  if (card) card.innerHTML = buildReduceHtml();
+  if (rv.inpFocus) {
+    var ni = document.getElementById('ni-' + rv.inpFocus);
+    if (ni) ni.classList.add('ni-focus');
+  }
+}
+
+/* ── Submit (✓) in reduce mode ── */
+function submitReduceAns() {
+  if (rv.phase === 'fill') {
+    /* validate all struck slots have correct inpVal */
+    var struckSlots = Object.keys(rv.slots).filter(function(p) { return rv.slots[p].struck; });
+    /* check all filled */
+    var allFilled = struckSlots.every(function(p) { return rv.slots[p].inpVal !== ''; });
+    if (!allFilled) {
+      struckSlots.forEach(function(p) {
+        if (!rv.slots[p].inpVal) {
+          var ni = document.getElementById('ni-' + p);
+          if (ni) { ni.classList.add('ni-err'); setTimeout(function(){ ni.classList.remove('ni-err'); }, 380); }
+        }
+      });
+      return;
+    }
+    /* check correctness */
+    var allOk = struckSlots.every(function(p) {
+      return parseInt(rv.slots[p].inpVal) === rv.slots[p].val / rv.divisor;
+    });
+    if (!allOk) {
+      rv.failed = true;
+      struckSlots.forEach(function(p) {
+        var ni = document.getElementById('ni-' + p);
+        if (ni) { ni.classList.add('ni-err'); setTimeout(function(){ ni.classList.remove('ni-err'); }, 380); }
+      });
+      showFb('✗ 約分後的數字不對，再檢查看看', false);
+      /* clear wrong inputs */
+      struckSlots.forEach(function(p) { rv.slots[p].inpVal = ''; });
+      rv.inpFocus = null;
+      setTimeout(function() { refreshReduceEq(); focusFirstInp(); }, 500);
+      return;
+    }
+    /* correct — update slot values */
+    struckSlots.forEach(function(p) {
+      rv.slots[p].val = parseInt(rv.slots[p].inpVal);
+      rv.slots[p].struck = false;  /* reset struck for next round */
+      rv.slots[p].inpVal = '';
+    });
+    rv.inpFocus = null;
+    /* mark filled inputs as correct visually (brief) then reset */
+
+    /* check if more reductions possible */
+    if (canReduceMore()) {
+      rv.phase = 'div'; rv.divisor = 0; rv.pick1 = null;
+      /* fill-pad always visible */
+      showFb('', true);
+      refreshReduceEq();
+    } else {
+      /* all done */
+      var gcfHint = buildGcfHint();
+      if (rv.q.sub === 'solo') {
+        /* show result */
+        rv.phase = 'done';
+        refreshReduceEq();
+        /* fill-pad always visible */
+        showFb(gcfHint, true);
+        document.getElementById('fill-ok-btn').disabled = true;
+        document.getElementById('btn-next').classList.remove('hidden');
+        if (!rv.failed) correctCount++;
+        playSound('correct');
+      } else {
+        /* multiply: go to final answer phase */
+        rv.phase = 'final';
+        refreshReduceEq();
+        /* show fill-pad for final answer */
+        fields = [{ id: 0, role: 'num', value: '' }, { id: 1, role: 'den', value: '' }];
+        activeField = -1;
+        showFb(gcfHint, true);
+        tapField(0);
+      }
+    }
+  } else if (rv.phase === 'final') {
+    /* validate final fraction answer using existing checkAns logic */
+    var allFilled2 = fields.every(function(f) { return f.value !== ''; });
+    if (!allFilled2) {
+      fields.forEach(function(f) {
+        if (!f.value) {
+          var el = document.getElementById('f-' + f.id);
+          if (el) { el.classList.add('fld-shake'); setTimeout(function(){ el.classList.remove('fld-shake'); }, 380); }
+        }
+      });
+      return;
+    }
+    var sn = +fields[0].value, sd = +fields[1].value;
+    if (sn === rv.q.ans[0] && sd === rv.q.ans[1]) {
+      if (!rv.failed) correctCount++;
+      playSound('correct');
+      fields.forEach(function(f) { var el = document.getElementById('f-'+f.id); if(el) el.classList.add('fld-correct'); });
+      document.getElementById('fill-ok-btn').disabled = true;
+      document.getElementById('btn-next').classList.remove('hidden');
+      showFb('✓ 答對了！', true);
+    } else {
+      rv.failed = true; playSound('wrong');
+      fields.forEach(function(f) { var el = document.getElementById('f-'+f.id); if(el) el.classList.add('fld-wrong'); });
+      showFb('✗ 答錯！正確答案：' + rv.q.ans[0] + ' / ' + rv.q.ans[1], false);
+      document.getElementById('fill-ok-btn').disabled = true;
+      document.getElementById('btn-next').classList.remove('hidden');
+    }
+  }
+}
+
+function canReduceMore() {
+  var vals = Object.keys(rv.slots).map(function(p) { return rv.slots[p].val; });
+  for (var d = 2; d <= 10; d++) {
+    /* for solo: check both n and d */
+    if (rv.q.sub === 'solo') {
+      if (rv.slots.n.val % d === 0 && rv.slots.d.val % d === 0) return true;
+    } else {
+      /* check cross pairs only */
+      if (rv.slots.b.val % d === 0 && rv.slots.c.val % d === 0) return true;
+      if (rv.slots.a.val % d === 0 && rv.slots.d.val % d === 0) return true;
+    }
+  }
+  return false;
+}
+
+function buildGcfHint() {
+  if (rv.q.sub === 'solo') {
+    var origGcf = gcd(rv.q.n, rv.q.d);
+    if (origGcf > 1) return '提示：' + rv.q.n + ' 和 ' + rv.q.d + ' 的最大公因數是 ' + origGcf;
+  }
+  return '';
+}
+
+function showFb(msg, ok) {
+  var fb = document.getElementById('fb-row');
+  if (!msg) { fb.className = 'feedback-row'; fb.textContent = ''; return; }
+  fb.className = 'feedback-row ' + (ok ? 'fb-correct' : 'fb-wrong');
+  fb.innerHTML = msg;
+}
+
+/* ── numPress / numDel routing for reduce mode ── */
+var _origSubmitAns = null;
+
+/* ═══ Sound ═══ */
+var _actx = null;
+function _getCtx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_actx.state === 'suspended') _actx.resume();
+  return _actx;
+}
+function playSound(type) {
+  try {
+    var ctx = _getCtx();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    var now = ctx.currentTime;
+    if (type === 'correct') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.setValueAtTime(784, now + 0.12);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc.start(now); osc.stop(now + 0.45);
+    } else {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.25);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.start(now); osc.stop(now + 0.3);
+    }
+  } catch(e) {}
+}
+
+/* ═══ Keyboard ═══ */
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('page-game').classList.contains('active')) return;
+  if (e.key >= '0' && e.key <= '9') numPress(e.key);
+  else if (e.key === 'Backspace') { e.preventDefault(); numDel(); }
+  else if (e.key === 'Enter') submitAns();
+  else if (e.key === 'Tab') { e.preventDefault(); if (fields.length > 0) tapField((activeField + 1) % fields.length); }
+  else if (e.key === '<') symPress('<');
+  else if (e.key === '=') symPress('=');
+  else if (e.key === '>') symPress('>');
+});
+
+/* ═══ Home init ═══ */
+(function() {
+  var grid = document.getElementById('module-grid');
+  grid.innerHTML = MODULES.map(function(m) {
+    return '<button class="mc" style="--mc-color:' + m.color + '" onclick="startModule(\'' + m.id + '\')">' +
+      '<div class="mc-icon">' + m.icon + '</div>' +
+      '<div class="mc-label">' + m.label + '</div>' +
+      '<div class="mc-desc">' + m.desc + '</div>' +
+    '</button>';
+  }).join('');
+})();
+</script>
+</body>
+</html>

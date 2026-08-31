@@ -4,20 +4,27 @@
  */
 'use strict';
 
-var _qsGradeOptions  = [];
-var _qsLessonOptions = {};
+/* ── 測驗列表快取 ── */
+var _qsAllSessions = [];
+var _qsAllScoreMap = {};
 
-/* ── 自選測驗狀態 ── */
-var _qsCustomStep       = 1;
-var _qsCustomName       = '';
-var _qsCustomGrade      = '';
-var _qsCustomLesson     = '';
-var _qsCustomLessonName = '';
-var _qsCustomQuestions  = [];  /* [{ id, type, question, answer, options }] */
-var _qsCustomSelected   = {};  /* { docId: true } */
-var _qsCustomActiveTab  = '';  /* 目前頁籤的題型 */
+/* ── 資料夾狀態（null = 未分類）── */
+var _qsCurrentFolder = null;
 
-/* ── 6 碼代碼產生（A-Z 0-9，排除易混淆字符 O/0/I/1）── */
+/* ── 批次選取狀態 ── */
+var _qsSelectMode  = false;
+var _qsSelectedIds = [];
+
+/* ── 已建立但尚無試卷的空資料夾（記憶體暫存）── */
+var _qsPendingFolders = [];
+
+/* ── HTML5 拖曳狀態 ── */
+var _qsDragSessionId = null;
+
+/* ── 詳情 panel 狀態 ── */
+var _qsDetailSessionId = null;
+
+/* ── 6 碼代碼產生 ── */
 function _genCode() {
   var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   var code  = '';
@@ -28,7 +35,9 @@ function _genCode() {
 function _qsEsc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
+function _qsEscJs(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
 function _qsCnToInt(s) {
   var map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,
               '十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15,
@@ -36,19 +45,6 @@ function _qsCnToInt(s) {
   if (map[s] !== undefined) return map[s];
   var n = parseInt(s, 10);
   return isNaN(n) ? null : n;
-}
-
-/* ════════════════════════════════════════
-   出題方式選擇 Modal
-   ════════════════════════════════════════ */
-function showModeSelectModal() {
-  var modal = document.getElementById('qs-mode-modal');
-  if (modal) modal.style.display = 'flex';
-}
-
-function hideModeSelectModal() {
-  var modal = document.getElementById('qs-mode-modal');
-  if (modal) modal.style.display = 'none';
 }
 
 /* ════════════════════════════════════════
@@ -64,12 +60,11 @@ function loadQuizSessions() {
   Promise.all([
     db.collection('quizSessions').where('teacherUid', '==', currentTeacher.uid).get(),
     db.collection('quizResults').where('teacherUid',  '==', currentTeacher.uid).get()
-      .catch(function() { return EMPTY_SNAP; })   /* 規則未部署時降級，不阻斷列表載入 */
+      .catch(function() { return EMPTY_SNAP; })
   ]).then(function(results) {
     var snap       = results[0];
     var resultSnap = results[1];
 
-    /* 依 sessionId 統計：整體最高分、作答人次、各學生最高分 */
     var scoreMap = {};
     resultSnap.forEach(function(doc) {
       var d   = doc.data();
@@ -78,7 +73,6 @@ function loadQuizSessions() {
       if (!scoreMap[sid]) scoreMap[sid] = { max: 0, count: 0, students: {} };
       scoreMap[sid].count++;
       if (d.score > scoreMap[sid].max) scoreMap[sid].max = d.score;
-      /* per-student best */
       var stId   = d.studentId || ('_' + scoreMap[sid].count);
       var stName = d.studentName || d.studentNickname || '匿名';
       if (!scoreMap[sid].students[stId] || d.score > scoreMap[sid].students[stId].max) {
@@ -87,6 +81,9 @@ function loadQuizSessions() {
     });
 
     if (snap.size === 0) {
+      _qsAllSessions = [];
+      _qsAllScoreMap = {};
+      _qsShowSidebar(false);
       wrap.innerHTML = '<p style="color:var(--muted);font-size:.88rem;padding:16px 0">尚未建立任何測驗。點擊「＋ 新增測驗」開始出題。</p>';
       return;
     }
@@ -98,291 +95,749 @@ function loadQuizSessions() {
       return (b.data.createdAt || '').localeCompare(a.data.createdAt || '');
     });
 
-    var html = '<div style="display:flex;flex-direction:column;gap:10px">';
-    sessions.forEach(function(s) {
-      var d      = s.data;
-      var active = d.active !== false;
-      var date   = d.createdAt ? d.createdAt.slice(0, 10) : '—';
-      var counts = d.counts || {};
-      var total  = (counts.explain || 0) + (counts.fillIn || 0) + (counts.mc || 0);
-      var borderCol = active ? 'var(--blue)' : 'var(--border)';
-      var bgCol     = active ? 'var(--blue-lt,#eef5fc)' : 'var(--gray-lt)';
-      var nameCol   = active ? 'var(--blue-dk,#2d6fa8)' : 'var(--muted)';
-      var stats     = scoreMap[s.id];
+    _qsAllSessions = sessions;
+    _qsAllScoreMap = scoreMap;
 
-      var typeBadge = d.type === 'custom'
-        ? '<span style="font-size:.65rem;font-weight:800;background:#dbeafe;color:#1d4ed8;' +
-          'border:1px solid #bfdbfe;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle">自選</span>'
-        : '<span style="font-size:.65rem;font-weight:800;background:var(--gray-lt);color:var(--muted);' +
-          'border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle">隨機</span>';
+    /* 清掉已有試卷的 pending 資料夾 */
+    var existFolders = {};
+    sessions.forEach(function(s) { if (s.data.folder) existFolders[s.data.folder] = true; });
+    _qsPendingFolders = _qsPendingFolders.filter(function(p) { return !existFolders[p]; });
 
-      html += '<div style="border:2px solid ' + borderCol + ';border-radius:12px;padding:14px 16px;background:' + bgCol + '">';
-      html += '<div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap">';
-
-      /* Info */
-      html += '<div style="flex:1;min-width:160px">';
-      html += '<div style="font-size:1rem;font-weight:900;color:' + nameCol + '">' + _qsEsc(d.name || '未命名') + typeBadge + '</div>';
-      html += '<div style="font-size:.78rem;font-weight:700;color:var(--muted);margin-top:2px">' +
-        _qsEsc(d.grade || '') + '　第 ' + _qsEsc(d.lesson || '') + ' 課　' + _qsEsc(d.lessonName || '') + '</div>';
-      html += '<div style="font-size:.75rem;color:var(--muted);margin-top:2px">建立：' + date +
-        '　解釋 ' + (counts.explain || 0) + '／填空 ' + (counts.fillIn || 0) + '／選擇 ' + (counts.mc || 0) + '　共 ' + total + ' 題</div>';
-
-      /* 最高成績 + 折疊式學生名單 */
-      if (stats && stats.count > 0) {
-        /* 學生清單，依最高分排序 */
-        var stuList = Object.keys(stats.students).map(function(id) {
-          return stats.students[id];
-        }).sort(function(a, b) { return b.max - a.max; });
-
-        var stuRows = '';
-        stuList.forEach(function(st) {
-          stuRows +=
-            '<div style="display:flex;justify-content:space-between;align-items:center;' +
-            'padding:4px 0;border-bottom:1px solid var(--border)">' +
-              '<span style="font-weight:700;color:var(--text)">' + _qsEsc(st.name) + '</span>' +
-              '<span style="font-weight:900;color:var(--green,#2aab5a);font-size:.88rem">' + st.max + ' 分</span>' +
-            '</div>';
-        });
-
-        html +=
-          '<details style="margin-top:8px;font-size:.75rem"' +
-          ' ontoggle="var t=this.querySelector(\'.qs-toggle-hint\');if(t)t.textContent=this.open?\'▾ 收合\':\'▾ 學生測驗結果\'">' +
-            '<summary style="cursor:pointer;list-style:none;user-select:none;outline:none;' +
-            'display:inline-flex;align-items:center;gap:6px;' +
-            'background:var(--blue-lt,#eef5fc);color:var(--blue-dk,#2d6fa8);' +
-            'border:1.5px solid var(--blue,#5b9dd9);border-radius:7px;' +
-            'padding:5px 12px;font-weight:800;font-size:.78rem;' +
-            'transition:background .15s,color .15s">' +
-              '<span class="qs-toggle-hint">▾ 學生測驗結果</span>' +
-              '<span style="font-size:.72rem;font-weight:600;opacity:.8">（' + stuList.length + ' 人 · 最高 ' + stats.max + ' 分）</span>' +
-            '</summary>' +
-            '<div style="margin-top:8px;background:white;border:1px solid var(--border);border-radius:8px;' +
-            'padding:6px 10px;max-height:200px;overflow-y:auto">' +
-              stuRows +
-            '</div>' +
-          '</details>';
-      } else {
-        html += '<div style="font-size:.75rem;color:var(--muted);margin-top:5px;font-weight:600">尚無作答紀錄</div>';
-      }
-      html += '</div>';
-
-      /* Status badge */
-      if (active) {
-        html += '<span style="font-size:.68rem;font-weight:800;background:var(--green);color:white;border-radius:4px;padding:2px 7px;align-self:flex-start">進行中</span>';
-      } else {
-        html += '<span style="font-size:.68rem;font-weight:800;background:var(--muted);color:white;border-radius:4px;padding:2px 7px;align-self:flex-start">已關閉</span>';
-      }
-      html += '</div>';/* end flex row */
-
-      /* Actions */
-      html += '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">';
-      if (active) {
-        html += '<button onclick="showQuizShareModal(\'' + _qsEscJs(s.id) + '\',\'' + _qsEscJs(d.name || '') + '\')" ' +
-          'style="padding:5px 14px;border:1.5px solid var(--blue);border-radius:7px;background:var(--blue-lt,#eef5fc);' +
-          'font-size:.78rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--blue-dk,#2d6fa8)">📤 分享給班級</button>';
-        html += '<button onclick="closeQuizSession(\'' + _qsEscJs(s.id) + '\')" ' +
-          'style="padding:5px 14px;border:1.5px solid var(--muted);border-radius:7px;background:white;' +
-          'font-size:.78rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">關閉測驗</button>';
-      }
-      html += '<button onclick="deleteQuizSession(\'' + _qsEscJs(s.id) + '\')" ' +
-        'style="padding:5px 14px;border:1.5px solid var(--red);border-radius:7px;background:white;' +
-        'font-size:.78rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--red)">刪除</button>';
-      html += '</div>';
-      /* 分享狀態徽章（非同步填入） */
-      html += '<div class="qs-share-status" data-session-id="' + s.id + '" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"></div>';
-
-      html += '</div>';
-    });
-    html += '</div>';
-    wrap.innerHTML = html;
-    _refreshAllShareStatus();
+    _qsShowSidebar(true);
+    _qsRenderSidebar();
+    _qsRenderList();
   }).catch(function(e) {
     wrap.innerHTML = '<p style="color:var(--red);font-size:.88rem">讀取失敗：' + _qsEsc(e.message) + '</p>';
   });
 }
 
-/* ════════════════════════════════════════
-   新增測驗 Modal
-   ════════════════════════════════════════ */
-function showCreateSessionModal() {
-  hideModeSelectModal();
-  if (!db || !currentTeacher) { showToast('Firebase 未就緒'); return; }
-
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', currentTeacher.uid).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').get()
-  ]).then(function(results) {
-    var gradeMap = {};
-    results.forEach(function(snap) {
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        var g = d.grade || '', l = d.lesson || '';
-        if (!g || !l) return;
-        if (!gradeMap[g]) gradeMap[g] = {};
-        if (!gradeMap[g][l]) gradeMap[g][l] = d.lessonName || '';
-      });
-    });
-
-    _qsGradeOptions  = Object.keys(gradeMap).sort();
-    _qsLessonOptions = {};
-    _qsGradeOptions.forEach(function(g) {
-      _qsLessonOptions[g] = Object.keys(gradeMap[g]).map(function(l) {
-        return { lesson: l, lessonName: gradeMap[g][l] };
-      }).sort(function(a, b) {
-        var na = _qsCnToInt(a.lesson), nb = _qsCnToInt(b.lesson);
-        if (na !== null && nb !== null) return na - nb;
-        return a.lesson.localeCompare(b.lesson, 'zh-TW');
-      });
-    });
-
-    var gradeEl = document.getElementById('qs-grade');
-    if (gradeEl) {
-      var gradeOpts = '<option value="">── 請選擇 ──</option>';
-      _qsGradeOptions.forEach(function(g) {
-        gradeOpts += '<option value="' + _qsEsc(g) + '">' + _qsEsc(g) + '</option>';
-      });
-      gradeEl.innerHTML = gradeOpts;
-    }
-    _updateSessionLessonOptions();
-    document.getElementById('qs-modal-error').textContent = '';
-    document.getElementById('qs-name').value              = '';
-    document.getElementById('qs-count-explain').value     = '3';
-    document.getElementById('qs-count-fillin').value      = '3';
-    document.getElementById('qs-count-mc').value          = '4';
-
-    var modal = document.getElementById('qs-modal');
-    if (modal) modal.style.display = 'flex';
-  }).catch(function(e) { showToast('載入年級失敗：' + e.message); });
+function _qsShowSidebar(show) {
+  var sb = document.getElementById('qs-sidebar');
+  if (sb) sb.style.display = show ? 'block' : 'none';
 }
 
-function _updateSessionLessonOptions() {
-  var gradeEl  = document.getElementById('qs-grade');
-  var lessonEl = document.getElementById('qs-lesson');
-  if (!gradeEl || !lessonEl) return;
-  var grade   = gradeEl.value;
-  var lessons = grade ? (_qsLessonOptions[grade] || []) : [];
-  var opts = '<option value="">── 請選擇 ──</option>';
-  lessons.forEach(function(item) {
-    opts += '<option value="' + _qsEsc(item.lesson) + '" data-name="' + _qsEsc(item.lessonName) + '">' +
-      '第 ' + _qsEsc(item.lesson) + ' 課　' + _qsEsc(item.lessonName) + '</option>';
+/* ════════════════════════════════════════
+   資料夾工具
+   ════════════════════════════════════════ */
+
+function _qsBuildFolderTree() {
+  var tree = {};
+  _qsAllSessions.forEach(function(s) {
+    var f = s.data.folder;
+    if (!f) return;
+    var parts = f.split('/');
+    var node  = tree;
+    parts.forEach(function(p) {
+      if (!node[p]) node[p] = { children: {} };
+      node = node[p].children;
+    });
   });
-  lessonEl.innerHTML = opts;
+  return tree;
 }
 
-function hideCreateSessionModal() {
-  var modal = document.getElementById('qs-modal');
-  if (modal) modal.style.display = 'none';
+function _qsFolderCount(path) {
+  var target = (path === '__uncat__') ? null : path;
+  return _qsAllSessions.filter(function(s) {
+    return (s.data.folder || null) === target;
+  }).length;
+}
+
+function _qsRenderSidebar() {
+  var el = document.getElementById('qs-sidebar');
+  if (!el) return;
+  var tree      = _qsBuildFolderTree();
+
+  /* 把尚無試卷的暫存資料夾也合入樹中 */
+  _qsPendingFolders.forEach(function(path) {
+    var parts = path.split('/');
+    var node  = tree;
+    parts.forEach(function(p) {
+      if (!node[p]) node[p] = { children: {} };
+      node = node[p].children;
+    });
+  });
+  var uncatCnt  = _qsFolderCount('__uncat__');
+  var isUncat   = (_qsCurrentFolder === null);
+
+  var html = '';
+
+  /* 未分類（固定項目） */
+  html += '<div class="qs-fi' + (isUncat ? ' qs-fi-active' : '') + '" ' +
+    'onclick="qsSelectFolder(null)" data-path="__uncat__" ' +
+    'ondragover="event.preventDefault();this.classList.add(\'qs-fi-drag\')" ' +
+    'ondragleave="this.classList.remove(\'qs-fi-drag\')" ' +
+    'ondrop="_qsDropOnFolder(event,null)">' +
+    '<span>📂</span>' +
+    '<span class="qs-fi-name">未分類</span>' +
+    '<span class="qs-fi-cnt">' + uncatCnt + '</span>' +
+    '</div>';
+
+  /* 資料夾樹 */
+  function renderNode(node, parentPath, depth) {
+    Object.keys(node).sort().forEach(function(name) {
+      var path      = parentPath ? parentPath + '/' + name : name;
+      var isActive  = (_qsCurrentFolder === path);
+      var cnt       = _qsFolderCount(path);
+      var hasChild  = Object.keys(node[name].children).length > 0;
+      var indent    = 8 + depth * 14;
+
+      html += '<div class="qs-fi' + (isActive ? ' qs-fi-active' : '') + '" ' +
+        'style="padding-left:' + indent + 'px" ' +
+        'onclick="qsSelectFolder(\'' + _qsEscJs(path) + '\')" data-path="' + _qsEsc(path) + '" ' +
+        'ondragover="event.preventDefault();this.classList.add(\'qs-fi-drag\')" ' +
+        'ondragleave="this.classList.remove(\'qs-fi-drag\')" ' +
+        'ondrop="_qsDropOnFolder(event,\'' + _qsEscJs(path) + '\')">' +
+        '<span>' + (hasChild ? '📁' : '📄') + '</span>' +
+        '<span class="qs-fi-name">' + _qsEsc(name) + '</span>' +
+        '<span class="qs-fi-cnt">' + cnt + '</span>' +
+        '<button class="qs-fi-menu" onclick="event.stopPropagation();_qsFolderMenu(\'' + _qsEscJs(path) + '\',this)">⋯</button>' +
+        '</div>';
+
+      if (depth < 1) renderNode(node[name].children, path, depth + 1);
+    });
+  }
+  renderNode(tree, '', 0);
+
+  html += '<button class="qs-fi-add" onclick="_qsCreateFolder(\'\')">＋ 新增資料夾</button>';
+  el.innerHTML = html;
+}
+
+function qsSelectFolder(path) {
+  _qsCurrentFolder = (path === '__uncat__' || path === null) ? null : path;
+  _qsSelectedIds   = [];
+  _qsUpdateSelectCount();
+  _qsRenderSidebar();
+  _qsRenderList();
+}
+
+/* ─ 資料夾選單（⋯）─ */
+function _qsFolderMenu(path, btn) {
+  var old = document.getElementById('qs-folder-dropdown');
+  if (old) { old.remove(); return; }
+
+  var depth = path.split('/').length;
+  var d     = document.createElement('div');
+  d.id = 'qs-folder-dropdown';
+  d.style.cssText = 'position:fixed;z-index:600;background:white;border:1.5px solid var(--border);' +
+    'border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);padding:5px 0;min-width:148px;font-family:inherit';
+
+  var items = [];
+  if (depth < 2) {
+    items.push({ label: '📁 新增子資料夾', fn: '_qsCreateFolder(\'' + _qsEscJs(path) + '\')' });
+  }
+  items.push({ label: '✏️ 重新命名', fn: '_qsRenameFolder(\'' + _qsEscJs(path) + '\')' });
+  items.push({ label: '🗑 刪除資料夾', fn: '_qsDeleteFolder(\'' + _qsEscJs(path) + '\')', red: true });
+
+  d.innerHTML = items.map(function(item) {
+    return '<button onclick="' + item.fn + ';var _d=document.getElementById(\'qs-folder-dropdown\');if(_d)_d.remove()" ' +
+      'style="display:block;width:100%;padding:8px 14px;border:none;background:none;text-align:left;' +
+      'font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;' +
+      (item.red ? 'color:var(--red)' : 'color:var(--text)') + '">' + item.label + '</button>';
+  }).join('');
+
+  document.body.appendChild(d);
+  var rect = btn.getBoundingClientRect();
+  var top  = rect.bottom + 4;
+  var left = rect.left;
+  if (left + 160 > window.innerWidth) left = window.innerWidth - 164;
+  d.style.top  = top  + 'px';
+  d.style.left = left + 'px';
+
+  setTimeout(function() {
+    document.addEventListener('click', function _close() {
+      var el = document.getElementById('qs-folder-dropdown');
+      if (el) el.remove();
+      document.removeEventListener('click', _close);
+    });
+  }, 10);
+}
+
+/* ─ 新增資料夾 ─ */
+function _qsCreateFolder(parentPath) {
+  var label = parentPath ? '在「' + parentPath + '」中新增子資料夾名稱：' : '新增資料夾名稱：';
+  var name  = prompt(label, '');
+  if (!name || !name.trim()) return;
+  name = name.trim();
+  if (name.indexOf('/') !== -1) { showToast('名稱不可包含 /'); return; }
+  var newPath = parentPath ? parentPath + '/' + name : name;
+  if (_qsPendingFolders.indexOf(newPath) === -1) _qsPendingFolders.push(newPath);
+  _qsCurrentFolder = newPath;
+  _qsRenderSidebar();
+  _qsRenderList();
+}
+
+/* ─ 重新命名資料夾 ─ */
+async function _qsRenameFolder(oldPath) {
+  var parts   = oldPath.split('/');
+  var oldName = parts[parts.length - 1];
+  var newName = prompt('重新命名資料夾：', oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+  newName = newName.trim();
+  if (newName.indexOf('/') !== -1) { showToast('名稱不可包含 /'); return; }
+
+  var parentPath = parts.slice(0, -1).join('/');
+  var newPath    = parentPath ? parentPath + '/' + newName : newName;
+
+  var toUpdate = _qsAllSessions.filter(function(s) {
+    return (s.data.folder || '').startsWith(oldPath);
+  });
+
+  try {
+    var BATCH_SIZE = 400;
+    for (var i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+      var batch = db.batch();
+      toUpdate.slice(i, i + BATCH_SIZE).forEach(function(s) {
+        var nf = s.data.folder.replace(oldPath, newPath);
+        batch.update(db.collection('quizSessions').doc(s.id), { folder: nf });
+        s.data.folder = nf;
+      });
+      await batch.commit();
+    }
+    if (_qsCurrentFolder && _qsCurrentFolder.startsWith(oldPath)) {
+      _qsCurrentFolder = _qsCurrentFolder.replace(oldPath, newPath);
+    }
+    showToast('已重新命名');
+    _qsRenderSidebar();
+    _qsRenderList();
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+/* ─ 刪除資料夾（含試卷）─ */
+async function _qsDeleteFolder(path) {
+  var toDelete = _qsAllSessions.filter(function(s) {
+    return (s.data.folder || '').startsWith(path);
+  });
+  var folderName = path.split('/').pop();
+  var msg = toDelete.length
+    ? '確定刪除「' + folderName + '」及其中 ' + toDelete.length + ' 張試卷？此操作無法復原。'
+    : '確定刪除空資料夾「' + folderName + '」？';
+  if (!confirm(msg)) return;
+
+  try {
+    for (var i = 0; i < toDelete.length; i++) {
+      await _qsDeleteSessionFull(toDelete[i].id);
+    }
+    if (_qsCurrentFolder && _qsCurrentFolder.startsWith(path)) _qsCurrentFolder = null;
+    showToast('已刪除');
+    _qsRenderSidebar();
+    _qsRenderList();
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+/* ─ 移至資料夾（卡片按鈕 → 選擇器）─ */
+function _qsShowMovePicker(sessionId) {
+  var old = document.getElementById('qs-move-modal');
+  if (old) old.remove();
+
+  var tree  = _qsBuildFolderTree();
+  var paths = [''];
+
+  function collectPaths(node, prefix) {
+    Object.keys(node).sort().forEach(function(name) {
+      var p = prefix ? prefix + '/' + name : name;
+      paths.push(p);
+      collectPaths(node[name].children, p);
+    });
+  }
+  collectPaths(tree, '');
+
+  var modal = document.createElement('div');
+  modal.id = 'qs-move-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);' +
+    'display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var inner = '<div style="background:white;border-radius:16px;padding:24px 20px;max-width:320px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.2)">';
+  inner += '<div style="font-size:1rem;font-weight:900;margin-bottom:14px">移至資料夾</div>';
+  inner += '<div style="max-height:260px;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px">';
+
+  paths.forEach(function(p, idx) {
+    var depth   = p ? p.split('/').length - 1 : 0;
+    var label   = p || '未分類';
+    var icon    = p ? '📁 ' : '📂 ';
+    var borderB = idx < paths.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
+    inner += '<div onclick="_qsMoveSessionToFolder(\'' + _qsEscJs(sessionId) + '\',\'' + _qsEscJs(p) + '\');document.getElementById(\'qs-move-modal\').remove()" ' +
+      'style="padding:9px 12px 9px ' + (12 + depth * 16) + 'px;cursor:pointer;font-size:.86rem;font-weight:700;' + borderB + '" ' +
+      'onmouseover="this.style.background=\'var(--gray-lt)\'" onmouseout="this.style.background=\'\'">' +
+      icon + _qsEsc(label) + '</div>';
+  });
+
+  inner += '<div onclick="_qsPickerNewFolder(\'' + _qsEscJs(sessionId) + '\')" ' +
+    'style="padding:9px 12px;cursor:pointer;font-size:.86rem;font-weight:700;color:var(--blue)" ' +
+    'onmouseover="this.style.background=\'var(--gray-lt)\'" onmouseout="this.style.background=\'\'">' +
+    '＋ 新建資料夾</div>';
+
+  inner += '</div>';
+  inner += '<div style="display:flex;justify-content:flex-end;margin-top:14px">';
+  inner += '<button onclick="document.getElementById(\'qs-move-modal\').remove()" ' +
+    'style="padding:7px 18px;border:1.5px solid var(--border);border-radius:8px;background:white;' +
+    'font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">取消</button>';
+  inner += '</div></div>';
+
+  modal.innerHTML = inner;
+  document.body.appendChild(modal);
+
+  modal.addEventListener('pointerdown', function(e) {
+    if (e.target === modal) modal.remove();
+  });
+}
+
+function _qsPickerNewFolder(sessionId) {
+  document.getElementById('qs-move-modal').remove();
+  var name = prompt('新資料夾名稱：', '');
+  if (!name || !name.trim()) return;
+  name = name.trim();
+  if (name.indexOf('/') !== -1) { showToast('名稱不可包含 /'); return; }
+  _qsMoveSessionToFolder(sessionId, name);
+}
+
+async function _qsMoveSessionToFolder(sessionId, folderPath) {
+  var folder = folderPath || null;
+  try {
+    var update = folder
+      ? { folder: folder }
+      : { folder: firebase.firestore.FieldValue.delete() };
+    await db.collection('quizSessions').doc(sessionId).update(update);
+    var s = _qsAllSessions.find(function(x) { return x.id === sessionId; });
+    if (s) s.data.folder = folder;
+    /* 有試卷移入後，不再需要 pending 標記 */
+    if (folder) _qsPendingFolders = _qsPendingFolders.filter(function(p) { return p !== folder; });
+    showToast('已移至「' + (folder || '未分類') + '」');
+    _qsRenderSidebar();
+    _qsRenderList();
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+/* ─ 拖曳：卡片 → sidebar ─ */
+function _qsOnDragStart(e, id) {
+  _qsDragSessionId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+  e.currentTarget.style.opacity = '0.45';
+}
+
+function _qsOnDragEnd(e) {
+  e.currentTarget.style.opacity = '';
+  document.querySelectorAll('.qs-fi-drag').forEach(function(el) {
+    el.classList.remove('qs-fi-drag');
+  });
+  _qsDragSessionId = null;
+}
+
+function _qsDropOnFolder(e, folderPath) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('qs-fi-drag');
+  var id = _qsDragSessionId || e.dataTransfer.getData('text/plain');
+  if (!id) return;
+  _qsMoveSessionToFolder(id, folderPath);
 }
 
 /* ════════════════════════════════════════
-   建立測驗（寫入 quizSessions）
+   批次選取模式
    ════════════════════════════════════════ */
-function createQuizSession() {
-  var name     = (document.getElementById('qs-name').value || '').trim();
-  var grade    = document.getElementById('qs-grade').value;
-  var lessonEl = document.getElementById('qs-lesson');
-  var lesson   = lessonEl.value;
-  var lessonName = lessonEl.selectedIndex >= 0
-    ? (lessonEl.options[lessonEl.selectedIndex].getAttribute('data-name') || '') : '';
-  var explain = parseInt(document.getElementById('qs-count-explain').value, 10) || 0;
-  var fillIn  = parseInt(document.getElementById('qs-count-fillin').value,  10) || 0;
-  var mc      = parseInt(document.getElementById('qs-count-mc').value,      10) || 0;
-  var errEl   = document.getElementById('qs-modal-error');
+function qsToggleSelectMode() {
+  _qsSelectMode  = !_qsSelectMode;
+  _qsSelectedIds = [];
+  if (_qsSelectMode && _qsDetailSessionId) {
+    /* 進入選取模式時關閉詳情 panel */
+    var panel = document.getElementById('qs-detail-panel');
+    var card  = document.querySelector('#qz-sessions-quiz .card');
+    if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+    if (card)  card.classList.remove('qs-panel-open');
+    _qsDetailSessionId = null;
+  }
+  var toolbar = document.getElementById('qs-batch-toolbar');
+  var btn     = document.getElementById('qs-select-mode-btn');
+  if (toolbar) toolbar.style.display = _qsSelectMode ? 'flex' : 'none';
+  if (btn)     btn.style.background  = _qsSelectMode ? 'var(--blue-lt)' : '';
+  _qsUpdateSelectCount();
+  _qsRenderList();
+}
 
-  if (!name)                        { errEl.textContent = '請填寫測驗名稱'; return; }
-  if (!grade)                       { errEl.textContent = '請選擇年級'; return; }
-  if (!lesson)                      { errEl.textContent = '請選擇課次'; return; }
-  if (explain + fillIn + mc === 0)  { errEl.textContent = '至少設定一種題型的題數'; return; }
-  errEl.textContent = '';
+function qsSelectAll() {
+  var filtered    = _qsGetFilteredSessions();
+  var allSelected = filtered.every(function(s) { return _qsSelectedIds.indexOf(s.id) !== -1; });
+  _qsSelectedIds  = allSelected ? [] : filtered.map(function(s) { return s.id; });
+  _qsUpdateSelectCount();
+  _qsRenderList();
+}
 
-  if (!db || !currentTeacher) { showToast('Firebase 未就緒'); return; }
+function qsToggleCard(id) {
+  var idx = _qsSelectedIds.indexOf(id);
+  if (idx === -1) _qsSelectedIds.push(id);
+  else            _qsSelectedIds.splice(idx, 1);
+  _qsUpdateSelectCount();
+  _qsRenderList();
+}
 
-  var btn = document.getElementById('btn-create-session');
-  if (btn) { btn.disabled = true; btn.textContent = '建立中…'; }
+function _qsUpdateSelectCount() {
+  var el = document.getElementById('qs-select-count');
+  if (el) el.textContent = '已選 ' + _qsSelectedIds.length + ' 張';
 
-  /* 第一步：從題庫撈題並固定抽樣 */
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', 'shared').where('grade', '==', grade).get(),
-    db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', grade).get()
-  ]).then(function(results) {
-    var seen = {};
-    var pool = { '詞語解釋': [], '詞語填空': [], '選擇題': [] };
-    results.forEach(function(snap) {
-      snap.docs.forEach(function(doc) {
-        if (seen[doc.id]) return;
-        seen[doc.id] = true;
-        var d = doc.data();
-        if (d.lesson === lesson && d.type && pool[d.type]) {
-          pool[d.type].push(doc.id);
-        }
-      });
+  var btn = document.getElementById('qs-select-all-btn');
+  if (btn) {
+    var filtered   = _qsGetFilteredSessions();
+    var allChosen  = filtered.length > 0 &&
+                     filtered.every(function(s) { return _qsSelectedIds.indexOf(s.id) !== -1; });
+    btn.textContent = allChosen ? '取消全選' : '全選';
+  }
+}
+
+function qsBatchMove() {
+  if (!_qsSelectedIds.length) { showToast('尚未選取任何試卷'); return; }
+
+  var old = document.getElementById('qs-move-modal');
+  if (old) old.remove();
+
+  var tree  = _qsBuildFolderTree();
+  _qsPendingFolders.forEach(function(path) {
+    var parts = path.split('/');
+    var node  = tree;
+    parts.forEach(function(p) {
+      if (!node[p]) node[p] = { children: {} };
+      node = node[p].children;
     });
+  });
 
-    /* 各題型隨機抽樣，不足時取全部 */
-    function sampleIds(arr, n) {
-      var a = arr.slice();
-      for (var i = a.length - 1; i > 0; i--) {
-        var j = Math.floor(Math.random() * (i + 1));
-        var t = a[i]; a[i] = a[j]; a[j] = t;
+  var paths = [''];
+  function collectPaths(node, prefix) {
+    Object.keys(node).sort().forEach(function(name) {
+      var p = prefix ? prefix + '/' + name : name;
+      paths.push(p);
+      collectPaths(node[name].children, p);
+    });
+  }
+  collectPaths(tree, '');
+
+  var modal = document.createElement('div');
+  modal.id = 'qs-move-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);' +
+    'display:flex;align-items:center;justify-content:center;padding:20px';
+
+  var inner = '<div style="background:white;border-radius:16px;padding:24px 20px;max-width:320px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.2)">';
+  inner += '<div style="font-size:1rem;font-weight:900;margin-bottom:4px">移至資料夾</div>';
+  inner += '<div style="font-size:.78rem;color:var(--muted);font-weight:700;margin-bottom:14px">已選 ' + _qsSelectedIds.length + ' 張試卷</div>';
+  inner += '<div style="max-height:260px;overflow-y:auto;border:1.5px solid var(--border);border-radius:10px">';
+
+  paths.forEach(function(p, idx) {
+    var depth   = p ? p.split('/').length - 1 : 0;
+    var icon    = p ? '📁 ' : '📂 ';
+    var borderB = idx < paths.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
+    inner += '<div onclick="_qsBatchMoveExecute(\'' + _qsEscJs(p) + '\');document.getElementById(\'qs-move-modal\').remove()" ' +
+      'style="padding:9px 12px 9px ' + (12 + depth * 16) + 'px;cursor:pointer;font-size:.86rem;font-weight:700;' + borderB + '" ' +
+      'onmouseover="this.style.background=\'var(--gray-lt)\'" onmouseout="this.style.background=\'\'">' +
+      icon + _qsEsc(p || '未分類') + '</div>';
+  });
+
+  inner += '<div onclick="_qsBatchMovePickerNewFolder()" ' +
+    'style="padding:9px 12px;cursor:pointer;font-size:.86rem;font-weight:700;color:var(--blue)" ' +
+    'onmouseover="this.style.background=\'var(--gray-lt)\'" onmouseout="this.style.background=\'\'">' +
+    '＋ 新建資料夾</div>';
+
+  inner += '</div>';
+  inner += '<div style="display:flex;justify-content:flex-end;margin-top:14px">';
+  inner += '<button onclick="document.getElementById(\'qs-move-modal\').remove()" ' +
+    'style="padding:7px 18px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">取消</button>';
+  inner += '</div></div>';
+
+  modal.innerHTML = inner;
+  document.body.appendChild(modal);
+  modal.addEventListener('pointerdown', function(e) { if (e.target === modal) modal.remove(); });
+}
+
+function _qsBatchMovePickerNewFolder() {
+  document.getElementById('qs-move-modal').remove();
+  var name = prompt('新資料夾名稱：', '');
+  if (!name || !name.trim()) return;
+  name = name.trim();
+  if (name.indexOf('/') !== -1) { showToast('名稱不可包含 /'); return; }
+  if (_qsPendingFolders.indexOf(name) === -1) _qsPendingFolders.push(name);
+  _qsBatchMoveExecute(name);
+}
+
+async function _qsBatchMoveExecute(folderPath) {
+  var folder = folderPath || null;
+  var ids    = _qsSelectedIds.slice();
+  try {
+    var BATCH_SIZE = 400;
+    for (var i = 0; i < ids.length; i += BATCH_SIZE) {
+      var batch = db.batch();
+      ids.slice(i, i + BATCH_SIZE).forEach(function(id) {
+        var update = folder
+          ? { folder: folder }
+          : { folder: firebase.firestore.FieldValue.delete() };
+        batch.update(db.collection('quizSessions').doc(id), update);
+        var s = _qsAllSessions.find(function(x) { return x.id === id; });
+        if (s) s.data.folder = folder;
+      });
+      await batch.commit();
+    }
+    if (folder) _qsPendingFolders = _qsPendingFolders.filter(function(p) { return p !== folder; });
+    showToast('已將 ' + ids.length + ' 張試卷移至「' + (folder || '未分類') + '」');
+    _qsSelectMode  = false;
+    _qsSelectedIds = [];
+    var toolbar = document.getElementById('qs-batch-toolbar');
+    var btn     = document.getElementById('qs-select-mode-btn');
+    if (toolbar) toolbar.style.display = 'none';
+    if (btn)     btn.style.background  = '';
+    _qsRenderSidebar();
+    _qsRenderList();
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+async function qsBatchDelete() {
+  if (!_qsSelectedIds.length) { showToast('尚未選取任何試卷'); return; }
+  if (!confirm('確定刪除已選 ' + _qsSelectedIds.length + ' 張試卷？此操作無法復原。')) return;
+
+  var ids = _qsSelectedIds.slice();
+  try {
+    for (var i = 0; i < ids.length; i++) {
+      await _qsDeleteSessionFull(ids[i]);
+    }
+    showToast('已刪除 ' + ids.length + ' 張試卷');
+    _qsSelectMode  = false;
+    _qsSelectedIds = [];
+    var toolbar = document.getElementById('qs-batch-toolbar');
+    var btn     = document.getElementById('qs-select-mode-btn');
+    if (toolbar) toolbar.style.display = 'none';
+    if (btn)     btn.style.background  = '';
+    _qsRenderSidebar();
+    _qsRenderList();
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
+}
+
+/* ─ 完整刪除一個 session（class copies + quizResults）─ */
+async function _qsDeleteSessionFull(id) {
+  var sharedClassIds = await _getSessionSharedClasses(id);
+
+  var resultsSnap = await db.collection('quizResults')
+    .where('sessionId', '==', id).get()
+    .catch(function() { return { docs: [] }; });
+
+  /* 先刪 quizResults（允許失敗，不阻斷主流程）*/
+  if (resultsSnap.docs.length) {
+    try {
+      var BATCH_SIZE = 400;
+      for (var ri = 0; ri < resultsSnap.docs.length; ri += BATCH_SIZE) {
+        var rb = db.batch();
+        resultsSnap.docs.slice(ri, ri + BATCH_SIZE).forEach(function(doc) { rb.delete(doc.ref); });
+        await rb.commit();
       }
-      return a.slice(0, n);
+    } catch(e) {
+      console.warn('_qsDeleteSessionFull: quizResults 刪除失敗（忽略）', e);
     }
+  }
 
-    var questionIds = [].concat(
-      sampleIds(pool['詞語填空'], fillIn),
-      sampleIds(pool['詞語解釋'], explain),
-      sampleIds(pool['選擇題'],   mc)
-    );
-
-    if (!questionIds.length) {
-      if (btn) { btn.disabled = false; btn.textContent = '建立'; }
-      errEl.textContent = '此課次題庫中沒有符合的題目，請先上傳題庫';
-      return;
-    }
-
-    /* 第二步：確保代碼唯一後寫入 */
-    function tryCreate() {
-      var code = _genCode();
-      db.collection('quizSessions')
-        .where('code', '==', code)
-        .where('active', '==', true)
-        .get()
-        .then(function(snap) {
-          if (!snap.empty) return tryCreate();
-          return db.collection('quizSessions').add({
-            type:        'random',
-            name:        name,
-            code:        code,
-            teacherUid:  currentTeacher.uid,
-            grade:       grade,
-            lesson:      lesson,
-            lessonName:  lessonName,
-            counts:      { explain: explain, fillIn: fillIn, mc: mc },
-            questionIds: questionIds,
-            createdAt:   new Date().toISOString(),
-            active:      true
-          });
-        })
-        .then(function() {
-          hideCreateSessionModal();
-          showToast('✅ 測驗代碼「' + code + '」已建立！');
-          loadQuizSessions();
-          if (btn) { btn.disabled = false; btn.textContent = '建立'; }
-        })
-        .catch(function(e) {
-          showToast('❌ 建立失敗：' + e.message);
-          if (btn) { btn.disabled = false; btn.textContent = '建立'; }
-        });
-    }
-    tryCreate();
-  }).catch(function(e) {
-    showToast('❌ 撈取題庫失敗：' + e.message);
-    if (btn) { btn.disabled = false; btn.textContent = '建立'; }
+  /* 刪 sharedQuizSessions subcollection + 主 session 文件 */
+  var refs = [];
+  sharedClassIds.forEach(function(classId) {
+    refs.push(db.collection('classes').doc(classId).collection('sharedQuizSessions').doc(id));
   });
+  refs.push(db.collection('quizSessions').doc(id));
+
+  var BATCH_SIZE = 400;
+  for (var i = 0; i < refs.length; i += BATCH_SIZE) {
+    var batch = db.batch();
+    refs.slice(i, i + BATCH_SIZE).forEach(function(ref) { batch.delete(ref); });
+    await batch.commit();
+  }
+
+  _qsAllSessions = _qsAllSessions.filter(function(s) { return s.id !== id; });
+  delete _qsAllScoreMap[id];
 }
 
 /* ════════════════════════════════════════
-   關閉 / 刪除測驗
+   渲染列表
+   ════════════════════════════════════════ */
+function _qsGetFilteredSessions() {
+  return _qsAllSessions.filter(function(s) {
+    return (s.data.folder || null) === _qsCurrentFolder;
+  });
+}
+
+function _qsRenderList() {
+  var wrap = document.getElementById('qs-list-wrap');
+  if (!wrap) return;
+
+  var filtered = _qsGetFilteredSessions();
+
+  if (!filtered.length) {
+    var label = _qsCurrentFolder ? '「' + _qsCurrentFolder.split('/').pop() + '」' : '未分類';
+    wrap.innerHTML = '<p style="color:var(--muted);font-size:.88rem;padding:16px 0">' + label + ' 尚無試卷。</p>';
+    return;
+  }
+
+  var html = '<div style="display:flex;flex-direction:column;gap:5px">';
+  filtered.forEach(function(s) {
+    var d          = s.data;
+    var isSelected = _qsSelectedIds.indexOf(s.id) !== -1;
+    var isActive   = !_qsSelectMode && (_qsDetailSessionId === s.id);
+
+    var typeBadge = d.type === 'custom'
+      ? '<span style="font-size:.6rem;font-weight:800;background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:3px;padding:1px 5px;margin-left:5px;vertical-align:middle">自選</span>'
+      : d.type === 'exam'
+      ? '<span style="font-size:.6rem;font-weight:800;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:3px;padding:1px 5px;margin-left:5px;vertical-align:middle">試卷</span>'
+      : '<span style="font-size:.6rem;font-weight:800;background:var(--gray-lt);color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:1px 5px;margin-left:5px;vertical-align:middle">隨機</span>';
+
+    html += '<div class="qs-row' + (isActive ? ' qs-row-active' : '') + '" ';
+    if (_qsSelectMode) {
+      html += 'onclick="qsToggleCard(\'' + _qsEscJs(s.id) + '\')"';
+    } else {
+      html += 'onclick="_qsOpenDetail(\'' + _qsEscJs(s.id) + '\')" draggable="true" ' +
+        'ondragstart="_qsOnDragStart(event,\'' + _qsEscJs(s.id) + '\')" ondragend="_qsOnDragEnd(event)"';
+    }
+    html += '>';
+
+    /* 選取模式：checkbox */
+    if (_qsSelectMode) {
+      html += '<div style="width:18px;height:18px;border-radius:4px;flex-shrink:0;' +
+        'border:2px solid ' + (isSelected ? 'var(--blue)' : 'var(--border)') + ';' +
+        'background:' + (isSelected ? 'var(--blue)' : 'white') + ';' +
+        'display:flex;align-items:center;justify-content:center">' +
+        (isSelected ? '<span style="color:white;font-size:.68rem;font-weight:900">✓</span>' : '') +
+        '</div>';
+    }
+
+    /* 名稱 */
+    html += '<div class="qs-row-name">' + _qsEsc(d.name || '未命名') + typeBadge + '</div>';
+
+    /* 年級/課次 */
+    var meta = [];
+    if (d.grade)  meta.push(d.grade);
+    if (d.lesson) meta.push('第' + d.lesson + '課' + (d.lessonName ? '　' + d.lessonName : ''));
+    if (meta.length) html += '<div class="qs-row-meta">' + _qsEsc(meta.join('　')) + '</div>';
+
+    /* ⋯ 選單按鈕 */
+    if (!_qsSelectMode) {
+      html += '<button class="qs-row-menu" onclick="event.stopPropagation();_qsCardMenu(\'' + _qsEscJs(s.id) + '\',this)" title="更多操作">⋯</button>';
+    }
+
+    html += '</div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+/* ── 卡片 ⋯ 選單 ── */
+function _qsCardMenu(id, btn) {
+  var old = document.getElementById('qs-card-dropdown');
+  if (old) { old.remove(); return; }
+
+  var s = _qsAllSessions.find(function(x) { return x.id === id; });
+  if (!s) return;
+  var d      = s.data;
+  var active = d.active !== false;
+
+  var items = [];
+  if (d.type === 'exam') {
+    items.push({ label: '✏️ 編輯',   fn: '_ecEditSession(\'' + _qsEscJs(id) + '\')' });
+    items.push({ label: '🖨 列印',   fn: '_ecPrintSession(\'' + _qsEscJs(id) + '\')' });
+  }
+  if (active) {
+    items.push({ label: '📤 分享給班級', fn: 'showQuizShareModal(\'' + _qsEscJs(id) + '\',\'' + _qsEscJs(d.name || '') + '\')' });
+    items.push({ label: '關閉測驗',      fn: 'closeQuizSession(\'' + _qsEscJs(id) + '\')' });
+  }
+  items.push({ label: '📁 移至資料夾', fn: '_qsShowMovePicker(\'' + _qsEscJs(id) + '\')' });
+  items.push({ label: '🗑 刪除', fn: 'deleteQuizSession(\'' + _qsEscJs(id) + '\')', red: true });
+
+  var dd = document.createElement('div');
+  dd.id = 'qs-card-dropdown';
+  dd.style.cssText = 'position:fixed;z-index:600;background:white;border:1.5px solid var(--border);' +
+    'border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.18);padding:5px 0;min-width:158px;font-family:inherit';
+  dd.innerHTML = items.map(function(item) {
+    return '<button onclick="' + item.fn + ';var _d=document.getElementById(\'qs-card-dropdown\');if(_d)_d.remove()" ' +
+      'style="display:block;width:100%;padding:8px 14px;border:none;background:none;text-align:left;' +
+      'font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;' +
+      (item.red ? 'color:var(--red)' : 'color:var(--text)') + '">' + item.label + '</button>';
+  }).join('');
+  document.body.appendChild(dd);
+
+  var rect = btn.getBoundingClientRect();
+  var left = rect.right - 162;
+  if (left < 4) left = 4;
+  dd.style.top  = (rect.bottom + 4) + 'px';
+  dd.style.left = left + 'px';
+
+  setTimeout(function() {
+    document.addEventListener('click', function _close() {
+      var el = document.getElementById('qs-card-dropdown');
+      if (el) el.remove();
+      document.removeEventListener('click', _close);
+    });
+  }, 10);
+}
+
+/* ── 詳情 panel ── */
+function _qsOpenDetail(id) {
+  _qsDetailSessionId = id;
+  var panel = document.getElementById('qs-detail-panel');
+  var card  = document.querySelector('#qz-sessions-quiz .card');
+  if (panel) panel.style.display = 'block';
+  if (card)  card.classList.add('qs-panel-open');
+  _qsRenderDetail();
+  _qsRenderList();
+}
+
+function _qsCloseDetail() {
+  _qsDetailSessionId = null;
+  var panel = document.getElementById('qs-detail-panel');
+  var card  = document.querySelector('#qz-sessions-quiz .card');
+  if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+  if (card)  card.classList.remove('qs-panel-open');
+  _qsRenderList();
+}
+
+function _qsRenderDetail() {
+  var panel = document.getElementById('qs-detail-panel');
+  if (!panel || !_qsDetailSessionId) return;
+
+  var s = _qsAllSessions.find(function(x) { return x.id === _qsDetailSessionId; });
+  if (!s) { _qsCloseDetail(); return; }
+
+  var d     = s.data;
+  var stats = _qsAllScoreMap[_qsDetailSessionId];
+
+  var html = '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px">';
+  html += '<div style="font-size:.88rem;font-weight:900;color:var(--blue-dk);min-width:0">' + _qsEsc(d.name || '未命名') + '</div>';
+  html += '<button onclick="_qsCloseDetail()" style="border:none;background:none;cursor:pointer;' +
+    'font-size:1rem;color:var(--muted);padding:2px 6px;border-radius:4px;flex-shrink:0;line-height:1" title="關閉">✕</button>';
+  html += '</div>';
+
+  if (stats && stats.count > 0) {
+    var stuList = Object.keys(stats.students).map(function(uid) {
+      return stats.students[uid];
+    }).sort(function(a, b) { return b.max - a.max; });
+
+    html += '<div style="font-size:.74rem;font-weight:700;color:var(--muted);margin-bottom:8px">' +
+      stuList.length + ' 人作答 · 最高 ' + stats.max + ' 分</div>';
+    html += '<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">';
+    stuList.forEach(function(st, i) {
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;' +
+        'background:' + (i % 2 === 0 ? 'white' : 'var(--gray-lt)') + '">' +
+        '<span style="font-weight:700;font-size:.84rem">' + _qsEsc(st.name) + '</span>' +
+        '<span style="font-weight:900;color:var(--green);font-size:.84rem">' + st.max + ' 分</span>' +
+        '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div style="color:var(--muted);font-size:.84rem;font-weight:600;padding:24px 0;text-align:center">尚無作答紀錄</div>';
+  }
+
+  panel.innerHTML = html;
+}
+
+
+/* ════════════════════════════════════════
+   關閉 / 刪除測驗（單張）
    ════════════════════════════════════════ */
 function closeQuizSession(id) {
   if (!confirm('關閉後學生將無法再使用此代碼入場，確定？')) return;
@@ -394,475 +849,21 @@ function closeQuizSession(id) {
 async function deleteQuizSession(id) {
   if (!confirm('確定刪除此測驗記錄？此操作無法復原。')) return;
   try {
-    // 先找出所有已分享此測驗的班級，一併刪除子集合紀錄
-    var sharedClassIds = await _getSessionSharedClasses(id);
-    var batch = db.batch();
-    sharedClassIds.forEach(function(classId) {
-      batch.delete(db.collection('classes').doc(classId).collection('sharedQuizSessions').doc(id));
-    });
-    batch.delete(db.collection('quizSessions').doc(id));
-    await batch.commit();
+    await _qsDeleteSessionFull(id);
     showToast('已刪除');
-    loadQuizSessions();
+    _qsRenderSidebar();
+    _qsRenderList();
   } catch(e) {
     showToast('❌ ' + e.message);
   }
 }
 
-/* ════════════════════════════════════════
-   自選測驗 Modal
-   ════════════════════════════════════════ */
-function showCustomSessionModal() {
-  hideModeSelectModal();
-  if (!db || !currentTeacher) { showToast('Firebase 未就緒'); return; }
-
-  _qsCustomStep       = 1;
-  _qsCustomName       = '';
-  _qsCustomGrade      = '';
-  _qsCustomLesson     = '';
-  _qsCustomLessonName = '';
-  _qsCustomQuestions  = [];
-  _qsCustomSelected   = {};
-  _qsCustomActiveTab  = '';
-
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', currentTeacher.uid).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').get()
-  ]).then(function(results) {
-    var gradeMap = {};
-    results.forEach(function(snap) {
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        var g = d.grade || '', l = d.lesson || '';
-        if (!g || !l) return;
-        if (!gradeMap[g]) gradeMap[g] = {};
-        if (!gradeMap[g][l]) gradeMap[g][l] = d.lessonName || '';
-      });
-    });
-
-    _qsGradeOptions  = Object.keys(gradeMap).sort();
-    _qsLessonOptions = {};
-    _qsGradeOptions.forEach(function(g) {
-      _qsLessonOptions[g] = Object.keys(gradeMap[g]).map(function(l) {
-        return { lesson: l, lessonName: gradeMap[g][l] };
-      }).sort(function(a, b) {
-        var na = _qsCnToInt(a.lesson), nb = _qsCnToInt(b.lesson);
-        if (na !== null && nb !== null) return na - nb;
-        return a.lesson.localeCompare(b.lesson, 'zh-TW');
-      });
-    });
-
-    _renderCustomStep1();
-    var modal = document.getElementById('qs-custom-modal');
-    if (modal) modal.style.display = 'flex';
-  }).catch(function(e) { showToast('載入年級失敗：' + e.message); });
-}
-
-function hideCustomSessionModal() {
-  var modal = document.getElementById('qs-custom-modal');
-  if (modal) modal.style.display = 'none';
-}
-
-/* ── 步驟 1：基本資訊 ── */
-function _renderCustomStep1() {
-  var subtitle = document.getElementById('qs-custom-subtitle');
-  if (subtitle) subtitle.textContent = '步驟 1／2　設定基本資訊';
-
-  var body = document.getElementById('qs-custom-body');
-  if (!body) return;
-
-  var gradeOptions = '<option value="">── 請選擇 ──</option>';
-  _qsGradeOptions.forEach(function(g) {
-    gradeOptions += '<option value="' + _qsEsc(g) + '"' +
-      (g === _qsCustomGrade ? ' selected' : '') + '>' + _qsEsc(g) + '</option>';
-  });
-
-  var lessonOptions = '<option value="">── 請選擇 ──</option>';
-  if (_qsCustomGrade && _qsLessonOptions[_qsCustomGrade]) {
-    _qsLessonOptions[_qsCustomGrade].forEach(function(item) {
-      lessonOptions += '<option value="' + _qsEsc(item.lesson) + '" data-name="' + _qsEsc(item.lessonName) + '"' +
-        (item.lesson === _qsCustomLesson ? ' selected' : '') + '>' +
-        '第 ' + _qsEsc(item.lesson) + ' 課　' + _qsEsc(item.lessonName) + '</option>';
-    });
-  }
-
-  body.innerHTML = [
-    '<label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">測驗名稱</label>',
-    '<input id="qsc-name" type="text" placeholder="例如：第七課自選測驗" maxlength="30" value="' + _qsEsc(_qsCustomName) + '"',
-    '  style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:14px">',
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">',
-    '  <div>',
-    '    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">年級</label>',
-    '    <select id="qsc-grade" onchange="_qsCustomUpdateLesson()"',
-    '      style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">',
-    gradeOptions,
-    '    </select>',
-    '  </div>',
-    '  <div>',
-    '    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">課次</label>',
-    '    <select id="qsc-lesson"',
-    '      style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">',
-    lessonOptions,
-    '    </select>',
-    '  </div>',
-    '</div>',
-    '<div id="qsc-step1-error" style="font-size:.82rem;font-weight:700;color:var(--red);min-height:20px;margin-bottom:12px"></div>',
-    '<div style="display:flex;gap:10px">',
-    '  <button onclick="hideCustomSessionModal()"',
-    '    style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">取消</button>',
-    '  <button onclick="_qsCustomNextStep()"',
-    '    style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">選擇題目 →</button>',
-    '</div>'
-  ].join('');
-}
-
-function _qsCustomUpdateLesson() {
-  var gradeEl  = document.getElementById('qsc-grade');
-  var lessonEl = document.getElementById('qsc-lesson');
-  if (!gradeEl || !lessonEl) return;
-  var grade   = gradeEl.value;
-  var lessons = grade ? (_qsLessonOptions[grade] || []) : [];
-  var opts = '<option value="">── 請選擇 ──</option>';
-  lessons.forEach(function(item) {
-    opts += '<option value="' + _qsEsc(item.lesson) + '" data-name="' + _qsEsc(item.lessonName) + '">' +
-      '第 ' + _qsEsc(item.lesson) + ' 課　' + _qsEsc(item.lessonName) + '</option>';
-  });
-  lessonEl.innerHTML = opts;
-}
-
-function _qsCustomNextStep() {
-  var nameEl   = document.getElementById('qsc-name');
-  var gradeEl  = document.getElementById('qsc-grade');
-  var lessonEl = document.getElementById('qsc-lesson');
-  var errEl    = document.getElementById('qsc-step1-error');
-
-  var name   = (nameEl   ? nameEl.value   : '').trim();
-  var grade  =  gradeEl  ? gradeEl.value  : '';
-  var lesson =  lessonEl ? lessonEl.value : '';
-  var lessonName = lessonEl && lessonEl.selectedIndex >= 0
-    ? (lessonEl.options[lessonEl.selectedIndex].getAttribute('data-name') || '') : '';
-
-  if (!name)   { if (errEl) errEl.textContent = '請填寫測驗名稱';  return; }
-  if (!grade)  { if (errEl) errEl.textContent = '請選擇年級';      return; }
-  if (!lesson) { if (errEl) errEl.textContent = '請選擇課次';      return; }
-  if (errEl) errEl.textContent = '';
-
-  _qsCustomName       = name;
-  _qsCustomGrade      = grade;
-  _qsCustomLesson     = lesson;
-  _qsCustomLessonName = lessonName;
-  _qsCustomStep       = 2;
-
-  _loadCustomBankQuestions(grade, lesson);
-}
-
-/* ── 載入題庫（供步驟 2 使用）── */
-function _loadCustomBankQuestions(grade, lesson) {
-  var body = document.getElementById('qs-custom-body');
-  if (!body) return;
-  body.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
-
-  var subtitle = document.getElementById('qs-custom-subtitle');
-  if (subtitle) subtitle.textContent = '步驟 2／2　選擇題目';
-
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', 'shared').where('grade', '==', grade).get(),
-    db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', grade).get()
-  ]).then(function(results) {
-    var seen      = {};
-    var questions = [];
-    results.forEach(function(snap) {
-      snap.docs.forEach(function(doc) {
-        if (seen[doc.id]) return;
-        seen[doc.id] = true;
-        var d = doc.data();
-        if (d.lesson === lesson && d.type && d.question && d.answer) {
-          questions.push({ id: doc.id, type: d.type, question: d.question,
-                           answer: d.answer, options: d.options || [] });
-        }
-      });
-    });
-    _qsCustomQuestions = questions;
-    _renderCustomStep2();
-  }).catch(function(e) {
-    if (body) body.innerHTML = '<p style="color:var(--red);font-size:.88rem;padding:16px 0">載入題目失敗：' + _qsEsc(e.message) + '</p>';
-  });
-}
-
-/* ── 步驟 2：頁籤式勾選題目 ── */
-function _renderCustomStep2() {
-  var body = document.getElementById('qs-custom-body');
-  if (!body) return;
-
-  var TYPE_ORDER = ['詞語填空', '詞語解釋', '選擇題'];
-  var grouped    = {};
-  TYPE_ORDER.forEach(function(t) { grouped[t] = []; });
-  _qsCustomQuestions.forEach(function(q) {
-    if (grouped[q.type]) grouped[q.type].push(q);
-  });
-
-  /* 確定有效頁籤（有題目的題型） */
-  var activeTabs = TYPE_ORDER.filter(function(t) { return grouped[t].length > 0; });
-  var hasAny     = activeTabs.length > 0;
-
-  /* 預設選第一個有題目的頁籤 */
-  if (!_qsCustomActiveTab || !grouped[_qsCustomActiveTab] || !grouped[_qsCustomActiveTab].length) {
-    _qsCustomActiveTab = activeTabs[0] || '';
-  }
-
-  var html = '';
-
-  /* ── 課次資訊列 ── */
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:6px">';
-  html += '<div style="font-size:.82rem;font-weight:800;color:var(--muted)">📚 ' +
-    _qsEsc(_qsCustomGrade) + '　第 ' + _qsEsc(_qsCustomLesson) + ' 課　' + _qsEsc(_qsCustomLessonName) + '</div>';
-  html += '<div id="qsc-selected-count" style="font-size:.82rem;font-weight:900;color:var(--blue)">已選 0 題</div>';
-  html += '</div>';
-
-  if (!hasAny) {
-    html += '<p style="color:var(--muted);font-size:.88rem;padding:12px 0">此課次無可用題目，請返回選擇其他課次。</p>';
-  } else {
-    /* ── 頁籤列 ── */
-    html += '<div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:0;gap:0" id="qsc-tab-bar">';
-    activeTabs.forEach(function(type) {
-      var qs        = grouped[type];
-      var selCount  = qs.filter(function(q) { return _qsCustomSelected[q.id]; }).length;
-      var isActive  = type === _qsCustomActiveTab;
-      var tabStyle  = isActive
-        ? 'flex:1;padding:10px 8px;border:none;border-bottom:3px solid var(--blue);background:white;' +
-          'font-size:.85rem;font-weight:900;color:var(--blue);cursor:pointer;font-family:inherit;' +
-          'border-radius:0;margin-bottom:-2px'
-        : 'flex:1;padding:10px 8px;border:none;border-bottom:3px solid transparent;background:var(--gray-lt);' +
-          'font-size:.85rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;' +
-          'border-radius:0;margin-bottom:-2px';
-      html += '<button id="qsc-tab-' + _qsEsc(type) + '" onclick="_qsCustomSwitchTab(\'' + _qsEsc(type) + '\')" style="' + tabStyle + '">';
-      html += _qsEsc(type);
-      html += ' <span id="qsc-tab-count-' + _qsEsc(type) + '" style="font-size:.72rem;font-weight:700;' +
-        (selCount ? 'color:var(--blue)' : 'color:var(--muted)') + '">' +
-        selCount + '／' + qs.length + '</span>';
-      html += '</button>';
-    });
-    html += '</div>';
-
-    /* ── 頁籤內容面板 ── */
-    html += '<div id="qsc-tab-panel" style="border:2px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:16px;min-height:200px">';
-    html += _buildTabPanel(_qsCustomActiveTab, grouped[_qsCustomActiveTab] || []);
-    html += '</div>';
-  }
-
-  html += '<div id="qsc-step2-error" style="font-size:.82rem;font-weight:700;color:var(--red);min-height:20px;margin-top:12px;margin-bottom:4px"></div>';
-  html += '<div style="display:flex;gap:10px;margin-top:4px">';
-  html += '<button onclick="_qsCustomBackStep()" style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt);font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--gray)">← 返回</button>';
-  if (hasAny) {
-    html += '<button id="btn-create-custom" onclick="createCustomSession()" ' +
-      'style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">建立自選測驗</button>';
-  }
-  html += '</div>';
-
-  body.innerHTML = html;
-  _qsCustomUpdateSelectedCount();
-}
-
-/* 產生單一頁籤的題目清單 HTML */
-function _buildTabPanel(type, qs) {
-  if (!qs.length) return '<p style="color:var(--muted);font-size:.88rem;padding:8px 0">此題型無題目。</p>';
-  var allChecked = qs.every(function(q) { return _qsCustomSelected[q.id]; });
-  var html = '';
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
-  html += '<span style="font-size:.78rem;font-weight:800;color:var(--muted)">共 ' + qs.length + ' 題</span>';
-  html += '<button onclick="_qsCustomToggleAll(\'' + _qsEsc(type) + '\')" ' +
-    'style="font-size:.75rem;padding:4px 12px;border:1.5px solid var(--border);border-radius:6px;' +
-    'background:white;cursor:pointer;font-family:inherit;color:var(--muted);font-weight:800">' +
-    (allChecked ? '取消全選' : '全部勾選') + '</button>';
-  html += '</div>';
-  html += '<div style="display:flex;flex-direction:column;gap:7px">';
-  qs.forEach(function(q) {
-    var checked  = _qsCustomSelected[q.id] ? ' checked' : '';
-    var borderCol = _qsCustomSelected[q.id] ? 'var(--blue)' : 'var(--border)';
-    var bgCol     = _qsCustomSelected[q.id] ? 'var(--blue-lt,#eef5fc)' : 'white';
-    html += '<label id="qsc-label-' + _qsEsc(q.id) + '" style="display:flex;align-items:flex-start;gap:12px;padding:11px 14px;' +
-      'border:2px solid ' + borderCol + ';border-radius:10px;cursor:pointer;background:' + bgCol + ';transition:border-color .12s,background .12s">';
-    html += '<input type="checkbox" value="' + _qsEsc(q.id) + '"' + checked +
-      ' onchange="_qsCustomToggleQ(\'' + _qsEsc(q.id) + '\',this.checked)"' +
-      ' style="margin-top:3px;flex-shrink:0;width:17px;height:17px;accent-color:var(--blue)">';
-    html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-size:.92rem;font-weight:700;line-height:1.6;color:var(--text,#1a1a1a)">' + _qsEsc(q.question) + '</div>';
-    html += '<div style="font-size:.76rem;color:var(--muted);font-weight:600;margin-top:3px">答：' + _qsEsc(q.answer) + '</div>';
-    html += '</div></label>';
-  });
-  html += '</div>';
-  return html;
-}
-
-/* 切換頁籤 */
-function _qsCustomSwitchTab(type) {
-  _qsCustomActiveTab = type;
-  var TYPE_ORDER = ['詞語填空', '詞語解釋', '選擇題'];
-  var grouped    = {};
-  TYPE_ORDER.forEach(function(t) { grouped[t] = []; });
-  _qsCustomQuestions.forEach(function(q) {
-    if (grouped[q.type]) grouped[q.type].push(q);
-  });
-  var activeTabs = TYPE_ORDER.filter(function(t) { return grouped[t].length > 0; });
-
-  /* 更新頁籤按鈕樣式 */
-  activeTabs.forEach(function(t) {
-    var btn = document.getElementById('qsc-tab-' + t);
-    if (!btn) return;
-    var isActive = t === type;
-    btn.style.borderBottom  = isActive ? '3px solid var(--blue)' : '3px solid transparent';
-    btn.style.background    = isActive ? 'white' : 'var(--gray-lt)';
-    btn.style.color         = isActive ? 'var(--blue)' : 'var(--muted)';
-    btn.style.fontWeight    = isActive ? '900' : '700';
-  });
-
-  /* 更新面板內容 */
-  var panel = document.getElementById('qsc-tab-panel');
-  if (panel) panel.innerHTML = _buildTabPanel(type, grouped[type] || []);
-}
-
-function _qsCustomToggleQ(id, checked) {
-  if (checked) _qsCustomSelected[id] = true;
-  else         delete _qsCustomSelected[id];
-  /* 更新 label 外框顏色 */
-  var label = document.getElementById('qsc-label-' + id);
-  if (label) {
-    label.style.borderColor = checked ? 'var(--blue)' : 'var(--border)';
-    label.style.background  = checked ? 'var(--blue-lt,#eef5fc)' : 'white';
-  }
-  _qsCustomUpdateSelectedCount();
-}
-
-function _qsCustomToggleAll(type) {
-  var ofType     = _qsCustomQuestions.filter(function(q) { return q.type === type; });
-  var allChecked = ofType.every(function(q) { return _qsCustomSelected[q.id]; });
-  ofType.forEach(function(q) {
-    if (allChecked) delete _qsCustomSelected[q.id];
-    else            _qsCustomSelected[q.id] = true;
-  });
-  ofType.forEach(function(q) {
-    var cb    = document.querySelector('input[value="' + q.id + '"]');
-    var label = document.getElementById('qsc-label-' + q.id);
-    if (cb) cb.checked = !allChecked;
-    if (label) {
-      label.style.borderColor = !allChecked ? 'var(--blue)' : 'var(--border)';
-      label.style.background  = !allChecked ? 'var(--blue-lt,#eef5fc)' : 'white';
-    }
-  });
-  /* 更新「全部勾選/取消全選」按鈕文字 */
-  var panel = document.getElementById('qsc-tab-panel');
-  if (panel) {
-    var toggleBtn = panel.querySelector('button');
-    if (toggleBtn) toggleBtn.textContent = allChecked ? '全部勾選' : '取消全選';
-  }
-  _qsCustomUpdateSelectedCount();
-}
-
-function _qsCustomUpdateSelectedCount() {
-  var n     = Object.keys(_qsCustomSelected).length;
-  var total = document.getElementById('qsc-selected-count');
-  if (total) total.textContent = '已選 ' + n + ' 題';
-
-  /* 同步各頁籤的 N／M 小字 */
-  var TYPE_ORDER = ['詞語填空', '詞語解釋', '選擇題'];
-  TYPE_ORDER.forEach(function(type) {
-    var countEl = document.getElementById('qsc-tab-count-' + type);
-    if (!countEl) return;
-    var qs       = _qsCustomQuestions.filter(function(q) { return q.type === type; });
-    var selCount = qs.filter(function(q) { return _qsCustomSelected[q.id]; }).length;
-    countEl.textContent = selCount + '／' + qs.length;
-    countEl.style.color = selCount ? 'var(--blue)' : 'var(--muted)';
-  });
-}
-
-function _qsCustomBackStep() {
-  _qsCustomStep = 1;
-  var subtitle = document.getElementById('qs-custom-subtitle');
-  if (subtitle) subtitle.textContent = '步驟 1／2　設定基本資訊';
-  _renderCustomStep1();
-}
-
-/* ════════════════════════════════════════
-   建立自選測驗（寫入 quizSessions）
-   ════════════════════════════════════════ */
-function createCustomSession() {
-  var selectedIds = Object.keys(_qsCustomSelected);
-  var errEl       = document.getElementById('qsc-step2-error');
-
-  if (!selectedIds.length) {
-    if (errEl) errEl.textContent = '請至少勾選一道題目';
-    return;
-  }
-  if (errEl) errEl.textContent = '';
-  if (!db || !currentTeacher) { showToast('Firebase 未就緒'); return; }
-
-  var btn = document.getElementById('btn-create-custom');
-  if (btn) { btn.disabled = true; btn.textContent = '建立中…'; }
-
-  /* 依題型順序排列 questionIds */
-  var TYPE_ORDER  = ['詞語填空', '詞語解釋', '選擇題'];
-  var questionIds = [];
-  TYPE_ORDER.forEach(function(type) {
-    _qsCustomQuestions.forEach(function(q) {
-      if (q.type === type && _qsCustomSelected[q.id]) questionIds.push(q.id);
-    });
-  });
-
-  /* 計算各題型數量 */
-  var counts = { explain: 0, fillIn: 0, mc: 0 };
-  _qsCustomQuestions.forEach(function(q) {
-    if (!_qsCustomSelected[q.id]) return;
-    if (q.type === '詞語解釋')      counts.explain++;
-    else if (q.type === '詞語填空') counts.fillIn++;
-    else if (q.type === '選擇題')   counts.mc++;
-  });
-
-  function tryCreate() {
-    var code = _genCode();
-    db.collection('quizSessions')
-      .where('code', '==', code)
-      .where('active', '==', true)
-      .get()
-      .then(function(snap) {
-        if (!snap.empty) return tryCreate();
-        return db.collection('quizSessions').add({
-          type:        'custom',
-          name:        _qsCustomName,
-          code:        code,
-          teacherUid:  currentTeacher.uid,
-          grade:       _qsCustomGrade,
-          lesson:      _qsCustomLesson,
-          lessonName:  _qsCustomLessonName,
-          questionIds: questionIds,
-          counts:      counts,
-          createdAt:   new Date().toISOString(),
-          active:      true
-        });
-      })
-      .then(function() {
-        hideCustomSessionModal();
-        showToast('✅ 自選測驗代碼「' + code + '」已建立！');
-        loadQuizSessions();
-        if (btn) { btn.disabled = false; btn.textContent = '建立自選測驗'; }
-      })
-      .catch(function(e) {
-        showToast('❌ 建立失敗：' + e.message);
-        if (btn) { btn.disabled = false; btn.textContent = '建立自選測驗'; }
-      });
-  }
-  tryCreate();
-}
 
 /* ════════════════════════════════════════
    試卷分享給班級
    ════════════════════════════════════════ */
-
-var _qsClassCache    = null;  /* 教師班級快取 */
-var _qsShareSessionId   = null;  /* 目前正在分享的 sessionId */
-
-function _qsEscJs(s) {
-  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-}
+var _qsClassCache     = null;
+var _qsShareSessionId = null;
 
 async function _loadClassesForShare() {
   if (_qsClassCache) return _qsClassCache;
@@ -898,8 +899,7 @@ async function _refreshAllShareStatus() {
       el.innerHTML = sharedIds.map(function(cid) {
         var cls = classes.find(function(c) { return c.id === cid; });
         if (!cls) return '';
-        return '<span style="font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:20px;' +
-          'background:#e0f2fe;color:#0369a1;white-space:nowrap">' + _qsEsc(cls.name) + '</span>';
+        return '<span style="font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:20px;background:#e0f2fe;color:#0369a1;white-space:nowrap">' + _qsEsc(cls.name) + '</span>';
       }).join(' ');
     }).catch(function() {});
   });
@@ -909,10 +909,10 @@ async function showQuizShareModal(sessionId, sessionName) {
   if (!db || !currentTeacher) { showToast('Firebase 未就緒'); return; }
   _qsShareSessionId = sessionId;
 
-  var modal    = document.getElementById('qs-share-modal');
-  var nameEl   = document.getElementById('qs-share-doc-name');
-  var listEl   = document.getElementById('qs-share-class-list');
-  var loadEl   = document.getElementById('qs-share-loading');
+  var modal      = document.getElementById('qs-share-modal');
+  var nameEl     = document.getElementById('qs-share-doc-name');
+  var listEl     = document.getElementById('qs-share-class-list');
+  var loadEl     = document.getElementById('qs-share-loading');
   var confirmBtn = document.getElementById('qs-share-confirm-btn');
   if (!modal) return;
 
@@ -920,6 +920,7 @@ async function showQuizShareModal(sessionId, sessionName) {
   listEl.innerHTML     = '';
   loadEl.style.display = 'block';
   confirmBtn.disabled  = true;
+  confirmBtn.onclick   = saveQuizShareSettings;
   modal.style.display  = 'flex';
 
   try {
@@ -934,14 +935,13 @@ async function showQuizShareModal(sessionId, sessionName) {
     }
     listEl.innerHTML = classes.map(function(cls) {
       var checked = sharedIds.indexOf(cls.id) !== -1 ? 'checked' : '';
-      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 6px;' +
-        'border-bottom:1px solid var(--border);cursor:pointer;font-weight:700;font-size:.9rem">' +
-        '<input type="checkbox" value="' + cls.id + '" ' + checked +
-        ' style="width:18px;height:18px;cursor:pointer">' +
+      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--border);cursor:pointer;font-weight:700;font-size:.9rem">' +
+        '<input type="checkbox" value="' + cls.id + '" ' + checked + ' style="width:18px;height:18px;cursor:pointer">' +
         _qsEsc(cls.name) + '</label>';
     }).join('');
   } catch(e) {
     loadEl.style.display = 'none';
+    confirmBtn.disabled  = false;
     listEl.innerHTML = '<div style="color:var(--red);font-size:.85rem;padding:8px">載入失敗：' + _qsEsc(e.message) + '</div>';
   }
 }
@@ -958,9 +958,7 @@ async function saveQuizShareSettings() {
   if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '儲存中…'; }
 
   var checks = document.querySelectorAll('#qs-share-class-list input[type=checkbox]');
-
   try {
-    /* 取得 session 基本資料供分享文件儲存 */
     var sessionDoc = await db.collection('quizSessions').doc(_qsShareSessionId).get();
     var sd = sessionDoc.exists ? sessionDoc.data() : {};
 
@@ -981,7 +979,6 @@ async function saveQuizShareSettings() {
       }
     });
     await batch.commit();
-
     showToast('✅ 分享設定已儲存');
     closeQuizShareModal();
     _refreshAllShareStatus();

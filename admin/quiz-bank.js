@@ -9,41 +9,6 @@ var qbParsedData = null;
 var _qbDelKeys  = {};
 var _qbDelCount = 0;
 
-/* ── Helpers ── */
-function _qbEsc(s) {
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function _cnNumToInt(s) {
-  var map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,
-              '十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15,
-              '十六':16,'十七':17,'十八':18 };
-  if (map[s] !== undefined) return map[s];
-  var n = parseInt(s, 10);
-  return isNaN(n) ? null : n;
-}
-
-function _showQbErrors(errors) {
-  var el = document.getElementById('qb-errors');
-  if (!el) return;
-  var visible = errors.slice(0, 5);
-  var html = '<div style="background:var(--red-lt);border:1.5px solid var(--red);border-radius:8px;padding:10px 14px">' +
-    '<div style="font-size:.78rem;font-weight:800;color:var(--red);margin-bottom:6px">⚠️ ' + errors.length + ' 列格式有誤，已略過：</div>' +
-    '<ul style="padding-left:16px;font-size:.78rem;color:var(--red);line-height:1.7">';
-  visible.forEach(function(e) { html += '<li>' + _qbEsc(e) + '</li>'; });
-  if (errors.length > 5) html += '<li style="color:var(--muted)">…還有 ' + (errors.length - 5) + ' 筆</li>';
-  html += '</ul></div>';
-  el.innerHTML = html;
-  el.style.display = '';
-}
-
-function _clearQbErrors() {
-  var el = document.getElementById('qb-errors');
-  if (el) { el.innerHTML = ''; el.style.display = 'none'; }
-}
-
 /* ════════════════════════════════════════
    下載 Excel 範例檔（由 SheetJS 前端生成，免靜態托管）
    ════════════════════════════════════════ */
@@ -107,7 +72,7 @@ function previewQuizBank() {
 
   var file = fileEl.files[0];
   if (!file) return;
-  _clearQbErrors();
+  clearQbErrors();
 
   var reader = new FileReader();
   reader.onload = function(e) {
@@ -205,7 +170,7 @@ function previewQuizBank() {
         });
       });
 
-      if (errors.length > 0) _showQbErrors(errors);
+      if (errors.length > 0) showQbErrors(errors);
 
       if (qbParsedData.length === 0) {
         showToast('❌ 無法解析任何有效題目，請確認格式。');
@@ -231,11 +196,11 @@ function renderQuizBankPreview() {
   qbParsedData.slice(0, 10).forEach(function(row, i) {
     var bg = i % 2 === 0 ? 'var(--gray-lt)' : '#fff';
     html += '<tr style="background:' + bg + '">';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.lesson) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.lessonName) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.type) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _qbEsc(row.question) + '</td>';
-    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + _qbEsc(row.answer) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.lesson) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.lessonName) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.type) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(row.question) + '</td>';
+    html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border)">' + escHtml(row.answer) + '</td>';
     html += '</tr>';
   });
 
@@ -248,7 +213,7 @@ function clearQuizBankPreview() {
   document.getElementById('qb-file').value = '';
   document.getElementById('qb-preview-wrap').style.display = 'none';
   document.getElementById('qb-preview-table').innerHTML = '';
-  _clearQbErrors();
+  clearQbErrors();
   /* Reset button so teacher can upload a second file without refreshing */
   var btn = document.querySelector('#qb-preview-wrap .btn-primary');
   if (btn) { btn.disabled = false; btn.textContent = '⬆️ 上傳至 Firebase'; }
@@ -342,7 +307,7 @@ function loadQuizBankStats() {
     Object.keys(gradeMap).sort().forEach(function(grade) {
       var lessonMap = gradeMap[grade];
       var lessons = Object.keys(lessonMap).sort(function(a, b) {
-        var na = _cnNumToInt(a), nb = _cnNumToInt(b);
+        var na = cnNumToInt(a), nb = cnNumToInt(b);
         if (na !== null && nb !== null) return na - nb;
         return a.localeCompare(b, 'zh-TW');
       });
@@ -352,13 +317,13 @@ function loadQuizBankStats() {
       html += '<div style="margin-bottom:12px">';
       /* Collapsible grade header */
       html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-lt);border-radius:8px;border:1px solid var(--border);cursor:pointer" ' +
-        'onclick="_qbToggleGrade(\'' + _qbEsc(gk) + '\',this)">';
-      html += '<span id="qb-grade-arrow-' + _qbEsc(gk) + '" style="font-size:.78rem;color:var(--muted);transition:transform .15s;display:inline-block">▶</span>';
-      html += '<span style="font-weight:900;font-size:.95rem">' + _qbEsc(grade) + '</span>';
+        'onclick="_qbToggleGrade(\'' + escHtml(gk) + '\',this)">';
+      html += '<span id="qb-grade-arrow-' + escHtml(gk) + '" style="font-size:.78rem;color:var(--muted);transition:transform .15s;display:inline-block">▶</span>';
+      html += '<span style="font-weight:900;font-size:.95rem">' + escHtml(grade) + '</span>';
       html += '<span style="font-size:.78rem;color:var(--muted);font-weight:700">共 ' + lessons.length + ' 課・' + gradeQCount + ' 題</span>';
       html += '</div>';
       /* Grade content (collapsed by default) */
-      html += '<div id="qb-grade-body-' + _qbEsc(gk) + '" style="display:none">';
+      html += '<div id="qb-grade-body-' + escHtml(gk) + '" style="display:none">';
 
       html += '<table style="width:100%;border-collapse:collapse;font-size:.82rem">';
       html += '<tr>' +
@@ -393,11 +358,11 @@ function loadQuizBankStats() {
         /* Summary row */
         html += '<tr style="background:' + bg + '">';
         html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);font-weight:700">' +
-          '<button onclick="_qbToggleDetail(\'' + _qbEsc(dk) + '\',this)" ' +
+          '<button onclick="_qbToggleDetail(\'' + escHtml(dk) + '\',this)" ' +
           'style="background:none;border:none;cursor:pointer;font-size:.75rem;margin-right:4px;color:var(--muted);font-family:inherit;padding:0" ' +
           'title="查看題目">▶</button>' +
-          '第 ' + _qbEsc(lesson) + ' 課 ' + srcBadges + '</td>';
-        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">' + _qbEsc(ld.lessonName) + '</td>';
+          '第 ' + escHtml(lesson) + ' 課 ' + srcBadges + '</td>';
+        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">' + escHtml(ld.lessonName) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語填空'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語解釋'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['選擇題']   || 0) + '</td>';
@@ -406,7 +371,7 @@ function loadQuizBankStats() {
         html += '</tr>';
 
         /* Detail row (collapsed by default) */
-        html += '<tr id="qb-detail-' + _qbEsc(dk) + '" style="display:none">';
+        html += '<tr id="qb-detail-' + escHtml(dk) + '" style="display:none">';
         html += '<td colspan="7" style="padding:0 10px 12px 28px;border-bottom:1px solid var(--border);background:#fafcff">';
         html += _qbRenderDetailTable(_qbDetailMap[dk] || []);
         html += '</td></tr>';
@@ -470,9 +435,9 @@ function _qbRenderDetailTable(questions) {
       : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue);margin-right:4px;vertical-align:middle"></span>';
     html += '<tr style="background:' + (i % 2 === 0 ? '#fff' : '#f8faff') + '">';
     html += '<td style="padding:4px 8px;color:var(--muted);white-space:nowrap">' + (i + 1) + '</td>';
-    html += '<td style="padding:4px 8px;white-space:nowrap">' + srcDot + _qbEsc(q.type) + '</td>';
-    html += '<td style="padding:4px 8px;line-height:1.5;max-width:280px">' + _qbEsc(q.question) + '</td>';
-    html += '<td style="padding:4px 8px;font-weight:700;color:var(--blue);white-space:nowrap">' + _qbEsc(q.answer) + '</td>';
+    html += '<td style="padding:4px 8px;white-space:nowrap">' + srcDot + escHtml(q.type) + '</td>';
+    html += '<td style="padding:4px 8px;line-height:1.5;max-width:280px">' + escHtml(q.question) + '</td>';
+    html += '<td style="padding:4px 8px;font-weight:700;color:var(--blue);white-space:nowrap">' + escHtml(q.answer) + '</td>';
     html += '</tr>';
   });
   html += '</table>';

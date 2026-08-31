@@ -10,7 +10,16 @@
       "Bash(awk '{print $1}')",
       "Bash(ls -la /d/github/QuEDU/chinese-quiz/*.html)",
       "Bash(xargs grep *)",
-      "Bash(find /d/github/QuEDU -type f \\\\\\( -name \"*.js\" -o -name \"*.html\" \\\\\\) -exec grep -l \"deleteQuizSession\\\\|sharedQuizSessions.*delete\\\\|cascade\" {} \\\\;)"
+      "Bash(find /d/github/QuEDU -type f \\\\\\( -name \"*.js\" -o -name \"*.html\" \\\\\\) -exec grep -l \"deleteQuizSession\\\\|sharedQuizSessions.*delete\\\\|cascade\" {} \\\\;)",
+      "Bash(python3 -c ' *)",
+      "Bash(node --check d:/github/QuEDU/src/hub.js)",
+      "Bash(git checkout *)",
+      "Bash(node --check src/hub.js)",
+      "Bash(python3 -c \"print\\('hello'\\)\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node --check d:/github/QuEDU/apps/learn/lang/recognize/js/state.js)",
+      "Bash(node --check d:/github/QuEDU/apps/learn/lang/chinese/js/state.js)",
+      "Bash(node --check d:/github/QuEDU/apps/learn/math/multiply/js/state.js)"
     ]
   }
 }

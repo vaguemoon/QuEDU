@@ -185,6 +185,24 @@ function importCSV() {
 }
 
 // ════════════════════════════════════════
+//  儲存課次生字 TTS 覆寫
+// ════════════════════════════════════════
+
+function saveCharOverrides(vId, lessonId, overrides, statusEl) {
+  if (!db) return;
+  db.collection('curriculum').doc(vId).collection('lessons').doc(lessonId)
+    .update({ charOverrides: overrides })
+    .then(function() {
+      if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已儲存'; }
+      showToast('✅ TTS 覆寫已儲存');
+    })
+    .catch(function(e) {
+      if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
+      showToast('❌ 儲存失敗：' + e.message);
+    });
+}
+
+// ════════════════════════════════════════
 //  手動新增課程
 // ════════════════════════════════════════
 
@@ -196,6 +214,8 @@ function saveManualLesson() {
   var chars       = Array.from(new Set(
     document.getElementById('manual-chars').value.replace(/ /g, '').split('').filter(Boolean)
   ));
+  var wordsRaw    = (document.getElementById('manual-words') ? document.getElementById('manual-words').value.trim() : '');
+  var words       = wordsRaw ? wordsRaw.split(/[\s,，]+/).map(function(w){ return w.trim(); }).filter(Boolean) : [];
   var status = document.getElementById('manual-status');
 
   if (!versionName)     { status.style.color = 'var(--red)'; status.textContent = '請輸入版本名稱！'; return; }
@@ -214,7 +234,9 @@ function saveManualLesson() {
     .then(function() {
       var docId  = grade + '_l' + lessonNum;
       var colRef = db.collection('curriculum').doc(versionId).collection('lessons');
-      return colRef.doc(docId).set({ grade: grade, lessonNum: lessonNum, name: name, chars: chars })
+      var lessonDoc = { grade: grade, lessonNum: lessonNum, name: name, chars: chars };
+      if (words.length) lessonDoc.words = words;
+      return colRef.doc(docId).set(lessonDoc)
         .then(function() {
           return colRef.get().then(function(snap) {
             return db.collection('curriculum').doc(versionId).update({ lessonCount: snap.size });
@@ -229,6 +251,8 @@ function saveManualLesson() {
       document.getElementById('manual-lesson-name').value = '';
       document.getElementById('manual-chars').value       = '';
       document.getElementById('manual-chars-preview').innerHTML = '';
+      var mw = document.getElementById('manual-words');
+      if (mw) mw.value = '';
       var content = document.getElementById('vc-' + versionId);
       if (content && content.style.display !== 'none') {
         delete content.dataset.loaded;

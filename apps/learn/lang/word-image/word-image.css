@@ -1,0 +1,507 @@
+/* word-image.css — 詞語趣 app */
+
+:root {
+  --correct:    #27ae60;
+  --correct-lt: #d5f5e3;
+  --wrong:      #e74c3c;
+  --wrong-lt:   #fde8e6;
+}
+
+/* ════════════════════════════
+   頂端列（依子app設計準則）
+   ════════════════════════════ */
+#page-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 52px; display: flex; align-items: center; gap: 6px;
+  background: var(--white); border-bottom: 1.5px solid var(--border);
+  padding: 0 10px; box-shadow: 0 2px 8px rgba(44,100,160,.08);
+}
+.btn-back-hub {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back-hub:active { background: var(--blue); color: white; }
+.btn-back {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: transparent; color: var(--muted);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back:active { background: var(--blue-lt); color: var(--blue-dk); }
+.btn-back.hidden { display: none; }
+#topbar-title {
+  flex: 1; text-align: center; font-size: .95rem; font-weight: 900;
+  color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#topbar-title span { color: var(--text); }
+#topbar-student {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 20px; cursor: pointer;
+  background: var(--blue-lt); border: 1.5px solid var(--border);
+  font-size: .82rem; font-weight: 700; color: var(--blue-dk);
+  position: relative; user-select: none; transition: background .15s;
+}
+#topbar-student:active { background: var(--border); }
+#topbar-avatar { font-size: 1.1rem; line-height: 1; }
+#topbar-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 200;
+  background: white; border: 1.5px solid var(--border); border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(44,100,160,.22); min-width: 130px; overflow: hidden;
+}
+.logout-menu.hidden { display: none; }
+.lm-btn {
+  display: block; width: 100%; padding: 13px 18px; border: none; background: none;
+  font-size: .9rem; font-weight: 800; cursor: pointer;
+  font-family: inherit; text-align: left; transition: background .15s;
+}
+.lm-logout { color: var(--red); }
+.lm-logout:active { background: #fff0f0; }
+
+/* ════════════════════════════
+   頁面骨架
+   ════════════════════════════ */
+.wi-page {
+  position: fixed; inset: 52px 0 0 0;
+  display: none; overflow-y: auto;
+  background: var(--bg);
+}
+.wi-page.active { display: block; }
+/* 內部容器：限制最大寬度並置中，提供適當內距 */
+.wi-page-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+}
+
+.wi-page-title {
+  font-size: 1.05rem; font-weight: 900;
+  color: var(--blue-dk); margin-bottom: 16px;
+}
+
+/* ════════════════════════════
+   年級 / 課次選擇按鈕格
+   ════════════════════════════ */
+.wi-btn-grid {
+  display: flex; flex-wrap: wrap; gap: 12px;
+}
+
+.wi-select-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 14px 22px; min-width: 110px;
+  background: white; border: 2px solid var(--border);
+  border-radius: 16px;
+  font-family: inherit; font-size: 1rem; font-weight: 800; color: var(--text);
+  cursor: pointer; transition: all .15s;
+  box-shadow: 0 2px 6px rgba(0,0,0,.05);
+}
+.wi-select-btn:hover {
+  border-color: var(--blue); background: var(--blue-lt);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(37,99,235,.12);
+}
+.wi-btn-count {
+  font-size: .72rem; font-weight: 700; color: var(--muted);
+}
+
+/* ════════════════════════════
+   模式選擇卡片
+   ════════════════════════════ */
+#mode-lesson-label {
+  font-size: .88rem; font-weight: 700; color: var(--muted); margin-bottom: 18px;
+}
+
+.wi-mode-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px; margin-bottom: 14px;
+}
+@media (max-width: 600px) {
+  .wi-mode-cards { grid-template-columns: 1fr; }
+}
+
+.wi-mode-card {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 30px 16px;
+  background: white; border: 2px solid var(--border);
+  border-radius: 20px;
+  font-family: inherit; cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 3px 10px rgba(0,0,0,.06);
+}
+.wi-mode-card:hover {
+  border-color: var(--blue); background: var(--blue-lt);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 22px rgba(37,99,235,.15);
+}
+.wi-mode-icon { font-size: 2.4rem; line-height: 1; }
+.wi-mode-name { font-size: 1.05rem; font-weight: 900; color: var(--blue-dk); }
+.wi-mode-desc { font-size: .78rem; font-weight: 600; color: var(--muted); text-align: center; line-height: 1.5; }
+.wi-mode-card.disabled {
+  opacity: .4; cursor: not-allowed; pointer-events: none;
+}
+
+/* ════════════════════════════
+   圖卡瀏覽（Browse）
+   ════════════════════════════ */
+/* 卡片瀏覽區 */
+.wi-browse-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  padding-top: 8px;
+}
+/* 計數器 */
+.wi-browse-counter {
+  font-size: .85rem; font-weight: 700; color: var(--muted);
+}
+
+/* 翻轉卡片 */
+.wi-flip-card {
+  width: 100%; max-width: 60%; aspect-ratio: 4/3;
+  perspective: 1000px; cursor: pointer;
+}
+/* 翻轉內部結構：前後兩面重疊，翻轉時旋轉Y軸180度 */
+.wi-flip-inner {
+  width: 100%; height: 100%;
+  position: relative; transform-style: preserve-3d;
+  transition: transform .45s ease;
+}
+.wi-flip-card.flipped .wi-flip-inner { transform: rotateY(180deg); }
+/* 卡片前後兩面樣式 */
+.wi-flip-front, .wi-flip-back {
+  position: absolute; inset: 0;
+  backface-visibility: hidden;
+  border-radius: 22px; overflow: hidden;
+  box-shadow: 0 8px 28px rgba(0,0,0,.13);
+}
+
+.wi-flip-front {
+  display: flex; flex-direction: column; background: white;
+}
+.wi-flip-front img {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+}
+
+.wi-flip-back {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk));
+  transform: rotateY(180deg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; padding: 28px 24px;
+}
+.wi-flip-back-word {
+  font-size: 5rem; font-weight: 900; color: white;
+  cursor: pointer; padding: 8px 16px; border-radius: 10px; transition: background .15s;
+}
+.wi-flip-back-word:active { background: rgba(255,255,255,.15); }
+.wi-flip-back-def {
+  font-size: 2rem; font-weight: 700; color: rgba(255,255,255,.92);
+  text-align: center; line-height: 1.7;
+  cursor: pointer; padding: 8px 16px; border-radius: 10px; transition: background .15s;
+}
+.wi-flip-back-def:active { background: rgba(255,255,255,.15); }
+
+/* 翻頁導航 */
+.wi-browse-nav {
+  display: flex; align-items: center; gap: 16px;
+}
+.wi-nav-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 2px solid var(--border); background: white;
+  font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; flex-shrink: 0;
+}
+.wi-nav-btn:hover:not(:disabled) {
+  border-color: var(--blue); background: var(--blue-lt);
+}
+.wi-nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* 進度圓點 */
+.wi-prog-dots {
+  display: flex; gap: 7px; flex-wrap: wrap;
+  justify-content: center; max-width: 240px;
+}
+.wi-prog-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  cursor: pointer; transition: transform .15s;
+}
+.wi-prog-dot:hover    { transform: scale(1.35); }
+.wi-prog-dot.current  { transform: scale(1.5); outline: 2.5px solid var(--blue); outline-offset: 2px; }
+.wi-prog-dot.gray     { background: #d0d7e2; }
+.wi-prog-dot.green    { background: var(--correct); }
+.wi-prog-dot.red      { background: var(--wrong); }
+
+.wi-browse-actions {
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+}
+
+/* ════════════════════════════
+   看圖猜詞（Quiz）
+   ════════════════════════════ */
+.wi-quiz-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+}
+.wi-quiz-progress-bar {
+  width: 100%; max-width: 440px;
+  background: var(--border); border-radius: 4px; height: 6px;
+}
+.wi-quiz-progress-fill {
+  height: 100%; background: var(--blue); border-radius: 4px; transition: width .3s;
+}
+/* 圖片區：圓角、陰影、背景色 */
+.wi-quiz-img-wrap {
+  width: 100%; max-width: 60%; aspect-ratio: 4/3;
+  border-radius: 20px; overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0,0,0,.13);
+  background: var(--gray-lt);
+}
+.wi-quiz-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wi-quiz-question {
+  font-size: .95rem; font-weight: 800; color: var(--muted);
+}
+/* 選項區 */
+.wi-quiz-opts {
+  width: 100%; max-width: 100%;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+/* 選項按鈕：圓角、陰影、字體 */
+.wi-quiz-opt {
+  padding: 16px 12px; min-height: 56px;
+  background: white; border: 2.5px solid var(--border);
+  border-radius: 14px;
+  font-family: inherit; font-size: 4rem; font-weight: 800; color: var(--text);
+  cursor: pointer; transition: all .15s;
+}
+.wi-quiz-opt:hover:not(:disabled) {
+  border-color: var(--blue); background: var(--blue-lt);
+}
+.wi-quiz-opt.correct {
+  background: var(--correct-lt); border-color: var(--correct); color: var(--correct);
+}
+.wi-quiz-opt.wrong {
+  background: var(--wrong-lt); border-color: var(--wrong); color: var(--wrong);
+}
+.wi-quiz-opt:disabled { cursor: default; }
+
+.wi-quiz-round-badge {
+  text-align: center; font-size: .8rem; font-weight: 700;
+  color: var(--wrong); background: var(--wrong-lt);
+  border-radius: 20px; padding: 5px 16px;
+  margin-bottom: 6px; align-self: center;
+}
+
+/* ════════════════════════════
+   每輪結算畫面（Settlement）
+   ════════════════════════════ */
+.wi-settle-wrap {
+  display: flex; flex-direction: column;
+  gap: 20px; padding: 32px 0 32px;
+}
+.wi-settle-round {
+  font-size: .88rem; font-weight: 800; color: var(--muted);
+  background: var(--blue-lt); border-radius: 20px; padding: 5px 18px;
+  align-self: center;
+}
+.wi-settle-score {
+  font-size: 2rem; font-weight: 900; color: var(--blue-dk);
+  text-align: center;
+}
+.wi-settle-section {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.wi-settle-section-title {
+  font-size: .82rem; font-weight: 800; border-radius: 20px; padding: 4px 16px;
+  align-self: flex-start;
+}
+.wi-settle-correct-title {
+  color: var(--correct); background: var(--correct-lt);
+}
+.wi-settle-wrong-title {
+  color: var(--wrong); background: var(--wrong-lt);
+}
+.wi-settle-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+.wi-settle-thumb {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  cursor: pointer; transition: transform .15s;
+}
+.wi-settle-thumb:active { transform: scale(.93); }
+.wi-settle-thumb img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  border-radius: 10px; border: 2.5px solid transparent;
+}
+.wi-settle-thumb-correct img { border-color: var(--correct); }
+.wi-settle-thumb-wrong   img { border-color: var(--wrong); }
+.wi-settle-thumb-noimg {
+  width: 100%; aspect-ratio: 4/3; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; background: var(--border);
+}
+.wi-settle-thumb-label {
+  font-size: .8rem; font-weight: 800; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 100%; text-align: center;
+}
+.wi-settle-thumb-wrong .wi-settle-thumb-label { color: var(--wrong); }
+.wi-settle-continue { align-self: center; margin-top: 6px; }
+
+/* ════════════════════════════
+   最終慶祝畫面（Celebration）
+   ════════════════════════════ */
+/* ════════════════════════════
+   煙花
+   ════════════════════════════ */
+.wi-fireworks {
+  position: fixed; inset: 0; pointer-events: none; z-index: 300; overflow: hidden;
+}
+@keyframes wi-fw-burst {
+  0%   { transform: translate(0, 0) scale(1.3); opacity: 1; }
+  75%  { opacity: .9; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 70px)) scale(0); opacity: 0; }
+}
+.wi-fw-dot {
+  position: absolute; width: 9px; height: 9px; border-radius: 50%;
+  animation: wi-fw-burst 1.1s cubic-bezier(.1,.6,.3,1) forwards;
+}
+
+@keyframes wi-pop-in {
+  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+  65%  { transform: scale(1.25) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1)   rotate(0deg); opacity: 1; }
+}
+.wi-celebrate-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; padding: 40px 0 28px; text-align: center;
+}
+.wi-celebrate-emoji {
+  font-size: 5rem; line-height: 1;
+  animation: wi-pop-in .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+.wi-celebrate-msg   { font-size: 1.15rem; font-weight: 900; color: var(--blue-dk); }
+.wi-celebrate-score { font-size: 1.9rem;  font-weight: 900; color: var(--text); }
+.wi-celebrate-pct   { font-size: 1rem;    font-weight: 700; color: var(--muted); }
+.wi-celebrate-rounds { font-size: .85rem; color: var(--muted); }
+.wi-result-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+
+/* ════════════════════════════
+   共用按鈕
+   ════════════════════════════ */
+.wi-btn-primary, .wi-btn-secondary {
+  padding: 12px 22px; border-radius: 12px;
+  font-family: inherit; font-size: .9rem; font-weight: 800;
+  cursor: pointer; border: 2px solid; transition: all .15s;
+}
+.wi-btn-primary {
+  background: var(--blue); color: white; border-color: var(--blue);
+}
+.wi-btn-primary:hover { background: var(--blue-dk); border-color: var(--blue-dk); }
+.wi-btn-secondary {
+  background: white; color: var(--text); border-color: var(--border);
+}
+.wi-btn-secondary:hover { border-color: var(--blue); background: var(--blue-lt); }
+
+/* ════════════════════════════
+   空資料 / 載入狀態
+   ════════════════════════════ */
+.wi-empty {
+  text-align: center; padding: 60px 20px; color: var(--muted);
+}
+.wi-empty-icon { font-size: 3rem; margin-bottom: 12px; }
+.wi-empty-text { font-size: .9rem; font-weight: 700; line-height: 1.7; }
+
+/* ════════════════════════════
+   頂層入口頁（選擇課程 / 自訂類別）
+   ════════════════════════════ */
+.wi-entry-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  max-width: 540px;
+  margin: 0 auto;
+}
+.wi-entry-card {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 36px 20px;
+  background: white; border: 2.5px solid var(--border);
+  border-radius: 22px;
+  font-family: inherit; cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 3px 12px rgba(0,0,0,.07);
+}
+.wi-entry-card:hover {
+  border-color: var(--blue); background: var(--blue-lt);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(37,99,235,.15);
+}
+.wi-entry-icon  { font-size: 3rem; line-height: 1; }
+.wi-entry-name  { font-size: 1.1rem; font-weight: 900; color: var(--blue-dk); }
+.wi-entry-desc  { font-size: .78rem; font-weight: 600; color: var(--muted); text-align: center; line-height: 1.5; }
+
+/* ════════════════════════════
+   自訂類別導覽（Custom Cat）
+   ════════════════════════════ */
+.wi-cat-bc {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 4px; margin-bottom: 16px; font-size: .9rem;
+}
+.wi-cat-bc-btn {
+  padding: 3px 8px; border-radius: 6px;
+  border: none; background: none; cursor: pointer;
+  color: var(--blue); font-weight: 700;
+  font-family: inherit; font-size: .9rem;
+  transition: background .15s;
+}
+.wi-cat-bc-btn:hover { background: var(--blue-lt); }
+.wi-cat-bc-curr { font-weight: 900; color: var(--text); padding: 3px 2px; }
+.wi-cat-bc-sep  { color: var(--muted); font-size: .85rem; }
+
+/* ════════════════════════════
+   響應式：矮螢幕（≤ 640px 高）橫排版型
+   ════════════════════════════ */
+@media (max-height: 640px) {
+  .wi-page-inner { padding: 10px 16px 16px; }
+
+  /* 看圖猜詞：圖左，進度＋選項右 */
+  .wi-quiz-wrap {
+    display: grid;
+    grid-template-columns: 42% 1fr;
+    grid-template-areas:
+      "img bar"
+      "img cnt"
+      "img qst"
+      "img opts";
+    column-gap: 20px;
+    align-items: start;
+  }
+  .wi-quiz-img-wrap {
+    grid-area: img;
+    max-width: none;
+    aspect-ratio: unset;
+  }
+  .wi-quiz-progress-bar { grid-area: bar; max-width: none; }
+  .wi-quiz-wrap > .wi-browse-counter { grid-area: cnt; }
+  .wi-quiz-question { grid-area: qst; }
+  .wi-quiz-opts { grid-area: opts; max-width: none; width: 100%; }
+
+  /* 圖卡瀏覽：卡片左，計數＋導航＋動作右 */
+  .wi-browse-wrap {
+    display: grid;
+    grid-template-columns: 52% 1fr;
+    grid-template-areas:
+      "card cnt"
+      "card nav"
+      "card acts";
+    column-gap: 20px;
+    align-items: start;
+  }
+  .wi-flip-card { grid-area: card; max-width: none; }
+  .wi-browse-wrap > .wi-browse-counter { grid-area: cnt; text-align: center; }
+  .wi-browse-nav { grid-area: nav; justify-content: center; }
+  .wi-browse-actions { grid-area: acts; flex-direction: column; align-items: stretch; }
+}

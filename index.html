@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -27,7 +27,7 @@
     <div class="panel active" id="panel-role">
       <div class="role-wrap">
         <div class="role-header">
-          <img src="assets/登入icon.png" class="role-logo-img" alt="上學趣">
+          <img src="assets/pic/登入icon.png" class="role-logo-img" alt="上學趣">
           <div class="role-subtitle">請選擇你的身份</div>
         </div>
         <!-- 公告橫幅（由 checkSiteSettings 控制顯示） -->
@@ -42,7 +42,7 @@
             <div class="role-name">教　師</div>
             <div class="role-sub">管理課程與班級</div>
           </button>
-          <button class="role-card role-student" onclick="showPanel('login')">
+          <button class="role-card role-student" onclick="window.location.href='login.html'">
             <div class="role-icon">🧒</div>
             <div class="role-name">學　生</div>
             <div class="role-sub">開始今天的學習</div>
@@ -101,146 +101,6 @@
       </div>
     </div>
 
-    <!-- ③ 學生登入 -->
-    <div class="panel right" id="panel-login">
-      <div class="slogin-wrap">
-        <div class="login-card">
-          <button class="btn-back-role" onclick="showPanel('role')">← 返回</button>
-          <div class="login-school">學生登入</div>
-          <div class="login-title">歡迎<span>回來</span></div>
-
-          <div id="login-form">
-            <label class="login-label">你的名字</label>
-            <input class="login-input" id="login-name" type="text" placeholder="輸入姓名"
-              autocomplete="off" oninput="updateLoginBtn()">
-            <label class="login-label">PIN 碼（4位數字）</label>
-            <div class="pin-display" id="pin-display">
-              <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
-              <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
-            </div>
-            <div class="pin-pad">
-              <button class="pin-btn" onclick="pinInput('1')">1</button>
-              <button class="pin-btn" onclick="pinInput('2')">2</button>
-              <button class="pin-btn" onclick="pinInput('3')">3</button>
-              <button class="pin-btn" onclick="pinInput('4')">4</button>
-              <button class="pin-btn" onclick="pinInput('5')">5</button>
-              <button class="pin-btn" onclick="pinInput('6')">6</button>
-              <button class="pin-btn" onclick="pinInput('7')">7</button>
-              <button class="pin-btn" onclick="pinInput('8')">8</button>
-              <button class="pin-btn" onclick="pinInput('9')">9</button>
-              <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
-              <button class="pin-btn" onclick="pinInput('0')">0</button>
-              <button class="pin-btn pin-btn-ok" id="btn-login-ok" onclick="doLogin()" disabled>✓</button>
-            </div>
-            <div class="login-error" id="login-error">名字或 PIN 碼不正確，請再試一次</div>
-            <div class="login-switch">還沒有帳號？<a onclick="showRegister()">點這裡註冊</a></div>
-          </div>
-
-          <div id="register-form" style="display:none">
-            <label class="login-label">你的名字</label>
-            <input class="login-input" id="reg-name" type="text" placeholder="輸入姓名"
-              autocomplete="off" oninput="updateRegBtn()">
-            <label class="login-label">設定 PIN 碼（4位數字）</label>
-            <div class="pin-display" id="reg-pin-display">
-              <div class="pin-dot" id="rpd0"></div><div class="pin-dot" id="rpd1"></div>
-              <div class="pin-dot" id="rpd2"></div><div class="pin-dot" id="rpd3"></div>
-            </div>
-            <div class="pin-pad">
-              <button class="pin-btn" onclick="regPinInput('1')">1</button>
-              <button class="pin-btn" onclick="regPinInput('2')">2</button>
-              <button class="pin-btn" onclick="regPinInput('3')">3</button>
-              <button class="pin-btn" onclick="regPinInput('4')">4</button>
-              <button class="pin-btn" onclick="regPinInput('5')">5</button>
-              <button class="pin-btn" onclick="regPinInput('6')">6</button>
-              <button class="pin-btn" onclick="regPinInput('7')">7</button>
-              <button class="pin-btn" onclick="regPinInput('8')">8</button>
-              <button class="pin-btn" onclick="regPinInput('9')">9</button>
-              <button class="pin-btn pin-btn-del" onclick="regPinDelete()">⌫</button>
-              <button class="pin-btn" onclick="regPinInput('0')">0</button>
-              <button class="pin-btn pin-btn-ok" id="btn-reg-ok" onclick="doRegister()" disabled>✓</button>
-            </div>
-            <div class="login-error" id="reg-error"></div>
-            <div class="login-switch">已有帳號？<a onclick="showLogin()">點這裡登入</a></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ④ Hub 主頁 -->
-    <div class="panel right" id="panel-hub">
-      <div class="hub-body">
-        <button class="hub-profile-card" onclick="showProfile()">
-          <div class="hub-profile-left">
-            <div class="hub-profile-avatar" id="hub-avatar">🐣</div>
-            <div>
-              <div class="hub-welcome-name" id="hub-name">—</div>
-              <div class="hub-welcome-sub">歡迎回來・點此編輯個人資料</div>
-            </div>
-          </div>
-          <span class="hub-profile-arrow">›</span>
-        </button>
-        <div class="hub-section-label">📚 學習區</div>
-        <div class="subjects-grid" id="subjects-grid"></div>
-        <div id="quiz-section">
-          <div class="hub-section-label">📝 測驗區</div>
-          <div class="subjects-grid" id="quiz-grid"></div>
-        </div>
-        <div class="hub-section-label">📊 近期記錄</div>
-        <div class="activity-card">
-          <div id="activity-list"><div class="activity-empty">載入中…</div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ⑤ 子項目 iframe -->
-    <div class="panel right" id="panel-subject">
-      <iframe id="subject-frame" src="about:blank" allow="microphone"></iframe>
-    </div>
-
-    <!-- ⑥ 個人設定 -->
-    <div class="panel right" id="panel-profile">
-      <div class="profile-nav-row">
-        <button class="btn-back-profile" onclick="showPanel('hub')">← 返回</button>
-      </div>
-      <div class="profile-header">
-        <div class="profile-avatar-big" id="profile-avatar-big">🐣</div>
-        <div>
-          <div class="profile-header-name" id="profile-header-name">—</div>
-          <div class="profile-header-sub">個人設定</div>
-        </div>
-      </div>
-      <div class="profile-body">
-        <div class="profile-section">
-          <div class="profile-section-title">暱稱</div>
-          <input class="profile-input" id="profile-nickname" type="text"
-            placeholder="輸入暱稱（選填）" maxlength="10">
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">頭像</div>
-          <div class="avatar-grid" id="avatar-grid"></div>
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">主題色系</div>
-          <div class="theme-grid" id="theme-grid"></div>
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">音效</div>
-          <div class="sound-row">
-            <span style="font-size:.9rem;font-weight:700">練習音效</span>
-            <button class="sound-toggle" id="sound-toggle" onclick="toggleSoundUI()">
-              <div class="sound-knob" id="sound-knob"></div>
-            </button>
-          </div>
-        </div>
-        <div class="profile-section">
-          <div class="profile-section-title">班級</div>
-          <div id="class-join-wrap"><div style="color:var(--muted);font-size:.85rem;font-weight:600">載入中…</div></div>
-        </div>
-        <button class="btn-save-profile" onclick="saveProfile()">💾 儲存設定</button>
-        <button class="btn-logout" onclick="showLogoutConfirm()">登出</button>
-      </div>
-    </div>
-
   </div>
 </div>
 
@@ -249,18 +109,6 @@
   <div style="font-size:3.5rem;margin-bottom:20px">🔧</div>
   <div style="font-size:1.5rem;font-weight:900;color:white;margin-bottom:10px">系統維護中</div>
   <div style="font-size:.95rem;font-weight:600;color:rgba(255,255,255,.7);max-width:320px;line-height:1.6">系統目前正在進行維護，請稍後再回來。<br>造成不便，敬請見諒。</div>
-</div>
-
-<div class="overlay" id="logout-overlay">
-  <div class="overlay-box">
-    <div class="overlay-icon">👋</div>
-    <div class="overlay-title">要登出嗎？</div>
-    <div class="overlay-sub">下次再來繼續學習！</div>
-    <div class="overlay-btns">
-      <button class="btn-cancel"  onclick="hideLogoutConfirm()">取消</button>
-      <button class="btn-confirm" onclick="doLogout()">登出</button>
-    </div>
-  </div>
 </div>
 
 <!-- iOS 安裝引導覆蓋層 -->
@@ -311,9 +159,9 @@
 </div>
 
 <div id="toast"></div>
+<link rel="stylesheet" href="shared/report.css">
 <script src="shared/shared.js"></script>
 <script src="src/auth.js"></script>
-<script src="src/hub.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
@@ -343,5 +191,10 @@ function skipInstallGuide() {
   document.getElementById('ios-install-overlay').style.display = 'none';
 }
 </script>
+<script src="shared/report.js"></script>
+<script>initReportWidget({ role: 'guest' });</script>
+<link rel="stylesheet" href="shared/scratch.css">
+<script src="shared/scratch.js"></script>
+<script>initScratchWidget();</script>
 </body>
 </html>

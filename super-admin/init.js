@@ -44,7 +44,8 @@ window.addEventListener('load', function() {
 
 /* ── 驗證通過後初始化 ── */
 function onAdminReady() {
-  loadOverview();
+  switchTab('schools');
+  startUnreadBadge();
 }
 
 /* ── 登出 ── */
@@ -59,18 +60,17 @@ function doLogout() {
 }
 
 /* ── 分頁切換 ── */
-var TABS = ['overview', 'accounts', 'curriculum', 'invites', 'settings'];
+var TABS = ['schools', 'curriculum', 'settings', 'reports'];
 
 function switchTab(tab) {
   TABS.forEach(function(t) {
     document.getElementById('panel-' + t).style.display = t === tab ? '' : 'none';
     document.getElementById('tab-'   + t).classList.toggle('active', t === tab);
   });
-  if (tab === 'overview')   loadOverview();
-  if (tab === 'accounts')   loadAccounts();
+  if (tab === 'schools')    { loadSchoolStats(); loadSchools(); }
   if (tab === 'curriculum') loadVersions();
-  if (tab === 'invites')    loadInvites();
   if (tab === 'settings')   loadSettings();
+  if (tab === 'reports')    loadReports();
 }
 
 /* ── 課程管理內 App 子頁籤 ── */

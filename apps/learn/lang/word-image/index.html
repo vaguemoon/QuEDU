@@ -1,0 +1,143 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>詞語趣｜上學趣</title>
+<link rel="manifest" href="/QuEDU/manifest.json">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<script>
+(function(){
+  var M = {
+    blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',
+    green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+    purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',
+    orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+    teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',
+    pink:'#fff0f8,#d63384,#a0255e,#fce4ec'
+  };
+  try {
+    var v = (M[localStorage.getItem('theme')] || M.blue).split(',');
+    var r = document.documentElement.style;
+    ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){ r.setProperty(k,v[i]); });
+  } catch(e) {}
+})();
+</script>
+<link rel="stylesheet" href="word-image.css">
+</head>
+<body>
+
+<!-- ── 頂端列 ── -->
+<div id="page-topbar">
+  <button class="btn-back-hub" id="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goBack()">← 返回</button>
+  <div id="topbar-title">🖼️ <span>詞語趣</span></div>
+  <div id="topbar-student" onclick="toggleStudentMenu()">
+    <span id="topbar-avatar">🐣</span>
+    <span id="topbar-name">—</span>
+    <div id="topbar-logout-menu" class="logout-menu hidden">
+      <button class="lm-btn lm-logout" onclick="sendLogout(event)">🚪 登出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ① 頂層入口 -->
+<div id="page-entry" class="wi-page active">
+  <div class="wi-page-inner">
+    <div class="wi-empty">
+      <div class="wi-empty-icon">⏳</div>
+      <div class="wi-empty-text">載入中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ② 年級選擇 -->
+<div id="page-grade" class="wi-page">
+  <div class="wi-page-inner">
+    <div class="wi-empty">
+      <div class="wi-empty-icon">⏳</div>
+      <div class="wi-empty-text">載入中…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ③ 課次選擇 -->
+<div id="page-lesson" class="wi-page">
+  <div class="wi-page-inner"></div>
+</div>
+
+<!-- ④ 自訂類別導覽 -->
+<div id="page-custom-cat" class="wi-page">
+  <div class="wi-page-inner"></div>
+</div>
+
+<!-- ⑤ 模式選擇 -->
+<div id="page-mode" class="wi-page">
+  <div class="wi-page-inner">
+    <div id="mode-lesson-label"></div>
+    <div class="wi-mode-cards">
+      <button class="wi-mode-card" onclick="startBrowse()">
+        <div class="wi-mode-icon">🃏</div>
+        <div class="wi-mode-name">圖卡瀏覽</div>
+        <div class="wi-mode-desc">逐張翻閱圖片與詞語</div>
+      </button>
+      <button class="wi-mode-card" id="mode-card-quiz" onclick="startQuiz()">
+        <div class="wi-mode-icon">🎯</div>
+        <div class="wi-mode-name">看圖猜詞</div>
+        <div class="wi-mode-desc">看圖片選出正確詞語</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ⑥ 圖卡瀏覽 -->
+<div id="page-browse" class="wi-page">
+  <div class="wi-page-inner"></div>
+</div>
+
+<!-- ⑦ 看圖猜詞 -->
+<div id="page-quiz" class="wi-page">
+  <div class="wi-page-inner"></div>
+</div>
+
+<!-- ⑧ 成績 -->
+<div id="page-result" class="wi-page">
+  <div class="wi-page-inner"></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="../../../../shared/shared.js"></script>
+<script src="js/state.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/browse.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/init.js"></script>
+<script>
+function toggleStudentMenu() {
+  var m = document.getElementById('topbar-logout-menu');
+  if (m) m.classList.toggle('hidden');
+}
+function sendLogout(evt) {
+  if (evt) evt.stopPropagation();
+  try { window.parent.postMessage({ type: 'word-image-logout' }, '*'); } catch(e) {}
+}
+document.addEventListener('click', function(e) {
+  var stu  = document.getElementById('topbar-student');
+  var menu = document.getElementById('topbar-logout-menu');
+  if (menu && !menu.classList.contains('hidden') && stu && !stu.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+</script>
+<link rel="stylesheet" href="../../../../shared/report.css">
+<script src="../../../../shared/report.js"></script>
+<script>initReportWidget({ role: 'student' });</script>
+<link rel="stylesheet" href="../../../../shared/scratch.css">
+<script src="../../../../shared/scratch.js"></script>
+<script>initScratchWidget();</script>
+</body>
+</html>

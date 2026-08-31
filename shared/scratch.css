@@ -1,0 +1,163 @@
+/* shared/scratch.css — 手寫草稿 Widget 樣式 */
+
+/* ── 懸浮按鈕 ── */
+.scratch-btn {
+  position: fixed;
+  right: 12px;
+  bottom: 24px;
+  z-index: 9498;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid var(--border, #e2e8f0);
+  box-shadow: 0 2px 10px rgba(0,0,0,.14);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue, #4a90d9);
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+  transition: box-shadow .15s, border-color .15s, background .15s, color .15s;
+}
+
+.scratch-btn:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  border-color: var(--blue, #4a90d9);
+}
+
+.scratch-btn.s-active {
+  background: var(--blue, #4a90d9);
+  color: white;
+  border-color: var(--blue, #4a90d9);
+}
+
+/* ── 草稿面板 ── */
+.scratch-panel {
+  position: fixed;
+  right: 64px; /* 12px margin + 44px 按鈕 + 8px 間距 */
+  top: 16px;
+  bottom: 16px;
+  width: 50vw;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.06);
+  z-index: 9490;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* 隱藏狀態：向右推出畫面外 */
+  transform: translateX(calc(50vw + 80px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .26s cubic-bezier(.25,.46,.45,.94), opacity .2s;
+}
+
+.scratch-panel.open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── 標題列 ── */
+.scratch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1.5px solid var(--border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.scratch-title {
+  font-size: .95rem;
+  font-weight: 900;
+  color: var(--text, #1a1a2e);
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+}
+
+.scratch-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .95rem;
+  color: var(--muted, #94a3b8);
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background .12s, color .12s;
+}
+
+.scratch-close:hover {
+  background: var(--border, #e2e8f0);
+  color: var(--text, #1a1a2e);
+}
+
+/* ── 工具列 ── */
+.scratch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1.5px solid var(--border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.scratch-sep { flex: 1; }
+
+.scratch-tool {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text, #1a1a2e);
+  padding: 0;
+  transition: border-color .12s, background .12s, color .12s;
+}
+
+.scratch-tool:hover:not(.active) {
+  border-color: var(--blue, #4a90d9);
+  background: var(--blue-lt, #e8f4fd);
+}
+
+.scratch-tool.active {
+  border-color: var(--blue, #4a90d9);
+  background: var(--blue-lt, #e8f4fd);
+  color: var(--blue-dk, #2d6fa8);
+}
+
+.scratch-clear-btn {
+  padding: 7px 14px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+  transition: border-color .12s, color .12s;
+}
+
+.scratch-clear-btn:hover {
+  border-color: var(--red, #ef4444);
+  color: var(--red, #ef4444);
+}
+
+/* ── 畫布 ── */
+.scratch-canvas {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+  background: white;
+}

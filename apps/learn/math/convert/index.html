@@ -1,0 +1,286 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>換算趣｜上學趣</title>
+<link rel="manifest" href="/QuEDU/manifest.json">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+<link rel="stylesheet" href="convert.css">
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goBack()">← 返回</button>
+  <div id="topbar-title">↔ <span>換算趣</span></div>
+  <div id="topbar-right">
+    <span id="topbar-stars" class="topbar-stars">★ 0</span>
+    <div id="topbar-student" onclick="toggleLogoutMenu()">
+      <span id="topbar-avatar">🐣</span>
+      <span id="topbar-name">—</span>
+      <div id="topbar-logout-menu" class="logout-menu hidden">
+        <button class="lm-btn" onclick="goToSettings(event)">⚙️ 設定</button>
+        <button class="lm-btn" onclick="goToAchievement(event)">🏆 成就</button>
+        <button class="lm-btn lm-logout" onclick="sendLogout(event)">🚪 登出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: HOME ══════════════════ -->
+<div id="page-home" class="page page-fill active">
+  <div class="home-wrap">
+    <div class="home-title">↔ 換算趣</div>
+    <div class="home-sub">選擇要練習的換算類型</div>
+    <div class="cat-cards">
+      <button class="cat-card cat-card-length" onclick="openCategory('length')">
+        <div class="cat-card-icon">📏</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">長度換算</div>
+          <div class="cat-card-sub">mm・cm・m・km</div>
+        </div>
+      </button>
+      <button class="cat-card cat-card-weight" onclick="openCategory('weight')">
+        <div class="cat-card-icon">⚖️</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">重量換算</div>
+          <div class="cat-card-sub">公克・公斤・公噸</div>
+        </div>
+      </button>
+      <button class="cat-card cat-card-volume" onclick="openCategory('volume')">
+        <div class="cat-card-icon">🧪</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">容量換算</div>
+          <div class="cat-card-sub">毫升・公升</div>
+        </div>
+      </button>
+      <button class="cat-card cat-card-time" onclick="openCategory('time')">
+        <div class="cat-card-icon">⏰</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">時間換算</div>
+          <div class="cat-card-sub">分鐘 ↔ 小時</div>
+        </div>
+      </button>
+      <button class="cat-card cat-card-money" onclick="openCategory('money')">
+        <div class="cat-card-icon">💰</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">貨幣換算</div>
+          <div class="cat-card-sub">鈔換零錢・零錢換鈔</div>
+        </div>
+      </button>
+      <button class="cat-card cat-card-decimal" onclick="openCategory('decimal')">
+        <div class="cat-card-icon">🥛</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">部分與整體</div>
+          <div class="cat-card-sub">小數・分數・生活情境</div>
+        </div>
+      </button>
+      <button class="cat-card cat-card-percent" onclick="openCategory('percent')">
+        <div class="cat-card-icon">📊</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">百分率換算</div>
+          <div class="cat-card-sub">百分率・小數・分數</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: SELECT ══════════════════ -->
+<div id="page-select" class="page">
+  <div id="select-body" class="select-body">
+    <!-- 由 renderSelectPage() 填充 -->
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: GAME ══════════════════ -->
+<div id="page-game" class="page">
+  <div class="game-layout" id="game-layout">
+
+    <!-- ── 左 40%：題目區 ── -->
+    <div class="game-left">
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-label">🔥 連擊</span>
+          <span class="stat-val streak" id="game-streak">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">答對</span>
+          <span class="stat-val" id="game-correct">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">剩餘</span>
+          <span class="stat-val" id="game-remain">10</span>
+        </div>
+      </div>
+
+      <!-- 嵌入式題目（答案格內嵌於題目句中） -->
+      <div id="game-question-area" class="q-area"></div>
+
+      <!-- 虛擬鍵盤 -->
+      <div class="fill-pad" id="game-fill-pad">
+        <div class="fill-pad-row">
+          <button class="fill-btn" onclick="fillAppend('7')">7</button>
+          <button class="fill-btn" onclick="fillAppend('8')">8</button>
+          <button class="fill-btn" onclick="fillAppend('9')">9</button>
+        </div>
+        <div class="fill-pad-row">
+          <button class="fill-btn" onclick="fillAppend('4')">4</button>
+          <button class="fill-btn" onclick="fillAppend('5')">5</button>
+          <button class="fill-btn" onclick="fillAppend('6')">6</button>
+        </div>
+        <div class="fill-pad-row">
+          <button class="fill-btn" onclick="fillAppend('1')">1</button>
+          <button class="fill-btn" onclick="fillAppend('2')">2</button>
+          <button class="fill-btn" onclick="fillAppend('3')">3</button>
+        </div>
+        <div class="fill-pad-row">
+          <button class="fill-btn fill-del" onclick="fillBackspace()">⌫</button>
+          <button class="fill-btn fill-dot hidden" id="fill-dot-key" onclick="fillAppend('.')">.</button>
+          <button class="fill-btn" onclick="fillAppend('0')">0</button>
+          <button class="fill-btn fill-ok" onclick="onGameSubmit()">✓</button>
+        </div>
+      </div>
+
+      <button id="game-next-btn" class="btn-next-q hidden" onclick="doNextQuestion()">下一題 →</button>
+      <button class="btn-end-practice" onclick="goBack()">結束練習</button>
+    </div>
+
+    <!-- ── 右 60%：換算沙盒 ── -->
+    <div class="game-right hidden" id="game-right">
+
+      <!-- 貨幣沙盒 -->
+      <div id="sb-container">
+        <div class="sb-layout">
+          <aside class="sb-bank" id="sb-bank">
+            <div class="sb-bank-title">錢 庫</div>
+            <div class="sb-bank-hint">點擊放入場景</div>
+            <div id="sb-bank-items" class="sb-bank-items"></div>
+          </aside>
+          <div class="sb-right">
+            <div class="sb-scene" id="sb-scene">
+              <div class="sb-scene-hint" id="sb-scene-hint" style="display:none">← 點擊錢庫取幣</div>
+            </div>
+          </div>
+        </div>
+        <div class="sb-statusbar">
+          <span id="sb-scene-total" class="sb-scene-total">場景：0 元</span>
+          <div id="sb-breakdown" class="sb-breakdown"></div>
+          <button class="sb-clear-btn" onclick="clearScene()">🗑 清空</button>
+        </div>
+      </div>
+
+      <!-- 度量衡沙盒（長度/重量/容量） -->
+      <div id="ms-container" class="hidden">
+        <div class="ms-scene">
+          <div class="ms-hint" id="ms-hint"></div>
+          <div class="ms-stage" id="ms-stage"></div>
+          <div class="ms-legend" id="ms-legend">
+            <span class="ms-leg">■ 大單位</span>
+            <span class="ms-leg">■ 小單位</span>
+          </div>
+        </div>
+        <div class="ms-statusbar">
+          <span id="ms-status" class="ms-status">場景：0</span>
+          <button class="sb-clear-btn" onclick="msResetScene()">↺ 重置</button>
+        </div>
+      </div>
+
+      <!-- 時間沙盒 -->
+      <div id="ts-container" class="hidden">
+        <div class="ts-scene">
+          <div class="ts-hint" id="ts-hint"></div>
+          <div class="ts-track-wrap">
+            <div class="ts-track" id="ts-track"></div>
+          </div>
+          <div class="ts-legend" id="ts-legend">
+            <span class="ts-leg ts-leg-large">■ 大單位</span>
+            <span class="ts-leg ts-leg-small">■ 小單位</span>
+          </div>
+        </div>
+        <div class="ts-statusbar">
+          <span id="ts-status" class="ts-status">場景：0 分</span>
+          <button class="sb-clear-btn" onclick="tsResetScene()">↺ 重置</button>
+        </div>
+      </div>
+
+      <!-- 小數沙盒 -->
+      <div id="dc-container" class="hidden"></div>
+
+      <!-- 彈窗（貨幣與時間沙盒共用） -->
+      <div id="sb-popup" class="sb-popup hidden"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: RESULT ══════════════════ -->
+<div id="page-result" class="page">
+  <div class="result-wrap">
+    <div class="result-icon" id="result-icon">🎉</div>
+    <div class="result-stars" id="result-stars">⭐⭐⭐</div>
+    <div class="result-title" id="result-title">太厲害了！</div>
+    <div class="result-sub" id="result-sub">答對 10 / 10 題</div>
+    <div class="result-btns">
+      <button class="btn-result" onclick="startGame()">再練一次</button>
+      <button class="btn-result" onclick="showPage('select')">換題型</button>
+      <button class="btn-result btn-result-home" onclick="showPage('home',false);PAGE_STACK=['home'];">回首頁</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: SETTINGS ══════════════════ -->
+<div id="page-settings" class="page">
+  <div class="settings-body">
+    <div class="settings-section-title">🐾 頭像</div>
+    <div id="settings-avatar-grid" class="avatar-grid"></div>
+    <div class="settings-section-title">🎨 主題色系</div>
+    <div id="theme-grid"></div>
+    <div class="settings-section-title">🔊 音效</div>
+    <div class="sound-row">
+      <span class="sound-label">練習音效</span>
+      <button class="sound-toggle-btn" id="sound-toggle-btn" onclick="toggleSound();applySound();">
+        <div class="sound-toggle-knob" id="sound-toggle-knob"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: ACHIEVEMENT ══════════════════ -->
+<div id="page-achievement" class="page">
+  <!-- 由 renderAchievementPage() 填充 -->
+</div>
+
+<div id="toast"></div>
+
+<script src="../../../../shared/shared.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/state.js"></script>
+<script src="js/questions.js"></script>
+<script src="js/game.js"></script>
+<script src="js/achievement.js"></script>
+<script src="js/sandbox.js"></script>
+<script src="js/timesandbox.js"></script>
+<script src="js/measuresandbox.js"></script>
+<script src="js/decimalsandbox.js"></script>
+<script src="js/init.js"></script>
+<link rel="stylesheet" href="../../../../shared/report.css">
+<script src="../../../../shared/report.js"></script>
+<script>initReportWidget({ role: 'student' });</script>
+<link rel="stylesheet" href="../../../../shared/scratch.css">
+<script src="../../../../shared/scratch.js"></script>
+<script>initScratchWidget();</script>
+</body>
+</html>

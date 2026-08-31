@@ -1,18 +1,243 @@
 /**
  * auth.js — 學生 / 教師認證流程
- * 負責：登入、註冊、教師登入 / 註冊、Google 登入、登出
+ * 負責：登入、註冊、教師登入 / 註冊、Google 登入、登出、系統設定檢查
  * 依賴：shared.js（db、auth、initFirebase、applyTheme、showToast）
- *        hub.js（renderHub、showPanel、loadActivity、PANELS）
  */
 'use strict';
 
 var currentStudent = null;
-var loginPin = '';
-var regPin   = '';
+var loginPin       = '';
+var regPin         = '';
+var regPinConfirm  = '';
+var regPhase       = 'set'; // 'set' | 'confirm'
 
-// ── 畫面切換 ──
+// ── 學校制登入狀態 ──
+var _selectedSchoolId   = '';
+var _selectedSchoolName = '';
+var _selectedClassId    = '';
+var _selectedClassName  = '';
+var _selectedSeatNumber = 0;
+var _schoolPin = '';
 
-var PANELS = ['role','teacher-login','login','hub','subject','profile'];
+function _esc(s) {
+  return String(s).replace(/'/g, "\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── 登入步驟導航 ──
+function _showStep(id) {
+  document.querySelectorAll('.login-step').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  var el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+function goBack(stepId) { _showStep(stepId); }
+
+// ── 學校制：Step 0 → 1a ──
+function goSchoolLogin() {
+  _showStep('step-school');
+  _loadSchools();
+}
+function goRegularLogin() {
+  _showStep('step-regular');
+  loginPin = ''; updatePinDisplay('pd', loginPin);
+  var nameEl = document.getElementById('login-name');
+  if (nameEl) { nameEl.value = ''; updateLoginBtn(); }
+}
+function goGuest() {
+  sessionStorage.setItem('hub_student', JSON.stringify({
+    id: 'guest', name: '訪客', nickname: '訪客', avatar: '👤',
+    isGuest: true, classIds: []
+  }));
+  sessionStorage.setItem('hub_welcome', '👋 訪客模式：學習進度不會保存。');
+  window.location.href = 'hub.html';
+}
+
+// ── Step 1a：載入學校列表 ──
+function _loadSchools() {
+  var box = document.getElementById('school-list-box');
+  if (!box) return;
+  if (!db) { setTimeout(_loadSchools, 300); return; }
+  box.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  db.collection('schools').where('active', '==', true).get()
+    .then(function(snap) {
+      if (snap.empty) {
+        box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-weight:700">目前尚無學校。<br><small>請聯繫老師或管理員設定。</small></div>';
+        return;
+      }
+      var schools = [];
+      snap.forEach(function(doc) { schools.push({ id: doc.id, name: doc.data().name || '' }); });
+      schools.sort(function(a, b) { return a.name.localeCompare(b.name, 'zh-TW'); });
+      var html = '';
+      schools.forEach(function(s) {
+        html += '<button class="login-list-item" onclick="_selectSchool(\'' +
+          _esc(s.id) + '\',\'' + _esc(s.name) + '\')">' + _esc(s.name) + '</button>';
+      });
+      box.innerHTML = html;
+    })
+    .catch(function() {
+      box.innerHTML = '<div style="padding:16px;color:var(--red);font-weight:700">載入失敗，請重試。</div>';
+    });
+}
+
+// ── Step 1b：選擇學校 → 載入班級 ──
+function _selectSchool(schoolId, schoolName) {
+  _selectedSchoolId   = schoolId;
+  _selectedSchoolName = schoolName;
+  document.getElementById('step-class-school').textContent = schoolName;
+  _showStep('step-class');
+  _loadClasses(schoolId);
+}
+function _loadClasses(schoolId) {
+  var box = document.getElementById('class-list-box');
+  if (!box) return;
+  box.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  db.collection('classes')
+    .where('schoolId',   '==', schoolId)
+    .where('active',     '==', true)
+    .where('classType',  '==', 'homeroom')
+    .get()
+    .then(function(snap) {
+      if (snap.empty) {
+        box.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-weight:700">此學校尚無班級。<br><small>請聯繫老師建立班級。</small></div>';
+        return;
+      }
+      var classes = [];
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        d._id = doc.id;
+        classes.push(d);
+      });
+      var gradeMap = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6 };
+      function _gradeOf(cls) {
+        if (cls.grade) return cls.grade;
+        var m = (cls.name || '').match(/^([一二三四五六])年/);
+        return m ? (gradeMap[m[1]] || 0) : 0;
+      }
+      classes.sort(function(a, b) {
+        var ga = _gradeOf(a), gb = _gradeOf(b);
+        if (ga !== gb) return ga - gb;
+        if ((a.classNumber || 0) !== (b.classNumber || 0)) return (a.classNumber || 0) - (b.classNumber || 0);
+        return (a.name || '').localeCompare(b.name || '', 'zh-TW');
+      });
+      var html = '';
+      classes.forEach(function(cls) {
+        html += '<button class="login-list-item" onclick="_selectClass(\'' +
+          _esc(cls._id) + '\',\'' + _esc(cls.name) + '\')">' +
+          _esc(cls.name) + '</button>';
+      });
+      box.innerHTML = html;
+    })
+    .catch(function() {
+      box.innerHTML = '<div style="padding:16px;color:var(--red);font-weight:700">載入失敗，請重試。</div>';
+    });
+}
+
+// ── Step 1c：選擇班級 → 載入座號 ──
+function _selectClass(classId, className) {
+  _selectedClassId   = classId;
+  _selectedClassName = className;
+  document.getElementById('step-seat-class').textContent = _selectedSchoolName + ' ' + className;
+  _showStep('step-seat');
+  _loadSeats(classId);
+}
+function _loadSeats(classId) {
+  var wrap = document.getElementById('seat-grid-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+
+  db.collection('students').where('classId', '==', classId).get()
+    .then(function(snap) {
+      var seats = [];
+      snap.forEach(function(doc) {
+        var n = doc.data().seatNumber;
+        if (n) seats.push(n);
+      });
+      seats.sort(function(a, b) { return a - b; });
+      if (!seats.length) {
+        wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-weight:700">此班級尚無座號帳號。<br><small>請聯繫老師設定帳號。</small></div>';
+        return;
+      }
+      wrap.innerHTML = seats.map(function(n) {
+        return '<button class="seat-btn" onclick="_selectSeat(' + n + ')">' + n + '</button>';
+      }).join('');
+    })
+    .catch(function() {
+      wrap.innerHTML = '<div style="padding:16px;color:var(--red);font-weight:700">載入失敗，請重試。</div>';
+    });
+}
+
+// ── Step 1d：選擇座號 → PIN 輸入 ──
+function _selectSeat(seatNumber) {
+  _selectedSeatNumber = seatNumber;
+  _schoolPin = '';
+  updatePinDisplay('spd', _schoolPin);
+  document.getElementById('btn-school-login-ok').disabled = true;
+  document.getElementById('school-login-error').classList.remove('show');
+  document.getElementById('step-pin-seat').textContent = seatNumber + ' 號';
+  document.getElementById('step-pin-class').textContent = _selectedSchoolName + ' ' + _selectedClassName;
+  _showStep('step-pin');
+}
+function schoolPinInput(d) {
+  if (_schoolPin.length >= 4) return;
+  _schoolPin += d; updatePinDisplay('spd', _schoolPin);
+  document.getElementById('btn-school-login-ok').disabled = _schoolPin.length < 4;
+}
+function schoolPinDelete() {
+  _schoolPin = _schoolPin.slice(0, -1); updatePinDisplay('spd', _schoolPin);
+  document.getElementById('btn-school-login-ok').disabled = true;
+}
+
+// ── Step 1d：學校制登入驗證 ──
+function doSchoolLogin() {
+  if (_schoolPin.length !== 4 || !_selectedClassId || !_selectedSeatNumber) return;
+  var btn = document.getElementById('btn-school-login-ok');
+  btn.disabled = true;
+  document.getElementById('school-login-error').classList.remove('show');
+  if (!db) { setTimeout(doSchoolLogin, 300); return; }
+
+  db.collection('students')
+    .where('classId', '==', _selectedClassId)
+    .where('seatNumber', '==', _selectedSeatNumber)
+    .limit(1)
+    .get()
+    .then(function(snap) {
+      if (snap.empty) {
+        document.getElementById('school-login-error').classList.add('show');
+        btn.disabled = false;
+        _schoolPin = ''; updatePinDisplay('spd', _schoolPin);
+        return;
+      }
+      var doc = snap.docs[0];
+      var d   = doc.data();
+      if (d.pin !== _schoolPin) {
+        document.getElementById('school-login-error').classList.add('show');
+        btn.disabled = false;
+        _schoolPin = ''; updatePinDisplay('spd', _schoolPin);
+        return;
+      }
+      onLoginSuccess({
+        id:       doc.id,
+        name:     d.name || (_selectedSeatNumber + '號'),
+        nickname: d.nickname || '',
+        avatar:   d.avatar   || '🐣',
+        pin:      _schoolPin,
+        seatNumber:  d.seatNumber,
+        classId:     _selectedClassId,
+        classIds:    d.classIds || [_selectedClassId]
+      });
+    })
+    .catch(function() {
+      showToast('連線失敗，請重試');
+      btn.disabled = false;
+    });
+}
+
+// ── 畫面切換（index.html: role↔teacher-login；hub.html: hub↔subject） ──
+
+var PANELS = ['role', 'teacher-login', 'hub', 'subject'];
 var currentPanel = 'role';
 
 function showPanel(name) {
@@ -78,57 +303,131 @@ function doLogin() {
       loginPin = ''; updatePinDisplay('pd', ''); return;
     }
     var d = doc.data();
+    if (d.classId && !d.classIds) {
+      db.collection('students').doc(name + '_' + loginPin)
+        .update({ classIds: [d.classId] })
+        .catch(function() {});
+    }
     onLoginSuccess({ id: name + '_' + loginPin, name: name, pin: loginPin,
                      nickname: d.nickname || '', avatar: d.avatar || '🐣',
-                     classId: d.classId || '' });
+                     classIds: d.classIds || (d.classId ? [d.classId] : []) });
   }).catch(function() {
     showToast('連線失敗，請重試');
     document.getElementById('btn-login-ok').disabled = false;
   });
 }
-function onLoginSuccess(student) {
+function onLoginSuccess(student, isNew) {
   currentStudent = student;
   sessionStorage.setItem('hub_student', JSON.stringify(student));
+  sessionStorage.setItem('hub_welcome',
+    (isNew ? '🎉 帳號建立成功！歡迎，' : '👋 歡迎，') +
+    (student.nickname || student.name) + '！');
   db.collection('students').doc(student.id)
     .update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() })
     .catch(function() {});
-  renderHub(); showPanel('hub'); loadActivity();
-  showToast('👋 歡迎，' + (student.nickname || student.name) + '！');
+  window.location.href = 'hub.html';
 }
 
 // ── 學生註冊 ──
 
+function _resetRegForm() {
+  regPin = ''; regPinConfirm = ''; regPhase = 'set';
+  updatePinDisplay('rpd', ''); updatePinDisplay('cpd', '');
+  var nameEl = document.getElementById('reg-name');
+  if (nameEl) nameEl.value = '';
+  var codeEl = document.getElementById('reg-invite-code');
+  if (codeEl) codeEl.value = '';
+  var confirmSection = document.getElementById('reg-confirm-section');
+  if (confirmSection) confirmSection.style.display = 'none';
+  var errEl = document.getElementById('reg-error');
+  if (errEl) errEl.classList.remove('show');
+  updateRegBtn();
+}
 function showRegister() {
   document.getElementById('login-form').style.display    = 'none';
   document.getElementById('register-form').style.display = '';
+  _resetRegForm();
 }
 function showLogin() {
   document.getElementById('register-form').style.display = 'none';
   document.getElementById('login-form').style.display    = '';
+  _resetRegForm();
 }
 function updateRegBtn() {
-  document.getElementById('btn-reg-ok').disabled =
-    !(document.getElementById('reg-name').value.trim() && regPin.length === 4);
+  var btnEl = document.getElementById('btn-reg-ok');
+  if (btnEl) btnEl.disabled =
+    !(document.getElementById('reg-name').value.trim() &&
+      regPin.length === 4 && regPinConfirm.length === 4);
 }
-function regPinInput(d) { if (regPin.length >= 4) return; regPin += d; updatePinDisplay('rpd', regPin); updateRegBtn(); }
-function regPinDelete()  { regPin = regPin.slice(0, -1); updatePinDisplay('rpd', regPin); updateRegBtn(); }
+function regPinInput(d) {
+  if (regPhase === 'set') {
+    if (regPin.length >= 4) return;
+    regPin += d; updatePinDisplay('rpd', regPin);
+    if (regPin.length === 4) {
+      regPhase = 'confirm';
+      var cs = document.getElementById('reg-confirm-section');
+      if (cs) cs.style.display = '';
+    }
+  } else {
+    if (regPinConfirm.length >= 4) return;
+    regPinConfirm += d; updatePinDisplay('cpd', regPinConfirm);
+  }
+  updateRegBtn();
+}
+function regPinDelete() {
+  if (regPhase === 'confirm') {
+    if (regPinConfirm.length > 0) {
+      regPinConfirm = regPinConfirm.slice(0, -1); updatePinDisplay('cpd', regPinConfirm);
+    } else {
+      regPhase = 'set';
+      var cs = document.getElementById('reg-confirm-section');
+      if (cs) cs.style.display = 'none';
+      regPin = regPin.slice(0, -1); updatePinDisplay('rpd', regPin);
+    }
+  } else {
+    regPin = regPin.slice(0, -1); updatePinDisplay('rpd', regPin);
+  }
+  updateRegBtn();
+}
 function doRegister() {
   var name = document.getElementById('reg-name').value.trim();
-  if (!name || regPin.length !== 4) return;
+  if (!name || regPin.length !== 4 || regPinConfirm.length !== 4) return;
+  var errEl = document.getElementById('reg-error');
+  errEl.classList.remove('show');
+  if (regPin !== regPinConfirm) {
+    errEl.textContent = '兩次 PIN 碼不一致，請重新輸入'; errEl.classList.add('show');
+    regPinConfirm = ''; updatePinDisplay('cpd', ''); updateRegBtn(); return;
+  }
   document.getElementById('btn-reg-ok').disabled = true;
   var id = name + '_' + regPin;
+  var inviteCode = (document.getElementById('reg-invite-code').value || '').trim().toUpperCase();
+
   db.collection('students').doc(id).get().then(function(doc) {
     if (doc.exists) {
-      var err = document.getElementById('reg-error');
-      err.textContent = '這個名字和 PIN 已被使用'; err.classList.add('show');
+      errEl.textContent = '這個名字和 PIN 已被使用'; errEl.classList.add('show');
       document.getElementById('btn-reg-ok').disabled = false; return;
     }
-    return db.collection('students').doc(id)
-      .set({ name: name, pin: regPin, nickname: '', avatar: '🐣', createdAt: new Date() })
-      .then(function() {
-        onLoginSuccess({ id: id, name: name, pin: regPin, nickname: '', avatar: '🐣' });
-        showToast('🎉 帳號建立成功！');
+    var lookupPromise = inviteCode
+      ? db.collection('classes')
+          .where('inviteCode', '==', inviteCode)
+          .where('active', '==', true)
+          .limit(1).get()
+          .then(function(snap) { return snap.empty ? '' : snap.docs[0].id; })
+          .catch(function() { return ''; })
+      : Promise.resolve('');
+
+    return lookupPromise.then(function(classId) {
+      var data = {
+        name: name, pin: regPin, nickname: '', avatar: '🐣',
+        type: 'trial', classIds: classId ? [classId] : [],
+        createdAt: new Date()
+      };
+      return db.collection('students').doc(id).set(data).then(function() {
+        if (inviteCode && !classId) showToast('邀請碼無效，帳號已建立，尚未加入班級。');
+        onLoginSuccess({ id: id, name: name, pin: regPin, nickname: '', avatar: '🐣',
+                         classIds: data.classIds }, true);
       });
+    });
   }).catch(function() {
     showToast('建立失敗，請重試');
     document.getElementById('btn-reg-ok').disabled = false;
@@ -217,14 +516,49 @@ function doGoogleLogin() {
 function showLogoutConfirm() { document.getElementById('logout-overlay').classList.add('show'); }
 function hideLogoutConfirm() { document.getElementById('logout-overlay').classList.remove('show'); }
 function doLogout() {
+  var isPreview = !!(currentStudent && currentStudent.isPreview);
   currentStudent = null; loginPin = ''; regPin = '';
   sessionStorage.removeItem('hub_student');
-  updatePinDisplay('pd', ''); updatePinDisplay('rpd', '');
-  document.getElementById('login-name').value = '';
-  document.getElementById('btn-login-ok').disabled = true;
-  document.getElementById('subject-frame').src = 'about:blank';
-  document.getElementById('activity-list').innerHTML =
-    '<div class="activity-empty">登入後查看學習記錄</div>';
-  hideLogoutConfirm(); showPanel('login');
+  sessionStorage.removeItem('hub_welcome');
+  var frame = document.getElementById('subject-frame');
+  if (frame) frame.src = 'about:blank';
+  hideLogoutConfirm();
+  if (isPreview) {
+    window.location.href = 'admin/index.html';
+    return;
+  }
   showToast('已登出，掰掰！👋');
+  setTimeout(function() { window.location.href = 'login.html'; }, 500);
 }
+
+// ── 系統設定（維護模式 / 公告） ──
+
+function checkSiteSettings() {
+  if (!db) { setTimeout(checkSiteSettings, 400); return; }
+  db.collection('siteSettings').doc('main').get()
+    .then(function(doc) {
+      if (!doc.exists) return;
+      var data = doc.data();
+      if (data.maintenanceMode) {
+        var overlay = document.getElementById('maintenance-overlay');
+        if (overlay) overlay.style.display = 'flex';
+      }
+      if (data.announcement && data.announcement.trim()) {
+        var banner = document.getElementById('announcement-banner');
+        var text   = document.getElementById('announcement-text');
+        if (banner && text) {
+          text.textContent = data.announcement.trim();
+          banner.style.display = 'flex';
+        }
+      }
+    })
+    .catch(function() {});
+}
+
+// ── 啟動 ──
+
+window.addEventListener('load', function() {
+  initFirebase();
+  applyTheme(currentTheme);
+  checkSiteSettings();
+});
