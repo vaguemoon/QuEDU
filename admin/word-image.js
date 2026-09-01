@@ -74,6 +74,15 @@ function _wiSetMode(mode) {
 }
 
 /* ════════════════════════════
+   詞語圖庫的詞語來源題型
+   詞語解釋／詞語填空的答案欄本來就是單一詞語，適合做成圖卡；
+   選擇題答案常是完整描述句，不適合，故不列入
+   ════════════════════════════ */
+function _wiIsWordSourceType(type) {
+  return type === '詞語解釋' || type === '詞語填空';
+}
+
+/* ════════════════════════════
    課程模式 Step 1：年級選擇
    ════════════════════════════ */
 function _wiRenderGradeSelector() {
@@ -90,13 +99,13 @@ function _wiRenderGradeSelector() {
     results.forEach(function(snap) {
       snap.forEach(function(d) {
         var data = d.data();
-        if (data.type === '詞語解釋' && data.grade) gradeSet[data.grade] = true;
+        if (_wiIsWordSourceType(data.type) && data.grade) gradeSet[data.grade] = true;
       });
     });
     _wiGradeList = Object.keys(gradeSet).sort();
     if (!_wiGradeList.length) {
       wrap.innerHTML = '<p style="color:var(--muted);padding:20px 0;font-size:.9rem">' +
-        '題庫中尚無「詞語解釋」題型，請先上傳題庫。</p>';
+        '題庫中尚無「詞語解釋」或「詞語填空」題型，請先上傳題庫。</p>';
       return;
     }
     var html = '<div class="card-title" style="margin-bottom:14px">選擇年級</div>' +
@@ -131,7 +140,7 @@ function _wiSelectGrade(idx) {
     results.forEach(function(snap) {
       snap.forEach(function(d) {
         var data = d.data();
-        if (data.grade === _wiGrade && data.type === '詞語解釋' && data.lesson) {
+        if (data.grade === _wiGrade && _wiIsWordSourceType(data.type) && data.lesson) {
           if (!lessonMap[data.lesson]) lessonMap[data.lesson] = data.lessonName || '';
         }
       });
@@ -147,7 +156,7 @@ function _wiSelectGrade(idx) {
     if (!_wiLessonList.length) {
       wrap.innerHTML =
         '<button class="wi-back-btn" onclick="_wiRenderGradeSelector()">← 返回年級</button>' +
-        '<p style="color:var(--muted);padding:16px 0;font-size:.88rem">此年級尚無詞語解釋題目</p>';
+        '<p style="color:var(--muted);padding:16px 0;font-size:.88rem">此年級尚無詞語解釋或詞語填空題目</p>';
       return;
     }
     _wiRenderLessonPage();
@@ -192,7 +201,7 @@ function _wiSelectLesson(idx) {
     [results[0], results[1]].forEach(function(snap) {
       snap.forEach(function(d) {
         var data = d.data();
-        if (data.grade === _wiGrade && data.lesson === _wiLesson && data.type === '詞語解釋') {
+        if (data.grade === _wiGrade && data.lesson === _wiLesson && _wiIsWordSourceType(data.type)) {
           if (!wordMap[data.answer]) wordMap[data.answer] = data.question || '';
         }
       });

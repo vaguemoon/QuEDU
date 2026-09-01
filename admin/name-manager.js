@@ -143,15 +143,11 @@ function migrateStudent(studentId, btn) {
     return;
   }
 
-  var cls = currentClasses.find(function(c) { return c.id === currentRosterClassId; }) || {};
-
   db.collection('students').doc(studentId).update({
     seatNumber:  seat,
     classId:     currentRosterClassId,
     schoolId:    currentSchoolId   || '',
-    schoolName:  currentSchoolName || '',
-    grade:       cls.grade       || 0,
-    classNumber: cls.classNumber || 0
+    schoolName:  currentSchoolName || ''
   })
   .then(function() {
     showToast('✅ 已指定座號 ' + seat + ' 號');

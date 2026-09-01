@@ -1119,7 +1119,7 @@
     <div id="panel-school-admin" style="display:none">
       <div class="app-tabs-mini" style="margin-bottom:16px">
         <button class="app-tab-mini active" onclick="switchSaView('classes',this)">🏫 全校班級管理</button>
-        <button class="app-tab-mini" onclick="switchSaView('students',this)">👥 學生名單</button>
+        <button class="app-tab-mini" id="sa-navtab-students" onclick="switchSaView('students',this)">👥 學生名單</button>
         <button class="app-tab-mini" onclick="switchSaView('teachers',this)">👨‍🏫 教師管理</button>
         <button class="app-tab-mini" onclick="switchSaView('tools',this)">🔧 學年工具</button>
       </div>
@@ -1130,14 +1130,6 @@
           <div class="stat-card stat-blue">
             <div class="stat-num" id="sa-stat-total">—</div>
             <div class="stat-lbl">全校學生</div>
-          </div>
-          <div class="stat-card stat-green">
-            <div class="stat-num" id="sa-stat-active">—</div>
-            <div class="stat-lbl">在學</div>
-          </div>
-          <div class="stat-card stat-yellow">
-            <div class="stat-num" id="sa-stat-archived">—</div>
-            <div class="stat-lbl">已封存</div>
           </div>
         </div>
         <div class="card">
@@ -1151,11 +1143,11 @@
                 style="padding:7px 14px;border:1.5px solid #bfdbfe;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
                 📥 批次匯入
               </button>
-              <input type="file" id="sa-bulk-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleSaBulkFile(this)">
-              <button onclick="generateHomeroomClasses()"
-                style="padding:7px 14px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-lt);color:var(--blue-dk);font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
-                ⚡ 生成原班
+              <button onclick="openReassignModal()"
+                style="padding:7px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--text);font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">
+                🔀 指派班級
               </button>
+              <input type="file" id="sa-bulk-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleSaBulkFile(this)">
               <button onclick="_saLoaded=false;loadMainRoster()"
                 style="padding:7px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--muted)">
                 🔄
@@ -1178,18 +1170,30 @@
               style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none">
               <option value="">全部班級</option>
             </select>
-            <select id="sa-filter-status" onchange="filterMainRoster()"
-              style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none">
-              <option value="active">在學中</option>
-              <option value="archived">已封存</option>
-              <option value="">全部</option>
-            </select>
             <input id="sa-search" type="text" placeholder="搜尋姓名…" oninput="filterMainRoster()"
               style="border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.88rem;font-family:inherit;outline:none;min-width:140px">
           </div>
           <div id="sa-roster-wrap">
             <div class="loading-wrap"><div class="spinner"></div></div>
           </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;border-color:#fca5a5;background:#fff8f7">
+          <div class="card-title" style="color:#b91c1c">⚠️ 危險區域</div>
+          <div style="font-size:.82rem;color:var(--muted);font-weight:600;margin-bottom:14px;line-height:1.7">
+            永久刪除此學校目前全部學生帳號與學習進度紀錄。不會影響行政班／科任班的班級本身。
+          </div>
+          <button onclick="openPurgeSchoolModal()"
+            style="padding:9px 18px;border:1.5px solid #dc2626;border-radius:9px;background:white;color:#dc2626;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit;margin-bottom:14px">
+            🗑️ 刪除全校學生資料
+          </button>
+          <div style="font-size:.82rem;color:var(--muted);font-weight:600;margin-bottom:14px;line-height:1.7">
+            全校範圍偵測同姓名的重複學生資料，不限同一班級。有學習進度的那筆會保留，都沒有則保留最早建立的；若兩筆都有進度資料則列為需手動處理，不會自動刪除。
+          </div>
+          <button onclick="openDupCheckModal()"
+            style="padding:9px 18px;border:1.5px solid #dc2626;border-radius:9px;background:white;color:#dc2626;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
+            🔍 偵測並清除重複學生
+          </button>
         </div>
       </div>
 
@@ -1251,49 +1255,40 @@
         <div class="card">
           <div class="card-title">🔧 學年升級工具</div>
           <div style="font-size:.82rem;color:var(--muted);font-weight:600;margin-bottom:20px;line-height:1.7">
-            每學年結束時，依序執行以下步驟。<strong>操作前請務必確認，部分步驟無法復原。</strong>
+            每學年結束時，<strong>依序</strong>執行以下步驟。<strong>操作前請務必確認，部分步驟無法復原。</strong>
           </div>
 
           <!-- 步驟 1 -->
           <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px">
-            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 1：全校升級（年級 +1）</div>
-            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">將所有 1–5 年在學學生的年級加 1。六年級學生請在步驟 2 處理。</div>
+            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 1：六年級畢業（永久刪除）</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">依「所屬行政班」判斷六年級學生，<strong>永久刪除</strong>其帳號與所有學習資料，系統已無封存機制、無法復原。<strong>務必先做這一步，再做步驟 2</strong>，避免與剛升上來的學生混在一起。</div>
+            <button onclick="deleteGraduatingStudents()"
+              style="padding:9px 20px;border:none;border-radius:9px;background:#f97316;color:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
+              刪除畢業生
+            </button>
+          </div>
+
+          <!-- 步驟 2 -->
+          <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px">
+            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 2：全校升級（年級 +1）</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">將所有 1–5 年在學學生的年級加 1，並自動移入「新年級＋相同班別」的既有行政班（例如原 1 年 3 班的學生會移入 2 年 3 班）。班級文件本身不會被修改。</div>
             <button onclick="batchGradeUp()"
               style="padding:9px 20px;border:none;border-radius:9px;background:var(--blue);color:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
               執行升級
             </button>
           </div>
 
-          <!-- 步驟 2 -->
-          <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px">
-            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 2：六年級學生封存（畢業）</div>
-            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">將六年級學生的 status 設為 archived。學習紀錄完整保留。</div>
-            <button onclick="archiveGraduation()"
-              style="padding:9px 20px;border:none;border-radius:9px;background:#f97316;color:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
-              封存六年級
-            </button>
-          </div>
-
           <!-- 步驟 3 -->
-          <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px">
-            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 3：舊班級封存</div>
-            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">將此學校所有啟用中的班級設為停用。老師仍可查看歷史紀錄。</div>
-            <button onclick="archiveAllClasses()"
-              style="padding:9px 20px;border:none;border-radius:9px;background:var(--red,#dc2626);color:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit">
-              封存所有班級
-            </button>
-          </div>
-
-          <!-- 步驟 4 -->
           <div style="border:1.5px solid var(--border);border-radius:12px;padding:18px">
-            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 4：重新分班</div>
-            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">先在「班級管理」建立新班級，再用本工具將學生批次移入。</div>
-            <button onclick="openReassignModal()"
+            <div style="font-weight:900;font-size:.95rem;margin-bottom:6px">步驟 3：填入新的一年級名單</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">前往「學生名單」使用批次匯入功能，將新生名單匯入既有的一年級行政班。</div>
+            <button onclick="switchSaView('students', document.getElementById('sa-navtab-students')); triggerSaBulkImport();"
               style="padding:9px 20px;border:1.5px solid var(--border);border-radius:9px;background:white;font-weight:800;font-size:.88rem;cursor:pointer;font-family:inherit;color:var(--text)">
-              開啟重新分班工具
+              前往批次匯入新生
             </button>
           </div>
         </div>
+
       </div>
     </div>
 
@@ -2085,35 +2080,64 @@ window.addEventListener('message', function(e) {
   </div>
 </div>
 
+<!-- 校務管理：刪除全校學生資料 Modal（危險操作）-->
+<div id="sa-purge-modal" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 26px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);border:2px solid #dc2626">
+    <div style="font-size:1.1rem;font-weight:900;color:#dc2626;margin-bottom:10px">⚠️ 刪除全校學生資料</div>
+    <div style="font-size:.85rem;color:var(--text);font-weight:600;line-height:1.7;margin-bottom:16px">
+      即將永久刪除「<strong id="sa-purge-school-name">—</strong>」目前全部 <strong id="sa-purge-count">—</strong> 位學生的帳號、密碼、座號、班級關聯，以及所有學習進度紀錄。
+      <br><br>
+      <strong style="color:#dc2626">此操作無法復原，且不會影響行政班／科任班的班級文件本身。</strong>
+    </div>
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:6px">
+      請輸入學校名稱「<strong id="sa-purge-school-name-2">—</strong>」以確認：
+    </label>
+    <input id="sa-purge-confirm-input" type="text" oninput="checkPurgeConfirmInput()" autocomplete="off"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:16px">
+    <div style="display:flex;gap:10px">
+      <button onclick="closePurgeSchoolModal()"
+        style="flex:1;padding:10px;border:2px solid var(--border);border-radius:10px;background:white;font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="sa-purge-confirm-btn" onclick="confirmPurgeSchoolStudents()" disabled
+        style="flex:2;padding:10px;border:none;border-radius:10px;background:#dc2626;color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">確認刪除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 校務管理：偵測並清除重複學生 Modal（危險操作）-->
+<div id="sa-dup-modal" style="display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:0;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);border:2px solid #dc2626;max-height:85vh;display:flex;flex-direction:column">
+    <div style="padding:22px 24px 14px;border-bottom:1.5px solid var(--border)">
+      <div style="font-size:1.1rem;font-weight:900;color:#dc2626;margin-bottom:6px">🔍 偵測並清除重複學生</div>
+      <div style="font-size:.8rem;color:var(--muted);font-weight:700" id="sa-dup-summary">掃描中…</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 24px">
+      <div id="sa-dup-list"></div>
+    </div>
+    <div style="padding:14px 24px;border-top:1.5px solid var(--border);display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeDupCheckModal()"
+        style="flex:1;padding:10px;border:2px solid var(--border);border-radius:10px;background:white;font-size:.9rem;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)">取消</button>
+      <button id="sa-dup-confirm-btn" onclick="confirmDupDelete()" disabled
+        style="flex:2;padding:10px;border:none;border-radius:10px;background:#dc2626;color:white;font-size:.9rem;font-weight:900;cursor:pointer;font-family:inherit">確認刪除</button>
+    </div>
+  </div>
+</div>
+
 <!-- 校務管理：新增學生 Modal -->
 <div id="sa-add-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:400px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
     <div style="font-size:1.05rem;font-weight:900;margin-bottom:6px">＋ 新增學生（轉入生）</div>
-    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:18px">學生將加入全校名單（Main），尚未歸屬任何班級。</div>
+    <div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:18px">學生將加入全校名單（Main），可直接指派行政班，或先不指派、之後再用「指派班級」處理。</div>
     <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">姓名 <span style="color:var(--red)">*</span></label>
     <input id="sa-add-name" type="text" maxlength="20" placeholder="請輸入學生姓名"
       style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:14px">
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-      <div>
-        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">年級</label>
-        <select id="sa-add-grade"
-          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:8px 6px;font-size:.88rem;font-family:inherit;outline:none">
-          <option value="">—</option>
-          <option value="1">1年</option><option value="2">2年</option><option value="3">3年</option>
-          <option value="4">4年</option><option value="5">5年</option><option value="6">6年</option>
-        </select>
-      </div>
-      <div>
-        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">班號</label>
-        <input id="sa-add-classnum" type="number" min="1" max="30" placeholder="班"
-          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.88rem;font-family:inherit;outline:none">
-      </div>
-      <div>
-        <label style="font-size:.72rem;font-weight:800;color:var(--muted);display:block;margin-bottom:4px">座號</label>
-        <input id="sa-add-seat" type="number" min="1" max="60" placeholder="號"
-          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.88rem;font-family:inherit;outline:none">
-      </div>
-    </div>
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">行政班（選填）</label>
+    <select id="sa-add-classid"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:14px;background:white">
+      <option value="">── 尚未分班 ──</option>
+    </select>
+    <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">座號（選填，加入班級時可再調整）</label>
+    <input id="sa-add-seat" type="number" min="1" max="60" placeholder="號"
+      style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:inherit;outline:none;margin-bottom:14px">
     <label style="font-size:.78rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">PIN（4 位數字，預設 0000）</label>
     <input id="sa-add-pin" type="text" maxlength="4" inputmode="numeric" value="0000"
       style="width:100%;border:2px solid var(--border);border-radius:9px;padding:9px 12px;font-size:.95rem;font-family:'Courier New',monospace;outline:none;margin-bottom:6px">

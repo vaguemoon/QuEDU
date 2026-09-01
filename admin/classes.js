@@ -132,11 +132,11 @@ function renderClasses() {
 
     var footer = isHomeroom
       ? '<div class="class-footer" id="cs-' + cls.id + '">' +
-          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">班級管理 →</button>' +
+          '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\',\'homeroom\')">班級管理 →</button>' +
         '</div>'
       : '<div class="class-footer" id="cs-' + cls.id + '">' +
           '<div class="class-footer-left">' +
-            '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\')">班級管理 →</button>' +
+            '<button class="btn-view-students" onclick="viewClassStudents(\'' + cls.id + '\',\'' + escHtml(cls.name) + '\',\'subject\')">班級管理 →</button>' +
           '</div>' +
           codeRow +
         '</div>';
@@ -152,9 +152,15 @@ function renderClasses() {
     '</div>';
   }).join('');
 
-  /* 非同步載入各班學生數 */
+  /* 非同步載入各班學生數
+     行政班以 classId 單一欄位為準（跟全校學生名單/班級名單同一套）；
+     classIds 陣列是「曾經加入過的所有班級」，學生升級搬班後舊班級 ID 不一定會被清乾淨，
+     用 array-contains 算行政班人數會把已經不在班的舊生也算進去 */
   currentClasses.forEach(function(cls) {
-    db.collection('students').where('classIds', 'array-contains', cls.id).get()
+    var query = cls.classType === 'homeroom'
+      ? db.collection('students').where('classId', '==', cls.id)
+      : db.collection('students').where('classIds', 'array-contains', cls.id);
+    query.get()
       .then(function(snap) {
         var count = 0;
         snap.forEach(function(doc) { if (!doc.id.startsWith('__preview__')) count++; });
@@ -355,10 +361,12 @@ function enterStudentView(classId, className) {
 }
 
 /* ── 切換到班級學生名單 ── */
-var currentRosterClassId = null;
+var currentRosterClassId   = null;
+var currentRosterClassType = 'homeroom'; // 'homeroom'（依 classId 單一欄位）｜'subject'（依 classIds 陣列）
 
-function viewClassStudents(classId, className) {
-  currentRosterClassId = classId;
+function viewClassStudents(classId, className, classType) {
+  currentRosterClassId   = classId;
+  currentRosterClassType = classType || 'homeroom';
   document.getElementById('classes-list-view').style.display = 'none';
   document.getElementById('class-roster-view').style.display = '';
   document.getElementById('roster-class-name').textContent = className;
@@ -369,7 +377,7 @@ function viewClassStudents(classId, className) {
   if (tasksView)    tasksView.style.display    = 'none';
   var tabs = document.querySelectorAll('#roster-app-tabs .app-tab-mini');
   tabs.forEach(function(b, i) { b.classList.toggle('active', i === 0); });
-  loadClassRoster(classId);
+  loadClassRoster(classId, currentRosterClassType);
 }
 
 function backToClasses() {
@@ -378,7 +386,7 @@ function backToClasses() {
 }
 
 function refreshRoster() {
-  if (currentRosterClassId) loadClassRoster(currentRosterClassId);
+  if (currentRosterClassId) loadClassRoster(currentRosterClassId, currentRosterClassType);
 }
 
 /* ════════════════════════════════
@@ -432,7 +440,6 @@ function showRosterAddModal(subjectClassId, subjectClassName) {
         id:         doc.id,
         name:       d.name       || '',
         seatNumber: d.seatNumber || 0,
-        grade:      d.grade      || 0,
         classId:    classId,
         classIds:   d.classIds   || []
       });
@@ -457,10 +464,10 @@ function showRosterAddModal(subjectClassId, subjectClassName) {
           })
       : Promise.resolve();
   }).then(function() {
-    /* 用 classMap 補齊學生的 grade（學生文件上可能為 0） */
+    /* 年班一律以所屬行政班為準，不採信學生文件自己的 grade */
     _rosterAddAllStudents.forEach(function(s) {
       var cls = s.classId ? _rosterAddClassMap[s.classId] : null;
-      if (cls && !s.grade) s.grade = cls.grade;
+      s.grade = cls ? cls.grade : 0;
     });
     _rosterAddAllStudents.sort(function(a, b) {
       if (a.grade !== b.grade) return a.grade - b.grade;
@@ -525,7 +532,7 @@ function _renderRosterAddStudents() {
   listEl.innerHTML = '<table style="width:100%;border-collapse:collapse">'
     + filtered.map(function(s) {
         var cls       = _rosterAddClassMap[s.classId];
-        var classStr  = cls ? cls.name : (s.grade ? s.grade + '年' : '—');
+        var classStr  = cls ? cls.name : '未分班';
         var label     = s.seatNumber ? s.seatNumber + ' 號' : '—';
         var nameStr   = s.name || '（未填姓名）';
         var alreadyIn = s.classIds.indexOf(_rosterAddTargetId) !== -1;

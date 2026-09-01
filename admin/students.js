@@ -383,7 +383,7 @@ function deleteStudent() {
     }).then(function() {
       showToast('🗑 已刪除「' + name + '」的資料。');
       backToOverview();
-      if (currentRosterClassId) loadClassRoster(currentRosterClassId);
+      if (currentRosterClassId) loadClassRoster(currentRosterClassId, currentRosterClassType);
     }).catch(function(e) { showToast('❌ 刪除失敗：' + e.message); });
 }
 
@@ -391,12 +391,19 @@ function removeStudentFromClass() {
   if (!currentDetailId || !currentRosterClassId) return;
   var name = document.getElementById('detail-name').textContent;
   if (!confirm('確定要將「' + name + '」從此班級移出？\n（學生的原班帳號與學習資料不受影響）')) return;
-  db.collection('students').doc(currentDetailId).update({
-    classIds: firebase.firestore.FieldValue.arrayRemove(currentRosterClassId)
+
+  var studentRef = db.collection('students').doc(currentDetailId);
+  studentRef.get().then(function(doc) {
+    var update = { classIds: firebase.firestore.FieldValue.arrayRemove(currentRosterClassId) };
+    /* 若移出的正是學生目前的 classId（行政班），一併清空，避免留下指向已移出班級的殘留欄位 */
+    if (doc.exists && doc.data().classId === currentRosterClassId) {
+      update.classId = '';
+    }
+    return studentRef.update(update);
   }).then(function() {
     showToast('已將「' + name + '」移出此班級');
     backToOverview();
-    loadClassRoster(currentRosterClassId);
+    loadClassRoster(currentRosterClassId, currentRosterClassType);
   }).catch(function(e) { showToast('操作失敗：' + e.message); });
 }
 

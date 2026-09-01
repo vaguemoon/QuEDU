@@ -285,8 +285,6 @@ function _processImport(parsed, existingClasses, existingStudents) {
             schoolName:  parsed.schoolName,
             classId:     classId,
             classIds:    [classId],
-            grade:       cls.grade,
-            classNumber: cls.classNumber,
             seatNumber:  s.seat,
             name:        s.name,
             pin:         '0000',

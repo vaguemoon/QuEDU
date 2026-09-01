@@ -6,18 +6,46 @@
 
 var currentRosterStudents = [];
 
-function loadClassRoster(classId) {
+/* 座號直接在班級名單內編輯（與全校學生名單共用同一個 students.seatNumber 欄位） */
+function saveRosterSeatNumber(input) {
+  var id  = input.getAttribute('data-id');
+  var val = parseInt(input.value) || 0;
+  input.disabled = true;
+  db.collection('students').doc(id).update({ seatNumber: val })
+    .then(function() {
+      var s = currentRosterStudents.find(function(x) { return x.id === id; });
+      if (s) s.seatNumber = val;
+      input.disabled = false;
+      input.style.borderColor = 'var(--green)';
+      setTimeout(function() { input.style.borderColor = ''; }, 1200);
+    })
+    .catch(function(e) {
+      input.disabled = false;
+      showToast('座號更新失敗：' + e.message);
+    });
+}
+
+function loadClassRoster(classId, classType) {
   var wrap = document.getElementById('class-roster-wrap');
   if (!wrap) return;
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
-  if (!db) { setTimeout(function(){ loadClassRoster(classId); }, 400); return; }
+  if (!db) { setTimeout(function(){ loadClassRoster(classId, classType); }, 400); return; }
 
-  db.collection('students').where('classIds', 'array-contains', classId).get()
+  /* 行政班（homeroom）以學生的 classId 單一欄位為準（跟全校學生名單同一套），
+     不再用 classIds 陣列的 array-contains——那個欄位是「曾經加入過的所有班級」，
+     學生升級搬班後舊班級的 ID 不一定會被清乾淨，用它來判斷「現在」的行政班會抓到已經不在班的舊生。
+     科任班（subject）維持用 classIds 陣列，因為學生本來就可能同時在多個科任班 */
+  var query = classType === 'homeroom'
+    ? db.collection('students').where('classId', '==', classId)
+    : db.collection('students').where('classIds', 'array-contains', classId);
+
+  query.get()
     .then(function(snap) {
       var students = [];
       snap.forEach(function(doc) {
         if (doc.id.startsWith('__preview__')) return;
         var d = doc.data();
+        if (classType === 'homeroom' && d.status === 'archived') return;
         students.push({
           id:         doc.id,
           name:       d.name || (d.seatNumber ? d.seatNumber + '號' : doc.id),
@@ -82,7 +110,7 @@ function renderClassRoster(wrap) {
   }
 
   var TRIAL_SEP =
-    '<tr><td colspan="3" style="padding:8px 10px 4px;font-size:.75rem;font-weight:900;' +
+    '<tr><td colspan="4" style="padding:8px 10px 4px;font-size:.75rem;font-weight:900;' +
     'color:var(--muted);background:#f7f7f7;border-top:2px solid var(--border);letter-spacing:.04em">' +
     '試用學生</td></tr>';
 
@@ -90,6 +118,11 @@ function renderClassRoster(wrap) {
     var lastStr  = _rosterLastStr(s.lastSeen);
     var trialTag = s.type === 'trial' ? '<span class="trial-badge">(試用)</span>' : '';
     return '<tr onclick="showStudentDetail(\'' + s.id + '\')">'
+      + '<td onclick="event.stopPropagation()" style="width:56px">'
+        + '<input type="number" min="1" max="60" value="' + (s.seatNumber || '') + '" placeholder="—" data-id="' + s.id + '"'
+        + ' style="width:48px;border:1.5px solid var(--border);border-radius:6px;padding:4px 6px;font-size:.8rem;font-family:\'Courier New\',monospace;text-align:center;outline:none"'
+        + ' onchange="saveRosterSeatNumber(this)">'
+      + '</td>'
       + '<td><strong>' + s.name + '</strong>' + trialTag + '</td>'
       + '<td style="color:var(--muted);font-size:.82rem">' + lastStr + '</td>'
       + '<td style="color:var(--blue);font-size:.82rem;font-weight:700">查看詳細 →</td>'
@@ -101,7 +134,7 @@ function renderClassRoster(wrap) {
 
   wrap.innerHTML =
     '<table class="student-table">'
-    + '<thead><tr><th>姓名</th><th>最後登入</th><th></th></tr></thead>'
+    + '<thead><tr><th>座號</th><th>姓名</th><th>最後登入</th><th></th></tr></thead>'
     + '<tbody>' + regularRows + trialRows + '</tbody>'
     + '</table>';
 
