@@ -33,7 +33,7 @@ Hub 傳入登入資訊 → 子 App 透過 `sessionStorage` 取得 → 子 App �
     ├── init.js         ← 啟動、自動登入（必要）
     ├── nav.js          ← 頁面切換、PAGE_STACK（必要）
     ├── state.js        ← 全域狀態、Firestore 讀寫（必要）
-    ├── voice.js        ← 語音朗讀（若有語音需求）
+    ├── voice.js        ← 語音朗讀（若有語音需求，中文語音選擇規則見「七-5」）
     ├── curriculum.js   ← 課程選擇（若依賴課程資料）
     └── *.js            ← 各功能模組（按職責拆分）
 ```
@@ -75,6 +75,12 @@ if (saved) {
 
 `appId` 為子 App 的唯一識別字，例如 `hanzi`（練字趣）、`math`（乘法趣）。  
 Hub 端監聽 `window.message` 並依 `type` 做對應處理。
+
+> ⚠️ **關鍵：只在子 App 這端送出訊息還不夠。** `src/hub.js` 用兩份白名單陣列
+> `_HUB_BACK_TYPES` 與 `_HUB_LOGOUT_TYPES` 判斷收到的訊息要不要處理，
+> **新 App 的 `{appId}-back-to-hub` 與 `{appId}-logout` 必須手動加進這兩個陣列**，
+> 否則子 App 送出訊息、Hub 完全不認得，「← 主頁」「登出」按鈕會看起來像沒反應，
+> 但實際上沒有任何錯誤訊息可查。這一步在 Checklist（十二）中列為必查項目。
 
 ---
 
@@ -281,6 +287,41 @@ window.addEventListener('load', function() {
 <script src="js/init.js"></script>     <!-- init.js 必須最後 -->
 ```
 
+### 7-5 中文語音朗讀（voice.js 必用規則）
+
+**禁止**自己寫「找陣列裡第一個語言代碼符合 zh 的語音」這種邏輯：
+
+```js
+// ❌ 錯誤示範：iOS 的多語言角色語音（Eddy、Grandma、Grandpa、Rocko、Flo、
+// Reed、Sandy、Shelley…）也會回報 lang = zh-CN / zh-TW，但它們是可以硬套
+// 很多國家語言的通用角色語音、不是專門的中文語音引擎，唸中文常常咬字不清、
+// 很多字唸不準；用 .find() 抓「第一個」很容易抓到這些角色語音而不是
+// 婷婷、美佳、善怡這類真正的中文語音。
+zhVoice = voices.find(function(v) { return v.lang.startsWith('zh'); });
+```
+
+**一律呼叫 `shared.js` 提供的 `pickBestZhVoice(voices)`**，它會優先挑「語音名稱本身是中文字」的語音，並依 zh-TW → zh-HK → zh-CN 排序，找不到才退回任何符合語言代碼的語音：
+
+```js
+var zhVoice = null;
+function loadVoices() {
+  zhVoice = pickBestZhVoice(speechSynthesis.getVoices());
+}
+if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
+function speakText(text) {
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-TW';           // 一律明確設定語言，不要依賴系統預設
+  if (zhVoice) u.voice = zhVoice;
+  speechSynthesis.speak(u);
+}
+```
+
+**注意**：`getVoices()` 在部分裝置（尤其 iOS Safari）第一次呼叫時可能回傳空陣列，語音清單要等 `onvoiceschanged` 觸發後才就緒，務必兩邊都呼叫 `loadVoices()`（如上），不要只呼叫一次。
+
+若 App 是**獨立匯出的靜態 HTML**（不會載入 `shared.js`，例如報讀工具存到報讀庫的文件），要把 `pickBestZhVoice()` 的邏輯直接內嵌一份到匯出的樣板字串裡；且要留意**已經匯出的舊文件是寫死的快照**，之後修這段邏輯不會回頭套用到舊文件，若有大量既有文件，需另外做一次性的批次修復（可參考報讀工具 `reader.js` 的 `_migrateReaderHtml()` 寫法）。
+
 ---
 
 ## 八、共用功能（直接呼叫 shared.js 提供的函式）
@@ -294,6 +335,7 @@ window.addEventListener('load', function() {
 | `showToast(msg)` | 顯示底部提示訊息 |
 | `playSound(type)` | 播放音效（`'correct'`、`'wrong'`、`'complete'` 等）|
 | `renderThemeGrid()` | 渲染設定頁的主題選色格 |
+| `pickBestZhVoice(voices)` | 從語音清單挑最適合朗讀中文的語音物件（規則見七-5）|
 
 這些函式在 `shared.js` 定義，子 App 直接呼叫，不需引數（除了標示者）。  
 子 App 的 HTML 必須包含 `<div id="toast"></div>` 供 `showToast` 使用。
@@ -366,7 +408,9 @@ students/{id}/progress/achievements
 - [ ] `init.js` 是最後載入的 JS
 - [ ] 登入資訊從 `sessionStorage('hub_student')` 取得，不自行實作登入
 - [ ] 登出 / 返回用 `postMessage` 通知 Hub
+- [ ] `{appId}-back-to-hub` 與 `{appId}-logout` 已加進 `src/hub.js` 的 `_HUB_BACK_TYPES` / `_HUB_LOGOUT_TYPES` 陣列（漏這步按鈕會看似沒反應）
 - [ ] 所有顏色使用 CSS 變數，無寫死色碼
+- [ ] 若有中文語音朗讀：一律呼叫 `pickBestZhVoice()`，未自行寫「找第一個 zh 語音」邏輯（見七-5）
 - [ ] 新增 `檔案功能說明.md` 說明每個 JS 的職責
 
 ---
@@ -406,3 +450,5 @@ students/{id}/progress/achievements
 | init.js 排在其他模組之前 | init.js 必須最後載入 |
 | 各 App 進度存在同一個 Firestore doc | 每個 App 用自己的 `progress/{appId}` |
 | postMessage type 未加 appId 前綴 | 避免不同 App 訊息衝突 |
+| postMessage type 送出去了，但沒加進 `src/hub.js` 的 `_HUB_BACK_TYPES` / `_HUB_LOGOUT_TYPES` | Hub 用白名單比對訊息類型，兩邊都要登記，否則按鈕看似沒反應且無錯誤訊息 |
+| TTS 用「陣列裡第一個語言代碼符合 zh 的語音」 | 改呼叫 `pickBestZhVoice()`，避免選到 iOS 的多語言角色語音（Eddy、Grandma 等）唸不準中文 |

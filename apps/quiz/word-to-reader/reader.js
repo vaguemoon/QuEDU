@@ -742,6 +742,100 @@ if (btnCloseVoiceDebug && voiceDebugModal) {
 }
 if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
 
+/* ══ 修復已儲存文件內嵌的舊版語音選擇邏輯 ══════════════════════
+   「存到報讀庫」的文件是儲存當下就固定好的獨立 HTML／JS 快照，
+   之後修好 buildOutputHtml() 產生的程式碼，並不會回頭更新舊文件裡
+   已經存好的那份——所以舊文件仍然是修復前的行為，需要另外更新。
+   這裡直接對已儲存文件的 html 內容做字串替換，只換掉語音選擇的那段
+   程式碼，文字內容完全不受影響。 */
+var _RK_PZ_FN =
+  'function pz(l){var zr=/zh|cmn|hant/i,nr=/[一-鿿]/,c=[];l.forEach(function(v,i){if(zr.test(v.lang))c.push(i);});' +
+  'if(!c.length)return -1;var n=c.filter(function(i){return nr.test(l[i].name);});var p=n.length?n:c;' +
+  'var tw=p.filter(function(i){return /^zh-TW/i.test(l[i].lang);});if(tw.length)return tw[0];' +
+  'var hk=p.filter(function(i){return /^zh-HK/i.test(l[i].lang);});if(hk.length)return hk[0];return p[0];}';
+var _RK_NEW_LV =
+  'function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");' +
+  'o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=pz(vc);if(z>=0)vs.value=z;}';
+var _RK_OLD_LV_RE =
+  /function lv\(\)\{vc=sy\.getVoices\(\);vs\.innerHTML="";vc\.forEach\(function\(v,i\)\{var o=document\.createElement\("option"\);o\.value=i;o\.textContent=v\.name\+" \("\+v\.lang\+"\)";vs\.appendChild\(o\);\}\);var z=vc\.findIndex\(function\(v\)\{return \/zh(?:\|cmn\|hant)?\/i\.test\(v\.lang\);\}\);if\(z>=0\)vs\.value=z;\}/;
+
+function _migrateReaderHtml(html) {
+  if (typeof html !== 'string' || html.indexOf('function pz(') !== -1) {
+    return { html: html, changed: false }; // 沒有內容，或已經是最新版
+  }
+  var out = html;
+  var changed = false;
+
+  if (out.indexOf('new SpeechSynthesisUtterance(tx);u.lang="zh-TW";') === -1) {
+    var patched = out.replace(
+      'new SpeechSynthesisUtterance(tx);var i=Number(vs.value);',
+      'new SpeechSynthesisUtterance(tx);u.lang="zh-TW";var i=Number(vs.value);'
+    );
+    if (patched !== out) { out = patched; changed = true; }
+  }
+
+  if (_RK_OLD_LV_RE.test(out)) {
+    out = out.replace(_RK_OLD_LV_RE, _RK_PZ_FN + '\n' + _RK_NEW_LV);
+    changed = true;
+  }
+
+  return { html: out, changed: changed };
+}
+
+var btnFixVoice = document.getElementById('btn-fix-voice');
+if (btnFixVoice) {
+  btnFixVoice.addEventListener('click', function () {
+    if (!currentUser || !fbDb) { showToast('請先登入才能修復雲端文件'); return; }
+    if (!confirm('這會檢查你「報讀庫」裡所有文件（含已分享到班級的複本），把舊版的語音選擇邏輯更新成最新版，文字內容不會被更動。確定要執行嗎？')) return;
+
+    procOverlay.classList.add('show');
+    procMsg.textContent = '修復語音選擇邏輯中…';
+
+    var uid = currentUser.uid;
+    var fixedCount = 0, checkedCount = 0;
+
+    fbDb.collection('teachers').doc(uid).collection('reader-library').get()
+      .then(function (libSnap) {
+        var ownJobs = libSnap.docs.map(function (doc) {
+          var d = doc.data();
+          checkedCount++;
+          var r = _migrateReaderHtml(d.html);
+          if (!r.changed) return Promise.resolve();
+          fixedCount++;
+          return doc.ref.update({ html: r.html });
+        });
+
+        return fbDb.collection('classes').where('teacherUid', '==', uid).get().then(function (clsSnap) {
+          var sharedJobs = [];
+          clsSnap.forEach(function (clsDoc) {
+            sharedJobs.push(
+              clsDoc.ref.collection('sharedReaderDocs').get().then(function (sharedSnap) {
+                var jobs = sharedSnap.docs.map(function (doc) {
+                  var d = doc.data();
+                  checkedCount++;
+                  var r = _migrateReaderHtml(d.html);
+                  if (!r.changed) return Promise.resolve();
+                  fixedCount++;
+                  return doc.ref.update({ html: r.html });
+                });
+                return Promise.all(jobs);
+              })
+            );
+          });
+          return Promise.all(ownJobs.concat(sharedJobs));
+        });
+      })
+      .then(function () {
+        procOverlay.classList.remove('show');
+        showToast('✅ 已檢查 ' + checkedCount + ' 份文件，修復 ' + fixedCount + ' 份');
+      })
+      .catch(function (e) {
+        procOverlay.classList.remove('show');
+        showToast('❌ 修復失敗：' + e.message);
+      });
+  });
+}
+
 function stopSpeak() {
   if (synth.speaking || synth.pending) synth.cancel();
   document.querySelectorAll('.line.reading').forEach(function (el) { el.classList.remove('reading'); });

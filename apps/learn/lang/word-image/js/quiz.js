@@ -31,6 +31,8 @@ function _speakWord(word, cb) {
   window.speechSynthesis.cancel();
   var utt = new SpeechSynthesisUtterance(word);
   utt.lang = 'zh-TW';
+  var zhVoice = pickBestZhVoice(window.speechSynthesis.getVoices());
+  if (zhVoice) utt.voice = zhVoice;
   var done = false;
   function finish() { if (!done) { done = true; cb(); } }
   utt.onend  = finish;

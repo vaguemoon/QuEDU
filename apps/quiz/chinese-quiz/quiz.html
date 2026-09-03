@@ -162,11 +162,31 @@ function getAnswer(i) {
    speakQuestion(qIdx)  — full sentence; fill-type splits at blanks
                           with 500ms silence at each gap
    ════════════════════════════════════════ */
+/* iOS 內建的多語言角色語音（Eddy、Grandma…）也會回報 zh-CN/zh-TW，但不是專門的中文
+   語音引擎，唸中文常咬字不清；優先挑「語音名稱本身是中文字」的語音（婷婷、美佳…）。 */
+var _zhVoice = null;
+function _loadZhVoice() {
+  var voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return;
+  var zhRe = /zh|cmn|hant/i, nameRe = /[一-鿿]/;
+  var candidates = voices.filter(function(v) { return zhRe.test(v.lang); });
+  if (!candidates.length) return;
+  var named = candidates.filter(function(v) { return nameRe.test(v.name); });
+  var pool  = named.length ? named : candidates;
+  var byTW  = pool.filter(function(v) { return /^zh-TW/i.test(v.lang); });
+  _zhVoice  = (byTW.length ? byTW : pool)[0];
+}
+if (window.speechSynthesis) {
+  _loadZhVoice();
+  if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = _loadZhVoice;
+}
+
 function speakText(text) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   var utt  = new SpeechSynthesisUtterance(String(text).trim());
   utt.lang = 'zh-TW';
+  if (_zhVoice) utt.voice = _zhVoice;
   utt.rate = 0.82;
   window.speechSynthesis.speak(utt);
 }
@@ -188,6 +208,7 @@ function speakQuestion(qIdx) {
 function _speak(text, onEnd) {
   var utt  = new SpeechSynthesisUtterance(text.trim());
   utt.lang = 'zh-TW';
+  if (_zhVoice) utt.voice = _zhVoice;
   utt.rate = 0.82;
   if (onEnd) utt.onend = onEnd;
   window.speechSynthesis.speak(utt);

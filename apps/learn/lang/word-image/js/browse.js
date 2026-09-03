@@ -77,5 +77,7 @@ function wiSpeak(evt, el) {
   window.speechSynthesis.cancel();
   var utt = new SpeechSynthesisUtterance(el.dataset.speak);
   utt.lang = 'zh-TW';
+  var zhVoice = pickBestZhVoice(window.speechSynthesis.getVoices());
+  if (zhVoice) utt.voice = zhVoice;
   window.speechSynthesis.speak(utt);
 }

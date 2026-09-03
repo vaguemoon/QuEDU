@@ -14,10 +14,7 @@ var _charContextWord = {};
 
 
 function loadVoices() {
-  var voices = synth.getVoices();
-  zhVoice = voices.find(function(v) {
-    return v.lang === 'zh-TW' || v.lang === 'zh-HK' || v.lang.startsWith('zh');
-  }) || null;
+  zhVoice = pickBestZhVoice(synth.getVoices());
 }
 
 if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;

@@ -359,6 +359,33 @@ function injectStyle(id, rules) {
    共用工具函數
    ════════════════════════════════════════ */
 
+/**
+ * 從 speechSynthesis.getVoices() 的結果中挑一個最適合朗讀中文的語音物件。
+ * iOS 內建的多語言「角色語音」（Eddy、Grandma、Grandpa、Rocko、Flo、Reed、Sandy、Shelley…）
+ * 雖然清單裡也會回報 zh-CN / zh-TW，選了也真的能發聲，但它們是可套用多國語言的通用
+ * 角色語音、不是專門的中文語音引擎，唸中文常常咬字不清、很多字唸不準。
+ * 蘋果專門做的中文語音一律用中文命名（婷婷、美佳、善怡…），品質好非常多，
+ * 所以優先挑「語音名稱本身是中文字」的語音，真的找不到才退回任何符合語言代碼的語音。
+ * 所有需要中文 TTS 的頁面共用，取代各自寫的「找第一個 zh 開頭語音」寫法。
+ */
+function pickBestZhVoice(voices) {
+  if (!voices || !voices.length) return null;
+  var zhRe   = /zh|cmn|hant/i; // 新版 iOS 可能用 cmn / Hant 等巨集語言代碼取代單純 zh
+  var nameRe = /[一-鿿]/;
+
+  var candidates = voices.filter(function(v) { return zhRe.test(v.lang); });
+  if (!candidates.length) return null;
+
+  var named = candidates.filter(function(v) { return nameRe.test(v.name); });
+  var pool  = named.length ? named : candidates;
+
+  var byTW = pool.filter(function(v) { return /^zh-TW/i.test(v.lang); });
+  if (byTW.length) return byTW[0];
+  var byHK = pool.filter(function(v) { return /^zh-HK/i.test(v.lang); });
+  if (byHK.length) return byHK[0];
+  return pool[0];
+}
+
 /** HTML 跳脫（防 XSS），所有頁面共用 */
 function escHtml(s) {
   return String(s)
