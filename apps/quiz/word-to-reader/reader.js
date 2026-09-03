@@ -661,9 +661,38 @@ function loadVoices() {
     opt.textContent = v.name + ' (' + v.lang + ')';
     voiceSelect.appendChild(opt);
   });
-  /* 新版 iOS 可能把中文語音標成 cmn / Hant 等巨集語言代碼而非單純 zh，故一併比對 */
-  var zh = voices.findIndex(function (v) { return /zh|cmn|hant/i.test(v.lang); });
+  var zh = _pickBestZhVoiceIndex(voices);
   if (zh >= 0) voiceSelect.value = zh;
+}
+
+/**
+ * 在可用語音中挑一個最適合唸中文的索引。
+ * iOS 內建的「角色語音」（Eddy、Grandma、Grandpa、Rocko、Flo、Reed、Sandy、Shelley…）
+ * 雖然清單裡也會掛 zh-CN / zh-TW 標籤、選了也真的能發聲，但它們是可套用多國語言的
+ * 通用角色語音、不是專門的中文語音引擎，唸中文常常咬字不清、很多字唸不準。
+ * 蘋果專門做的中文語音一律用中文命名（婷婷、美佳、善怡…），品質好非常多，
+ * 所以優先挑「名字本身是中文」的語音，真的找不到才退回任何符合語言代碼的語音。
+ */
+function _pickBestZhVoiceIndex(list) {
+  /* 新版 iOS 可能把中文語音標成 cmn / Hant 等巨集語言代碼而非單純 zh，故一併比對 */
+  var zhRe   = /zh|cmn|hant/i;
+  var nameRe = /[一-鿿]/; // 語音名稱本身含中文字
+
+  var candidates = [];
+  list.forEach(function (v, i) {
+    if (zhRe.test(v.lang)) candidates.push(i);
+  });
+  if (!candidates.length) return -1;
+
+  var named = candidates.filter(function (i) { return nameRe.test(list[i].name); });
+  var pool  = named.length ? named : candidates;
+
+  /* 同樣是中文命名語音時，優先 zh-TW，其次 zh-HK，最後才是 zh-CN */
+  var byTW = pool.filter(function (i) { return /^zh-TW/i.test(list[i].lang); });
+  if (byTW.length) return byTW[0];
+  var byHK = pool.filter(function (i) { return /^zh-HK/i.test(list[i].lang); });
+  if (byHK.length) return byHK[0];
+  return pool[0];
 }
 loadVoices();
 
@@ -686,16 +715,18 @@ function renderVoiceDebugList() {
     return;
   }
 
+  var pickedIdx = _pickBestZhVoiceIndex(list);
   var rows = list.map(function (v, i) {
-    var isZh = /zh|cmn|hant/i.test(v.lang);
-    var style = isZh ? 'font-weight:900;color:var(--blue-dk)' : 'color:var(--fg2)';
-    return '<div style="' + style + '">' + (i + 1) + '. ' + v.name + '　—　' + v.lang +
-      (isZh ? '　✅ 目前程式判定為中文語音' : '') + '</div>';
+    var isZh    = /zh|cmn|hant/i.test(v.lang);
+    var isPicked = i === pickedIdx;
+    var style = isPicked ? 'font-weight:900;color:var(--green)' : (isZh ? 'font-weight:700;color:var(--blue-dk)' : 'color:var(--fg2)');
+    var tag = isPicked ? '　🎯 目前實際會用這個語音朗讀' : (isZh ? '　（中文候選，非首選）' : '');
+    return '<div style="' + style + '">' + (i + 1) + '. ' + v.name + '　—　' + v.lang + tag + '</div>';
   }).join('');
 
   voiceDebugList.innerHTML =
     '<p style="margin-bottom:10px;font-size:.8rem;color:var(--fg2)">共 ' + list.length +
-    ' 個語音，藍色粗體是系統目前判定為中文的語音（把這個清單截圖給老師/技術人員即可）：</p>' + rows;
+    ' 個語音。綠色粗體＝目前實際會拿來朗讀的語音，藍色＝其他中文候選但沒被選中（把這個清單截圖給老師/技術人員即可）：</p>' + rows;
 }
 
 if (voiceDebugBtn && voiceDebugModal) {
@@ -1073,7 +1104,8 @@ function buildOutputHtml(docName, group) {
     + '<script>\n(function(){\n'
     + 'var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;\n'
     + 'var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");\n'
-    + 'function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=vc.findIndex(function(v){return /zh|cmn|hant/i.test(v.lang);});if(z>=0)vs.value=z;}\n'
+    + 'function pz(l){var zr=/zh|cmn|hant/i,nr=/[\\u4e00-\\u9fff]/,c=[];l.forEach(function(v,i){if(zr.test(v.lang))c.push(i);});if(!c.length)return -1;var n=c.filter(function(i){return nr.test(l[i].name);});var p=n.length?n:c;var tw=p.filter(function(i){return /^zh-TW/i.test(l[i].lang);});if(tw.length)return tw[0];var hk=p.filter(function(i){return /^zh-HK/i.test(l[i].lang);});if(hk.length)return hk[0];return p[0];}\n'
+    + 'function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=pz(vc);if(z>=0)vs.value=z;}\n'
     + 'lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;\n'
     + 'function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}\n'
     + 'function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);u.lang="zh-TW";var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}\n'
