@@ -666,6 +666,49 @@ function loadVoices() {
   if (zh >= 0) voiceSelect.value = zh;
 }
 loadVoices();
+
+/* ── 語音清單除錯面板：不需要接 Mac，直接在裝置上看目前 TTS 抓得到哪些語音 ── */
+var voiceDebugBtn      = document.getElementById('voice-debug-btn');
+var voiceDebugModal    = document.getElementById('modal-voice-debug');
+var voiceDebugList     = document.getElementById('voice-debug-list');
+var btnCloseVoiceDebug = document.getElementById('btn-close-voice-debug');
+
+function renderVoiceDebugList() {
+  if (!voiceDebugList) return;
+  var list = synth.getVoices();
+
+  if (!list.length) {
+    voiceDebugList.innerHTML = '<p style="color:var(--red)">目前抓不到任何語音，正在等待系統回應…（部分裝置語音清單需要幾秒鐘才會就緒，請稍候）</p>';
+    synth.addEventListener('voiceschanged', function onVC() {
+      synth.removeEventListener('voiceschanged', onVC);
+      renderVoiceDebugList();
+    });
+    return;
+  }
+
+  var rows = list.map(function (v, i) {
+    var isZh = /zh|cmn|hant/i.test(v.lang);
+    var style = isZh ? 'font-weight:900;color:var(--blue-dk)' : 'color:var(--fg2)';
+    return '<div style="' + style + '">' + (i + 1) + '. ' + v.name + '　—　' + v.lang +
+      (isZh ? '　✅ 目前程式判定為中文語音' : '') + '</div>';
+  }).join('');
+
+  voiceDebugList.innerHTML =
+    '<p style="margin-bottom:10px;font-size:.8rem;color:var(--fg2)">共 ' + list.length +
+    ' 個語音，藍色粗體是系統目前判定為中文的語音（把這個清單截圖給老師/技術人員即可）：</p>' + rows;
+}
+
+if (voiceDebugBtn && voiceDebugModal) {
+  voiceDebugBtn.addEventListener('click', function () {
+    renderVoiceDebugList();
+    voiceDebugModal.classList.add('show');
+  });
+}
+if (btnCloseVoiceDebug && voiceDebugModal) {
+  btnCloseVoiceDebug.addEventListener('click', function () {
+    voiceDebugModal.classList.remove('show');
+  });
+}
 if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
 
 function stopSpeak() {

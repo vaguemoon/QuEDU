@@ -20,7 +20,19 @@
   <div id="topbar-title">🎧 有聲教材</div>
   <button class="topbar-tab active" id="tab-convert">📂 轉換</button>
   <button class="topbar-tab"        id="tab-library">📚 報讀庫</button>
+  <button id="voice-debug-btn" title="顯示這台裝置目前可用的語音清單">🔍 語音清單</button>
   <button id="login-btn">☁️ 登入</button>
+</div>
+
+<!-- ── 語音清單除錯 Modal ────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-voice-debug">
+  <div class="modal-card" style="max-width:520px;max-height:80vh;overflow-y:auto">
+    <h3>🔍 這台裝置目前可用的語音</h3>
+    <div id="voice-debug-list" style="font-size:.85rem;line-height:1.9"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-ok" id="btn-close-voice-debug" style="flex:1">關閉</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Page: Upload ────────────────────────────────────────── -->
