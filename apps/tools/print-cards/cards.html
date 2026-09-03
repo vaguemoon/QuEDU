@@ -79,15 +79,42 @@ body {
 
 /* ── One A4 page (screen: 2×2 preview) ── */
 .print-page {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, auto);
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
   background: white;
   padding: 20px;
   border-radius: 6px;
   border: 1px solid #ccdaea;
   box-shadow: 0 3px 12px rgba(0,0,0,.09);
+}
+
+/* 第一頁專用：班級／姓名填寫列 */
+.print-page-header {
+  display: flex;
+  gap: 24px;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px dashed #ccdaea;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+.print-page-header .fill-line {
+  display: inline-block;
+  min-width: 110px;
+  height: 1em;
+  margin-left: 4px;
+  border-bottom: 1px solid #8aa8c8;
+  vertical-align: bottom;
+}
+
+/* 四張圖卡的 2×2 排版，獨立於頁面容器，加了表頭也不影響每頁四張 */
+.print-page-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 14px;
+  flex: 1;
 }
 
 /* ── Single card ── */
@@ -278,10 +305,6 @@ body {
     width:   190mm;
     height:  277mm;
     padding: 0;
-    gap:     5mm;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows:    repeat(2, 1fr);
-    align-items: center;   /* center each card vertically in its grid cell */
     border: none;
     box-shadow: none;
     border-radius: 0;
@@ -292,6 +315,24 @@ body {
   .print-page:last-child {
     page-break-after: auto;
     break-after: auto;
+  }
+
+  .print-page-header {
+    flex-shrink: 0;
+    padding-bottom: 3mm;
+    margin-bottom: 3mm;
+    font-size: 10pt;
+    border-bottom: 0.5pt dashed #8aa8c8;
+  }
+  .print-page-header .fill-line { min-width: 30mm; }
+
+  .print-page-grid {
+    flex: 1;
+    min-height: 0;
+    gap: 5mm;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows:    repeat(2, 1fr);
+    align-items: center;   /* center each card vertically in its grid cell */
   }
 
   .char-card {

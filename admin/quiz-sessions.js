@@ -862,18 +862,17 @@ async function deleteQuizSession(id) {
 /* ════════════════════════════════════════
    試卷分享給班級
    ════════════════════════════════════════ */
-var _qsClassCache     = null;
 var _qsShareSessionId = null;
 
+/* 每次都直接查 Firestore，不快取——班級的負責教師（teacherUid）如果被改派，
+   快取住的舊清單不會反映異動，分享名單就會跟實際權限脫節 */
 async function _loadClassesForShare() {
-  if (_qsClassCache) return _qsClassCache;
   if (!db || !currentTeacher) return [];
   var snap = await db.collection('classes')
     .where('teacherUid', '==', currentTeacher.uid).get();
-  _qsClassCache = snap.docs.map(function(d) {
+  return snap.docs.map(function(d) {
     return { id: d.id, name: d.data().name };
   });
-  return _qsClassCache;
 }
 
 async function _getSessionSharedClasses(sessionId) {

@@ -1,0 +1,209 @@
+/* radical.css — 部件趣 app 專屬樣式 */
+
+/* ── 頂端列 ── */
+#page-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 52px; display: flex; align-items: center; gap: 6px;
+  background: var(--white); border-bottom: 1.5px solid var(--border);
+  padding: 0 10px; box-shadow: 0 2px 8px rgba(44,100,160,.08);
+}
+.btn-back-hub {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap;
+}
+.btn-back {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: transparent; color: var(--muted);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap;
+}
+.btn-back.hidden { display: none; }
+#topbar-title {
+  flex: 1; text-align: center; font-size: .95rem; font-weight: 900;
+  color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#topbar-title span { color: var(--text); }
+#topbar-student {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 20px; cursor: pointer;
+  background: var(--blue-lt); border: 1.5px solid var(--border);
+  font-size: .82rem; font-weight: 700; color: var(--blue-dk);
+  position: relative; user-select: none;
+}
+#topbar-avatar { font-size: 1.1rem; line-height: 1; }
+#topbar-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow); z-index: 300;
+  display: flex; flex-direction: column; min-width: 130px; overflow: hidden;
+}
+.logout-menu.hidden { display: none; }
+.lm-btn {
+  padding: 11px 16px; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: .88rem; font-weight: 800;
+  text-align: left; color: var(--text);
+}
+.lm-btn:hover { background: var(--blue-lt); }
+.lm-logout { color: var(--red); }
+
+/* ── 頁面基礎 ── */
+.page { display: none; position: fixed; inset: 0; overflow-y: auto; padding: 60px 0 24px; }
+.page.active { display: block; }
+.rk-page-inner { max-width: 640px; margin: 0 auto; padding: 16px; }
+.rk-page-title { font-size: 1.1rem; font-weight: 900; color: var(--text); margin-bottom: 16px; text-align: center; }
+
+/* ── 練習集清單（page-entry） ── */
+.rk-set-list { display: flex; flex-direction: column; gap: 12px; }
+.rk-set-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; border-radius: var(--radius-sm);
+  border: 2px solid var(--border); background: var(--white);
+  cursor: pointer; text-align: left; font-family: inherit;
+  box-shadow: 0 2px 8px rgba(44,100,160,.07); transition: all .12s;
+}
+.rk-set-card:active { transform: scale(.98); border-color: var(--blue); }
+.rk-set-icon { font-size: 1.8rem; flex-shrink: 0; }
+.rk-set-name { font-size: 1rem; font-weight: 800; color: var(--text); }
+.rk-set-sub  { font-size: .78rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.rk-empty {
+  text-align: center; padding: 48px 16px; color: var(--muted);
+  font-weight: 700; font-size: .9rem; line-height: 1.8;
+}
+
+/* ── 模式選擇（page-menu） ── */
+.rk-mode-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 26px;
+}
+.rk-mode-card {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 20px 10px; border-radius: var(--radius-sm);
+  border: 2px solid var(--border); background: var(--white);
+  cursor: pointer; font-family: inherit; text-align: center;
+  box-shadow: 0 2px 8px rgba(44,100,160,.07); transition: all .12s;
+}
+.rk-mode-card:active { transform: scale(.96); border-color: var(--blue); }
+.rk-mode-card.disabled { opacity: .4; pointer-events: none; }
+.rk-mode-icon { font-size: 2rem; }
+.rk-mode-name { font-size: .92rem; font-weight: 900; color: var(--text); }
+.rk-mode-desc { font-size: .72rem; color: var(--muted); font-weight: 600; }
+
+.rk-progress-title { font-size: .85rem; font-weight: 900; color: var(--muted); margin-bottom: 10px; }
+.rk-progress-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.rk-progress-chip {
+  padding: 6px 12px; border-radius: 20px; font-size: .82rem; font-weight: 800;
+  border: 1.5px solid var(--border); color: var(--muted); background: var(--white);
+}
+.rk-progress-chip.new       { border-color: var(--border); color: var(--muted); }
+.rk-progress-chip.practiced { border-color: var(--blue); background: var(--blue-lt); color: var(--blue-dk); }
+.rk-progress-chip.mastered  { border-color: var(--green); background: #f0fbf5; color: #1e8449; }
+
+/* ── 四選一練習（page-quiz） ── */
+.q-progress-bar-wrap { position: fixed; top: 52px; left: 0; right: 0; height: 5px; background: var(--border); z-index: 100; }
+.q-progress-fill { height: 100%; background: var(--blue); transition: width .3s; width: 0; }
+#page-quiz { display: none; position: fixed; inset: 0; overflow-y: auto; padding: 60px 0 0; }
+#page-quiz.active { display: flex; flex-direction: column; }
+.q-panel { flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 16px 14px; }
+.q-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+.q-num  { font-size: .82rem; font-weight: 800; color: var(--muted); }
+.q-type { font-size: .78rem; font-weight: 800; color: var(--blue-dk); background: var(--blue-lt); padding: 3px 10px; border-radius: 20px; }
+
+#quiz-prompt-wrap { display: flex; align-items: center; justify-content: center; padding: 20px 0; }
+.rk-prompt {
+  font-size: 6rem; font-weight: 900; color: var(--text);
+  font-family: 'Noto Serif TC', serif; line-height: 1;
+}
+
+.option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; }
+.option-btn {
+  width: 100%; min-height: 80px; border: 3px solid var(--border);
+  border-radius: 20px; background: var(--white);
+  font-size: 4.5rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
+  cursor: pointer; transition: all .12s;
+  text-align: center; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(44,100,160,.07);
+}
+.option-btn:hover:not(:disabled) { background: var(--blue-lt); border-color: var(--blue); }
+.option-btn:active:not(:disabled) { transform: scale(.95); }
+.option-btn.correct {
+  background: #f0fbf5; border-color: var(--green); color: #1e8449;
+  box-shadow: 0 0 0 4px rgba(82,201,122,.2);
+}
+.option-btn.wrong { background: #fff0f0; border-color: var(--red); color: var(--red); animation: rkShake .35s ease; }
+.option-btn:disabled { cursor: default; }
+
+@keyframes rkShake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  60% { transform: translateX(10px); }
+}
+
+.btn-result {
+  padding: 14px; border: none; border-radius: var(--radius-sm);
+  font-size: .95rem; font-weight: 900; cursor: pointer; font-family: inherit;
+}
+.btn-result-primary   { background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: white; }
+.btn-result-secondary { background: var(--bg); color: var(--muted); border: 2px solid var(--border); }
+
+/* ── 翻牌配對（page-memory） ── */
+.rk-memory-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: .85rem; font-weight: 800; color: var(--muted); margin-bottom: 14px;
+}
+.rk-memory-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+}
+.rk-memory-card {
+  aspect-ratio: 3 / 4; border-radius: 14px; cursor: pointer;
+  position: relative; perspective: 600px;
+}
+.rk-memory-card-inner {
+  position: absolute; inset: 0; transition: transform .3s; transform-style: preserve-3d;
+}
+.rk-memory-card.flipped .rk-memory-card-inner,
+.rk-memory-card.matched .rk-memory-card-inner { transform: rotateY(180deg); }
+.rk-memory-face {
+  position: absolute; inset: 0; backface-visibility: hidden;
+  border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--border); box-shadow: 0 2px 8px rgba(44,100,160,.07);
+}
+.rk-memory-face-back {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: white;
+  font-size: 1.6rem; font-weight: 900;
+}
+.rk-memory-face-front {
+  background: var(--white); transform: rotateY(180deg);
+  font-size: 2.2rem; font-weight: 900; font-family: 'Noto Serif TC', serif; color: var(--text);
+}
+.rk-memory-card.matched .rk-memory-face-front { background: #f0fbf5; border-color: var(--green); color: #1e8449; }
+
+/* ── 部件描寫（page-write） ── */
+.rk-write-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: .85rem; font-weight: 800; color: var(--muted); margin-bottom: 16px;
+}
+.rk-write-target {
+  width: min(70vw, 320px); aspect-ratio: 1 / 1; margin: 0 auto;
+  border: 2px solid var(--border); border-radius: 16px; background: var(--white);
+  position: relative;
+}
+.rk-write-target::before, .rk-write-target::after {
+  content: ''; position: absolute; background: #e2ecf6;
+}
+.rk-write-target::before { left: 0; right: 0; top: 50%; height: 1px; }
+.rk-write-target::after  { top: 0; bottom: 0; left: 50%; width: 1px; }
+.rk-write-actions { display: flex; gap: 10px; margin-top: 20px; }
+.rk-write-actions .btn-result { flex: 1; }
+.rk-write-empty { text-align: center; color: var(--muted); font-weight: 700; padding: 24px 0; }
+
+/* ── 設定 ── */
+.settings-body { max-width: 480px; margin: 0 auto; padding: 16px; }
+.settings-section-title { font-size: .85rem; font-weight: 900; color: var(--muted); margin: 20px 0 10px; }
+#settings-avatar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.avatar-btn {
+  aspect-ratio: 1 / 1; border-radius: 14px; border: 2px solid var(--border);
+  background: var(--white); font-size: 1.6rem; cursor: pointer;
+}
+.avatar-btn.selected { border-color: var(--blue); background: var(--blue-lt); }

@@ -180,6 +180,34 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'radical', file: 'apps/learn/lang/radical/index.html',
+    icon: '🧩', name: '部件趣', desc: '部件・部首拆字練習',
+    type: 'learn', category: 'chinese',
+    theme: 'theme-orange', badge: '部件LV1', badgeClass: 'green',
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('radical').get()
+        .then(function(doc) {
+          if (!doc.exists) return '部件LV1';
+          var rs = doc.data().radicalStatus || {};
+          var m = Object.values(rs).filter(function(v) { return v === 'mastered'; }).length;
+          if (m >= 30) return '部件LV5';
+          if (m >= 15) return '部件LV4';
+          if (m >= 8)  return '部件LV3';
+          if (m >= 3)  return '部件LV2';
+          return '部件LV1';
+        }).catch(function() { return '部件LV1'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('radical').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var rs = doc.data().radicalStatus || {};
+          var m = Object.values(rs).filter(function(v) { return v === 'mastered'; }).length;
+          return m ? { sub: '精熟 ' + m + ' 個部件', score: m + ' 部件' } : null;
+        }).catch(function() { return null; });
+    }
+  },
+  {
     id: 'english', file: 'apps/learn/lang/english/index.html',
     icon: '🌐', name: '英文趣', desc: '英文發音・常用語・生字',
     type: 'learn', category: 'english',
@@ -265,9 +293,9 @@ var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','�
 var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
-  'geometry-back-to-hub','english-back'];
+  'geometry-back-to-hub','english-back','radical-back-to-hub'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
-  'geometry-logout','english-logout'];
+  'geometry-logout','english-logout','radical-logout'];
 
 // ── Hub 渲染 ──
 

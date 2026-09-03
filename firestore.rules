@@ -135,6 +135,24 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // 部件趣：練習集本體 —— 學生（無 Auth）可讀，教師（已登入）可寫
+    match /radicalSets/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 部件趣：練習集內的字／部件對應 —— 學生可讀，教師可寫
+    match /radicalItems/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 部件趣：練習集班級指派 —— 學生可讀，教師可寫
+    match /radicalSetAssignments/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
     // 數學題組 —— 學生（無 Auth）可讀（測驗時需取題），教師可寫
     match /mathQuestions/{doc} {
       allow read:  if true;

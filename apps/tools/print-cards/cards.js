@@ -22,8 +22,24 @@ var wrapper = document.getElementById('cards-wrapper');
 for (var p = 0; p < chars.length; p += 4) {
   var page = document.createElement('div');
   page.className = 'print-page';
-  chars.slice(p, p + 4).forEach(function(c) { page.appendChild(buildCard(c)); });
+  if (p === 0) page.appendChild(buildNameHeader());
+
+  var grid = document.createElement('div');
+  grid.className = 'print-page-grid';
+  chars.slice(p, p + 4).forEach(function(c) { grid.appendChild(buildCard(c)); });
+  page.appendChild(grid);
+
   wrapper.appendChild(page);
+}
+
+/* ══ 第一頁專用：班級／姓名填寫列 ══ */
+function buildNameHeader() {
+  var header = document.createElement('div');
+  header.className = 'print-page-header';
+  header.innerHTML =
+    '<span>班級：<span class="fill-line"></span></span>' +
+    '<span>姓名：<span class="fill-line"></span></span>';
+  return header;
 }
 
 updateStatus();

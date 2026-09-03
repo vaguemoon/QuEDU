@@ -288,6 +288,7 @@
             <button class="db-nav-btn active" id="dbnav-chinese-bank" onclick="switchDbView('chinese-bank',this)">📚 題庫</button>
             <button class="db-nav-btn" id="dbnav-word-image"    onclick="switchDbView('word-image',this)">🖼️ 詞語圖庫</button>
             <button class="db-nav-btn" id="dbnav-english"       onclick="switchDbView('english',this)">🇺🇸 英文圖庫</button>
+            <button class="db-nav-btn" id="dbnav-radical"       onclick="switchDbView('radical',this)">🧩 部件圖庫</button>
             <button class="db-nav-btn" id="dbnav-audio-chinese" onclick="switchDbView('audio-chinese',this)">🎵 音檔(施工中)</button>
           </div>
           <div class="db-nav-group">
@@ -375,6 +376,11 @@
           <!-- 語文 › 詞語圖庫 -->
           <div id="dbview-word-image" style="display:none">
             <div id="wi-main"><div class="loading-wrap"><div class="spinner"></div></div></div>
+          </div>
+
+          <!-- 語文 › 部件圖庫 -->
+          <div id="dbview-radical" style="display:none">
+            <div id="rk-main"><div class="loading-wrap"><div class="spinner"></div></div></div>
           </div>
 
           <!-- 語文 › 英文圖庫 -->
@@ -1751,6 +1757,24 @@
   </div>
 </div>
 
+<!-- ══ 部件趣：練習集指派給班級 Modal ══ -->
+<div id="rk-assign-modal" style="display:none;position:fixed;inset:0;z-index:601;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:440px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
+    <div id="rk-assign-title" style="font-size:1.05rem;font-weight:900;margin-bottom:18px">指派給班級</div>
+    <div id="rk-assign-list" style="max-height:300px;overflow-y:auto;margin-bottom:18px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="_rkCloseAssign()"
+        style="flex:1;padding:11px;border:2px solid var(--border);border-radius:10px;background:var(--gray-lt,#f5f5f5);font-family:inherit;font-size:.9rem;font-weight:800;cursor:pointer;color:var(--muted)">
+        取消
+      </button>
+      <button onclick="_rkSaveAssign()"
+        style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--blue-dk));color:white;font-family:inherit;font-size:.9rem;font-weight:900;cursor:pointer">
+        儲存指派
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ 音檔錄製 Modal ══ -->
 <div id="ac-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2)">
@@ -1811,6 +1835,7 @@
 <script src="quiz-sessions.js"></script>
 <script src="math-quiz.js"></script>
 <script src="word-image.js"></script>
+<script src="radical-sets.js"></script>
 <script src="english.js"></script>
 <script src="math-bank.js"></script>
 <script src="audio-clips.js"></script>

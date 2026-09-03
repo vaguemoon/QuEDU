@@ -243,7 +243,7 @@ function _initDatabaseTab() {
 
 /* ── 資料庫：切換左欄項目 ── */
 function switchDbView(viewId, btn) {
-  ['chinese-bank', 'word-image', 'english', 'audio-chinese', 'math-bank', 'audio-math'].forEach(function(v) {
+  ['chinese-bank', 'word-image', 'english', 'radical', 'audio-chinese', 'math-bank', 'audio-math'].forEach(function(v) {
     var el = document.getElementById('dbview-' + v);
     if (el) el.style.display = v === viewId ? '' : 'none';
   });
@@ -252,6 +252,7 @@ function switchDbView(viewId, btn) {
   if (viewId === 'chinese-bank')  loadQuizBankStats();
   if (viewId === 'word-image')    loadWordImageTab();
   if (viewId === 'english')       loadEnglishTab();
+  if (viewId === 'radical')       loadRadicalTab();
   if (viewId === 'math-bank')     loadMathBankStats();
   if (viewId === 'audio-chinese') loadAudioClipsTab('chinese');
   if (viewId === 'audio-math')    loadAudioClipsTab('math');

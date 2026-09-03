@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>部件趣｜上學趣</title>
+<link rel="manifest" href="/QuEDU/manifest.json">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+<link rel="stylesheet" href="radical.css">
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+</head>
+<body>
+
+<!-- ── 頂端列 ── -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goBack()">← 返回</button>
+  <div id="topbar-title">🧩 <span>部件趣</span></div>
+  <div id="topbar-student" onclick="toggleLogoutMenu()">
+    <span id="topbar-avatar">🐣</span>
+    <span id="topbar-name">—</span>
+    <div id="topbar-logout-menu" class="logout-menu hidden">
+      <button class="lm-btn lm-settings" onclick="goToSettings(event)">⚙️ 設定</button>
+      <button class="lm-btn lm-logout"   onclick="sendLogout(event)">🚪 登出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 選擇練習集 ── -->
+<div id="page-entry" class="page active">
+  <div class="rk-page-inner">
+    <div class="rk-page-title">🧩 選擇練習集</div>
+    <div id="entry-list"><div class="loading-wrap"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<!-- ── 模式選擇 ── -->
+<div id="page-menu" class="page">
+  <div class="rk-page-inner">
+    <div class="rk-page-title" id="menu-set-title">練習集</div>
+    <div class="rk-mode-cards">
+      <button class="rk-mode-card" onclick="startQuiz('c2w')">
+        <div class="rk-mode-icon">🔍</div>
+        <div class="rk-mode-name">看部件選字</div>
+        <div class="rk-mode-desc">給一個部件，找出含有它的字</div>
+      </button>
+      <button class="rk-mode-card" onclick="startQuiz('w2c')">
+        <div class="rk-mode-icon">🔄</div>
+        <div class="rk-mode-name">看字選部件</div>
+        <div class="rk-mode-desc">給一個字，找出它包含的部件</div>
+      </button>
+      <button class="rk-mode-card" onclick="startMemory()">
+        <div class="rk-mode-icon">🃏</div>
+        <div class="rk-mode-name">翻牌配對</div>
+        <div class="rk-mode-desc">翻牌找出部件與字的配對</div>
+      </button>
+      <button class="rk-mode-card" id="mode-card-write" onclick="startWrite()">
+        <div class="rk-mode-icon">✍️</div>
+        <div class="rk-mode-name">部件描寫</div>
+        <div class="rk-mode-desc">跟著筆順練習寫部件</div>
+      </button>
+    </div>
+    <div class="rk-progress-title">📊 部件熟練度</div>
+    <div id="menu-radical-progress"></div>
+  </div>
+</div>
+
+<!-- ── 四選一練習（看部件選字／看字選部件共用） ── -->
+<div id="page-quiz" class="page">
+  <div class="q-progress-bar-wrap"><div class="q-progress-fill" id="quiz-progress-fill"></div></div>
+  <div class="q-panel">
+    <div class="q-header">
+      <span class="q-num" id="quiz-q-num">已答 0 題</span>
+      <span class="q-type" id="quiz-q-type">看部件選字</span>
+    </div>
+    <div id="quiz-prompt-wrap">
+      <div class="rk-prompt" id="quiz-prompt">氵</div>
+    </div>
+    <div class="option-grid" id="quiz-option-grid"></div>
+    <button class="btn-result btn-result-secondary" style="margin-top:4px" onclick="showPage('menu')">📋 離開練習</button>
+  </div>
+</div>
+
+<!-- ── 翻牌配對遊戲 ── -->
+<div id="page-memory" class="page">
+  <div class="rk-page-inner">
+    <div class="rk-memory-header">
+      <span id="memory-status">翻開卡片，配對部件與字</span>
+      <span id="memory-moves">已翻 0 次</span>
+    </div>
+    <div class="rk-memory-grid" id="memory-grid"></div>
+    <button class="btn-result btn-result-secondary" style="margin-top:14px" onclick="showPage('menu')">📋 離開遊戲</button>
+  </div>
+</div>
+
+<!-- ── 部件描寫練習 ── -->
+<div id="page-write" class="page">
+  <div class="rk-page-inner">
+    <div class="rk-write-header">
+      <span id="write-status">跟著筆順描寫部件</span>
+      <span id="write-progress">1 / 1</span>
+    </div>
+    <div class="rk-write-target" id="write-target"></div>
+    <div class="rk-write-actions">
+      <button class="btn-result btn-result-primary" onclick="writeNext()">下一個 →</button>
+      <button class="btn-result btn-result-secondary" onclick="showPage('menu')">📋 離開練習</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 設定 ── -->
+<div id="page-settings" class="page">
+  <div class="settings-body">
+    <div class="settings-section-title">🐾 頭像</div>
+    <div id="settings-avatar-grid"></div>
+    <div class="settings-section-title">🎨 主題色系</div>
+    <div id="theme-grid"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="../../../../shared/shared.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/state.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/write.js"></script>
+<script src="js/init.js"></script>
+<link rel="stylesheet" href="../../../../shared/report.css">
+<script src="../../../../shared/report.js"></script>
+<script>initReportWidget({ role: 'student' });</script>
+<link rel="stylesheet" href="../../../../shared/scratch.css">
+<script src="../../../../shared/scratch.js"></script>
+<script>initScratchWidget();</script>
+</body>
+</html>
