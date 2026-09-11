@@ -209,7 +209,7 @@ var SUBJECTS = [
   },
   {
     id: 'zhuyin', file: 'apps/learn/lang/zhuyin/index.html',
-    icon: '🔤', name: '注音趣', desc: '注音符號點選學習',
+    icon: 'ㄅ', name: '注音趣', desc: '注音符號點選學習',
     type: 'learn', category: 'chinese',
     theme: 'theme-pink', badge: '注音趣', badgeClass: 'green',
     getLevel: function() { return Promise.resolve('注音趣'); },
@@ -333,9 +333,8 @@ function renderHub() {
   var learnSubjects = SUBJECTS.filter(function(s) { return s.type !== 'quiz'; });
   var quizSubjects  = SUBJECTS.filter(function(s) { return s.type === 'quiz'; });
 
-  // 學習區分國語／英文／數學三個區塊
+  // 學習區分國語／英文／數學三個區塊，各自一整排（欄數與卡片寬度交給 .subjects-grid 的 CSS 控制）
   var learnGrid = document.getElementById('subjects-grid');
-  learnGrid.style.gridTemplateColumns = ''; // 由子 grid 自行控制
   var groups = [
     { key: 'chinese', label: '📖 國語' },
     { key: 'english', label: '🌐 英文' },
@@ -346,7 +345,7 @@ function renderHub() {
     if (!subs.length) return '';
     return '<div class="hub-subject-group">' +
       '<div class="hub-group-title">' + g.label + '</div>' +
-      '<div class="subjects-grid" style="grid-template-columns:repeat(2,1fr)">' +
+      '<div class="subjects-grid">' +
       _renderSubjectCards(subs) + '</div></div>';
   }).join('');
 

@@ -20,6 +20,7 @@ function zySpeak(text) {
   window.speechSynthesis.cancel();
   var utt = new SpeechSynthesisUtterance(text);
   utt.lang = 'zh-TW';
+  utt.rate = 0.85; // 給低年級學生聽，語速放慢一些（沿用練字趣/認字趣的速度）
   if (zyZhVoice) utt.voice = zyZhVoice;
   window.speechSynthesis.speak(utt);
 }

@@ -85,7 +85,7 @@ body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:v
 .btn-logout-hub:hover{background:#fee2e2}
 
 /* 主內容區 */
-.hub-content{flex:1;overflow-y:auto;padding:28px 24px 60px;max-width:760px}
+.hub-content{flex:1;overflow-y:auto;padding:28px 24px 60px;max-width:1200px}
 .hub-panel{display:none}
 .hub-panel.active{display:block}
 
@@ -93,9 +93,12 @@ body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:v
 .hub-bottom-nav{display:none}
 
 .hub-section-label{font-size:.78rem;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:12px}
+/* 學習區外層：國語／英文／數學各自一整排，垂直堆疊，不要再跟內層小網格搶同一個 class */
+.subjects-groups{display:flex;flex-direction:column}
 .hub-subject-group{margin-bottom:20px}
 .hub-group-title{font-size:.78rem;font-weight:900;color:var(--muted);letter-spacing:1px;margin-bottom:10px}
-.subjects-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+/* 每個分類內部：卡片固定寬度、不拉伸，同一分類的 App 數量不多時就是一整排 */
+.subjects-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 220px));justify-content:flex-start;gap:13px}
 .subject-card{background:var(--white);border-radius:20px;padding:20px 14px 18px;box-shadow:0 4px 18px rgba(44,100,160,.1);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .18s;border:2.5px solid transparent;text-align:center}
 .subject-card:hover{transform:translateY(-4px);box-shadow:0 8px 28px rgba(44,100,160,.18)}
 .subject-card:active{transform:scale(.95)}
