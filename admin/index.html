@@ -234,6 +234,7 @@
         <div class="app-tabs-mini" id="roster-app-tabs" style="margin-bottom:16px">
           <button class="app-tab-mini active" onclick="switchRosterTab('students', this)">👥 學生狀態</button>
           <button class="app-tab-mini" id="roster-tab-tasks" onclick="switchRosterTab('tasks', this)">📢 公告</button>
+          <button class="app-tab-mini" id="roster-tab-quiz" onclick="switchRosterTab('quiz', this)">📝 測驗管理</button>
         </div>
 
         <!-- 學生名單 -->
@@ -271,6 +272,24 @@
               </button>
             </div>
             <div id="task-add-error" style="font-size:.78rem;color:var(--red);font-weight:700;min-height:18px;margin-top:4px"></div>
+          </div>
+        </div>
+
+        <!-- 測驗管理 -->
+        <div id="roster-quiz-view" style="display:none">
+          <div class="card">
+            <div class="card-title">
+              <button class="back-btn" style="margin:0;padding:0" onclick="backToClasses()">← 返回班級</button>
+              <span id="roster-quiz-class-name" style="margin-left:10px;font-weight:900"></span>
+              <button onclick="loadRosterQuizManagement()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+            </div>
+            <p style="font-size:.8rem;color:var(--muted);margin-bottom:14px;line-height:1.6">
+              這裡列出目前實際分享給這個班級的語文測驗（不論是哪位老師分享的），跟左側「語文測驗列表」的資料夾歸檔是兩回事——
+              資料夾只是老師自己整理用，這裡才是學生真正看得到的清單。移除分享後學生就不會再看到那份測驗。
+            </p>
+            <div id="roster-quiz-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1768,6 +1787,18 @@
 <div id="zy-modal" style="display:none;position:fixed;inset:0;z-index:601;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:20px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.22)">
     <div id="zy-modal-title" style="font-size:1.05rem;font-weight:900;margin-bottom:18px">編輯符號</div>
+    <div style="margin-bottom:16px;padding:12px;border:1.5px dashed var(--border);border-radius:12px">
+      <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">符號發音（錄音，取代不穩定的自動發音）</label>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button type="button" class="ac-rec-btn" id="zy-rec-btn" onclick="_zyToggleRecord()">🎙 開始錄音</button>
+        <span id="zy-rec-timer" style="font-size:.82rem;color:var(--muted);font-weight:700">0.0s</span>
+        <label style="font-size:.78rem;color:var(--blue-dk);font-weight:700;cursor:pointer">
+          或上傳檔案 <input id="zy-audio-file" type="file" accept="audio/*" onchange="_zyAudioFileSelected(this)" style="font-size:.78rem;max-width:130px">
+        </label>
+      </div>
+      <audio id="zy-audio-preview" controls style="display:none;margin-top:8px;width:100%;height:32px"></audio>
+      <div id="zy-audio-error" style="font-size:.76rem;color:var(--red);font-weight:700;margin-top:4px"></div>
+    </div>
     <div style="margin-bottom:14px">
       <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">意象圖片</label>
       <div style="display:flex;gap:6px;align-items:center">
@@ -1850,6 +1881,7 @@
 <script src="teacher-school.js"></script>
 <script src="overview.js"></script>
 <script src="tasks.js"></script>
+<script src="roster-quiz.js"></script>
 <script src="students.js"></script>
 <script src="quiz-bank.js"></script>
 <script src="quiz-sessions.js"></script>

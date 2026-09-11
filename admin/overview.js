@@ -70,14 +70,17 @@ function switchRosterTab(appId, btn) {
     tabsEl.querySelectorAll('.app-tab-mini').forEach(function(b) { b.classList.remove('active'); });
     if (btn) btn.classList.add('active');
   }
-  var isTasks      = appId === 'tasks';
   var progressView = document.getElementById('roster-progress-view');
   var tasksView    = document.getElementById('roster-tasks-view');
-  if (progressView) progressView.style.display = isTasks ? 'none' : '';
-  if (tasksView)    tasksView.style.display    = isTasks ? '' : 'none';
+  var quizView     = document.getElementById('roster-quiz-view');
+  if (progressView) progressView.style.display = appId === 'students' ? '' : 'none';
+  if (tasksView)    tasksView.style.display    = appId === 'tasks'    ? '' : 'none';
+  if (quizView)     quizView.style.display     = appId === 'quiz'     ? '' : 'none';
 
-  if (isTasks) {
+  if (appId === 'tasks') {
     loadClassTasks();
+  } else if (appId === 'quiz') {
+    if (typeof loadRosterQuizManagement === 'function') loadRosterQuizManagement();
   } else {
     var wrap = document.getElementById('class-roster-wrap');
     if (wrap) renderClassRoster(wrap);
