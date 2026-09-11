@@ -5,14 +5,17 @@
 
 var PAGE_STACK = [];
 var PAGE_CONFIG = {
-  'entry':    { title: '🧩 <span>部件趣</span>', back: false },
-  'menu':     { title: '選擇模式',                back: true  },
-  'quiz':     { title: '練習中',                  back: false },
-  'memory':   { title: '翻牌配對',                back: false },
-  'write':    { title: '部件描寫',                back: false },
-  'settings': { title: '⚙️ <span>設定</span>',   back: true  }
+  'mode-select':  { title: '🧩 <span>部件趣</span>',   back: false },
+  'curriculum':   { title: '📚 <span>課本生字</span>', back: true  },
+  'teacher-sets': { title: '🧩 <span>老師自建</span>', back: true  },
+  'menu':         { title: '選擇模式',                  back: true  },
+  'quiz':         { title: '練習中',                    back: true  },
+  'memory':       { title: '配對消除',                  back: true  },
+  'write':        { title: '部件描寫',                  back: true  },
+  'snap':         { title: '部件拼貼',                  back: true  },
+  'settings':     { title: '⚙️ <span>設定</span>',     back: true  }
 };
-var currentPage = 'entry';
+var currentPage = 'mode-select';
 
 function showPage(name, pushHistory) {
   if (pushHistory === undefined) pushHistory = true;
@@ -25,11 +28,27 @@ function showPage(name, pushHistory) {
 
   var titleEl = document.getElementById('topbar-title');
   var backBtn = document.getElementById('topbar-back');
-  if (titleEl) titleEl.innerHTML = cfg.title;
+  var bcEl    = document.getElementById('topbar-breadcrumb');
+
+  if (name === 'curriculum') {
+    // 課本生字：依目前步驟渲染麵包屑，交給 curriculum.js 處理
+    var cStep = (typeof currSelectedBook !== 'undefined' && currSelectedBook) ? 3
+              : (typeof currSelectedVer  !== 'undefined' && currSelectedVer)  ? 2 : 1;
+    if (typeof updateTopbarBreadcrumb === 'function') updateTopbarBreadcrumb(cStep);
+  } else {
+    if (bcEl) bcEl.classList.add('hidden');
+    if (titleEl) { titleEl.innerHTML = cfg.title; titleEl.classList.remove('hidden'); }
+  }
+
   if (backBtn) backBtn.classList.toggle('hidden', !cfg.back);
 }
 
 function goBack() {
+  // 課本生字選擇頁：返回麵包屑上一層，而非跳出課程選擇
+  if (currentPage === 'curriculum' && typeof currStep !== 'undefined' && currStep > 1) {
+    goToCurrStep(currStep - 1);
+    return;
+  }
   if (PAGE_STACK.length > 1) {
     PAGE_STACK.pop();
     var prev = PAGE_STACK[PAGE_STACK.length - 1];

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>注音趣｜上學趣</title>
+<link rel="manifest" href="/QuEDU/manifest.json">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+<link rel="stylesheet" href="zhuyin.css">
+</head>
+<body>
+
+<!-- ── 頂端列 ── -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goBack()">← 返回</button>
+  <div id="topbar-title">🔤 <span>注音趣</span></div>
+  <div id="topbar-student" onclick="toggleLogoutMenu()">
+    <span id="topbar-avatar">🐣</span>
+    <span id="topbar-name">—</span>
+    <div id="topbar-logout-menu" class="logout-menu hidden">
+      <button class="lm-btn lm-settings" onclick="goToSettings(event)">⚙️ 設定</button>
+      <button class="lm-btn lm-logout"   onclick="sendLogout(event)">🚪 登出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 注音符號表 ── -->
+<div id="page-grid" class="page active">
+  <div class="zy-page-inner">
+    <div id="zy-grid-wrap"><div class="loading-wrap"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<!-- ── 設定 ── -->
+<div id="page-settings" class="page">
+  <div class="settings-body">
+    <div class="settings-section-title">🐾 頭像</div>
+    <div id="settings-avatar-grid"></div>
+    <div class="settings-section-title">🎨 主題色系</div>
+    <div id="theme-grid"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="../../../../shared/shared.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/state.js"></script>
+<script src="js/voice.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>

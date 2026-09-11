@@ -30,7 +30,7 @@ function _renderBrowse() {
           '</div>' +
           '<div class="wi-flip-back">' +
             '<div class="wi-flip-back-word" data-speak="' + _escAttr(item.word) + '" onclick="wiSpeak(event,this)">' + _escHtml(item.word) + '</div>' +
-            '<div class="wi-flip-back-def" data-speak="' + _escAttr(item.definition) + '" onclick="wiSpeak(event,this)">' + _escHtml(item.definition) + '</div>' +
+            (item.definition ? '<div class="wi-flip-back-def" data-speak="' + _escAttr(item.definition) + '" onclick="wiSpeak(event,this)">' + _escHtml(item.definition) + '</div>' : '') +
           '</div>' +
         '</div>' +
       '</div>' +

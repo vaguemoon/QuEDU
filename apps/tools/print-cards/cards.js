@@ -209,10 +209,11 @@ function renderWriter(char) {
     HanziWriter.create(target, char, {
       width: sz, height: sz,
       padding:       Math.round(sz * 0.08),
-      showCharacter: false,
+      showCharacter: true,
       showOutline:   true,
       outlineColor:  '#b8d4f0',
       strokeColor:   '#4a90d9',
+      radicalColor:  '#e74c3c',
       onLoadCharDataSuccess: function() {
         var svg = target.querySelector('svg');
         if (svg && !svg.getAttribute('viewBox')) {

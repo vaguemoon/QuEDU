@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <link rel="stylesheet" href="../../../../shared/shared.css">
+<link rel="stylesheet" href="../../../../shared/curriculum.css">
 <script>
 (function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
   purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
@@ -26,6 +27,13 @@
   <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
   <button class="btn-back hidden" id="topbar-back" onclick="goBack()">← 返回</button>
   <div id="topbar-title">🧩 <span>部件趣</span></div>
+  <div id="topbar-breadcrumb" class="hidden">
+    <span id="tb-crumb-1" class="tb-crumb">出版社</span>
+    <span class="tb-sep">›</span>
+    <span id="tb-crumb-2" class="tb-crumb">冊次</span>
+    <span class="tb-sep">›</span>
+    <span id="tb-crumb-3" class="tb-crumb">課次</span>
+  </div>
   <div id="topbar-student" onclick="toggleLogoutMenu()">
     <span id="topbar-avatar">🐣</span>
     <span id="topbar-name">—</span>
@@ -36,10 +44,49 @@
   </div>
 </div>
 
-<!-- ── 選擇練習集 ── -->
-<div id="page-entry" class="page active">
+<!-- ── 選擇練習方式 ── -->
+<div id="page-mode-select" class="page fill active">
+  <button class="mode-choice mode-choice-left" onclick="showPage('curriculum')">
+    <div class="mode-choice-icon">📚</div>
+    <div class="mode-choice-title">課本生字</div>
+    <div class="mode-choice-sub">從課本選課次練習</div>
+  </button>
+  <button class="mode-choice mode-choice-custom" onclick="showPage('teacher-sets')">
+    <div class="mode-choice-icon">🧩</div>
+    <div class="mode-choice-title">老師自建</div>
+    <div class="mode-choice-sub">老師建立的部件資料庫</div>
+  </button>
+</div>
+
+<!-- ── 課本生字：出版社／冊次／課次 ── -->
+<div id="page-curriculum" class="page">
+
+  <!-- Step 1：選出版社 -->
+  <div class="curr-step" id="curr-step-1">
+    <div class="curr-step-title">📖 選擇出版社</div>
+    <div class="curr-ver-cards" id="version-cards">
+      <div class="curr-loading">載入課程資料中…</div>
+    </div>
+  </div>
+
+  <!-- Step 2：選冊次 -->
+  <div class="curr-step" id="curr-step-2" style="display:none">
+    <div class="curr-step-title" id="step2-title">選擇冊次</div>
+    <div class="curr-book-cards" id="book-cards"></div>
+  </div>
+
+  <!-- Step 3：選課次 -->
+  <div class="curr-step" id="curr-step-3" style="display:none">
+    <div class="curr-step-title" id="step3-title">選擇課次</div>
+    <div class="curr-lesson-cards" id="lesson-cards"></div>
+  </div>
+
+</div>
+
+<!-- ── 老師自建：選擇部件 ── -->
+<div id="page-teacher-sets" class="page">
   <div class="rk-page-inner">
-    <div class="rk-page-title">🧩 選擇練習集</div>
+    <div class="rk-page-title">🧩 選擇部件</div>
     <div id="entry-list"><div class="loading-wrap"><div class="spinner"></div></div></div>
   </div>
 </div>
@@ -61,17 +108,47 @@
       </button>
       <button class="rk-mode-card" onclick="startMemory()">
         <div class="rk-mode-icon">🃏</div>
-        <div class="rk-mode-name">翻牌配對</div>
-        <div class="rk-mode-desc">翻牌找出部件與字的配對</div>
+        <div class="rk-mode-name">配對消除</div>
+        <div class="rk-mode-desc">翻牌找出部件與意象圖片的配對</div>
       </button>
       <button class="rk-mode-card" id="mode-card-write" onclick="startWrite()">
         <div class="rk-mode-icon">✍️</div>
         <div class="rk-mode-name">部件描寫</div>
         <div class="rk-mode-desc">跟著筆順練習寫部件</div>
       </button>
+      <button class="rk-mode-card hidden" id="mode-card-snap" onclick="startSnap()">
+        <div class="rk-mode-icon">🧲</div>
+        <div class="rk-mode-name">部件拼貼</div>
+        <div class="rk-mode-desc">拖曳部件拼出正確的字</div>
+      </button>
     </div>
     <div class="rk-progress-title">📊 部件熟練度</div>
     <div id="menu-radical-progress"></div>
+    <div class="rk-progress-title" id="decomp-progress-title" style="display:none">🧲 拼貼進度</div>
+    <div id="menu-decomp-progress"></div>
+  </div>
+</div>
+
+<!-- ── 部件拼貼（磁吸式雙軌結構拼貼板） ── -->
+<div id="page-snap" class="page">
+  <div class="rk-page-inner">
+    <div class="rk-memory-header">
+      <span id="snap-status">拖曳部件到正確的顏色房間</span>
+      <span id="snap-progress">1 / 1</span>
+    </div>
+    <div class="snap-game-area">
+      <div class="snap-board snap-board-lr" id="snap-board">
+        <div class="snap-zone snap-zone-a" id="snap-zone-first" data-slot="first"></div>
+        <div class="snap-zone snap-zone-b" id="snap-zone-second" data-slot="second"></div>
+        <div class="snap-board-char" id="snap-board-char"></div>
+      </div>
+      <div class="snap-tray" id="snap-tray"></div>
+    </div>
+    <div class="snap-actions">
+      <button class="btn-result btn-result-primary" id="snap-confirm-btn" onclick="_rkSnapConfirm()" disabled>✅ 確定</button>
+      <button class="btn-result btn-result-primary snap-next-btn hidden" id="snap-next-btn" onclick="_rkSnapConfirmNext()">下一個 →</button>
+      <button class="btn-result btn-result-secondary" onclick="showPage('menu')">📋 離開練習</button>
+    </div>
   </div>
 </div>
 
@@ -91,11 +168,11 @@
   </div>
 </div>
 
-<!-- ── 翻牌配對遊戲 ── -->
+<!-- ── 配對消除遊戲 ── -->
 <div id="page-memory" class="page">
   <div class="rk-page-inner">
     <div class="rk-memory-header">
-      <span id="memory-status">翻開卡片，配對部件與字</span>
+      <span id="memory-status">翻開卡片，配對部件與意象圖片</span>
       <span id="memory-moves">已翻 0 次</span>
     </div>
     <div class="rk-memory-grid" id="memory-grid"></div>
@@ -132,10 +209,12 @@
 <script src="../../../../shared/shared.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/state.js"></script>
+<script src="../../../../shared/curriculum.js"></script>
 <script src="js/menu.js"></script>
 <script src="js/quiz.js"></script>
 <script src="js/memory.js"></script>
 <script src="js/write.js"></script>
+<script src="js/snap.js"></script>
 <script src="js/init.js"></script>
 <link rel="stylesheet" href="../../../../shared/report.css">
 <script src="../../../../shared/report.js"></script>

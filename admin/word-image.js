@@ -82,6 +82,30 @@ function _wiIsWordSourceType(type) {
   return type === '詞語解釋' || type === '詞語填空';
 }
 
+/* 由題庫組出「詞語 → 說明文字」對照表：
+   詞語解釋／詞語填空的答案都算詞語來源（決定哪些字有卡片可做），
+   但說明文字只用「詞語解釋」的題幹；沒有解釋題的詞語說明文字留空，不會顯示填空句子。 */
+function _wiBuildWordMap(qSnaps, grade, lesson) {
+  var wordMap = {};
+  qSnaps.forEach(function(snap) {
+    snap.forEach(function(d) {
+      var data = d.data();
+      if (data.grade === grade && data.lesson === lesson && _wiIsWordSourceType(data.type) && data.answer) {
+        if (!(data.answer in wordMap)) wordMap[data.answer] = '';
+      }
+    });
+  });
+  qSnaps.forEach(function(snap) {
+    snap.forEach(function(d) {
+      var data = d.data();
+      if (data.grade === grade && data.lesson === lesson && data.type === '詞語解釋' && data.answer) {
+        if (!wordMap[data.answer]) wordMap[data.answer] = data.question || '';
+      }
+    });
+  });
+  return wordMap;
+}
+
 /* ════════════════════════════
    課程模式 Step 1：年級選擇
    ════════════════════════════ */
@@ -197,15 +221,7 @@ function _wiSelectLesson(idx) {
     db.collection('questions').where('teacherUid', '==', 'shared').get(),
     db.collection('wordImages').where('gradeLesson', '==', gradeLesson).get()
   ]).then(function(results) {
-    var wordMap = {};
-    [results[0], results[1]].forEach(function(snap) {
-      snap.forEach(function(d) {
-        var data = d.data();
-        if (data.grade === _wiGrade && data.lesson === _wiLesson && _wiIsWordSourceType(data.type)) {
-          if (!wordMap[data.answer]) wordMap[data.answer] = data.question || '';
-        }
-      });
-    });
+    var wordMap = _wiBuildWordMap([results[0], results[1]], _wiGrade, _wiLesson);
     _wiWordList = Object.keys(wordMap).map(function(w) {
       return { word: w, definition: wordMap[w] };
     });
@@ -235,7 +251,11 @@ function _wiRenderWordGrid() {
       '<div class="card-title" style="margin:0">' + _wiEsc(title) + '</div>' +
       '<span style="font-size:.82rem;font-weight:700;color:var(--muted)">' +
         hasImg + ' / ' + total + ' 已上傳圖片</span>' +
+      '<button class="btn btn-secondary" style="margin-left:auto;padding:6px 14px;font-size:.78rem" onclick="_wiSyncDefinitions()">' +
+        '🔄 同步說明文字</button>' +
     '</div>' +
+    '<p style="font-size:.76rem;color:var(--muted);margin:-8px 0 12px">' +
+      '若某個詞語後來補上了「詞語解釋」題目，已上傳的圖卡卡片說明文字不會自動更新，按這個按鈕重新同步。</p>' +
     '<div class="wi-word-grid">';
 
   _wiWordList.forEach(function(item, i) {
@@ -259,7 +279,7 @@ function _wiRenderWordGrid() {
         '<span style="font-size:.95rem;font-weight:900;color:var(--text)">' + _wiEsc(item.word) + '</span>' +
         '<button class="wi-search-btn" onclick="event.stopPropagation();_wiOpenGoogleSearch(' + i + ')">搜圖</button>' +
       '</div>' +
-      '<div class="wi-def-label">' + _wiEsc(item.definition) + '</div>';
+      (item.definition ? '<div class="wi-def-label">' + _wiEsc(item.definition) + '</div>' : '');
     if (hasImage) {
       html += '<button class="wi-del-btn" onclick="event.stopPropagation();_wiDeleteImage(' + i + ')">' +
         '刪除圖片</button>';
@@ -268,6 +288,41 @@ function _wiRenderWordGrid() {
   });
   html += '</div>';
   wrap.innerHTML = html;
+}
+
+/* ── 重新以「詞語解釋優先」規則同步已上傳圖卡的說明文字 ── */
+function _wiSyncDefinitions() {
+  var uid = currentTeacher.uid;
+  showToast('同步中…');
+
+  Promise.all([
+    db.collection('questions').where('teacherUid', '==', uid).get(),
+    db.collection('questions').where('teacherUid', '==', 'shared').get()
+  ]).then(function(results) {
+    var wordMap = _wiBuildWordMap([results[0], results[1]], _wiGrade, _wiLesson);
+
+    _wiWordList.forEach(function(item) {
+      if (wordMap[item.word] !== undefined) item.definition = wordMap[item.word];
+    });
+
+    var batch = db.batch();
+    var count = 0;
+    Object.keys(_wiImageMap).forEach(function(word) {
+      var img = _wiImageMap[word];
+      var newDef = wordMap[word];
+      if (img && img.docId && newDef !== undefined) {
+        batch.update(db.collection('wordImages').doc(img.docId), { definition: newDef });
+        count++;
+      }
+    });
+
+    if (!count) { showToast('沒有需要同步的圖卡'); _wiRenderWordGrid(); return; }
+
+    batch.commit().then(function() {
+      showToast('✅ 已同步 ' + count + ' 筆圖卡的說明文字');
+      _wiRenderWordGrid();
+    }).catch(function(e) { showToast('❌ 同步失敗：' + e.message); });
+  }).catch(function(e) { showToast('❌ 同步失敗：' + e.message); });
 }
 
 /* ════════════════════════════
@@ -640,7 +695,7 @@ function _wiCatRenderNode() {
             '<span style="font-size:.95rem;font-weight:900;color:var(--text)">' + _wiEsc(item.word) + '</span>' +
             '<button class="wi-search-btn" onclick="event.stopPropagation();_wiCatGoogleSearch(' + i + ')">搜圖</button>' +
           '</div>' +
-          '<div class="wi-def-label">' + _wiEsc(item.definition) + '</div>';
+          (item.definition ? '<div class="wi-def-label">' + _wiEsc(item.definition) + '</div>' : '');
         if (hasImage) {
           html += '<button class="wi-del-btn" onclick="event.stopPropagation();_wiCatDeleteImg(' + i + ')">刪除圖片</button>';
         }

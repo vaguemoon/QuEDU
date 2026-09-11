@@ -5,6 +5,8 @@
 'use strict';
 
 var qbParsedData = null;
+var qbDupCount   = 0;   // 上傳前偵測到、已略過的重複題目數
+var qbDupSamples = [];  // 略過的重複題目摘要（供教師檢視）
 
 var _qbDelKeys  = {};
 var _qbDelCount = 0;
@@ -177,7 +179,7 @@ function previewQuizBank() {
         return;
       }
 
-      renderQuizBankPreview();
+      _qbFilterDuplicates(grade);
     } catch(err) {
       showToast('❌ 解析失敗：' + err.message);
     }
@@ -185,8 +187,60 @@ function previewQuizBank() {
   reader.readAsArrayBuffer(file);
 }
 
+/* ── 判斷重複的標準：同年級＋同課次＋同題型＋同題幹＋同答案，全部相同才算重複 ── */
+function _qbDupKey(item) {
+  return item.grade + '||' + item.lesson + '||' + item.type + '||' + item.question + '||' + item.answer;
+}
+
+/* ── 比對「自己」已上傳過的題目，略過完全重複的列（不影響單純修改過的題目） ── */
+function _qbFilterDuplicates(grade) {
+  if (!db || !currentTeacher) { renderQuizBankPreview(); return; }
+
+  db.collection('questions')
+    .where('teacherUid', '==', currentTeacher.uid)
+    .where('grade', '==', grade)
+    .get()
+    .then(function(snap) {
+      var existingKeys = {};
+      snap.forEach(function(doc) {
+        existingKeys[_qbDupKey(doc.data())] = true;
+      });
+
+      var seenInFile = {};
+      var kept = [];
+      var dupSamples = [];
+      qbParsedData.forEach(function(item) {
+        var key = _qbDupKey(item);
+        var isDup = existingKeys[key] || seenInFile[key];
+        seenInFile[key] = true;
+        if (isDup) {
+          dupSamples.push('第' + item.lesson + '課．' + item.type + '．' + item.question + '　→　' + item.answer);
+        } else {
+          kept.push(item);
+        }
+      });
+
+      qbDupCount  = dupSamples.length;
+      qbDupSamples = dupSamples;
+      qbParsedData = kept;
+
+      if (qbParsedData.length === 0) {
+        showToast('這批題目全部與你之前上傳過的重複，沒有新題目可上傳。');
+        qbDupCount = 0; qbDupSamples = [];
+        return;
+      }
+
+      renderQuizBankPreview();
+    })
+    .catch(function(e) {
+      showToast('⚠️ 重複比對失敗（' + e.message + '），將略過比對直接預覽');
+      renderQuizBankPreview();
+    });
+}
+
 function renderQuizBankPreview() {
   document.getElementById('qb-total-count').textContent = qbParsedData.length;
+  _qbRenderDupNotice();
 
   var headers = ['課次', '課名', '題型', '題幹', '答案'];
   var html = '<tr>' + headers.map(function(h) {
@@ -208,12 +262,33 @@ function renderQuizBankPreview() {
   document.getElementById('qb-preview-wrap').style.display = '';
 }
 
+/* ── 顯示已略過的重複題目提示（與自己之前上傳過的題目完全相同才會列在這裡） ── */
+function _qbRenderDupNotice() {
+  var el = document.getElementById('qb-dup-notice');
+  if (!el) return;
+  if (!qbDupCount) { el.innerHTML = ''; el.style.display = 'none'; return; }
+
+  var visible = qbDupSamples.slice(0, 5);
+  var html = '<div style="background:var(--orange-lt,#fdf1e6);border:1.5px solid var(--orange,#e67e22);border-radius:8px;padding:10px 14px">' +
+    '<div style="font-size:.78rem;font-weight:800;color:#8a4a12;margin-bottom:6px">↩️ 已自動略過 ' + qbDupCount + ' 筆重複題目（課次／題型／題幹／答案皆與你之前上傳過的完全相同）：</div>' +
+    '<ul style="padding-left:16px;font-size:.78rem;color:#8a4a12;line-height:1.7">';
+  visible.forEach(function(s) { html += '<li>' + escHtml(s) + '</li>'; });
+  if (qbDupSamples.length > 5) html += '<li style="color:var(--muted)">…還有 ' + (qbDupSamples.length - 5) + ' 筆</li>';
+  html += '</ul></div>';
+  el.innerHTML = html;
+  el.style.display = '';
+}
+
 function clearQuizBankPreview() {
   qbParsedData = null;
+  qbDupCount   = 0;
+  qbDupSamples = [];
   document.getElementById('qb-file').value = '';
   document.getElementById('qb-preview-wrap').style.display = 'none';
   document.getElementById('qb-preview-table').innerHTML = '';
   clearQbErrors();
+  var dupEl = document.getElementById('qb-dup-notice');
+  if (dupEl) { dupEl.innerHTML = ''; dupEl.style.display = 'none'; }
   /* Reset button so teacher can upload a second file without refreshing */
   var btn = document.querySelector('#qb-preview-wrap .btn-primary');
   if (btn) { btn.disabled = false; btn.textContent = '⬆️ 上傳至 Firebase'; }

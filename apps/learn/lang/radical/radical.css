@@ -1,5 +1,11 @@
 /* radical.css — 部件趣 app 專屬樣式 */
 
+:root {
+  --snap-a-bg: #fff3cd; --snap-a-dk: #8a6d1f;
+  --snap-b-bg: #dbeeff; --snap-b-dk: #2d6fa8;
+  --snap-merged-bg: #eef1f5;
+}
+
 /* ── 頂端列 ── */
 #page-topbar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 200;
@@ -25,6 +31,23 @@
   color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 #topbar-title span { color: var(--text); }
+#topbar-title.hidden { display: none; }
+#topbar-breadcrumb {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 2px; overflow: hidden; min-width: 0;
+}
+#topbar-breadcrumb.hidden { display: none; }
+.tb-crumb {
+  font-size: .78rem; font-weight: 800; color: var(--muted);
+  padding: 4px 10px; border-radius: 14px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 88px;
+  transition: all .15s; cursor: default;
+}
+.tb-crumb.tb-active { color: var(--blue-dk); background: var(--blue-lt); }
+.tb-crumb.tb-link   { cursor: pointer; }
+.tb-crumb.tb-link:hover  { background: var(--blue-lt); color: var(--blue-dk); }
+.tb-crumb.tb-link:active { background: var(--blue); color: white; transform: scale(.94); }
+.tb-sep { color: var(--border); font-size: .85rem; flex-shrink: 0; }
 #topbar-student {
   flex-shrink: 0; display: flex; align-items: center; gap: 5px;
   padding: 5px 10px; border-radius: 20px; cursor: pointer;
@@ -55,7 +78,28 @@
 .rk-page-inner { max-width: 640px; margin: 0 auto; padding: 16px; }
 .rk-page-title { font-size: 1.1rem; font-weight: 900; color: var(--text); margin-bottom: 16px; text-align: center; }
 
-/* ── 練習集清單（page-entry） ── */
+/* ── 選擇練習方式（雙卡片，page-mode-select） ── */
+.page.fill { display: none; }
+.page.fill.active { display: flex; }
+#page-mode-select { flex-direction: row; }
+.mode-choice {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 24px; padding: 48px 32px;
+  cursor: pointer; transition: all .18s; border: none; font-family: inherit;
+}
+.mode-choice-left   { background: var(--blue-lt); border-right: 1px solid var(--border); }
+.mode-choice-custom { background: #fff4e8; }
+@media (max-width: 600px) {
+  #page-mode-select { flex-direction: column; }
+  .mode-choice-left { border-right: none; border-bottom: 1px solid var(--border); }
+}
+.mode-choice:hover  { filter: brightness(.96); transform: scale(1.01); }
+.mode-choice:active { filter: brightness(.92); transform: scale(.99); }
+.mode-choice-icon  { font-size: 5rem; }
+.mode-choice-title { font-size: 2rem; font-weight: 900; color: var(--text); }
+.mode-choice-sub   { font-size: 1rem; font-weight: 600; color: var(--muted); }
+
+/* ── 老師自建：練習集清單（page-teacher-sets） ── */
 .rk-set-list { display: flex; flex-direction: column; gap: 12px; }
 .rk-set-card {
   display: flex; align-items: center; gap: 12px;
@@ -66,6 +110,7 @@
 }
 .rk-set-card:active { transform: scale(.98); border-color: var(--blue); }
 .rk-set-icon { font-size: 1.8rem; flex-shrink: 0; }
+.rk-set-icon-img { width: 44px; height: 44px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
 .rk-set-name { font-size: 1rem; font-weight: 800; color: var(--text); }
 .rk-set-sub  { font-size: .78rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
 .rk-empty {
@@ -86,6 +131,7 @@
 }
 .rk-mode-card:active { transform: scale(.96); border-color: var(--blue); }
 .rk-mode-card.disabled { opacity: .4; pointer-events: none; }
+.rk-mode-card.hidden { display: none; }
 .rk-mode-icon { font-size: 2rem; }
 .rk-mode-name { font-size: .92rem; font-weight: 900; color: var(--text); }
 .rk-mode-desc { font-size: .72rem; color: var(--muted); font-weight: 600; }
@@ -114,6 +160,10 @@
 .rk-prompt {
   font-size: 6rem; font-weight: 900; color: var(--text);
   font-family: 'Noto Serif TC', serif; line-height: 1;
+}
+.rk-prompt-variant {
+  font-size: .38em; font-weight: 700; color: var(--muted);
+  vertical-align: middle; margin-left: 2px;
 }
 
 .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; }
@@ -146,6 +196,7 @@
 }
 .btn-result-primary   { background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: white; }
 .btn-result-secondary { background: var(--bg); color: var(--muted); border: 2px solid var(--border); }
+.btn-result:disabled  { background: var(--border); color: var(--muted); cursor: default; opacity: .7; }
 
 /* ── 翻牌配對（page-memory） ── */
 .rk-memory-header {
@@ -178,6 +229,23 @@
   font-size: 2.2rem; font-weight: 900; font-family: 'Noto Serif TC', serif; color: var(--text);
 }
 .rk-memory-card.matched .rk-memory-face-front { background: #f0fbf5; border-color: var(--green); color: #1e8449; }
+.rk-memory-img { width: 88%; height: 88%; object-fit: cover; border-radius: 10px; }
+
+.rk-memory-card.hint .rk-memory-face-back { animation: rkMemoryHintGlow 1s ease-in-out infinite; }
+@keyframes rkMemoryHintGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,0,.85); }
+  50%      { box-shadow: 0 0 0 9px rgba(255,196,0,0); }
+}
+
+.rk-memory-sparkle {
+  position: fixed; left: 0; top: 0; pointer-events: none; z-index: 900;
+  font-size: 1.4rem; transform: translate(-50%, -50%);
+  animation: rkSparkleBurst .75s ease-out forwards;
+}
+@keyframes rkSparkleBurst {
+  0%   { transform: translate(-50%, -50%) scale(.4); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.15); opacity: 0; }
+}
 
 /* ── 部件描寫（page-write） ── */
 .rk-write-header {
@@ -197,6 +265,51 @@
 .rk-write-actions { display: flex; gap: 10px; margin-top: 20px; }
 .rk-write-actions .btn-result { flex: 1; }
 .rk-write-empty { text-align: center; color: var(--muted); font-weight: 700; padding: 24px 0; }
+
+/* ── 部件拼貼（page-snap） ── */
+.snap-game-area { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 10px 0 20px; }
+.snap-board {
+  position: relative; width: min(78vw, 340px); aspect-ratio: 1 / 1;
+  display: flex; overflow: hidden; border: 3px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.snap-board-lr { flex-direction: row; }
+.snap-board-tb { flex-direction: column; }
+.snap-zone { flex: 1; transition: background .3s; }
+.snap-zone-a { background: var(--snap-a-bg); }
+.snap-zone-b { background: var(--snap-b-bg); }
+.snap-zone-merged { background: var(--snap-merged-bg); }
+.snap-board-char {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 7.5rem; font-weight: 700; color: var(--text);
+  font-family: '標楷體', DFKai-SB, 'BiauKai', serif;
+  opacity: 0; pointer-events: none; background: var(--snap-merged-bg);
+}
+.snap-board-char.show { opacity: 1; animation: snapFlash .6s ease-out; }
+@keyframes snapFlash {
+  0%   { transform: scale(.6);  opacity: 0; }
+  40%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.snap-tray { display: flex; gap: 24px; justify-content: center; align-items: center; min-height: 130px; }
+.snap-piece {
+  width: 120px; height: 120px; border-radius: var(--radius-sm);
+  background: var(--white); border: 2.5px solid var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 4rem; font-weight: 700; color: var(--blue-dk);
+  font-family: '標楷體', DFKai-SB, 'BiauKai', serif; cursor: grab;
+  touch-action: none; user-select: none;
+  box-shadow: 0 2px 8px rgba(44,100,160,.12);
+}
+.snap-piece.dragging { cursor: grabbing; box-shadow: 0 8px 20px rgba(44,100,160,.28); }
+.snap-piece.parked {
+  background: transparent; border-color: transparent; box-shadow: none;
+  font-size: 6.5rem; color: var(--text);
+}
+
+.snap-actions { display: flex; gap: 10px; margin-top: 14px; }
+.snap-actions .btn-result { flex: 1; }
+.snap-next-btn.hidden { display: none; }
 
 /* ── 設定 ── */
 .settings-body { max-width: 480px; margin: 0 auto; padding: 16px; }

@@ -12,7 +12,7 @@ var PAGE_CONFIG = {
   'menu':          { title:'📋 <span>今天的生字</span>', back:true  },
   'mode':          { title:'選擇模式',                    back:true  },
   'learn':         { title:'學習中',                      back:true  },
-  'exam':          { title:'今日測驗',                    back:false },
+  'exam':          { title:'今日測驗',                    back:true  },
   'settings':      { title:'⚙️ <span>設定</span>',       back:true  },
   'achievement':   { title:'🏆 <span>我的成就</span>',   back:true  }
 };

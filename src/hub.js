@@ -208,6 +208,14 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'zhuyin', file: 'apps/learn/lang/zhuyin/index.html',
+    icon: '🔤', name: '注音趣', desc: '注音符號點選學習',
+    type: 'learn', category: 'chinese',
+    theme: 'theme-pink', badge: '注音趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('注音趣'); },
+    activity: function() { return Promise.resolve(null); }
+  },
+  {
     id: 'english', file: 'apps/learn/lang/english/index.html',
     icon: '🌐', name: '英文趣', desc: '英文發音・常用語・生字',
     type: 'learn', category: 'english',
@@ -293,9 +301,9 @@ var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','�
 var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
-  'geometry-back-to-hub','english-back','radical-back-to-hub'];
+  'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
-  'geometry-logout','english-logout','radical-logout'];
+  'geometry-logout','english-logout','radical-logout','zhuyin-logout'];
 
 // ── Hub 渲染 ──
 

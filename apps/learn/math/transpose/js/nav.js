@@ -4,7 +4,7 @@ var PAGE_STACK = [];
 var PAGE_CONFIG = {
   'home':     { title: '↔ <span>移項趣</span>', back: false },
   'game':     { title: '✏️ <span>練習中</span>',  back: true  },
-  'result':   { title: '📊 <span>練習結果</span>', back: false },
+  'result':   { title: '📊 <span>練習結果</span>', back: true  },
   'settings': { title: '⚙️ <span>設定</span>',     back: true  }
 };
 var currentPage = 'home';

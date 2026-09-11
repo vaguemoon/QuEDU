@@ -147,8 +147,27 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
-    // 部件趣：練習集班級指派 —— 學生可讀，教師可寫
-    match /radicalSetAssignments/{doc} {
+    // 部件趣：字元拆解對照表（部件拼貼遊戲用，全校共用資料）—— 學生可讀，教師可寫
+    match /charDecompositions/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 部件趣：部件意象圖庫（配對消除遊戲用，全校共用資料）—— 學生可讀，教師可寫
+    // 保留供「匯入舊資料」一次性遷移讀取，正式資料已改存 radicalGroups
+    match /radicalMeanings/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 部件趣：部件資料庫（每個部件一筆全校共用資料，取代 radicalSets/radicalItems/radicalMeanings）
+    match /radicalGroups/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 注音趣：注音符號圖庫（37 個固定符號，全校共用資料）—— 學生可讀，教師可寫
+    match /zhuyinSounds/{doc} {
       allow read:  if true;
       allow write: if request.auth != null;
     }

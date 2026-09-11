@@ -270,13 +270,18 @@ function goTo(toId) {
 var _AC = null;
 function _getAC() {
   if (!_AC) _AC = new (window.AudioContext || window.webkitAudioContext)();
+  // 近幾版 iOS Safari 收緊了自動播放政策：即使在使用者手勢中建立，
+  // AudioContext 也可能停在 suspended 狀態，播放時排程的聲音不會報錯，只是完全無聲，
+  // 必須每次都嘗試 resume() 才能確保真的在播放狀態。
+  if (_AC.state === 'suspended') { try { _AC.resume(); } catch (e) {} }
   return _AC;
 }
 
-// iOS 需要在 touch / click 事件中解鎖 AudioContext
+// iOS 需要在使用者手勢中解鎖並 resume() AudioContext，才能確保之後排程的音效真的會播放
 (function() {
   function unlock() { _getAC(); }
   document.addEventListener('touchstart', unlock, { once: true });
+  document.addEventListener('pointerdown', unlock, { once: true });
   document.addEventListener('click',      unlock, { once: true });
 })();
 

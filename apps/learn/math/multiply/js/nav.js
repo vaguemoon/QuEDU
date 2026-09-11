@@ -11,7 +11,7 @@ var PAGE_CONFIG = {
   'practice':        { title: '✏️ <span>練習中</span>',   back: true  },
   'exam-select':     { title: '📋 <span>測驗設定</span>', back: true  },
   'exam':            { title: '⏱ <span>測驗中</span>',   back: true  },
-  'exam-result':     { title: '📊 <span>測驗結果</span>', back: false },
+  'exam-result':     { title: '📊 <span>測驗結果</span>', back: true  },
   'settings':        { title: '⚙️ <span>設定</span>',     back: true  },
   'achievement':     { title: '🏆 <span>我的成就</span>', back: true  }
 };

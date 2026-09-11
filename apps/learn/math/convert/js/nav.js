@@ -9,7 +9,7 @@ var PAGE_CONFIG = {
   'home':        { title: '↔ <span>換算趣</span>',    back: false },
   'select':      { title: '📋 <span>選擇題型</span>',  back: true  },
   'game':        { title: '✏️ <span>練習中</span>',    back: true  },
-  'result':      { title: '📊 <span>本輪結果</span>',  back: false },
+  'result':      { title: '📊 <span>本輪結果</span>',  back: true  },
   'settings':    { title: '⚙️ <span>設定</span>',      back: true  },
   'achievement': { title: '🏆 <span>我的成就</span>',  back: true  },
 };
