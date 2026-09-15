@@ -115,7 +115,9 @@ function fillBackspace() {
 
 function updateFillDisplay() {
   var el = document.getElementById('fill-display');
-  if (el) el.textContent = fillInputStr || '＿';
+  if (!el) return;
+  el.textContent = fillInputStr || '＿';
+  el.classList.toggle('q-filled', !!fillInputStr);
 }
 
 function handleFillKeydown(e) {

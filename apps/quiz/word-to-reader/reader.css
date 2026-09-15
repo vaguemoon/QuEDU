@@ -66,7 +66,9 @@ body.dark {
    不用逐字查表）══════════════════════════════════════════════ */
 @font-face {
   font-family: 'BpmfZihiKai';
-  src: url('../../../assets/font/BPMFZIHIKAISTD-REGULAR.TTF') format('truetype');
+  src: url('../../../assets/font/BPMFZIHIKAISTD-REGULAR.woff2') format('woff2'),
+       url('../../../assets/font/BPMFZIHIKAISTD-REGULAR.TTF') format('truetype');
+  font-display: swap;
 }
 #reader-content, .doc-heading {
   font-family: 'BpmfZihiKai', var(--font-ui);
@@ -365,8 +367,16 @@ body {
 }
 .lineText { flex: 1; line-height: 1.85; }
 
-/* 分段留白（空行），不是朗讀單位，純粹拉開視覺間距 */
-.line-gap { height: 16px; }
+/* 分段留白（空行），不是朗讀單位。用跟 .line 完全一樣的 padding／
+   line-height（內含一個 &nbsp; 撐開高度）讓它確實佔住「一行」的高度，
+   而不是隨字體大小走鐘的任意留白；背景明確設成跟頁面同色，
+   不要被上下相鄰行的斑馬紋背景帶到 */
+.line-gap {
+  display: flex; align-items: flex-start;
+  padding: 9px 12px; border-radius: 13px; margin: 2px 0;
+  background: var(--bg);
+}
+.line-gap span { line-height: 1.85; }
 
 .title-main {
   font-size: 1.05rem; font-weight: 900; color: var(--blue-dk);

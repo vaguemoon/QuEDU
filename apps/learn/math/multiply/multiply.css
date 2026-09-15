@@ -233,6 +233,7 @@
 
 .q-num      { color: var(--blue-dk); }
 .q-blank    { color: var(--muted); border-bottom: 4px solid var(--blue); min-width: 60px; display: inline-block; text-align: center; }
+.q-blank.q-filled { color: var(--blue-dk); }
 .q-product  { color: var(--orange); font-size: 1.1em; }
 .q-correct  { color: var(--green); }
 .q-correct-pair { color: var(--green); font-weight: 900; }

@@ -977,10 +977,11 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
   });
 
   /* ─── CSS ─── */
-  var _fontUrl = window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF';
+  var _fontUrl2 = window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.woff2';
+  var _fontUrl  = window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF';
   var css = [
     '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap");',
-    '@font-face{font-family:"BpmfZihiKai";src:url("' + _fontUrl + '") format("truetype")}',
+    '@font-face{font-family:"BpmfZihiKai";src:url("' + _fontUrl2 + '") format("woff2"),url("' + _fontUrl + '") format("truetype");font-display:swap}',
     '*{box-sizing:border-box}',
     'body{font-family:"BpmfZihiKai",serif;color:#1a1a2e;background:#fff;',
          'margin:0;padding:18mm 20mm;font-size:12pt;line-height:2.8}',

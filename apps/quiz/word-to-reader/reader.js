@@ -637,10 +637,14 @@ function renderLines(lines) {
   var even = 0;
   lines.forEach(function (line) {
     if (line === '') {
-      var gap = document.createElement('div');
+      var gap     = document.createElement('div');
+      var gapSpan = document.createElement('span');
       gap.className = 'line-gap';
       gap.dataset.raw = '';
+      gapSpan.innerHTML = '&nbsp;'; /* 撐出跟一般行同樣的高度 */
+      gap.appendChild(gapSpan);
       readerContent.appendChild(gap);
+      even = 0; /* 分段後斑馬紋從頭算，配色不會因為前面行數而忽奇忽偶 */
       return;
     }
 
@@ -846,7 +850,7 @@ document.getElementById('font-minus').addEventListener('click', function () {
   readerContent.style.fontSize = fontValue + 'px';
 });
 document.getElementById('font-plus').addEventListener('click', function () {
-  fontValue = Math.min(36, fontValue + 1);
+  fontValue = Math.min(60, fontValue + 1);
   fontVal.textContent = fontValue + 'px';
   readerContent.style.fontSize = fontValue + 'px';
 });
@@ -1083,7 +1087,7 @@ function idbDelete(name) {
 /* ══ Generate Output HTML ═══════════════════════════════════ */
 function buildOutputHtml(docName, group) {
   var linesHtml = Array.from(readerContent.querySelectorAll('.line, .line-gap')).map(function (el) {
-    if (el.classList.contains('line-gap')) return '<div class="line-gap"></div>';
+    if (el.classList.contains('line-gap')) return '<div class="line-gap"><span>&nbsp;</span></div>';
     var t   = (el.querySelector('.lineText') || el).textContent;
     var cls = el.className.replace(/\breading\b/g, '').trim();
     return '<div class="' + cls + '"><span class="lineText">'
@@ -1102,15 +1106,18 @@ function buildOutputHtml(docName, group) {
     + 'body.dark{--blue:#58a6ff;--blue-dk:#79c0ff;--blue-lt:#1c2d3f;--fg1:#e6edf3;--fg2:#7d8590;--bg:#0d1117;--white:#161b22;--border:#30363d;--grad-btn:linear-gradient(135deg,#3a7fd4,#2d6fa8);--reading-bg:#2a2010;--reading-border:#d29922;--line-even:#161b22;--line-hover:#1c2d3f}\n'
     + '*{box-sizing:border-box;margin:0;padding:0}\n'
     + 'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--fg1);min-height:100vh;transition:background .3s,color .3s}\n'
-    + '@font-face{font-family:"BpmfZihiKai";src:url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF") format("truetype")}\n'
+    + '@font-face{font-family:"BpmfZihiKai";src:url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.woff2") format("woff2"),url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF") format("truetype");font-display:swap}\n'
     + '#content,.doc-heading{font-family:"BpmfZihiKai","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}\n'
     + 'html.hide-ruby #content,html.hide-ruby .doc-heading{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}\n'
     + '.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:background .3s,border-color .3s}\n'
     + '.ctrl-group{display:flex;align-items:center;gap:6px}\n'
     + '.ctrl-label{font-size:.76rem;font-weight:800;color:var(--fg2);white-space:nowrap}\n'
     + '.ctrl-select{font-size:.8rem;font-weight:700;background:var(--blue-lt);color:var(--blue-dk);border:2px solid var(--border);border-radius:10px;padding:5px 8px;max-width:145px;outline:none;cursor:pointer}\n'
-    + '.ctrl-range{width:78px;accent-color:var(--blue)}\n'
     + '.ctrl-val{font-size:.76rem;font-weight:800;color:var(--blue-dk);min-width:24px;text-align:center}\n'
+    + '.ctrl-pm{display:flex;align-items:center;gap:4px}\n'
+    + '.btn-pm{width:28px;height:28px;border:2px solid var(--border);border-radius:8px;background:var(--white);color:var(--blue-dk);font-size:1rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;line-height:1;user-select:none}\n'
+    + '.btn-pm:hover{background:var(--blue-lt);border-color:var(--blue)}\n'
+    + '.btn-pm:active{transform:scale(.88)}\n'
     + '.spacer{flex:1}\n'
     + '.btn-ctrl{height:36px;padding:0 13px;border:2px solid var(--border);border-radius:11px;background:var(--white);color:var(--fg1);font-size:.85rem;font-weight:800;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px}\n'
     + '.btn-ctrl:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue-dk)}\n'
@@ -1120,7 +1127,8 @@ function buildOutputHtml(docName, group) {
     + '.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--fg2)}\n'
     + '.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}\n'
     + '#content{padding:4px 14px 72px}\n'
-    + '.line-gap{height:16px}\n'
+    + '.line-gap{display:flex;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;background:var(--bg)}\n'
+    + '.line-gap span{line-height:1.85}\n'
     + '.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}\n'
     + '.line:hover{background:var(--line-hover)}\n'
     + '.line.even{background:var(--line-even)}\n'
@@ -1135,8 +1143,8 @@ function buildOutputHtml(docName, group) {
     + '<script>(function(){if(localStorage.getItem("admin-dark")==="1")document.body.classList.add("dark");})()</s' + 'cript>\n'
     + '<div class="controls-bar">\n'
     + '  <div class="ctrl-group"><span class="ctrl-label">聲音</span><select id="vs" class="ctrl-select"></select></div>\n'
-    + '  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>\n'
-    + '  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>\n'
+    + '  <div class="ctrl-group"><span class="ctrl-label">語速</span><div class="ctrl-pm"><button class="btn-pm" id="rm">−</button><span class="ctrl-val" id="rv">0.9</span><button class="btn-pm" id="rp">+</button></div></div>\n'
+    + '  <div class="ctrl-group"><span class="ctrl-label">字體</span><div class="ctrl-pm"><button class="btn-pm" id="fm">−</button><span class="ctrl-val" id="fv">17</span><button class="btn-pm" id="fp">+</button></div></div>\n'
     + '  <div class="spacer"></div>\n'
     + '  <button class="btn-ctrl" id="zt">📖 隱藏注音</button>\n'
     + '  <button class="btn-ctrl primary" id="pa">▶ 連播</button>\n'
@@ -1148,13 +1156,13 @@ function buildOutputHtml(docName, group) {
     + '<div class="doc-heading">' + escapeHtml(docName) + '</div>\n'
     + '<div id="content">\n' + linesHtml + '\n</div>\n'
     + '<script>\n(function(){\n'
-    + 'var sy=window.speechSynthesis,vc=[],ipa=false,pai=0;\n'
-    + 'var vs=document.getElementById("vs"),rs=document.getElementById("rs"),rv=document.getElementById("rv"),fs=document.getElementById("fs"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");\n'
+    + 'var sy=window.speechSynthesis,vc=[],ipa=false,pai=0,rateVal=0.9,fontVal=17;\n'
+    + 'var vs=document.getElementById("vs"),rv=document.getElementById("rv"),fv=document.getElementById("fv"),sb=document.getElementById("sb"),ct=document.getElementById("content");\n'
     + 'function pz(l){var zr=/zh|cmn|hant/i,nr=/[\\u4e00-\\u9fff]/,c=[];l.forEach(function(v,i){if(zr.test(v.lang))c.push(i);});if(!c.length)return -1;var n=c.filter(function(i){return nr.test(l[i].name);});var p=n.length?n:c;var tw=p.filter(function(i){return /^zh-TW/i.test(l[i].lang);});if(tw.length)return tw[0];var hk=p.filter(function(i){return /^zh-HK/i.test(l[i].lang);});if(hk.length)return hk[0];return p[0];}\n'
     + 'function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=pz(vc);if(z>=0)vs.value=z;}\n'
     + 'lv();if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=lv;\n'
     + 'function ss(){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});ipa=false;pai=0;sb.textContent="💡 點擊任意行朗讀，或按「連播」";}\n'
-    + 'function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);u.lang="zh-TW";var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=parseFloat(rs.value)||0.9;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}\n'
+    + 'function sp(tx,nd,cb){if(sy.speaking||sy.pending)sy.cancel();document.querySelectorAll(".line.reading").forEach(function(el){el.classList.remove("reading");});if(!tx)return;var u=new SpeechSynthesisUtterance(tx);u.lang="zh-TW";var i=Number(vs.value);if(vc[i])u.voice=vc[i];u.rate=rateVal;u.onstart=function(){if(nd){nd.classList.add("reading");nd.scrollIntoView({behavior:"smooth",block:"nearest"});}sb.textContent="🔊 "+tx.slice(0,36)+(tx.length>36?"…":"");};u.onend=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};u.onerror=function(){if(nd)nd.classList.remove("reading");if(cb)cb();};sy.speak(u);}\n'
     + 'function pa(){var ls=Array.from(ct.querySelectorAll(".line")).filter(function(el){return!el.classList.contains("title-main")&&!el.classList.contains("title-sub");});if(!ls.length)return;ipa=true;pai=0;function step(){if(!ipa||pai>=ls.length){ipa=false;sb.textContent="✅ 播放完畢";return;}var el=ls[pai++];var t=el.querySelector(".lineText");var tx=(t?t.textContent:el.textContent).trim();if(!tx){step();return;}sp(tx,el,step);}step();}\n'
     + 'ct.addEventListener("click",function(e){var nd=e.target.closest(".line");if(!nd)return;if(nd.classList.contains("title-main")||nd.classList.contains("title-sub"))return;ipa=false;var t=nd.querySelector(".lineText");sp((t?t.textContent:nd.textContent).trim(),nd);});\n'
     + 'ct.addEventListener("mouseup",function(){var sel=window.getSelection();var tx=sel?sel.toString().trim():"";if(tx)sp(tx);});\n'
@@ -1162,8 +1170,10 @@ function buildOutputHtml(docName, group) {
     + 'document.getElementById("pu").addEventListener("click",function(){if(sy.speaking&&!sy.paused)sy.pause();});\n'
     + 'document.getElementById("re").addEventListener("click",function(){if(sy.paused)sy.resume();});\n'
     + 'document.getElementById("st").addEventListener("click",ss);\n'
-    + 'rs.addEventListener("input",function(){rv.textContent=rs.value;});\n'
-    + 'fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});\n'
+    + 'document.getElementById("rm").addEventListener("click",function(){rateVal=Math.max(.3,Math.round((rateVal-.1)*10)/10);rv.textContent=rateVal;});\n'
+    + 'document.getElementById("rp").addEventListener("click",function(){rateVal=Math.min(1.5,Math.round((rateVal+.1)*10)/10);rv.textContent=rateVal;});\n'
+    + 'document.getElementById("fm").addEventListener("click",function(){fontVal=Math.max(13,fontVal-1);fv.textContent=fontVal;ct.style.fontSize=fontVal+"px";});\n'
+    + 'document.getElementById("fp").addEventListener("click",function(){fontVal=Math.min(60,fontVal+1);fv.textContent=fontVal;ct.style.fontSize=fontVal+"px";});\n'
     + 'var zo=true,zt=document.getElementById("zt");zt.addEventListener("click",function(){zo=!zo;document.documentElement.classList.toggle("hide-ruby",!zo);zt.textContent=zo?"📖 隱藏注音":"📖 顯示注音";});\n'
     + '})();\n<\/script>\n<\/body>\n<\/html>';
 }
