@@ -759,9 +759,24 @@ var _RK_NEW_LV =
 var _RK_OLD_LV_RE =
   /function lv\(\)\{vc=sy\.getVoices\(\);vs\.innerHTML="";vc\.forEach\(function\(v,i\)\{var o=document\.createElement\("option"\);o\.value=i;o\.textContent=v\.name\+" \("\+v\.lang\+"\)";vs\.appendChild\(o\);\}\);var z=vc\.findIndex\(function\(v\)\{return \/zh(?:\|cmn\|hant)?\/i\.test\(v\.lang\);\}\);if\(z>=0\)vs\.value=z;\}/;
 
+/* 舊文件補上注音字型／開關（跟語音修復同一套機制：字串比對＋替換，
+   文字內容不受影響）*/
+var _RK_ZY_CSS_ANCHOR =
+  'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--fg1);min-height:100vh;transition:background .3s,color .3s}';
+var _RK_ZY_CSS_INJECT =
+  '@font-face{font-family:"BpmfZihiKai";src:url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF") format("truetype")}' +
+  '#content,.doc-heading{font-family:"BpmfZihiKai","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}' +
+  'html.hide-ruby #content,html.hide-ruby .doc-heading{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}';
+var _RK_ZY_BTN_ANCHOR = '<button class="btn-ctrl primary" id="pa">▶ 連播</button>';
+var _RK_ZY_BTN_INJECT = '<button class="btn-ctrl" id="zt">📖 隱藏注音</button>\n  ' + _RK_ZY_BTN_ANCHOR;
+var _RK_ZY_JS_ANCHOR =
+  'fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});';
+var _RK_ZY_JS_INJECT = _RK_ZY_JS_ANCHOR +
+  '\nvar zo=true,zt=document.getElementById("zt");zt.addEventListener("click",function(){zo=!zo;document.documentElement.classList.toggle("hide-ruby",!zo);zt.textContent=zo?"📖 隱藏注音":"📖 顯示注音";});';
+
 function _migrateReaderHtml(html) {
-  if (typeof html !== 'string' || html.indexOf('function pz(') !== -1) {
-    return { html: html, changed: false }; // 沒有內容，或已經是最新版
+  if (typeof html !== 'string') {
+    return { html: html, changed: false }; // 沒有內容
   }
   var out = html;
   var changed = false;
@@ -779,60 +794,82 @@ function _migrateReaderHtml(html) {
     changed = true;
   }
 
+  if (out.indexOf('BpmfZihiKai') === -1) {
+    var withZy = out
+      .replace(_RK_ZY_CSS_ANCHOR, _RK_ZY_CSS_ANCHOR + _RK_ZY_CSS_INJECT)
+      .replace(_RK_ZY_BTN_ANCHOR, _RK_ZY_BTN_INJECT)
+      .replace(_RK_ZY_JS_ANCHOR, _RK_ZY_JS_INJECT);
+    if (withZy !== out) { out = withZy; changed = true; }
+  }
+
   return { html: out, changed: changed };
 }
 
 var btnFixVoice = document.getElementById('btn-fix-voice');
 if (btnFixVoice) {
-  btnFixVoice.addEventListener('click', function () {
-    if (!currentUser || !fbDb) { showToast('請先登入才能修復雲端文件'); return; }
-    if (!confirm('這會檢查你「報讀庫」裡所有文件（含已分享到班級的複本），把舊版的語音選擇邏輯更新成最新版，文字內容不會被更動。確定要執行嗎？')) return;
+  btnFixVoice.addEventListener('click', async function () {
+    if (!confirm('這會檢查本機報讀庫（登入時也含雲端備份與已分享到班級的複本），把舊版功能（語音選擇邏輯、注音字型開關）更新成最新版，文字內容不會被更動。確定要執行嗎？')) return;
 
     procOverlay.classList.add('show');
-    procMsg.textContent = '修復語音選擇邏輯中…';
+    procMsg.textContent = '更新舊文件中…';
 
-    var uid = currentUser.uid;
     var fixedCount = 0, checkedCount = 0;
 
-    fbDb.collection('teachers').doc(uid).collection('reader-library').get()
-      .then(function (libSnap) {
+    try {
+      /* 本機瀏覽器看到的「報讀庫」列表其實是從 IndexedDB 讀出來的，
+         不是直接讀雲端，所以一定要在這裡也修一份，否則畫面上開啟
+         舊文件時仍會是沒補丁的版本 */
+      var idbEntries = await idbGetAll();
+      for (var i = 0; i < idbEntries.length; i++) {
+        var entry = idbEntries[i];
+        checkedCount++;
+        var r = _migrateReaderHtml(entry.html);
+        if (r.changed) {
+          fixedCount++;
+          entry.html = r.html;
+          await idbPut(entry);
+        }
+      }
+
+      if (currentUser && fbDb) {
+        var uid = currentUser.uid;
+        var libSnap = await fbDb.collection('teachers').doc(uid).collection('reader-library').get();
         var ownJobs = libSnap.docs.map(function (doc) {
           var d = doc.data();
           checkedCount++;
-          var r = _migrateReaderHtml(d.html);
-          if (!r.changed) return Promise.resolve();
+          var r2 = _migrateReaderHtml(d.html);
+          if (!r2.changed) return Promise.resolve();
           fixedCount++;
-          return doc.ref.update({ html: r.html });
+          return doc.ref.update({ html: r2.html });
         });
 
-        return fbDb.collection('classes').where('teacherUid', '==', uid).get().then(function (clsSnap) {
-          var sharedJobs = [];
-          clsSnap.forEach(function (clsDoc) {
-            sharedJobs.push(
-              clsDoc.ref.collection('sharedReaderDocs').get().then(function (sharedSnap) {
-                var jobs = sharedSnap.docs.map(function (doc) {
-                  var d = doc.data();
-                  checkedCount++;
-                  var r = _migrateReaderHtml(d.html);
-                  if (!r.changed) return Promise.resolve();
-                  fixedCount++;
-                  return doc.ref.update({ html: r.html });
-                });
-                return Promise.all(jobs);
-              })
-            );
-          });
-          return Promise.all(ownJobs.concat(sharedJobs));
+        var clsSnap = await fbDb.collection('classes').where('teacherUid', '==', uid).get();
+        var sharedJobs = [];
+        clsSnap.forEach(function (clsDoc) {
+          sharedJobs.push(
+            clsDoc.ref.collection('sharedReaderDocs').get().then(function (sharedSnap) {
+              var jobs = sharedSnap.docs.map(function (doc) {
+                var d = doc.data();
+                checkedCount++;
+                var r3 = _migrateReaderHtml(d.html);
+                if (!r3.changed) return Promise.resolve();
+                fixedCount++;
+                return doc.ref.update({ html: r3.html });
+              });
+              return Promise.all(jobs);
+            })
+          );
         });
-      })
-      .then(function () {
-        procOverlay.classList.remove('show');
-        showToast('✅ 已檢查 ' + checkedCount + ' 份文件，修復 ' + fixedCount + ' 份');
-      })
-      .catch(function (e) {
-        procOverlay.classList.remove('show');
-        showToast('❌ 修復失敗：' + e.message);
-      });
+        await Promise.all(ownJobs.concat(sharedJobs));
+      }
+
+      procOverlay.classList.remove('show');
+      showToast('✅ 已檢查 ' + checkedCount + ' 份文件，修復 ' + fixedCount + ' 份');
+      loadLibrary();
+    } catch (e) {
+      procOverlay.classList.remove('show');
+      showToast('❌ 修復失敗：' + e.message);
+    }
   });
 }
 
@@ -921,6 +958,15 @@ document.getElementById('font-plus').addEventListener('click', function () {
   fontValue = Math.min(36, fontValue + 1);
   fontVal.textContent = fontValue + 'px';
   readerContent.style.fontSize = fontValue + 'px';
+});
+
+/* ══ 注音字形開關（預設顯示，跟測驗列印一樣用內含注音的字型檔）══ */
+var zhuyinOn = true;
+var zhuyinToggleBtn = document.getElementById('zhuyin-toggle-btn');
+zhuyinToggleBtn.addEventListener('click', function () {
+  zhuyinOn = !zhuyinOn;
+  document.documentElement.classList.toggle('hide-ruby', !zhuyinOn);
+  zhuyinToggleBtn.textContent = zhuyinOn ? '📖 隱藏注音' : '📖 顯示注音';
 });
 
 /* ══ Edit Panel ═════════════════════════════════════════════ */
@@ -1155,6 +1201,9 @@ function buildOutputHtml(docName, group) {
     + 'body.dark{--blue:#58a6ff;--blue-dk:#79c0ff;--blue-lt:#1c2d3f;--fg1:#e6edf3;--fg2:#7d8590;--bg:#0d1117;--white:#161b22;--border:#30363d;--grad-btn:linear-gradient(135deg,#3a7fd4,#2d6fa8);--reading-bg:#2a2010;--reading-border:#d29922;--line-even:#161b22;--line-hover:#1c2d3f}\n'
     + '*{box-sizing:border-box;margin:0;padding:0}\n'
     + 'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--fg1);min-height:100vh;transition:background .3s,color .3s}\n'
+    + '@font-face{font-family:"BpmfZihiKai";src:url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF") format("truetype")}\n'
+    + '#content,.doc-heading{font-family:"BpmfZihiKai","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}\n'
+    + 'html.hide-ruby #content,html.hide-ruby .doc-heading{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}\n'
     + '.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:background .3s,border-color .3s}\n'
     + '.ctrl-group{display:flex;align-items:center;gap:6px}\n'
     + '.ctrl-label{font-size:.76rem;font-weight:800;color:var(--fg2);white-space:nowrap}\n'
@@ -1187,6 +1236,7 @@ function buildOutputHtml(docName, group) {
     + '  <div class="ctrl-group"><span class="ctrl-label">語速</span><input id="rs" class="ctrl-range" type="range" min="0.3" max="1.5" step="0.05" value="0.9"/><span class="ctrl-val" id="rv">0.9</span></div>\n'
     + '  <div class="ctrl-group"><span class="ctrl-label">字體</span><input id="fs" class="ctrl-range" type="range" min="13" max="36" step="1" value="17"/><span class="ctrl-val" id="fv">17</span></div>\n'
     + '  <div class="spacer"></div>\n'
+    + '  <button class="btn-ctrl" id="zt">📖 隱藏注音</button>\n'
     + '  <button class="btn-ctrl primary" id="pa">▶ 連播</button>\n'
     + '  <button class="btn-ctrl" id="pu">⏸</button>\n'
     + '  <button class="btn-ctrl" id="re">⏯</button>\n'
@@ -1212,6 +1262,7 @@ function buildOutputHtml(docName, group) {
     + 'document.getElementById("st").addEventListener("click",ss);\n'
     + 'rs.addEventListener("input",function(){rv.textContent=rs.value;});\n'
     + 'fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});\n'
+    + 'var zo=true,zt=document.getElementById("zt");zt.addEventListener("click",function(){zo=!zo;document.documentElement.classList.toggle("hide-ruby",!zo);zt.textContent=zo?"📖 隱藏注音":"📖 顯示注音";});\n'
     + '})();\n<\/script>\n<\/body>\n<\/html>';
 }
 

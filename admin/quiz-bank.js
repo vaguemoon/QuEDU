@@ -337,8 +337,7 @@ function loadQuizBankStats() {
   _qbDelKeys       = {};
   _qbDelCount      = 0;
   _qbDetailMap     = {};
-  _qbExpandedKeys  = {};
-  _qbGradeExpanded = {};
+  /* 保留 _qbExpandedKeys／_qbGradeExpanded，讓刪除單題後重新整理不會把展開的課次收合回去 */
 
   if (!db || !currentTeacher) { setTimeout(loadQuizBankStats, 300); return; }
 
@@ -374,7 +373,7 @@ function loadQuizBankStats() {
       /* Store for detail view */
       var dk = _qbDetailKey(g, l);
       if (!_qbDetailMap[dk]) _qbDetailMap[dk] = [];
-      _qbDetailMap[dk].push({ type: d.type, question: d.question, answer: d.answer, src: src });
+      _qbDetailMap[dk].push({ id: doc.id, type: d.type, question: d.question, answer: d.answer, src: src });
     });
 
     var html = '';
@@ -389,16 +388,19 @@ function loadQuizBankStats() {
       var gradeQCount = lessons.reduce(function(s, l) { return s + lessonMap[l].total; }, 0);
       var gk = _qbGradeKey(grade);
 
+      var gradeOpen = !!_qbGradeExpanded[gk];
+
       html += '<div style="margin-bottom:12px">';
       /* Collapsible grade header */
       html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gray-lt);border-radius:8px;border:1px solid var(--border);cursor:pointer" ' +
         'onclick="_qbToggleGrade(\'' + escHtml(gk) + '\',this)">';
-      html += '<span id="qb-grade-arrow-' + escHtml(gk) + '" style="font-size:.78rem;color:var(--muted);transition:transform .15s;display:inline-block">▶</span>';
+      html += '<span id="qb-grade-arrow-' + escHtml(gk) + '" style="font-size:.78rem;color:var(--muted);transition:transform .15s;display:inline-block' +
+        (gradeOpen ? ';transform:rotate(90deg)' : '') + '">▶</span>';
       html += '<span style="font-weight:900;font-size:.95rem">' + escHtml(grade) + '</span>';
       html += '<span style="font-size:.78rem;color:var(--muted);font-weight:700">共 ' + lessons.length + ' 課・' + gradeQCount + ' 題</span>';
       html += '</div>';
-      /* Grade content (collapsed by default) */
-      html += '<div id="qb-grade-body-' + escHtml(gk) + '" style="display:none">';
+      /* Grade content（保留上次展開/收合狀態） */
+      html += '<div id="qb-grade-body-' + escHtml(gk) + '" style="display:' + (gradeOpen ? '' : 'none') + '">';
 
       html += '<table style="width:100%;border-collapse:collapse;font-size:.82rem">';
       html += '<tr>' +
@@ -430,12 +432,14 @@ function loadQuizBankStats() {
         if (ld.hasOwn)    srcBadges += '<span style="font-size:.68rem;font-weight:800;color:white;background:var(--green);border-radius:4px;padding:1px 5px;margin-right:3px">我的</span>';
         if (ld.hasShared) srcBadges += '<span style="font-size:.68rem;font-weight:800;color:white;background:var(--blue);border-radius:4px;padding:1px 5px;margin-right:3px">共用</span>';
 
+        var detailOpen = !!_qbExpandedKeys[dk];
+
         /* Summary row */
         html += '<tr style="background:' + bg + '">';
         html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);font-weight:700">' +
           '<button onclick="_qbToggleDetail(\'' + escHtml(dk) + '\',this)" ' +
           'style="background:none;border:none;cursor:pointer;font-size:.75rem;margin-right:4px;color:var(--muted);font-family:inherit;padding:0" ' +
-          'title="查看題目">▶</button>' +
+          'title="查看題目">' + (detailOpen ? '▼' : '▶') + '</button>' +
           '第 ' + escHtml(lesson) + ' 課 ' + srcBadges + '</td>';
         html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">' + escHtml(ld.lessonName) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語填空'] || 0) + '</td>';
@@ -445,8 +449,8 @@ function loadQuizBankStats() {
         html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:right">' + delBtn + '</td>';
         html += '</tr>';
 
-        /* Detail row (collapsed by default) */
-        html += '<tr id="qb-detail-' + escHtml(dk) + '" style="display:none">';
+        /* Detail row（保留上次展開/收合狀態） */
+        html += '<tr id="qb-detail-' + escHtml(dk) + '" style="display:' + (detailOpen ? '' : 'none') + '">';
         html += '<td colspan="7" style="padding:0 10px 12px 28px;border-bottom:1px solid var(--border);background:#fafcff">';
         html += _qbRenderDetailTable(_qbDetailMap[dk] || []);
         html += '</td></tr>';
@@ -485,6 +489,7 @@ function _qbToggleDetail(dk, btn) {
   var open = row.style.display !== 'none';
   row.style.display = open ? 'none' : '';
   btn.textContent = open ? '▶' : '▼';
+  _qbExpandedKeys[dk] = !open;
 }
 
 function _qbRenderDetailTable(questions) {
@@ -508,11 +513,17 @@ function _qbRenderDetailTable(questions) {
     var srcDot = q.src === 'own'
       ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle"></span>'
       : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue);margin-right:4px;vertical-align:middle"></span>';
+    var rowDelBtn = (q.src === 'own' && q.id)
+      ? '<button onclick="deleteSingleQuestion(\'' + _qbEscJs(q.id) + '\',\'' + _qbEscJs(q.question) + '\')" ' +
+        'style="padding:2px 8px;border:1.5px solid var(--red);border-radius:6px;background:white;' +
+        'color:var(--red);font-size:.7rem;font-weight:800;cursor:pointer;font-family:inherit">刪除</button>'
+      : '';
     html += '<tr style="background:' + (i % 2 === 0 ? '#fff' : '#f8faff') + '">';
     html += '<td style="padding:4px 8px;color:var(--muted);white-space:nowrap">' + (i + 1) + '</td>';
     html += '<td style="padding:4px 8px;white-space:nowrap">' + srcDot + escHtml(q.type) + '</td>';
     html += '<td style="padding:4px 8px;line-height:1.5;max-width:280px">' + escHtml(q.question) + '</td>';
     html += '<td style="padding:4px 8px;font-weight:700;color:var(--blue);white-space:nowrap">' + escHtml(q.answer) + '</td>';
+    html += '<td style="padding:4px 8px;text-align:right;white-space:nowrap">' + rowDelBtn + '</td>';
     html += '</tr>';
   });
   html += '</table>';
@@ -561,6 +572,26 @@ function deleteLessonQuestions(key) {
         });
     })
     .catch(function(e) { showToast('❌ 刪除失敗：' + e.message); });
+}
+
+/* ════════════════════════════════════════
+   刪除單一題目（例如重複題，只想刪其中一題）
+   ════════════════════════════════════════ */
+function deleteSingleQuestion(docId, questionText) {
+  if (!docId || !currentTeacher) return;
+  if (!confirm('確定要刪除這一題嗎？\n\n「' + questionText + '」\n\n此操作無法復原。')) return;
+  if (!db) { showToast('Firebase 未就緒'); return; }
+
+  db.collection('questions').doc(docId).delete()
+    .then(function() {
+      showToast('✅ 已刪除這一題');
+      loadQuizBankStats();
+    })
+    .catch(function(e) { showToast('❌ 刪除失敗：' + e.message); });
+}
+
+function _qbEscJs(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 /**

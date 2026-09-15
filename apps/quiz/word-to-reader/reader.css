@@ -62,6 +62,19 @@ body.dark {
   --line-hover:     #1c2d3f;
 }
 
+/* ══ 注音字型（跟測驗列印同一顆字型檔：字形本身已內含注音，
+   不用逐字查表）══════════════════════════════════════════════ */
+@font-face {
+  font-family: 'BpmfZihiKai';
+  src: url('../../../assets/font/BPMFZIHIKAISTD-REGULAR.TTF') format('truetype');
+}
+#reader-content, .doc-heading {
+  font-family: 'BpmfZihiKai', var(--font-ui);
+}
+html.hide-ruby #reader-content, html.hide-ruby .doc-heading {
+  font-family: var(--font-ui);
+}
+
 /* ══ Reset ══════════════════════════════════════════════════ */
 *, *::before, *::after {
   box-sizing: border-box; margin: 0; padding: 0;
