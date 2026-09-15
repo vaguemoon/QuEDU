@@ -46,18 +46,15 @@ function _rgRenderRoot() {
           '<span style="font-size:.72rem;font-weight:700;color:var(--muted);margin-left:8px">全校共用・目前 ' + _rgGroups.length + ' 個部件</span>' +
         '</div>' +
         '<div style="display:flex;gap:8px">' +
-          '<button class="btn btn-secondary" style="padding:7px 14px;font-size:.8rem" onclick="_rgMigrateOldData()">🔄 匯入舊資料</button>' +
           '<button class="wi-cat-add-btn" onclick="_rgOpenBuilder()">＋ 新增部件</button>' +
         '</div>' +
       '</div>' +
       '<p style="font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6">' +
         '每個部件一筆資料，全校老師共用、可以共同編輯；包含這個部件的字、意象圖片、口訣。' +
-        '「匯入舊資料」會把之前用練習集／意象圖庫建立的內容自動合併進來（可重複點擊，已匯入的不會重複）。' +
-      '</p>' +
-      '<div id="rg-migrate-status" style="font-size:.78rem;color:var(--muted);font-weight:700;margin-bottom:10px"></div>';
+      '</p>';
 
     if (!_rgGroups.length) {
-      html += '<div class="wi-cat-empty">尚未建立任何部件。點擊「＋ 新增部件」開始建立，或「🔄 匯入舊資料」自動帶入之前建立的內容。</div>';
+      html += '<div class="wi-cat-empty">尚未建立任何部件。點擊「＋ 新增部件」開始建立。</div>';
     } else {
       html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px">' +
         _rgGroups.map(function(g) {
@@ -314,80 +311,6 @@ function _rgDelete(radical) {
     showToast('✅ 已刪除「' + title + '」');
     _rgRenderRoot();
   }).catch(function(e) { showToast('❌ 刪除失敗：' + e.message); });
-}
-
-/* ════════════════════════════════
-   匯入舊資料（練習集 + 意象圖庫 → 部件資料庫）
-   ════════════════════════════════ */
-function _rgMigrateOldData() {
-  var statusEl = document.getElementById('rg-migrate-status');
-  if (statusEl) statusEl.textContent = '匯入中…';
-
-  Promise.all([
-    db.collection('radicalItems').get(),
-    db.collection('radicalMeanings').get(),
-    db.collection('radicalGroups').get()
-  ]).then(function(results) {
-    var charMap = {}; // radical -> Set of chars（用物件模擬）
-    results[0].forEach(function(doc) {
-      var d = doc.data();
-      if (!d.radical || !d.char) return;
-      if (!charMap[d.radical]) charMap[d.radical] = {};
-      charMap[d.radical][d.char] = true;
-    });
-
-    var meaningMap = {}; // radical -> {imageUrl, phrase}
-    results[1].forEach(function(doc) {
-      meaningMap[doc.id] = doc.data();
-    });
-
-    var existingMap = {}; // radical -> 現有 radicalGroups 資料
-    results[2].forEach(function(doc) {
-      existingMap[doc.id] = doc.data();
-    });
-
-    var allRadicals = {};
-    Object.keys(charMap).forEach(function(r) { allRadicals[r] = true; });
-    Object.keys(meaningMap).forEach(function(r) { allRadicals[r] = true; });
-
-    var radicals = Object.keys(allRadicals);
-    if (!radicals.length) {
-      if (statusEl) statusEl.textContent = '沒有舊資料可以匯入。';
-      return;
-    }
-
-    var batch = db.batch(), count = 0, batches = [];
-    var mergedCount = 0;
-    radicals.forEach(function(r) {
-      var existing   = existingMap[r] || {};
-      var oldChars   = charMap[r] ? Object.keys(charMap[r]) : [];
-      var mergedChars = existing.chars || [];
-      var seen = {}; mergedChars.forEach(function(c) { seen[c] = true; });
-      oldChars.forEach(function(c) { if (!seen[c]) { seen[c] = true; mergedChars.push(c); } });
-
-      var meaning = meaningMap[r] || {};
-      var data = {
-        title:    existing.title    || (r + '部'),
-        variant:  existing.variant  || '',
-        imageUrl: existing.imageUrl || meaning.imageUrl || '',
-        phrase:   existing.phrase   || meaning.phrase   || '',
-        chars:    mergedChars
-      };
-      batch.set(db.collection('radicalGroups').doc(r), data);
-      mergedCount++;
-      if (++count % 499 === 0) { batches.push(batch); batch = db.batch(); }
-    });
-    batches.push(batch);
-
-    return Promise.all(batches.map(function(b) { return b.commit(); })).then(function() {
-      if (statusEl) statusEl.textContent = '';
-      showToast('✅ 已匯入／合併 ' + mergedCount + ' 個部件');
-      _rgRenderRoot();
-    });
-  }).catch(function(e) {
-    if (statusEl) statusEl.textContent = '';
-    showToast('❌ 匯入失敗：' + e.message);
-  });
 }
 
 /* ── 工具函式 ── */

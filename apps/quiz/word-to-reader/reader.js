@@ -503,12 +503,13 @@ document.getElementById('tab-library').addEventListener('click', function () { s
 function extractLinesFromHtml(html) {
   var parser = new DOMParser();
   var doc    = parser.parseFromString(html, 'text/html');
-  return Array.from(doc.querySelectorAll('.line')).map(function (el) {
+  return Array.from(doc.querySelectorAll('.line, .line-gap')).map(function (el) {
+    if (el.classList.contains('line-gap')) return '';
     var text = (el.querySelector('.lineText') || el).textContent.trim();
     if (el.classList.contains('title-main')) return '## ' + text;
     if (el.classList.contains('title-sub'))  return '# '  + text;
     return text;
-  }).filter(function (l) { return l.length > 0; });
+  });
 }
 
 function openLibraryItemForEdit(entry) {
@@ -606,14 +607,27 @@ manualBtn.addEventListener('click', function () {
 });
 
 /* ══ Build Reader ═══════════════════════════════════════════ */
+/* 把原始文字拆成行，空行保留下來當「分段留白」用（不是朗讀單位），
+   連續多個空行只算一個留白，開頭／結尾的空行沒有意義直接丟掉 */
+function splitToLines(rawText) {
+  var raw = rawText.split('\n').map(function (l) { return l.trim(); });
+  var out = [];
+  raw.forEach(function (l) {
+    if (l.length === 0) {
+      if (out.length && out[out.length - 1] !== '') out.push('');
+    } else {
+      out.push(l);
+    }
+  });
+  while (out.length && out[out.length - 1] === '') out.pop();
+  return out;
+}
+
 function buildReader(rawText, name) {
   currentDocName = name;
   docTitle.textContent = name;
   stopSpeak();
-  var lines = rawText.split('\n')
-    .map(function (l) { return l.trim(); })
-    .filter(function (l) { return l.length > 0; });
-  renderLines(lines);
+  renderLines(splitToLines(rawText));
   readerContent.style.fontSize = fontValue + 'px';
   statusBar.textContent = '💡 點擊任意行朗讀，或按「連播」';
 }
@@ -622,6 +636,14 @@ function renderLines(lines) {
   readerContent.innerHTML = '';
   var even = 0;
   lines.forEach(function (line) {
+    if (line === '') {
+      var gap = document.createElement('div');
+      gap.className = 'line-gap';
+      gap.dataset.raw = '';
+      readerContent.appendChild(gap);
+      return;
+    }
+
     var div  = document.createElement('div');
     var span = document.createElement('span');
     span.className = 'lineText';
@@ -742,137 +764,6 @@ if (btnCloseVoiceDebug && voiceDebugModal) {
 }
 if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = loadVoices;
 
-/* ══ 修復已儲存文件內嵌的舊版語音選擇邏輯 ══════════════════════
-   「存到報讀庫」的文件是儲存當下就固定好的獨立 HTML／JS 快照，
-   之後修好 buildOutputHtml() 產生的程式碼，並不會回頭更新舊文件裡
-   已經存好的那份——所以舊文件仍然是修復前的行為，需要另外更新。
-   這裡直接對已儲存文件的 html 內容做字串替換，只換掉語音選擇的那段
-   程式碼，文字內容完全不受影響。 */
-var _RK_PZ_FN =
-  'function pz(l){var zr=/zh|cmn|hant/i,nr=/[一-鿿]/,c=[];l.forEach(function(v,i){if(zr.test(v.lang))c.push(i);});' +
-  'if(!c.length)return -1;var n=c.filter(function(i){return nr.test(l[i].name);});var p=n.length?n:c;' +
-  'var tw=p.filter(function(i){return /^zh-TW/i.test(l[i].lang);});if(tw.length)return tw[0];' +
-  'var hk=p.filter(function(i){return /^zh-HK/i.test(l[i].lang);});if(hk.length)return hk[0];return p[0];}';
-var _RK_NEW_LV =
-  'function lv(){vc=sy.getVoices();vs.innerHTML="";vc.forEach(function(v,i){var o=document.createElement("option");' +
-  'o.value=i;o.textContent=v.name+" ("+v.lang+")";vs.appendChild(o);});var z=pz(vc);if(z>=0)vs.value=z;}';
-var _RK_OLD_LV_RE =
-  /function lv\(\)\{vc=sy\.getVoices\(\);vs\.innerHTML="";vc\.forEach\(function\(v,i\)\{var o=document\.createElement\("option"\);o\.value=i;o\.textContent=v\.name\+" \("\+v\.lang\+"\)";vs\.appendChild\(o\);\}\);var z=vc\.findIndex\(function\(v\)\{return \/zh(?:\|cmn\|hant)?\/i\.test\(v\.lang\);\}\);if\(z>=0\)vs\.value=z;\}/;
-
-/* 舊文件補上注音字型／開關（跟語音修復同一套機制：字串比對＋替換，
-   文字內容不受影響）*/
-var _RK_ZY_CSS_ANCHOR =
-  'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--fg1);min-height:100vh;transition:background .3s,color .3s}';
-var _RK_ZY_CSS_INJECT =
-  '@font-face{font-family:"BpmfZihiKai";src:url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF") format("truetype")}' +
-  '#content,.doc-heading{font-family:"BpmfZihiKai","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}' +
-  'html.hide-ruby #content,html.hide-ruby .doc-heading{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}';
-var _RK_ZY_BTN_ANCHOR = '<button class="btn-ctrl primary" id="pa">▶ 連播</button>';
-var _RK_ZY_BTN_INJECT = '<button class="btn-ctrl" id="zt">📖 隱藏注音</button>\n  ' + _RK_ZY_BTN_ANCHOR;
-var _RK_ZY_JS_ANCHOR =
-  'fs.addEventListener("input",function(){fv.textContent=fs.value;ct.style.fontSize=fs.value+"px";});';
-var _RK_ZY_JS_INJECT = _RK_ZY_JS_ANCHOR +
-  '\nvar zo=true,zt=document.getElementById("zt");zt.addEventListener("click",function(){zo=!zo;document.documentElement.classList.toggle("hide-ruby",!zo);zt.textContent=zo?"📖 隱藏注音":"📖 顯示注音";});';
-
-function _migrateReaderHtml(html) {
-  if (typeof html !== 'string') {
-    return { html: html, changed: false }; // 沒有內容
-  }
-  var out = html;
-  var changed = false;
-
-  if (out.indexOf('new SpeechSynthesisUtterance(tx);u.lang="zh-TW";') === -1) {
-    var patched = out.replace(
-      'new SpeechSynthesisUtterance(tx);var i=Number(vs.value);',
-      'new SpeechSynthesisUtterance(tx);u.lang="zh-TW";var i=Number(vs.value);'
-    );
-    if (patched !== out) { out = patched; changed = true; }
-  }
-
-  if (_RK_OLD_LV_RE.test(out)) {
-    out = out.replace(_RK_OLD_LV_RE, _RK_PZ_FN + '\n' + _RK_NEW_LV);
-    changed = true;
-  }
-
-  if (out.indexOf('BpmfZihiKai') === -1) {
-    var withZy = out
-      .replace(_RK_ZY_CSS_ANCHOR, _RK_ZY_CSS_ANCHOR + _RK_ZY_CSS_INJECT)
-      .replace(_RK_ZY_BTN_ANCHOR, _RK_ZY_BTN_INJECT)
-      .replace(_RK_ZY_JS_ANCHOR, _RK_ZY_JS_INJECT);
-    if (withZy !== out) { out = withZy; changed = true; }
-  }
-
-  return { html: out, changed: changed };
-}
-
-var btnFixVoice = document.getElementById('btn-fix-voice');
-if (btnFixVoice) {
-  btnFixVoice.addEventListener('click', async function () {
-    if (!confirm('這會檢查本機報讀庫（登入時也含雲端備份與已分享到班級的複本），把舊版功能（語音選擇邏輯、注音字型開關）更新成最新版，文字內容不會被更動。確定要執行嗎？')) return;
-
-    procOverlay.classList.add('show');
-    procMsg.textContent = '更新舊文件中…';
-
-    var fixedCount = 0, checkedCount = 0;
-
-    try {
-      /* 本機瀏覽器看到的「報讀庫」列表其實是從 IndexedDB 讀出來的，
-         不是直接讀雲端，所以一定要在這裡也修一份，否則畫面上開啟
-         舊文件時仍會是沒補丁的版本 */
-      var idbEntries = await idbGetAll();
-      for (var i = 0; i < idbEntries.length; i++) {
-        var entry = idbEntries[i];
-        checkedCount++;
-        var r = _migrateReaderHtml(entry.html);
-        if (r.changed) {
-          fixedCount++;
-          entry.html = r.html;
-          await idbPut(entry);
-        }
-      }
-
-      if (currentUser && fbDb) {
-        var uid = currentUser.uid;
-        var libSnap = await fbDb.collection('teachers').doc(uid).collection('reader-library').get();
-        var ownJobs = libSnap.docs.map(function (doc) {
-          var d = doc.data();
-          checkedCount++;
-          var r2 = _migrateReaderHtml(d.html);
-          if (!r2.changed) return Promise.resolve();
-          fixedCount++;
-          return doc.ref.update({ html: r2.html });
-        });
-
-        var clsSnap = await fbDb.collection('classes').where('teacherUid', '==', uid).get();
-        var sharedJobs = [];
-        clsSnap.forEach(function (clsDoc) {
-          sharedJobs.push(
-            clsDoc.ref.collection('sharedReaderDocs').get().then(function (sharedSnap) {
-              var jobs = sharedSnap.docs.map(function (doc) {
-                var d = doc.data();
-                checkedCount++;
-                var r3 = _migrateReaderHtml(d.html);
-                if (!r3.changed) return Promise.resolve();
-                fixedCount++;
-                return doc.ref.update({ html: r3.html });
-              });
-              return Promise.all(jobs);
-            })
-          );
-        });
-        await Promise.all(ownJobs.concat(sharedJobs));
-      }
-
-      procOverlay.classList.remove('show');
-      showToast('✅ 已檢查 ' + checkedCount + ' 份文件，修復 ' + fixedCount + ' 份');
-      loadLibrary();
-    } catch (e) {
-      procOverlay.classList.remove('show');
-      showToast('❌ 修復失敗：' + e.message);
-    }
-  });
-}
-
 function stopSpeak() {
   if (synth.speaking || synth.pending) synth.cancel();
   document.querySelectorAll('.line.reading').forEach(function (el) { el.classList.remove('reading'); });
@@ -971,9 +862,11 @@ zhuyinToggleBtn.addEventListener('click', function () {
 
 /* ══ Edit Panel ═════════════════════════════════════════════ */
 function openEdit() {
-  /* 優先讀 data-raw（保留 ## / # 前綴），fallback 讀顯示文字 */
-  editTextarea.value = Array.from(readerContent.querySelectorAll('.line'))
+  /* 優先讀 data-raw（保留 ## / # 前綴），fallback 讀顯示文字；
+     .line-gap（分段留白）還原成空行 */
+  editTextarea.value = Array.from(readerContent.querySelectorAll('.line, .line-gap'))
     .map(function (el) {
+      if (el.classList.contains('line-gap')) return '';
       return el.dataset.raw !== undefined
         ? el.dataset.raw
         : (el.querySelector('.lineText') || el).textContent;
@@ -989,10 +882,7 @@ editToggleBtn.addEventListener('click', function () {
   editPanel.style.display === 'none' ? openEdit() : closeEdit();
 });
 applyEditBtn.addEventListener('click', function () {
-  var lines = editTextarea.value.split('\n')
-    .map(function (l) { return l.trim(); })
-    .filter(function (l) { return l.length > 0; });
-  renderLines(lines);
+  renderLines(splitToLines(editTextarea.value));
   readerContent.style.fontSize = fontValue + 'px';
   closeEdit();
   showToast('✅ 已套用編輯內容');
@@ -1080,6 +970,16 @@ function applyLinePrefix(prefix) {
 document.getElementById('fmt-t1').addEventListener('click',    function () { applyLinePrefix('## '); });
 document.getElementById('fmt-t2').addEventListener('click',    function () { applyLinePrefix('# '); });
 document.getElementById('fmt-clear').addEventListener('click', function () { applyLinePrefix(''); });
+
+/* ══ Edit Panel — 插入空行（分段用）════════════════════════ */
+document.getElementById('fmt-gap').addEventListener('click', function () {
+  var ta  = editTextarea;
+  var pos = ta.selectionStart;
+  ta.value = ta.value.slice(0, pos) + '\n\n' + ta.value.slice(pos);
+  var cur = pos + 2;
+  ta.setSelectionRange(cur, cur);
+  ta.focus();
+});
 
 /* ══ Edit Panel — Merge Short Lines ════════════════════════ */
 document.getElementById('fmt-merge').addEventListener('click', function () {
@@ -1182,7 +1082,8 @@ function idbDelete(name) {
 
 /* ══ Generate Output HTML ═══════════════════════════════════ */
 function buildOutputHtml(docName, group) {
-  var linesHtml = Array.from(readerContent.querySelectorAll('.line')).map(function (el) {
+  var linesHtml = Array.from(readerContent.querySelectorAll('.line, .line-gap')).map(function (el) {
+    if (el.classList.contains('line-gap')) return '<div class="line-gap"></div>';
     var t   = (el.querySelector('.lineText') || el).textContent;
     var cls = el.className.replace(/\breading\b/g, '').trim();
     return '<div class="' + cls + '"><span class="lineText">'
@@ -1219,6 +1120,7 @@ function buildOutputHtml(docName, group) {
     + '.status-tip{padding:8px 18px 4px;font-size:.76rem;font-weight:700;color:var(--fg2)}\n'
     + '.doc-heading{padding:14px 18px 4px;font-size:1.1rem;font-weight:900;color:var(--blue-dk)}\n'
     + '#content{padding:4px 14px 72px}\n'
+    + '.line-gap{height:16px}\n'
     + '.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}\n'
     + '.line:hover{background:var(--line-hover)}\n'
     + '.line.even{background:var(--line-even)}\n'
