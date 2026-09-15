@@ -135,6 +135,25 @@ body {
 }
 .btn-clear:hover { border-color: var(--red); color: var(--red); }
 
+/* ── 字體大小調整（展示給學生看時可放大） ── */
+.font-size-ctrl { display: flex; align-items: center; gap: 6px; }
+.font-size-label { font-size: .72rem; color: var(--muted); font-weight: 700; }
+.btn-fs {
+  width: 24px; height: 24px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--blue-dk);
+  font-size: .9rem;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.btn-fs:hover { background: var(--blue-lt); border-color: var(--blue); }
+.font-size-val { font-size: .78rem; font-weight: 800; color: var(--blue-dk); min-width: 26px; text-align: center; }
+
 .interim-line {
   min-height: 20px;
   font-size: .85rem;
@@ -173,7 +192,8 @@ body.dark {
   --orange-lt: #3a2c1a;
 }
 body.dark #transcript,
-body.dark .btn-clear { background: #1e2535; color: #e2e8f0; border-color: #35405a; }
+body.dark .btn-clear,
+body.dark .btn-fs { background: #1e2535; color: #e2e8f0; border-color: #35405a; }
 </style>
 </head>
 <body>
@@ -204,7 +224,15 @@ body.dark .btn-clear { background: #1e2535; color: #e2e8f0; border-color: #35405
 <div class="card transcript-card">
   <div class="field-label">
     逐字稿
-    <button class="btn-clear" id="btn-clear" onclick="clearTranscript()">🗑 清除文字</button>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="font-size-ctrl">
+        <span class="font-size-label">字體</span>
+        <button class="btn-fs" onclick="adjustFontSize(-2)">−</button>
+        <span class="font-size-val" id="font-size-val">16</span>
+        <button class="btn-fs" onclick="adjustFontSize(2)">+</button>
+      </div>
+      <button class="btn-clear" id="btn-clear" onclick="clearTranscript()">🗑 清除文字</button>
+    </div>
   </div>
   <div class="interim-line" id="interim-line"></div>
   <textarea id="transcript" placeholder="按「開始聽寫」後，說話內容會即時顯示在這裡，也可以直接點擊修改文字…"></textarea>
@@ -412,6 +440,14 @@ function appendFinalText(text) {
 function clearTranscript() {
   elTranscript.value = '';
   elTranscript.focus();
+}
+
+/* ── 字體大小調整（展示給學生看時可放大） ── */
+var transcriptFontSize = 16;
+function adjustFontSize(delta) {
+  transcriptFontSize = Math.max(14, Math.min(60, transcriptFontSize + delta));
+  document.getElementById('font-size-val').textContent = transcriptFontSize;
+  elTranscript.style.fontSize = transcriptFontSize + 'px';
 }
 
 /* ── 離開／關閉工具時務必釋放麥克風 ── */
