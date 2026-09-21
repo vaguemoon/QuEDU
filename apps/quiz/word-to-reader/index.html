@@ -108,7 +108,17 @@
       <button class="btn-fmt" id="fmt-gap">➕ 插入空行</button>
       <button class="btn-fmt" id="fmt-merge">⊕ 合併短行</button>
       <div class="fmt-divider"></div>
+      <button class="btn-fmt" id="fmt-image-toggle">🖼 插入圖片</button>
+      <div class="fmt-divider"></div>
       <button class="btn-fmt" id="fmt-search-toggle">🔍 搜尋取代</button>
+    </div>
+    <!-- 插入圖片列 -->
+    <div class="edit-image-bar" id="edit-image-bar">
+      <label class="btn-fmt edit-image-pick-btn" for="image-file-input">
+        📁 選擇檔案
+      </label>
+      <input type="file" id="image-file-input" accept="image/*" class="visually-hidden-input">
+      <span class="edit-image-hint">或直接貼上圖片（Ctrl+V）</span>
     </div>
     <!-- 搜尋取代列 -->
     <div class="edit-search-bar" id="edit-search-bar">

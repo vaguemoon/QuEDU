@@ -503,8 +503,16 @@ document.getElementById('tab-library').addEventListener('click', function () { s
 function extractLinesFromHtml(html) {
   var parser = new DOMParser();
   var doc    = parser.parseFromString(html, 'text/html');
-  return Array.from(doc.querySelectorAll('.line, .line-gap')).map(function (el) {
+  return Array.from(doc.querySelectorAll('.line, .line-gap, .line-image')).map(function (el) {
     if (el.classList.contains('line-gap')) return '';
+    if (el.classList.contains('line-image')) {
+      /* 匯入時圖片本身沒有短代碼，重新配一個並記錄真正的圖片資料 */
+      var imgEl = el.querySelector('img');
+      _imgIdCounter++;
+      var id = String(_imgIdCounter);
+      if (imgEl) _readerImages[id] = imgEl.getAttribute('src') || '';
+      return '[[圖片:' + id + ']]';
+    }
     var text = (el.querySelector('.lineText') || el).textContent.trim();
     if (el.classList.contains('title-main')) return '## ' + text;
     if (el.classList.contains('title-sub'))  return '# '  + text;
@@ -606,6 +614,82 @@ manualBtn.addEventListener('click', function () {
   editTextarea.focus();
 });
 
+/* ══ 插入圖片 ════════════════════════════════════════════════
+   圖片本身（壓縮後的 data URL）通常長達數萬字元，直接塞進純文字編輯框
+   會變成一整行看不懂的亂碼、很難編輯，所以編輯框裡只放一個短代碼
+   [[圖片:id]]，真正的圖片資料另外存在 _readerImages 這個 map 裡，
+   只有在畫面實際 render 圖片、或匯出成獨立 HTML 檔時才會用到。 */
+var _readerImages = {}; // id -> data URL
+var _imgIdCounter = 0;
+var IMG_MARKER_RE = /^\[\[圖片:([\w-]+)\]\]$/;
+
+function _compressImageFile(file, maxPx, quality, cb) {
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var img = new Image();
+    img.onload = function () {
+      var scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      var cw = Math.max(1, Math.round(img.width * scale));
+      var ch = Math.max(1, Math.round(img.height * scale));
+      var canvas = document.createElement('canvas');
+      canvas.width = cw; canvas.height = ch;
+      canvas.getContext('2d').drawImage(img, 0, 0, cw, ch);
+      cb(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = function () { showToast('⚠️ 無法讀取這張圖片'); };
+    img.src = e.target.result;
+  };
+  reader.onerror = function () { showToast('⚠️ 無法讀取檔案'); };
+  reader.readAsDataURL(file);
+}
+
+function insertImageFile(file) {
+  if (!file || file.type.indexOf('image') === -1) { showToast('⚠️ 請選擇圖片檔案'); return; }
+  _compressImageFile(file, 900, 0.75, function (dataUrl) {
+    _imgIdCounter++;
+    var id = String(_imgIdCounter);
+    _readerImages[id] = dataUrl;
+    var marker = '[[圖片:' + id + ']]';
+
+    var ta     = editTextarea;
+    var pos    = ta.selectionStart;
+    var before = ta.value.slice(0, pos);
+    var after  = ta.value.slice(pos);
+    var insert = (before.length && !/\n$/.test(before) ? '\n' : '') + marker + '\n';
+    ta.value   = before + insert + after;
+    var cur    = before.length + insert.length;
+    ta.setSelectionRange(cur, cur);
+    ta.focus();
+    showToast('✅ 已插入圖片');
+  });
+}
+
+document.getElementById('fmt-image-toggle').addEventListener('click', function () {
+  var bar = document.getElementById('edit-image-bar');
+  var isShow = bar.classList.toggle('show');
+  document.getElementById('fmt-image-toggle').classList.toggle('active', isShow);
+});
+document.getElementById('image-file-input').addEventListener('change', function (e) {
+  var file = e.target.files[0];
+  if (file) insertImageFile(file);
+  e.target.value = '';
+});
+document.addEventListener('paste', function (e) {
+  /* 貼上目標必須是編輯框本身才生效（編輯框在 display:none 的面板裡
+     不可能被 focus，所以這個判斷已經隱含「編輯面板必須是打開的」，
+     不用再另外檢查面板可見性；也不用先點「🖼 插入圖片」把那一列
+     打開才能貼——這樣使用者比較不會覺得「明明貼了怎麼沒反應」）*/
+  if (document.activeElement !== editTextarea) return;
+  var items = (e.clipboardData || {}).items || [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      var file = items[i].getAsFile();
+      if (file) { e.preventDefault(); insertImageFile(file); }
+      break;
+    }
+  }
+});
+
 /* ══ Build Reader ═══════════════════════════════════════════ */
 /* 把原始文字拆成行，空行保留下來當「分段留白」用（不是朗讀單位），
    連續多個空行只算一個留白，開頭／結尾的空行沒有意義直接丟掉 */
@@ -645,6 +729,19 @@ function renderLines(lines) {
       gap.appendChild(gapSpan);
       readerContent.appendChild(gap);
       even = 0; /* 分段後斑馬紋從頭算，配色不會因為前面行數而忽奇忽偶 */
+      return;
+    }
+
+    var imgMatch = IMG_MARKER_RE.exec(line);
+    if (imgMatch) {
+      var imgDiv = document.createElement('div');
+      var imgEl  = document.createElement('img');
+      imgDiv.className = 'line-image';
+      imgDiv.dataset.raw = line;
+      imgEl.src = _readerImages[imgMatch[1]] || '';
+      imgEl.alt = '插入的圖片';
+      imgDiv.appendChild(imgEl);
+      readerContent.appendChild(imgDiv);
       return;
     }
 
@@ -845,12 +942,12 @@ document.getElementById('rate-plus').addEventListener('click', function () {
   rateVal.textContent = rateValue;
 });
 document.getElementById('font-minus').addEventListener('click', function () {
-  fontValue = Math.max(13, fontValue - 1);
+  fontValue = Math.max(13, fontValue - 2);
   fontVal.textContent = fontValue + 'px';
   readerContent.style.fontSize = fontValue + 'px';
 });
 document.getElementById('font-plus').addEventListener('click', function () {
-  fontValue = Math.min(60, fontValue + 1);
+  fontValue = Math.min(60, fontValue + 2);
   fontVal.textContent = fontValue + 'px';
   readerContent.style.fontSize = fontValue + 'px';
 });
@@ -866,9 +963,9 @@ zhuyinToggleBtn.addEventListener('click', function () {
 
 /* ══ Edit Panel ═════════════════════════════════════════════ */
 function openEdit() {
-  /* 優先讀 data-raw（保留 ## / # 前綴），fallback 讀顯示文字；
-     .line-gap（分段留白）還原成空行 */
-  editTextarea.value = Array.from(readerContent.querySelectorAll('.line, .line-gap'))
+  /* 優先讀 data-raw（保留 ## / # 前綴，圖片行也是存短代碼），
+     fallback 讀顯示文字；.line-gap（分段留白）還原成空行 */
+  editTextarea.value = Array.from(readerContent.querySelectorAll('.line, .line-gap, .line-image'))
     .map(function (el) {
       if (el.classList.contains('line-gap')) return '';
       return el.dataset.raw !== undefined
@@ -991,8 +1088,11 @@ document.getElementById('fmt-merge').addEventListener('click', function () {
   var merged = [];
   lines.forEach(function (line) {
     var trimmed = line.trim();
-    /* 短行（< 5 字且非空行）附加到上一行 */
-    if (trimmed.length > 0 && trimmed.length < 5 && merged.length > 0 && merged[merged.length - 1].trim().length > 0) {
+    /* 短行（< 5 字且非空行）附加到上一行；圖片代碼行不參與合併，
+       避免把短行接到 [[圖片:id]] 後面弄壞代碼 */
+    if (trimmed.length > 0 && trimmed.length < 5 && merged.length > 0 &&
+        merged[merged.length - 1].trim().length > 0 &&
+        !IMG_MARKER_RE.test(merged[merged.length - 1].trim())) {
       merged[merged.length - 1] += trimmed;
     } else {
       merged.push(line);
@@ -1086,8 +1186,13 @@ function idbDelete(name) {
 
 /* ══ Generate Output HTML ═══════════════════════════════════ */
 function buildOutputHtml(docName, group) {
-  var linesHtml = Array.from(readerContent.querySelectorAll('.line, .line-gap')).map(function (el) {
+  var linesHtml = Array.from(readerContent.querySelectorAll('.line, .line-gap, .line-image')).map(function (el) {
     if (el.classList.contains('line-gap')) return '<div class="line-gap"><span>&nbsp;</span></div>';
+    if (el.classList.contains('line-image')) {
+      var imgEl = el.querySelector('img');
+      var src   = imgEl ? imgEl.getAttribute('src') : '';
+      return '<div class="line-image"><img src="' + src + '" alt="插入的圖片"></div>';
+    }
     var t   = (el.querySelector('.lineText') || el).textContent;
     var cls = el.className.replace(/\breading\b/g, '').trim();
     return '<div class="' + cls + '"><span class="lineText">'
@@ -1129,6 +1234,8 @@ function buildOutputHtml(docName, group) {
     + '#content{padding:4px 14px 72px}\n'
     + '.line-gap{display:flex;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;background:var(--bg)}\n'
     + '.line-gap span{line-height:1.85}\n'
+    + '.line-image{margin:6px 0;text-align:left}\n'
+    + '.line-image img{max-width:100%;max-height:360px;border-radius:10px;border:1.5px solid var(--border)}\n'
     + '.line{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:13px;margin:2px 0;cursor:pointer;transition:background .12s}\n'
     + '.line:hover{background:var(--line-hover)}\n'
     + '.line.even{background:var(--line-even)}\n'
@@ -1172,8 +1279,8 @@ function buildOutputHtml(docName, group) {
     + 'document.getElementById("st").addEventListener("click",ss);\n'
     + 'document.getElementById("rm").addEventListener("click",function(){rateVal=Math.max(.3,Math.round((rateVal-.1)*10)/10);rv.textContent=rateVal;});\n'
     + 'document.getElementById("rp").addEventListener("click",function(){rateVal=Math.min(1.5,Math.round((rateVal+.1)*10)/10);rv.textContent=rateVal;});\n'
-    + 'document.getElementById("fm").addEventListener("click",function(){fontVal=Math.max(13,fontVal-1);fv.textContent=fontVal;ct.style.fontSize=fontVal+"px";});\n'
-    + 'document.getElementById("fp").addEventListener("click",function(){fontVal=Math.min(60,fontVal+1);fv.textContent=fontVal;ct.style.fontSize=fontVal+"px";});\n'
+    + 'document.getElementById("fm").addEventListener("click",function(){fontVal=Math.max(13,fontVal-2);fv.textContent=fontVal;ct.style.fontSize=fontVal+"px";});\n'
+    + 'document.getElementById("fp").addEventListener("click",function(){fontVal=Math.min(60,fontVal+2);fv.textContent=fontVal;ct.style.fontSize=fontVal+"px";});\n'
     + 'var zo=true,zt=document.getElementById("zt");zt.addEventListener("click",function(){zo=!zo;document.documentElement.classList.toggle("hide-ruby",!zo);zt.textContent=zo?"📖 隱藏注音":"📖 顯示注音";});\n'
     + '})();\n<\/script>\n<\/body>\n<\/html>';
 }

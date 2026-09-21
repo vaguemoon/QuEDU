@@ -293,17 +293,24 @@ body.dark .char-chip { background: #1e2d45; border-color: #2d4060; }
 
 <!-- 選項 -->
 <div style="display:flex;align-items:center;gap:10px;padding:10px 4px 4px;">
-  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:var(--text)">
-    <input type="checkbox" id="practice-check" onchange="onPracticeToggle()"
+  <label for="test-check" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:600;color:var(--text)">
+    <input type="checkbox" id="test-check" onchange="onTestToggle()"
       style="width:17px;height:17px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">
-    含生字練習格（每字附 3 格田字練習格）
+    產生測驗單（只有遮蔽字讓學生補寫，不含注音／部首／造詞；每次遮蔽位置各自獨立）
   </label>
 </div>
-<div id="mask-option-row" style="display:none;align-items:center;gap:10px;padding:2px 4px 4px 29px;">
-  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--muted)">
-    <input type="checkbox" id="mask-check"
-      style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">
-    遮蔽練習（大字隨機遮蔽一部分，練習格對應處留白讓學生補寫）
+<div id="test-options-row" style="display:none;align-items:center;gap:16px;padding:6px 4px 4px 29px;flex-wrap:wrap;">
+  <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;color:var(--muted)">
+    每字至少出現
+    <input type="number" id="test-min-repeat" min="1" value="1" oninput="updateCharsPreview()"
+      style="width:52px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;text-align:center;font-family:inherit">
+    次
+  </label>
+  <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;color:var(--muted)">
+    測驗單總字數
+    <input type="number" id="test-total-count" min="1" placeholder="留空＝不擴充" oninput="updateCharsPreview()"
+      style="width:72px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;text-align:center;font-family:inherit">
+    字（不足的話會隨機從已選字中補）
   </label>
 </div>
 
@@ -466,50 +473,97 @@ function clearLesson() {
 /* ── 生字輸入 ── */
 function onCharsInput() { updateCharsPreview(); }
 
+/* ── 測驗單勾選：切換後顯示/隱藏「每字至少幾次／總字數」選項 ── */
+function onTestToggle() {
+  var on = document.getElementById('test-check').checked;
+  document.getElementById('test-options-row').style.display = on ? 'flex' : 'none';
+  updateCharsPreview();
+}
+
+function getUniqueChars() {
+  var raw = document.getElementById('chars-input').value;
+  return Array.from(new Set(Array.from(raw).filter(function(c) { return c.trim(); })));
+}
+
+/* 測驗單擴充：每個字先保證至少出現 minRepeat 次，不夠總字數的差額
+   再從已選字中隨機補滿，最後整個洗牌，同一個字才不會黏在一起 */
+function buildTestCharList(uniqueChars) {
+  var minRepeat = Math.max(1, parseInt(document.getElementById('test-min-repeat').value, 10) || 1);
+  var totalRaw  = document.getElementById('test-total-count').value.trim();
+  var baseCount = uniqueChars.length * minRepeat;
+
+  var list = [];
+  uniqueChars.forEach(function(c) {
+    for (var i = 0; i < minRepeat; i++) list.push(c);
+  });
+
+  if (totalRaw) {
+    var total = Math.max(baseCount, parseInt(totalRaw, 10) || baseCount);
+    while (list.length < total) {
+      list.push(uniqueChars[Math.floor(Math.random() * uniqueChars.length)]);
+    }
+  }
+
+  for (var k = list.length - 1; k > 0; k--) {
+    var r = Math.floor(Math.random() * (k + 1));
+    var tmp = list[k]; list[k] = list[r]; list[r] = tmp;
+  }
+  return list;
+}
+
+function getCharsFromInput() {
+  var uniqueChars = getUniqueChars();
+  var testOn = document.getElementById('test-check').checked;
+  return testOn ? buildTestCharList(uniqueChars) : uniqueChars;
+}
+
 function updateCharsPreview() {
-  var raw   = document.getElementById('chars-input').value;
-  var chars = Array.from(new Set(Array.from(raw).filter(function(c) { return c.trim(); })));
+  var uniqueChars = getUniqueChars();
+  var testOn  = document.getElementById('test-check').checked;
   var preview = document.getElementById('chars-preview');
   var count   = document.getElementById('chars-count');
   var badge   = document.getElementById('chars-badge');
   var btn     = document.getElementById('btn-generate');
   var lbl     = document.getElementById('btn-label');
 
-  preview.innerHTML = chars.map(function(c) {
+  preview.innerHTML = uniqueChars.map(function(c) {
     return '<div class="char-chip">' + c + '</div>';
   }).join('');
 
-  badge.textContent = chars.length + ' 字';
-  count.textContent = chars.length ? '共 ' + chars.length + ' 字（每頁 6 張，共 ' + Math.ceil(chars.length / 6) + ' 頁）' : '';
+  if (testOn) {
+    var minRepeat  = Math.max(1, parseInt(document.getElementById('test-min-repeat').value, 10) || 1);
+    var totalRaw   = document.getElementById('test-total-count').value.trim();
+    var baseCount  = uniqueChars.length * minRepeat;
+    var finalTotal = totalRaw ? Math.max(baseCount, parseInt(totalRaw, 10) || baseCount) : baseCount;
 
-  if (chars.length) {
+    badge.textContent = uniqueChars.length + ' 個不同字';
+    count.textContent = uniqueChars.length
+      ? '共 ' + uniqueChars.length + ' 個不同字，測驗單將產生 ' + finalTotal + ' 字（每頁 35 字，共 ' + Math.ceil(finalTotal / 35) + ' 頁）'
+      : '';
+  } else {
+    badge.textContent = uniqueChars.length + ' 字';
+    count.textContent = uniqueChars.length
+      ? '共 ' + uniqueChars.length + ' 字（每頁 5 字，共 ' + Math.ceil(uniqueChars.length / 5) + ' 頁）'
+      : '';
+  }
+
+  if (uniqueChars.length) {
     btn.disabled = false;
-    lbl.textContent = '產生圖卡（開新分頁）';
+    lbl.textContent = testOn ? '產生測驗單（開新分頁）' : '產生圖卡（開新分頁）';
   } else {
     btn.disabled = true;
     lbl.textContent = '請先輸入生字';
   }
 }
 
-/* ── 練習格勾選：連動顯示「遮蔽練習」子選項 ── */
-function onPracticeToggle() {
-  var on  = document.getElementById('practice-check').checked;
-  var row = document.getElementById('mask-option-row');
-  row.style.display = on ? 'flex' : 'none';
-  if (!on) document.getElementById('mask-check').checked = false;
-}
-
-/* ── 產生圖卡 ── */
+/* ── 產生圖卡／測驗單 ── */
 function generate() {
-  var raw   = document.getElementById('chars-input').value;
-  var chars = Array.from(new Set(Array.from(raw).filter(function(c) { return c.trim(); })));
+  var chars = getCharsFromInput();
   var label = document.getElementById('label-input').value.trim();
   if (!chars.length) return;
 
-  var practiceOn = document.getElementById('practice-check').checked;
-  var practice   = practiceOn ? '1' : '0';
-  var mask       = (practiceOn && document.getElementById('mask-check').checked) ? '1' : '0';
-  var params = new URLSearchParams({ label: label, chars: chars.join(''), practice: practice, mask: mask });
+  var testOn = document.getElementById('test-check').checked;
+  var params = new URLSearchParams({ label: label, chars: chars.join(''), test: testOn ? '1' : '0' });
   window.open('cards.html?' + params.toString(), '_blank');
 }
 

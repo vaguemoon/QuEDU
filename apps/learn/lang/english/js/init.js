@@ -268,6 +268,11 @@ function _renderModeCards() {
         '<div class="en-mode-icon">🔤</div>' +
         '<div class="en-mode-name">看圖選字</div>' +
         '<div class="en-mode-desc">看圖片選出正確的英文單字</div>' +
+      '</button>' +
+      '<button class="en-mode-card"' + dis + ' onclick="startQuiz(\'listen-words\')">' +
+        '<div class="en-mode-icon">🎧</div>' +
+        '<div class="en-mode-name">聽音選字</div>' +
+        '<div class="en-mode-desc">聽發音選出正確的英文單字</div>' +
       '</button>';
 
   } else if (currentSection === 'expressions') {

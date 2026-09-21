@@ -118,11 +118,10 @@ body {
   flex-shrink: 0;
 }
 
-/* 六張圖卡的 2×3 排版，獨立於頁面容器，加了表頭也不影響每頁六張 */
+/* 卡片版面：一欄，每頁固定 5 張（見 cards.js 的 CARDS_PER_PAGE） */
 .print-page-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(3, auto);
+  grid-template-columns: 1fr;
   gap: 10px;
   flex: 1;
 }
@@ -138,55 +137,7 @@ body {
   background: white;
 }
 
-/* Card body: side-info (left) + char-wrap (right) */
-.card-body {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Left side column: 注音 + 部首 */
-.card-side-info {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  align-items: center;
-  width: 52px;
-  flex-shrink: 0;
-  align-self: stretch;
-  border-left: 1px solid #ddeaf8;
-  padding: 6px 2px;
-  gap: 6px;
-}
-
-.side-info-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.info-label {
-  font-size: .55rem;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.info-value {
-  font-size: .92rem;
-  font-weight: 700;
-  color: var(--text-dark);
-  line-height: 1.1;
-}
-
 /* 注音：直排字母 + 橫排聲調符號 */
-.info-zhuyin {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .zy-wrapper {
   display: inline-flex;
   flex-direction: row;
@@ -208,21 +159,9 @@ body {
   line-height: 1;
 }
 
-/* Char box with 田字格
-   CSS Grid stacking avoids position:absolute which breaks in some print engines. */
-.card-char-wrap {
-  flex: 1;
-  aspect-ratio: 1 / 1;
-  display: grid;
-  grid-template: 1fr / 1fr;
-  border: 1.5px solid var(--card-border);
-  border-radius: 7px;
-  overflow: hidden;
-  background: white;
-  min-width: 0;
-}
-
-/* Both stack in same grid cell */
+/* 田字格用的字方塊（CSS Grid stacking，避免 position:absolute
+   在部分列印引擎失效）：hz-target 放大字、tian-svg 疊十字虛線，
+   .hzp-unit-char 就是用這兩個組合出來的 */
 .hz-target {
   grid-area: 1 / 1;
   min-width: 0;
@@ -243,8 +182,8 @@ body {
   position: relative;
 }
 
-/* 遮蔽練習：疊在最上層（大字用灰色、練習格仿寫用白色），蓋住底下的
-   字跡與田字格線，讓學生只能靠記憶補上被蓋住的部分 */
+/* 遮蔽練習：疊在最上層，蓋住底下的字跡與田字格線，
+   讓學生只能靠記憶補上被蓋住的部分 */
 .mask-overlay {
   grid-area: 1 / 1;
   width: 100%;
@@ -252,26 +191,6 @@ body {
   pointer-events: none;
   z-index: 2;
   position: relative;
-}
-
-/* ── Practice row (3 writing boxes, full card width) ── */
-.practice-row {
-  display: flex;
-  flex-direction: row;
-  gap: 6px;
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.practice-box {
-  flex: 1;
-  aspect-ratio: 1 / 1;
-  border: 1.5px solid var(--card-border);
-  border-radius: 5px;
-  overflow: hidden;
-  background: white;
-  display: grid;
-  grid-template: 1fr / 1fr;
 }
 
 /* 第一格的仿寫底稿（HanziWriter 極淡字形） */
@@ -294,6 +213,113 @@ body {
   pointer-events: none;
   z-index: 1;
   position: relative;
+}
+
+/* ══════════════════════════════════════
+   測驗單：只有遮蔽字，5 個一行、置中排列，
+   不含注音／部首／造詞／寫字格 ══════════════════════════════════════ */
+.test-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  justify-content: center;
+}
+.test-box {
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--card-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  display: grid;
+  grid-template: 1fr / 1fr;
+}
+
+/* ══════════════════════════════════════
+   橫式生字練習格（學習單，目前唯一的卡片版型）
+══════════════════════════════════════ */
+.hzp-card {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.hzp-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 每一格（參考格／練習格）都是同一種「格子」：單一圓角外框，
+   左半是字、右半是注音，中間用內部的 border-left 隔開——
+   外框只在最外層的 .hzp-unit 畫一次，兩個半邊本身完全沒有自己的
+   邊框／圓角，才會看起來像「同一個格子被劃開兩半」，而不是
+   兩個各自獨立的形狀拼在一起 */
+.hzp-unit {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  border: 1.5px solid var(--card-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  flex-shrink: 0;
+}
+.hzp-unit-char {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  display: grid;
+  grid-template: 1fr / 1fr;
+}
+.hzp-unit-zy {
+  width: 30px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  border-left: 1.5px solid var(--card-border);
+}
+/* 仿寫底稿那一格的注音也是淡色描摹用，不是正確答案參考 */
+.hzp-unit-zy.faint { color: rgba(74, 144, 217, .4); }
+
+.hzp-word-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+.hzp-radical-title,
+.hzp-radical-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  flex-shrink: 0;
+}
+.hzp-radical-zy {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  flex-shrink: 0;
+  margin-right: 16px;
+  display: inline-flex;
+  align-items: center;
+}
+.hzp-word-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  flex-shrink: 0;
+}
+.hzp-word-blank {
+  flex: 1;
+  height: 2.4em;
+  border-bottom: 1.5px solid var(--text-dark);
 }
 
 /* ════════════════════════
@@ -338,18 +364,13 @@ body {
   }
   .print-page-header .fill-line { min-width: 30mm; }
 
-  /* rows 用 auto（依內容決定高度），不要用 1fr 平分整頁高度——
-     否則卡片高度不足時，align-items:center 會把每排卡片往中間擠，
-     兩排之間就會擠出一大條空白。多出來的空間留在最後一排下方，不要分散到列與列之間 */
-  /* 欄寬改用 max-content：卡片縮到剛好包住內容，避免方格縮小後
-     卡片邊框內留下大片左右空白；兩欄整體再置中於頁面 */
+  /* 單欄、每頁固定 5 張，讓瀏覽器依內容自然決定每張卡片高度 */
   .print-page-grid {
     flex: 1;
     min-height: 0;
     gap: 3.5mm;
-    grid-template-columns: repeat(2, max-content);
-    grid-template-rows:    repeat(3, auto);
-    justify-content: center;
+    grid-template-columns: 1fr;
+    justify-content: stretch;
     align-content: start;
   }
 
@@ -360,26 +381,31 @@ body {
     gap: 2mm;
   }
 
-  /* 6 張一頁的高度預算很緊，大字方塊跟描摹格都要用明確的固定邊長，
-     且下面三個描摹格的總寬度刻意算到跟大字那排的內容寬度完全對齊，
-     這樣卡片內就不會再有多餘的左右留白（之前用 max-width 讓方格縮小、
-     卡片仍撐滿欄寬，才會兩側留白；也不能再用 flex:1 撐滿欄寬，
-     否則 3 排疊起來會超過 A4 高度，第 3 排被擠到下一頁） */
-  .card-body { gap: 3mm; }
+  .hzp-card { padding: 2mm; }
+  .hzp-row { gap: 2mm; }
+  .hzp-unit { border-width: 1pt; border-radius: 3pt; }
+  .hzp-unit-char { width: 22mm; height: 22mm; }
+  .hzp-unit-zy { width: 9mm; font-size: 11pt; border-left-width: 1pt; }
+  .hzp-word-line { font-size: 12pt; margin-top: 3mm; gap: 4mm; }
+  .hzp-radical-title, .hzp-radical-value { font-size: 12pt; }
+  .hzp-radical-zy { font-size: 9pt; margin-right: 5mm; }
+  .hzp-word-blank { height: 10mm; }
 
-  .card-char-wrap { flex: 0 0 auto; width: 48mm; height: 48mm; }
-
-  .card-side-info {
-    width: 12mm;
-    padding: 2mm 1mm;
-    border-left: 0.5pt solid #ddeaf8;
+  /* 測驗單：5 欄固定寬度的遮蔽字格，跟學習單完全獨立的一套版面 */
+  .test-grid {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2.5mm;
   }
-
-  .practice-row { gap: 2mm; margin-top: 1.5mm; }
-  .practice-box { flex: 0 0 auto; width: 19.5mm; height: 19.5mm; border-width: 0.5pt; border-radius: 3pt; }
-
-  .info-label { font-size: 6pt; }
-  .info-value { font-size: 9.5pt; }
+  .test-box {
+    width: 34mm;
+    height: 34mm;
+    border-width: 1pt;
+    border-radius: 4pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
 }
 </style>
 </head>

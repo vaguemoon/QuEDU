@@ -54,7 +54,7 @@ function startQuiz(mode) {
   }
 
   /* 更新 topbar 標題 */
-  var titles = { phonics: '看圖猜音', words: '看圖選字', 'expr-listen': '聽音選圖', 'expr-read': '看圖選句' };
+  var titles = { phonics: '看圖猜音', words: '看圖選字', 'listen-words': '聽音選字', 'expr-listen': '聽音選圖', 'expr-read': '看圖選句' };
   if (window._PAGE_TITLES) _PAGE_TITLES['quiz'] = titles[currentQuizMode] || '英文測驗';
 
   _renderQuiz();
@@ -98,10 +98,11 @@ function _renderQuiz() {
   }
   quizAnswered = false;
   var item = quizQueue[quizCurrent];
-  if      (currentQuizMode === 'phonics')     _renderQuizPhonics(item);
-  else if (currentQuizMode === 'words')       _renderQuizWords(item);
-  else if (currentQuizMode === 'expr-listen') _renderQuizExprListen(item);
-  else if (currentQuizMode === 'expr-read')   _renderQuizExprRead(item);
+  if      (currentQuizMode === 'phonics')      _renderQuizPhonics(item);
+  else if (currentQuizMode === 'words')        _renderQuizWords(item);
+  else if (currentQuizMode === 'listen-words') _renderQuizListenWords(item);
+  else if (currentQuizMode === 'expr-listen')  _renderQuizExprListen(item);
+  else if (currentQuizMode === 'expr-read')    _renderQuizExprRead(item);
 }
 
 function _wrapHtml(pct, n, contentHtml, extraClass) {
@@ -156,6 +157,31 @@ function _renderQuizWords(item) {
   );
   inner.dataset.correctKey = item.word;
   inner.dataset.optKeys    = JSON.stringify(opts.map(function(o) { return o.word; }));
+}
+
+/* ── 生字 (listen-words)：聽音選字 ── */
+function _renderQuizListenWords(item) {
+  var n    = quizQueue.length;
+  var pct  = Math.round(quizCurrent / n * 100);
+  var opts = _buildItemOptions(item);
+
+  var optsHtml = opts.map(function(opt, i) {
+    return '<button class="en-quiz-opt en-quiz-word-opt" id="qopt-' + i + '" onclick="answerQuiz(' + i + ')">' +
+      _escHtml(opt.word) + '</button>';
+  }).join('');
+
+  var inner = document.querySelector('#page-quiz .en-page-inner');
+  inner.innerHTML = _wrapHtml(pct, n,
+    '<div class="en-quiz-listen-prompt">' +
+      '<button class="en-quiz-speak-big" data-word="' + _escAttr(item.word) + '" onclick="enSpeak(null,this.dataset.word)">🔊</button>' +
+      '<div class="en-quiz-question">聽到的英文單字是？</div>' +
+    '</div>' +
+    '<div class="en-quiz-opts" id="quiz-opts">' + optsHtml + '</div>',
+    'en-quiz-wrap-listen'
+  );
+  inner.dataset.correctKey = item.word;
+  inner.dataset.optKeys    = JSON.stringify(opts.map(function(o) { return o.word; }));
+  setTimeout(function() { enSpeak(null, item.word); }, 400);
 }
 
 /* ── 常用語 (expr-listen)：聽音選圖 ── */
@@ -224,13 +250,17 @@ function answerQuiz(optIdx) {
     else if (i === optIdx && !isRight) btn.classList.add('wrong');
   });
 
+  // 用字本身（不是隊列位置）當 quizSeen 的 key——quizQueue 每輪都會重新
+  // 洗牌／縮小，同一個位置在不同輪代表不同的字，用位置當 key 會導致
+  // 「這一題其實是重練的」被誤判成沒答錯過，分數（首輪答對）就會算多
+  var wordKey = quizQueue[quizCurrent].word;
   if (isRight) {
     sfxCorrect();
-    if (!quizSeen[quizCurrent]) quizScore++;
+    if (!quizSeen[wordKey]) quizScore++;
     quizRoundCorrect.push(quizQueue[quizCurrent]);
   } else {
     sfxWrong();
-    quizSeen[quizCurrent] = true;
+    quizSeen[wordKey] = true;
     quizWrong.push(quizQueue[quizCurrent]);
   }
   recordResult(quizQueue[quizCurrent].word, isRight);
