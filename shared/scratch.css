@@ -34,29 +34,32 @@
   border-color: var(--blue, #4a90d9);
 }
 
-/* ── 草稿面板 ── */
+/* 面板全畫面打開時，浮動按鈕會擋在畫布角落妨礙畫圖，先藏起來——
+   面板本身的關閉鈕（✕）已經可以關閉，不影響操作 */
+.scratch-btn.s-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── 草稿面板（全畫面） ── */
 .scratch-panel {
   position: fixed;
-  right: 64px; /* 12px margin + 44px 按鈕 + 8px 間距 */
-  top: 16px;
-  bottom: 16px;
-  width: 50vw;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.06);
+  border-radius: 0;
+  box-shadow: none;
   z-index: 9490;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* 隱藏狀態：向右推出畫面外 */
-  transform: translateX(calc(50vw + 80px));
   opacity: 0;
   pointer-events: none;
-  transition: transform .26s cubic-bezier(.25,.46,.45,.94), opacity .2s;
+  transition: opacity .2s;
 }
 
 .scratch-panel.open {
-  transform: translateX(0);
   opacity: 1;
   pointer-events: auto;
 }
@@ -106,6 +109,69 @@
 }
 
 .scratch-sep { flex: 1; }
+
+/* ── 筆／橡皮擦粗細調整 ── */
+.scratch-size-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  border-left: 1.5px solid var(--border, #e2e8f0);
+  margin-left: 4px;
+}
+
+.scratch-size-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+  white-space: nowrap;
+}
+
+.scratch-size-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue-dk, #2d6fa8);
+  font-size: 1rem;
+  font-weight: 900;
+  padding: 0;
+  line-height: 1;
+  user-select: none;
+  transition: border-color .12s, background .12s;
+}
+
+.scratch-size-btn:hover  { border-color: var(--blue, #4a90d9); background: var(--blue-lt, #e8f4fd); }
+.scratch-size-btn:active { transform: scale(.92); }
+
+.scratch-size-val {
+  font-size: .82rem;
+  font-weight: 800;
+  color: var(--blue-dk, #2d6fa8);
+  min-width: 26px;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}
+
+/* ── 橡皮擦範圍游標：跟著游標／手指移動的圓圈，實際大小＝擦取範圍 ── */
+.scratch-eraser-cursor {
+  position: fixed;
+  border: 1.5px solid #333;
+  border-radius: 50%;
+  background: rgba(0,0,0,.06);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  display: none;
+  z-index: 9495;
+}
+
+.scratch-eraser-cursor.show { display: block; }
 
 .scratch-tool {
   width: 36px;
