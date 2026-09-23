@@ -381,15 +381,7 @@ btnConfirmShare.addEventListener('click', async function() {
     /* 更新卡片徽章 or 表格欄 */
     if (_libMode === 'card') {
       var statusEl = document.querySelector('.lib-card-share-status[data-doc="' + doc.name + '"]');
-      if (statusEl) {
-        statusEl.innerHTML = '';
-        newSharedClasses.forEach(function(cls) {
-          var badge = document.createElement('span');
-          badge.className   = 'share-badge';
-          badge.textContent = cls.name;
-          statusEl.appendChild(badge);
-        });
-      }
+      if (statusEl) renderShareStatusBadges(statusEl, newSharedClasses);
     } else {
       var tr = document.querySelector('#lib-table-body tr[data-name="' + doc.name + '"]');
       if (tr) {
@@ -565,7 +557,21 @@ function showToast(msg) {
   toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2800);
 }
 
-/* ══ File Upload ════════════════════════════════════════════ */
+/* ══ File Upload ════════════════════════════════════════════
+   支援 .docx / .txt / .odt / .pdf 直接解析；.doc（97-2003 舊版二進位格式）
+   瀏覽器端沒有可靠的剖析函式庫，無法真的轉換，只提示老師另存新檔為 .docx。 */
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+var SUPPORTED_EXTS = ['docx', 'txt', 'odt', 'pdf'];
+
+function _fileExt(name) {
+  var m = /\.([a-z0-9]+)$/i.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+
 fileInput.addEventListener('change', function () {
   selectedFile = fileInput.files[0] || null;
   convertBtn.disabled = !selectedFile;
@@ -578,7 +584,7 @@ dropZone.addEventListener('dragleave', function ()  { dropZone.classList.remove(
 dropZone.addEventListener('drop', function (e) {
   e.preventDefault(); dropZone.classList.remove('drag-over');
   var f = e.dataTransfer.files[0];
-  if (f && /\.(docx?|doc)$/i.test(f.name)) {
+  if (f && /\.(docx?|txt|odt|pdf)$/i.test(f.name)) {
     selectedFile = f;
     convertBtn.disabled = false;
     convertBtn.textContent = '▶ 開始轉換「' + f.name + '」';
@@ -587,15 +593,32 @@ dropZone.addEventListener('drop', function (e) {
 
 convertBtn.addEventListener('click', function () {
   if (!selectedFile) return;
-  procMsg.textContent = '正在解析 Word 檔案…';
+  var ext = _fileExt(selectedFile.name);
+
+  if (ext === 'doc') {
+    showToast('⚠️ 偵測到舊版 .doc 格式，本工具無法直接讀取，請用 Word / WPS / Google 文件另存新檔為 .docx 後再上傳');
+    return;
+  }
+  if (SUPPORTED_EXTS.indexOf(ext) === -1) {
+    showToast('⚠️ 不支援的檔案格式：.' + ext);
+    return;
+  }
+
+  procMsg.textContent = '正在解析文件…';
   procOverlay.classList.add('show');
   var fr = new FileReader();
   fr.onload = function (e) {
-    mammoth.extractRawText({ arrayBuffer: e.target.result })
-      .then(function (result) {
-        var name = selectedFile.name.replace(/\.(docx?|doc)$/i, '');
-        buildReader(result.value, name);
+    _extractFileText(ext, e.target.result)
+      .then(function (text) {
         procOverlay.classList.remove('show');
+        if (!text.trim()) {
+          showToast(ext === 'pdf'
+            ? '⚠️ 這份 PDF 擷取不到文字，可能是掃描或圖片檔，請改用其他格式或直接輸入文字'
+            : '⚠️ 這個檔案擷取不到文字內容');
+          return;
+        }
+        var name = selectedFile.name.replace(/\.[^.]+$/, '');
+        buildReader(text, name);
         showPage('reader');
       })
       .catch(function (err) {
@@ -603,8 +626,67 @@ convertBtn.addEventListener('click', function () {
         showToast('⚠️ 解析失敗：' + err.message);
       });
   };
-  fr.readAsArrayBuffer(selectedFile);
+  if (ext === 'txt') fr.readAsText(selectedFile);
+  else fr.readAsArrayBuffer(selectedFile);
 });
+
+function _extractFileText(ext, data) {
+  if (ext === 'docx') {
+    return mammoth.extractRawText({ arrayBuffer: data }).then(function (r) { return r.value; });
+  }
+  if (ext === 'txt') {
+    return Promise.resolve(data);
+  }
+  if (ext === 'odt') {
+    return _extractOdtText(data);
+  }
+  if (ext === 'pdf') {
+    return _extractPdfText(data);
+  }
+  return Promise.reject(new Error('不支援的檔案格式'));
+}
+
+/* ODT 本質是 zip + XML（跟 .docx 一樣），用 JSZip 讀出 content.xml，
+   取出所有段落（text:p）與標題（text:h），依文件順序合併成純文字 */
+function _extractOdtText(arrayBuffer) {
+  var TEXT_NS = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0';
+  return JSZip.loadAsync(arrayBuffer)
+    .then(function (zip) {
+      var entry = zip.file('content.xml');
+      if (!entry) throw new Error('找不到 content.xml，不是有效的 ODT 檔案');
+      return entry.async('string');
+    })
+    .then(function (xmlStr) {
+      var xml   = new DOMParser().parseFromString(xmlStr, 'application/xml');
+      var nodes = xml.getElementsByTagNameNS(TEXT_NS, '*');
+      var lines = [];
+      for (var i = 0; i < nodes.length; i++) {
+        var ln = nodes[i].localName;
+        if (ln === 'p' || ln === 'h') lines.push(nodes[i].textContent || '');
+      }
+      return lines.join('\n');
+    });
+}
+
+/* PDF 用 pdf.js 逐頁擷取純文字，版面/表格會被拉平，掃描檔（純圖片）擷取不到文字 */
+function _extractPdfText(arrayBuffer) {
+  return pdfjsLib.getDocument({ data: arrayBuffer }).promise.then(function (pdf) {
+    var pageTexts = [];
+    var chain = Promise.resolve();
+    for (var i = 1; i <= pdf.numPages; i++) {
+      (function (pageNum) {
+        chain = chain.then(function () {
+          return pdf.getPage(pageNum)
+            .then(function (page) { return page.getTextContent(); })
+            .then(function (content) {
+              pageTexts.push(content.items.map(function (it) { return it.str; }).join(' '));
+            });
+        });
+      })(i);
+    }
+    return chain.then(function () { return pageTexts.join('\n\n'); });
+  });
+}
 
 manualBtn.addEventListener('click', function () {
   buildReader('', '未命名文件');
@@ -1342,7 +1424,12 @@ btnConfirmSave.addEventListener('click', async function () {
     procOverlay.classList.remove('show');
     _editingLibraryEntry = null;
     showToast('✅ 已儲存「' + fname + '」' + (currentUser ? '（含雲端備份）' : ''));
-    setTimeout(function () { showPage('library'); loadLibrary(); }, 1000);
+    /* 剛存完文章是老師最容易忘記分享的當下，直接接著跳出分享視窗；
+       未登入無法分享，這種情況維持原本只跳轉書單頁 */
+    setTimeout(function () {
+      showPage('library'); loadLibrary();
+      if (currentUser) showShareModal(entry.name, entry.title, entry.html);
+    }, 1000);
   } catch (e) {
     procOverlay.classList.remove('show');
     showToast('⚠️ 儲存失敗：' + e.message);
@@ -1517,6 +1604,23 @@ function renderLibraryCards(entries) {
   });
 }
 
+/* 分享狀態徽章：已分享列出班級名，未分享則常駐顯示橘色警示（不靠 hover），
+   卡片與表格共用，分享成功後也用這個函式重繪 */
+function renderShareStatusBadges(container, sharedClasses) {
+  container.innerHTML = '';
+  if (sharedClasses && sharedClasses.length) {
+    sharedClasses.forEach(function(cls) {
+      var badge = document.createElement('span');
+      badge.className = 'share-badge'; badge.textContent = cls.name || cls;
+      container.appendChild(badge);
+    });
+  } else {
+    var warn = document.createElement('span');
+    warn.className = 'share-badge-none'; warn.textContent = '⚠ 尚未分享';
+    container.appendChild(warn);
+  }
+}
+
 function buildLibCard(entry) {
   var card = document.createElement('div');
   card.className = 'lib-card';
@@ -1564,11 +1668,7 @@ function buildLibCard(entry) {
 
   var shareStatus = document.createElement('div');
   shareStatus.className = 'lib-card-share-status'; shareStatus.dataset.doc = entry.name;
-  entry.sharedClasses.forEach(function(cls) {
-    var badge = document.createElement('span');
-    badge.className = 'share-badge'; badge.textContent = cls.name || cls;
-    shareStatus.appendChild(badge);
-  });
+  renderShareStatusBadges(shareStatus, entry.sharedClasses);
   card.appendChild(shareStatus);
 
   card.addEventListener('click', function(e) {
@@ -1710,7 +1810,7 @@ function buildLibTableRow(entry) {
 }
 
 function formatSharedClasses(sharedClasses) {
-  if (!sharedClasses || !sharedClasses.length) return '<span style="color:var(--fg2)">—</span>';
+  if (!sharedClasses || !sharedClasses.length) return '<span class="share-badge-none">⚠ 尚未分享</span>';
   var names = sharedClasses.map(function(c) { return escapeHtml(c.name || String(c)); });
   var chips = names.slice(0, 3).map(function(n) { return '<span class="share-badge">' + n + '</span>'; }).join(' ');
   if (names.length > 3) chips += ' <span class="share-badge-more">+' + (names.length - 3) + '班</span>';

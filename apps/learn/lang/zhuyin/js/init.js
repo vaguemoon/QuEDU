@@ -9,8 +9,8 @@ window.addEventListener('load', function() {
   applySound();
   initSoundWrapper();
 
-  showPage('grid', false);
-  PAGE_STACK = ['grid'];
+  showPage('mode-select', false);
+  PAGE_STACK = ['mode-select'];
 
   (function waitDb() {
     if (!db) { setTimeout(waitDb, 200); return; }
@@ -45,13 +45,20 @@ function _zyAutoLogin() {
       return;
     }
 
-    db.collection('students').doc(hub.id).get().then(function(sDoc) {
+    Promise.all([
+      db.collection('students').doc(hub.id).get(),
+      db.collection('students').doc(hub.id).collection('progress').doc('zhuyin').get()
+    ]).then(function(results) {
+      var sDoc = results[0], pDoc = results[1];
       if (!sDoc.exists) return;
       var sData = sDoc.data();
+      var pData = pDoc.exists ? pDoc.data() : {};
       currentStudent = {
         name: hub.name, pin: hub.pin, id: hub.id,
         nickname: sData.nickname || '', avatar: sData.avatar || '🐣'
       };
+      zySymbolStatus.listenStatus = pData.listenStatus || {};
+      zySymbolStatus.readStatus  = pData.readStatus  || {};
       _zyApplyTopbar();
     }).catch(function(e) { console.warn('autoLogin error:', e); });
   } catch (e) {}

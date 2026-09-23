@@ -5,10 +5,16 @@
 
 var PAGE_STACK = [];
 var PAGE_CONFIG = {
-  'grid':     { title: '🔤 <span>注音趣</span>', back: false },
-  'settings': { title: '⚙️ <span>設定</span>',   back: true  }
+  'mode-select':          { title: '🔤 <span>注音趣</span>',   back: false },
+  'grid':                 { title: '🗂️ <span>符號瀏覽</span>', back: true  },
+  'zy-menu':              { title: '',                         back: true  }, // 標題依方向動態設定，見 _zySetDirectionTitle()
+  'zy-practice':          { title: '',                         back: true  },
+  'zy-exam':              { title: '',                         back: true  },
+  'zy-exam-round-result': { title: '',                         back: true  },
+  'zy-exam-result':       { title: '',                         back: true  },
+  'settings':             { title: '⚙️ <span>設定</span>',     back: true  }
 };
-var currentPage = 'grid';
+var currentPage = 'mode-select';
 
 function showPage(name, pushHistory) {
   if (pushHistory === undefined) pushHistory = true;

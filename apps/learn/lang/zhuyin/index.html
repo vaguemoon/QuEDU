@@ -35,10 +35,129 @@
   </div>
 </div>
 
+<!-- ── 模式選擇 ── -->
+<div id="page-mode-select" class="page active">
+  <div class="zy-page-inner">
+    <div class="zy-mode-cards">
+      <button class="zy-mode-card" onclick="showPage('grid')">
+        <span class="zy-mode-icon">🗂️</span>
+        <span class="zy-mode-name">符號瀏覽</span>
+        <span class="zy-mode-desc">看圖聽音，認識 37 個注音符號</span>
+      </button>
+      <button class="zy-mode-card" onclick="enterZyDirection('listen')">
+        <span class="zy-mode-icon">🎧</span>
+        <span class="zy-mode-name">聽音選字</span>
+        <span class="zy-mode-desc">播放發音，選出正確的注音符號</span>
+      </button>
+      <button class="zy-mode-card" onclick="enterZyDirection('read')">
+        <span class="zy-mode-icon">👀</span>
+        <span class="zy-mode-name">看字選音</span>
+        <span class="zy-mode-desc">看到符號，聽選項找出正確發音</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 注音符號表 ── -->
-<div id="page-grid" class="page active">
+<div id="page-grid" class="page">
   <div class="zy-page-inner">
     <div id="zy-grid-wrap"><div class="loading-wrap"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<!-- ── 練習／測驗：符號選單（聽音選字／看字選音 共用） ── -->
+<div id="page-zy-menu" class="page">
+  <div class="menu-progress-bar" id="zy-menu-progress-bar">
+    <div class="menu-progress-title">📊 學習進度</div>
+    <div class="progress-track">
+      <div class="progress-seg mastered"  id="zy-prog-mastered"  style="width:0%"></div>
+      <div class="progress-seg practiced" id="zy-prog-practiced" style="width:0%"></div>
+      <div class="progress-seg new"       id="zy-prog-new"       style="width:100%"></div>
+    </div>
+    <div class="progress-counts" id="zy-prog-counts"></div>
+  </div>
+  <div class="menu-body" id="zy-menu-body"></div>
+  <div class="menu-action-bar" id="zy-menu-action-bar"></div>
+</div>
+
+<!-- ── 練習模式 ── -->
+<div id="page-zy-practice" class="page">
+  <div class="q-progress-bar-wrap"><div class="q-progress-fill" id="prac-progress-fill"></div></div>
+  <div class="q-panel">
+    <div class="q-header">
+      <span class="q-num" id="prac-q-num">已答 0 題</span>
+      <span class="q-type" id="prac-q-type">聽音選字</span>
+    </div>
+    <div id="prac-bar">
+      <div id="prac-bar-left">
+        <span id="prac-bar-stars">
+          <span class="prac-star" id="prac-star-1">★</span>
+          <span class="prac-star" id="prac-star-2">★</span>
+          <span class="prac-star" id="prac-star-3">★</span>
+        </span>
+        <span id="prac-bar-info">再多練習幾題吧！</span>
+      </div>
+      <button id="prac-audio-btn" onclick="replayZpAudio()">🔊</button>
+    </div>
+    <div id="prac-prompt"></div>
+    <div class="option-grid" id="prac-option-grid"></div>
+    <button class="btn-result btn-result-secondary" style="margin-top:4px" onclick="backToZyMenu()">📋 離開練習</button>
+  </div>
+</div>
+
+<!-- ── 測驗模式 ── -->
+<div id="page-zy-exam" class="page">
+  <div class="q-progress-bar-wrap"><div class="q-progress-fill" id="exam-progress-fill"></div></div>
+  <div class="q-panel">
+    <div class="q-header">
+      <span class="q-num" id="exam-q-num">第 1 題 / 共 ? 題</span>
+      <span class="q-round" id="exam-round-label">Round 1</span>
+      <span class="q-type"  id="exam-q-type">聽音選字</span>
+    </div>
+    <div class="play-btn-wrap" id="exam-audio-wrap">
+      <button class="play-btn" onclick="replayZeAudio()">
+        <span class="play-btn-icon">🔊</span><span>再聽一次</span>
+      </button>
+    </div>
+    <div id="exam-prompt"></div>
+    <div class="option-grid" id="exam-option-grid"></div>
+  </div>
+</div>
+
+<!-- ── 每輪結算畫面 ── -->
+<div id="page-zy-exam-round-result" class="page">
+  <div class="round-panel">
+    <div class="round-icon" id="round-icon">📊</div>
+    <div class="round-title" id="round-title">Round 1 結算</div>
+    <div class="round-sub"   id="round-sub"></div>
+    <div class="round-sections">
+      <div class="round-section" id="round-pass-section">
+        <div class="round-section-title round-pass-title">✅ 答對了！</div>
+        <div class="round-grid" id="round-pass-grid"></div>
+      </div>
+      <div class="round-section" id="round-fail-section">
+        <div class="round-section-title round-fail-title">💪 再試試看！</div>
+        <div class="round-grid" id="round-fail-grid"></div>
+      </div>
+    </div>
+    <button class="btn-result btn-result-green" id="btn-next-round" onclick="startZeNextRound()">
+      開始 Round 2 →
+    </button>
+    <button class="btn-result btn-result-secondary" onclick="backToZyMenu()">📋 回到符號列表</button>
+  </div>
+</div>
+
+<!-- ── 測驗最終結果 ── -->
+<div id="page-zy-exam-result" class="page">
+  <div class="result-panel">
+    <div class="result-icon" id="exam-result-icon">🎉</div>
+    <div class="result-title" id="exam-result-title">測驗完成！</div>
+    <div class="result-sub"   id="exam-result-sub"></div>
+    <div id="exam-result-rounds"></div>
+    <div class="result-btns">
+      <button class="btn-result btn-result-primary" onclick="startZyExam()">🔄 重新測驗</button>
+      <button class="btn-result btn-result-secondary" onclick="backToZyMenu()">📋 回到符號列表</button>
+    </div>
   </div>
 </div>
 
@@ -58,6 +177,8 @@
 <script src="js/state.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/menu.js"></script>
+<script src="js/practice.js"></script>
+<script src="js/exam.js"></script>
 <script src="js/init.js"></script>
 </body>
 </html>

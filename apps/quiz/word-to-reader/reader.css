@@ -185,6 +185,7 @@ body {
 .drop-icon { font-size: 2.6rem; display: block; margin-bottom: 8px; }
 .drop-text { font-size: .87rem; font-weight: 700; color: var(--fg2); line-height: 1.6; }
 .drop-text strong { color: var(--blue-dk); }
+.drop-hint { display: block; font-size: .72rem; font-weight: 600; color: var(--fg2); opacity: .75; margin-top: 6px; }
 
 .btn-main {
   width: 100%; height: 48px;
@@ -487,25 +488,22 @@ body {
 .lib-card-del,
 .lib-card-edit,
 .lib-card-dl,
-.lib-card-edit-content {
+.lib-card-edit-content,
+.lib-card-share {
   position: absolute; top: 50%;
   transform: translateY(-50%);
   width: 30px; height: 30px;
   background: none; border: none; border-radius: 8px;
   color: var(--fg2); font-size: .88rem;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  opacity: 0; transition: all .15s;
+  transition: all .15s;
 }
+/* 操作按鈕（含分享）平板觸控沒有 hover，所以一律常駐顯示，不再靠 hover 才現身 */
 .lib-card-del          { right: 12px; }
 .lib-card-edit         { right: 48px; }
 .lib-card-dl           { right: 84px; }
 .lib-card-edit-content { right: 120px; }
 .lib-card-share        { right: 156px; }
-.lib-card:hover .lib-card-del,
-.lib-card:hover .lib-card-edit,
-.lib-card:hover .lib-card-dl,
-.lib-card:hover .lib-card-edit-content,
-.lib-card:hover .lib-card-share { opacity: 1; }
 .lib-card-del:hover          { background: var(--red);     color: #fff; }
 .lib-card-edit:hover         { background: var(--blue-lt); color: var(--blue-dk); }
 .lib-card-dl:hover           { background: #e6f9ee;        color: #389959; }
@@ -519,6 +517,12 @@ body {
 .share-badge {
   font-size: .7rem; font-weight: 700; padding: 2px 7px;
   border-radius: 20px; background: #e0f2fe; color: #0369a1;
+  white-space: nowrap;
+}
+/* 尚未分享：常駐橘色警示，不需要 hover 或點開才看得到 */
+.share-badge-none {
+  font-size: .7rem; font-weight: 700; padding: 2px 7px;
+  border-radius: 20px; background: #fff3e8; color: var(--orange-dk);
   white-space: nowrap;
 }
 
