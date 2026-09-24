@@ -251,16 +251,14 @@
 .play-btn:active { transform: scale(.96); box-shadow: 0 3px 10px rgba(74,144,217,.3); }
 .play-btn-icon { font-size: 2rem; }
 
-/* 注音符號題目提示（看字選音用：顯示題目符號本身，可點擊重聽） */
+/* 注音符號題目提示（看字選音用：純顯示題目符號，不可點擊——點了會直接聽到正解等於洩題） */
 .zy-quiz-prompt-symbol {
   margin: 4px auto 6px; width: 120px; height: 120px;
   border: 2.5px solid var(--border); border-radius: 20px;
   background: var(--blue-lt); color: var(--blue-dk);
   font-size: 4.2rem; font-weight: 900; font-family: 'Noto Serif TC', serif;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
 }
-.zy-quiz-prompt-symbol:active { background: var(--blue); color: white; }
 
 .option-grid {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -285,6 +283,17 @@
   animation: shake .35s ease;
 }
 .option-btn:disabled { cursor: default; }
+/* 看字選音：試聽後待確認的選項（尚未送出答案，還可以改選別的再試聽） */
+.option-btn.pending-select {
+  border-color: var(--orange); background: #fff8f0;
+  box-shadow: 0 0 0 4px rgba(255,140,66,.22);
+}
+
+/* 確認答案鍵：試聽前禁用，灰階不可按 */
+.zy-confirm-btn:disabled {
+  background: var(--bg); color: var(--muted);
+  box-shadow: none; cursor: not-allowed; opacity: .7;
+}
 
 /* 看字選音的選項是「可播放音檔」按鈕，不是符號本身，字級/字型跟符號選項不同 */
 .option-btn.zy-audio-option {

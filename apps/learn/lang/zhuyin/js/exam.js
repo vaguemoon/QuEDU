@@ -11,6 +11,7 @@ var zeCurrentCorrect   = 0;
 var zeCurrentFailed    = [];
 var zeRoundHistory     = [];
 var zeIdx              = 0;
+var zePendingBtn       = null; // 看字選音：已試聽、等待「確認答案」的選項按鈕
 
 function startZyExam() {
   zeRound1 = shuffle(zyAllSymbols.map(function(s) {
@@ -39,10 +40,14 @@ function renderZeQuestion() {
   var gridEl    = document.getElementById('exam-option-grid');
   var promptEl  = document.getElementById('exam-prompt');
   var audioWrap = document.getElementById('exam-audio-wrap');
+  var confirmBtn = document.getElementById('exam-confirm-btn');
 
   if (numEl)   numEl.textContent   = '第 ' + (zeIdx + 1) + ' 題 / 共 ' + total + ' 題';
   if (progEl)  progEl.style.width  = Math.round((zeIdx / total) * 100) + '%';
   if (roundEl) roundEl.textContent = 'Round ' + zeCurrentRound;
+
+  zePendingBtn = null;
+  if (confirmBtn) { confirmBtn.style.display = zyDirection === 'read' ? '' : 'none'; confirmBtn.disabled = true; }
 
   if (zyDirection === 'listen') {
     if (audioWrap) audioWrap.style.display = '';
@@ -52,13 +57,11 @@ function renderZeQuestion() {
         return '<button class="option-btn" data-value="' + opt + '" onclick="onZeOption(this)">' + opt + '</button>';
       }).join('');
     }
-    zySpeak(q.answer);
+    zySpeakSymbol(q.answer);
   } else {
     if (audioWrap) audioWrap.style.display = 'none';
-    if (promptEl) {
-      promptEl.innerHTML =
-        '<button class="zy-quiz-prompt-symbol" onclick="zySpeakSymbol(\'' + q.answer + '\')">' + q.answer + '</button>';
-    }
+    /* 提示符號改成純顯示，不可點擊——點了會直接聽到正解，等於洩題 */
+    if (promptEl) promptEl.innerHTML = '<div class="zy-quiz-prompt-symbol">' + q.answer + '</div>';
     if (gridEl) {
       gridEl.innerHTML = q.options.map(function(opt, i) {
         return '<button class="option-btn zy-audio-option" data-value="' + opt + '" onclick="onZeOption(this)">' +
@@ -68,13 +71,35 @@ function renderZeQuestion() {
   }
 }
 
+/* 看字選音：點選項只是試聽＋標記待確認，不會馬上判對錯；
+   聽音選字維持原本點了就直接送出答案 */
 function onZeOption(btn) {
+  if (zyDirection === 'read') {
+    zySpeakSymbol(btn.dataset.value);
+    if (zePendingBtn) zePendingBtn.classList.remove('pending-select');
+    zePendingBtn = btn;
+    btn.classList.add('pending-select');
+    var confirmBtn = document.getElementById('exam-confirm-btn');
+    if (confirmBtn) confirmBtn.disabled = false;
+    return;
+  }
+  _commitZeAnswer(btn);
+}
+
+function onZeConfirm() {
+  if (!zePendingBtn) return;
+  var btn = zePendingBtn;
+  zePendingBtn = null;
+  var confirmBtn = document.getElementById('exam-confirm-btn');
+  if (confirmBtn) confirmBtn.disabled = true;
+  _commitZeAnswer(btn);
+}
+
+function _commitZeAnswer(btn) {
   var q       = zeCurrentQuestions[zeIdx];
   var chosen  = btn.dataset.value;
   var allBtns = document.querySelectorAll('#exam-option-grid .option-btn');
-
-  if (zyDirection === 'read') zySpeakSymbol(chosen);
-  allBtns.forEach(function(b) { b.disabled = true; });
+  allBtns.forEach(function(b) { b.disabled = true; b.classList.remove('pending-select'); });
 
   if (chosen === q.answer) {
     btn.classList.add('correct');
@@ -95,7 +120,7 @@ function onZeOption(btn) {
 
 function replayZeAudio() {
   var q = zeCurrentQuestions[zeIdx];
-  if (q && zyDirection === 'listen') zySpeak(q.answer);
+  if (q && zyDirection === 'listen') zySpeakSymbol(q.answer);
 }
 
 function endZeRound() {

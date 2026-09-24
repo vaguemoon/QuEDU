@@ -784,16 +784,6 @@
           <div class="tool-card-arrow">→</div>
         </button>
 
-        <!-- 即時語音轉文字卡片 -->
-        <button class="tool-card" onclick="openToolModal('voice-notes')">
-          <div class="tool-card-icon">🗣️</div>
-          <div class="tool-card-body">
-            <div class="tool-card-name">即時語音轉文字</div>
-            <div class="tool-card-desc">口述筆記／速記，說話內容即時轉成文字</div>
-          </div>
-          <div class="tool-card-arrow">→</div>
-        </button>
-
       </div>
     </div>
 
@@ -1869,6 +1859,9 @@
 <link rel="stylesheet" href="../shared/scratch.css">
 <script src="../shared/scratch.js"></script>
 <script>initScratchWidget();</script>
+<link rel="stylesheet" href="../shared/voice-to-text.css">
+<script src="../shared/voice-to-text.js"></script>
+<script>initVoiceToTextWidget();</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="../shared/shared.js"></script>
@@ -1896,8 +1889,7 @@
 <script>
 var TOOL_CONFIG = {
   reader:        { title: '🎧 報讀工具', src: '../apps/quiz/word-to-reader/index.html' },
-  'print-cards': { title: '🖨️ 列印工具', src: '../apps/tools/print-cards/index.html' },
-  'voice-notes': { title: '🗣️ 即時語音轉文字', src: '../apps/tools/voice-notes/index.html' }
+  'print-cards': { title: '🖨️ 列印工具', src: '../apps/tools/print-cards/index.html' }
 };
 function openToolModal(id) {
   var cfg = TOOL_CONFIG[id];

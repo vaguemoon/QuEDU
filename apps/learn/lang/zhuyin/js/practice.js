@@ -16,6 +16,7 @@ var zpFirstRoundQueue = [];
 var zpFirstRoundIdx   = 0;
 var zpPrevStars       = 0;
 var zpActiveSymbols   = [];
+var zpPendingBtn      = null; // 看字選音：已試聽、等待「確認答案」的選項按鈕
 
 function startZyPractice(selectedItems) {
   zpActiveSymbols = (selectedItems && selectedItems.length)
@@ -62,9 +63,13 @@ function renderZpQuestion() {
   var q       = zpCurrentQ;
   var numEl   = document.getElementById('prac-q-num');
   var gridEl  = document.getElementById('prac-option-grid');
-  var promptEl  = document.getElementById('prac-prompt');
-  var audioBtn  = document.getElementById('prac-audio-btn');
+  var promptEl   = document.getElementById('prac-prompt');
+  var audioBtn   = document.getElementById('prac-audio-btn');
+  var confirmBtn = document.getElementById('prac-confirm-btn');
   if (numEl) numEl.textContent = '已答 ' + zpTotalAnswered + ' 題';
+
+  zpPendingBtn = null;
+  if (confirmBtn) { confirmBtn.style.display = zyDirection === 'read' ? '' : 'none'; confirmBtn.disabled = true; }
 
   if (zyDirection === 'listen') {
     if (audioBtn) audioBtn.style.display = '';
@@ -74,13 +79,11 @@ function renderZpQuestion() {
         return '<button class="option-btn" data-value="' + opt + '" onclick="onZpOption(this)">' + opt + '</button>';
       }).join('');
     }
-    zySpeak(q.answer);
+    zySpeakSymbol(q.answer);
   } else {
     if (audioBtn) audioBtn.style.display = 'none';
-    if (promptEl) {
-      promptEl.innerHTML =
-        '<button class="zy-quiz-prompt-symbol" onclick="zySpeakSymbol(\'' + q.answer + '\')">' + q.answer + '</button>';
-    }
+    /* 提示符號改成純顯示，不可點擊——點了會直接聽到正解，等於洩題 */
+    if (promptEl) promptEl.innerHTML = '<div class="zy-quiz-prompt-symbol">' + q.answer + '</div>';
     if (gridEl) {
       gridEl.innerHTML = q.options.map(function(opt, i) {
         return '<button class="option-btn zy-audio-option" data-value="' + opt + '" onclick="onZpOption(this)">' +
@@ -90,13 +93,35 @@ function renderZpQuestion() {
   }
 }
 
+/* 看字選音：點選項只是試聽＋標記待確認，不會馬上判對錯；
+   聽音選字維持原本點了就直接送出答案 */
 function onZpOption(btn) {
+  if (zyDirection === 'read') {
+    zySpeakSymbol(btn.dataset.value);
+    if (zpPendingBtn) zpPendingBtn.classList.remove('pending-select');
+    zpPendingBtn = btn;
+    btn.classList.add('pending-select');
+    var confirmBtn = document.getElementById('prac-confirm-btn');
+    if (confirmBtn) confirmBtn.disabled = false;
+    return;
+  }
+  _commitZpAnswer(btn);
+}
+
+function onZpConfirm() {
+  if (!zpPendingBtn) return;
+  var btn = zpPendingBtn;
+  zpPendingBtn = null;
+  var confirmBtn = document.getElementById('prac-confirm-btn');
+  if (confirmBtn) confirmBtn.disabled = true;
+  _commitZpAnswer(btn);
+}
+
+function _commitZpAnswer(btn) {
   var q       = zpCurrentQ;
   var chosen  = btn.dataset.value;
   var allBtns = document.querySelectorAll('#prac-option-grid .option-btn');
-
-  if (zyDirection === 'read') zySpeakSymbol(chosen);
-  allBtns.forEach(function(b) { b.disabled = true; });
+  allBtns.forEach(function(b) { b.disabled = true; b.classList.remove('pending-select'); });
 
   if (chosen === q.answer) {
     btn.classList.add('correct');
@@ -114,6 +139,11 @@ function onZpOption(btn) {
       allBtns.forEach(function(b) {
         if (!b.classList.contains('wrong')) b.disabled = false;
       });
+      /* 看字選音重試：確認鍵要等下一次試聽選擇才會再打開 */
+      if (zyDirection === 'read') {
+        var confirmBtn = document.getElementById('prac-confirm-btn');
+        if (confirmBtn) confirmBtn.disabled = true;
+      }
     }, 500);
   }
 }
@@ -163,5 +193,5 @@ function updateZpMastery() {
 }
 
 function replayZpAudio() {
-  if (zpCurrentQ && zyDirection === 'listen') zySpeak(zpCurrentQ.answer);
+  if (zpCurrentQ && zyDirection === 'listen') zySpeakSymbol(zpCurrentQ.answer);
 }

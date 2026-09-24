@@ -1,0 +1,236 @@
+/* shared/voice-to-text.css — 語音轉文字 Widget 樣式
+   跟 shared/scratch.css 同一套「懸浮按鈕 → 全畫面面板」模式，放在手寫草稿按鈕左邊，
+   兩個 Widget 可能同時被同一頁引入，位置刻意不重疊。 */
+
+/* ── 懸浮按鈕 ── */
+.vtt-btn {
+  position: fixed;
+  right: 64px;
+  bottom: 24px;
+  z-index: 9497;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  border: 1.5px solid var(--border, #e2e8f0);
+  box-shadow: 0 2px 10px rgba(0,0,0,.14);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue, #4a90d9);
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+  transition: box-shadow .15s, border-color .15s, background .15s, color .15s;
+}
+.vtt-btn:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  border-color: var(--blue, #4a90d9);
+}
+.vtt-btn.v-active {
+  background: var(--blue, #4a90d9);
+  color: white;
+  border-color: var(--blue, #4a90d9);
+}
+/* 面板全畫面打開時，浮動按鈕會擋在畫面角落，先藏起來 */
+.vtt-btn.v-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── 面板（全畫面） ── */
+.vtt-panel {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: white;
+  border-radius: 0;
+  box-shadow: none;
+  z-index: 9489;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.vtt-panel.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── 標題列 ── */
+.vtt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1.5px solid var(--border, #e2e8f0);
+  flex-shrink: 0;
+}
+.vtt-title {
+  font-size: .95rem;
+  font-weight: 900;
+  color: var(--text, #1a1a2e);
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+}
+.vtt-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .95rem;
+  color: var(--muted, #94a3b8);
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background .12s, color .12s;
+}
+.vtt-close:hover {
+  background: var(--border, #e2e8f0);
+  color: var(--text, #1a1a2e);
+}
+
+/* ── 內容區 ── */
+.vtt-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.vtt-banner {
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.6;
+  background: #fdf1e6;
+  border: 1.5px solid var(--orange, #e67e22);
+  color: #8a4a12;
+}
+
+/* ── 麥克風狀態列 ── */
+.vtt-mic-row { display: flex; align-items: center; gap: 14px; }
+.vtt-pulse-wrap {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: var(--blue-lt, #eef5fc);
+}
+.vtt-pulse-dot {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--border, #e2e8f0);
+  transition: transform .08s ease-out, background-color .2s;
+}
+.vtt-pulse-dot.listening { background: #dc3545; }
+.vtt-pulse-dot.error { background: var(--orange, #e67e22); }
+.vtt-mic-status-text { font-size: .92rem; font-weight: 800; color: var(--text, #1a1a2e); }
+
+.vtt-mic-error {
+  display: none;
+  background: #fdecea;
+  border: 1.5px solid #dc3545;
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-size: .8rem;
+  font-weight: 700;
+  color: #8a1a24;
+  line-height: 1.6;
+}
+.vtt-mic-error.show { display: block; }
+
+/* ── 開始／停止聽寫按鈕 ── */
+.vtt-toggle-btn {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--blue, #4a90d9), var(--blue-dk, #2d6fa8));
+  color: white;
+  border: none;
+  border-radius: 11px;
+  font-size: .95rem;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .15s, transform .12s;
+}
+.vtt-toggle-btn:hover { opacity: .9; }
+.vtt-toggle-btn:active { transform: scale(.98); }
+.vtt-toggle-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.vtt-toggle-btn.listening { background: linear-gradient(135deg, #dc3545, #b0202f); }
+
+/* ── 逐字稿區 ── */
+.vtt-transcript-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.vtt-field-label {
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--muted, #94a3b8);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.vtt-field-actions { display: flex; align-items: center; gap: 12px; }
+.vtt-clear-btn {
+  padding: 5px 12px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 7px;
+  background: white;
+  color: var(--muted, #94a3b8);
+  font-size: .74rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.vtt-clear-btn:hover { border-color: #dc3545; color: #dc3545; }
+
+.vtt-fs-ctrl { display: flex; align-items: center; gap: 6px; }
+.vtt-fs-label { font-size: .72rem; color: var(--muted, #94a3b8); font-weight: 700; }
+.vtt-fs-btn {
+  width: 24px; height: 24px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  background: white;
+  color: var(--blue-dk, #2d6fa8);
+  font-size: .9rem;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.vtt-fs-btn:hover { background: var(--blue-lt, #eef5fc); border-color: var(--blue, #4a90d9); }
+.vtt-fs-val { font-size: .78rem; font-weight: 800; color: var(--blue-dk, #2d6fa8); min-width: 22px; text-align: center; font-family: 'Courier New', monospace; }
+
+.vtt-interim-line {
+  min-height: 20px;
+  font-size: .85rem;
+  font-style: italic;
+  color: var(--muted, #94a3b8);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.vtt-transcript {
+  width: 100%;
+  flex: 1;
+  min-height: 160px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: 'Noto Sans TC', sans-serif;
+  color: var(--text, #1a1a2e);
+  line-height: 1.9;
+  outline: none;
+  resize: none;
+  transition: border-color .15s;
+}
+.vtt-transcript:focus { border-color: var(--blue, #4a90d9); }
