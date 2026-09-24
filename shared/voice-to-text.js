@@ -65,7 +65,11 @@
         + '<div class="vtt-banner" id="vtt-banner-insecure" style="display:none">'
           + '⚠️ 使用麥克風需要安全連線（https），請透過正式網址開啟本頁面。'
         + '</div>'
-        + '<div class="vtt-mic-row">'
+        + '<div class="vtt-banner" id="vtt-banner-ios" style="display:none">'
+          + '📱 這台裝置請直接點下方文字框，再點鍵盤上的 🎤 語音輸入鍵即可開始說話——'
+          + 'iPad／iPhone 內建的語音輸入比較穩定，這裡就不用另外按「開始聽寫」了。'
+        + '</div>'
+        + '<div class="vtt-mic-row" id="vtt-mic-row">'
           + '<div class="vtt-pulse-wrap"><div class="vtt-pulse-dot" id="vtt-pulse-dot"></div></div>'
           + '<div class="vtt-mic-status-text" id="vtt-mic-status-text">尚未開始</div>'
         + '</div>'
@@ -98,7 +102,17 @@
     document.getElementById('vtt-fs-plus').addEventListener('click', function () { adjustFontSize(2); });
 
     if (!window.isSecureContext) document.getElementById('vtt-banner-insecure').style.display = '';
-    if (!SpeechRecognitionCtor) {
+
+    /* iOS 的 JS 語音辨識引擎經實測不可靠（常常整段卡死、完全沒有文字結果），
+       但裝置本身內建的鍵盤語音輸入是可靠的——iOS 直接不走 JS 辨識這條路，
+       改引導學生用鍵盤上的語音輸入鍵，把「開始聽寫」整組 UI 換成說明文字 */
+    if (isIOS) {
+      document.getElementById('vtt-banner-ios').style.display = '';
+      document.getElementById('vtt-mic-row').style.display = 'none';
+      document.getElementById('vtt-toggle-btn').style.display = 'none';
+      var taIOS = document.getElementById('vtt-transcript');
+      if (taIOS) taIOS.placeholder = '點這裡，再點鍵盤上的 🎤 語音輸入鍵開始說話…';
+    } else if (!SpeechRecognitionCtor) {
       document.getElementById('vtt-banner-unsupported').style.display = '';
       document.getElementById('vtt-toggle-btn').disabled = true;
       setStatus('瀏覽器不支援語音辨識', 'error');
@@ -112,6 +126,13 @@
     document.getElementById('vtt-panel').classList.add('open');
     document.getElementById('vtt-widget-btn').classList.add('v-active', 'v-hidden');
     isOpen = true;
+    /* iOS：直接把鍵盤叫出來，學生不用自己再點一次文字框找麥克風鍵 */
+    if (isIOS) {
+      setTimeout(function () {
+        var ta = document.getElementById('vtt-transcript');
+        if (ta) ta.focus();
+      }, 350);
+    }
   }
 
   function closePanel() {
