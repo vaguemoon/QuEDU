@@ -13,6 +13,13 @@
 
   var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+  /* iPad/iPhone Safari 對 continuous:true 有已知的靜默卡住問題——權限拿到、
+     顯示「正在聆聽」，但 onresult／onerror／onend 全部不會觸發，形同永久卡死。
+     iPadOS 13+ 的 Safari 在 UA 上會偽裝成 Mac（navigator.platform === 'MacIntel'），
+     要另外用「有觸控點」來判斷才分得出來。 */
+  var isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   var isOpen      = false;
   var listening   = false;
   var userStopped = true; // true = 使用者主動停止／尚未開始，不應自動重啟
@@ -22,6 +29,7 @@
   var analyser    = null;
   var rafId       = null;
   var fontSize    = 16;
+  var watchdogTimer = null; // 偵測「已開始聆聽但完全沒反應」的靜默卡死狀態
 
   var MIC_SVG =
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"'
@@ -163,6 +171,9 @@
 
   function startAll() {
     clearError();
+    /* 頁面上其他功能（TTS 發音等）可能才剛用過 speechSynthesis，iOS 對音訊工作階段
+       的銜接不穩定，開麥克風前先確保沒有殘留的語音播放 */
+    if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
     var toggleBtn = document.getElementById('vtt-toggle-btn');
     toggleBtn.disabled = true;
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
@@ -182,6 +193,7 @@
 
   function stopAll() {
     listening = false;
+    clearWatchdog();
     var toggleBtn = document.getElementById('vtt-toggle-btn');
     if (toggleBtn) {
       toggleBtn.textContent = '🎙️ 開始聽寫';
@@ -235,10 +247,15 @@
   function startRecognition() {
     recognition = new SpeechRecognitionCtor();
     recognition.lang = 'zh-TW';
-    recognition.continuous = true;
+    /* iOS Safari 的 continuous:true 常常整段卡死（不觸發任何事件），改用
+       「單句辨識 + onend 自動重啟下一句」串接出連續聽寫的效果，穩定得多 */
+    recognition.continuous     = !isIOS;
     recognition.interimResults = true;
 
+    armWatchdog();
+
     recognition.onresult = function (e) {
+      clearWatchdog(); armWatchdog(); // 有收到結果代表活著，重新倒數
       var interim = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var transcript = e.results[i][0].transcript;
@@ -253,6 +270,7 @@
     };
 
     recognition.onerror = function (e) {
+      clearWatchdog();
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         userStopped = true;
         handleMicError({ name: 'NotAllowedError' });
@@ -260,18 +278,41 @@
         userStopped = true;
         handleMicError({ name: 'NotFoundError' });
       } else if (e.error === 'network') {
-        showError('語音辨識連線發生問題，請確認網路連線。');
+        showError('語音辨識連線發生問題，請確認網路連線（此裝置的語音辨識可能需要連上雲端服務）。');
       }
       /* 'no-speech' 等暫時性錯誤交給 onend 自動重啟即可 */
     };
 
     recognition.onend = function () {
+      clearWatchdog();
       if (!userStopped && listening) {
-        try { recognition.start(); } catch (e) { /* 已在啟動中則忽略 */ }
+        /* iOS 緊接著重啟常常直接失敗，留一點間隔給系統回收音訊工作階段 */
+        setTimeout(function () {
+          if (!userStopped && listening) {
+            try { startRecognition(); } catch (e) { /* 已在啟動中則忽略 */ }
+          }
+        }, isIOS ? 250 : 0);
       }
     };
 
     recognition.start();
+  }
+
+  /* iOS 已知會整段卡死：權限拿到、顯示「正在聆聽」，但 onresult／onerror／onend
+     全部不觸發。用一個計時器偵測這種情況，逾時就強制中斷並提示使用者手動重試
+     （iOS 上要重新取得使用者手勢才比較可能真的成功接上麥克風）。 */
+  function armWatchdog() {
+    clearWatchdog();
+    watchdogTimer = setTimeout(function () {
+      userStopped = true;
+      if (recognition) { try { recognition.abort(); } catch (e) {} }
+      stopAll();
+      showError('沒有偵測到語音回應，這台裝置的語音辨識可能暫時無法使用，請再次點擊「開始聽寫」重試；若持續發生，可能是網路無法連上語音辨識服務。');
+      setStatus('沒有回應，請重試', 'error');
+    }, 8000);
+  }
+  function clearWatchdog() {
+    if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null; }
   }
 
   function appendFinalText(text) {
