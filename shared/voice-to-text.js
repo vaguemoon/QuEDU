@@ -126,12 +126,12 @@
     document.getElementById('vtt-panel').classList.add('open');
     document.getElementById('vtt-widget-btn').classList.add('v-active', 'v-hidden');
     isOpen = true;
-    /* iOS：直接把鍵盤叫出來，學生不用自己再點一次文字框找麥克風鍵 */
+    /* iOS：直接把鍵盤叫出來，學生不用自己再點一次文字框找麥克風鍵。
+       focus() 必須跟按鈕點擊同一輪同步呼叫，iOS 才認得這是使用者手勢觸發的，
+       前一版用 setTimeout 延遲呼叫，反而讓 iOS 判定不是使用者手勢而不彈鍵盤 */
     if (isIOS) {
-      setTimeout(function () {
-        var ta = document.getElementById('vtt-transcript');
-        if (ta) ta.focus();
-      }, 350);
+      var ta = document.getElementById('vtt-transcript');
+      if (ta) ta.focus();
     }
   }
 
