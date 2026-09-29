@@ -35,14 +35,32 @@
   </div>
 </div>
 
+<!-- ── 區域選擇：單音／結合韻 ── -->
+<div id="page-zy-section-select" class="page active">
+  <div class="zy-page-inner">
+    <div class="zy-mode-cards zy-section-cards">
+      <button class="zy-mode-card" onclick="enterZySection('single')">
+        <span class="zy-mode-icon">🔡</span>
+        <span class="zy-mode-name">單音</span>
+        <span class="zy-mode-desc">37 個注音符號（聲符 21 ＋ 韻符 16）</span>
+      </button>
+      <button class="zy-mode-card" onclick="enterZySection('combined')">
+        <span class="zy-mode-icon">🔗</span>
+        <span class="zy-mode-name">結合韻</span>
+        <span class="zy-mode-desc">22 個結合韻（ㄧ／ㄨ／ㄩ 跟韻符拼出來的組合音）</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── 模式選擇 ── -->
-<div id="page-mode-select" class="page active">
+<div id="page-mode-select" class="page">
   <div class="zy-page-inner">
     <div class="zy-mode-cards">
-      <button class="zy-mode-card" onclick="showPage('grid')">
+      <button class="zy-mode-card" onclick="enterZyGrid()">
         <span class="zy-mode-icon">🗂️</span>
         <span class="zy-mode-name">符號瀏覽</span>
-        <span class="zy-mode-desc">看圖聽音，認識 37 個注音符號</span>
+        <span class="zy-mode-desc">看圖聽音，逐一認識這一區的符號</span>
       </button>
       <button class="zy-mode-card" onclick="enterZyDirection('listen')">
         <span class="zy-mode-icon">🎧</span>

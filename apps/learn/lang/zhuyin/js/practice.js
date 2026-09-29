@@ -20,8 +20,8 @@ var zpPendingBtn      = null; // 看字選音：已試聽、等待「確認答�
 
 function startZyPractice(selectedItems) {
   zpActiveSymbols = (selectedItems && selectedItems.length)
-    ? zyAllSymbols.filter(function(s) { return selectedItems.indexOf(s) !== -1; })
-    : zyAllSymbols.slice();
+    ? zyActiveSymbols().filter(function(s) { return selectedItems.indexOf(s) !== -1; })
+    : zyActiveSymbols().slice();
   zpVocabCount = zpActiveSymbols.length;
   if (!zpVocabCount) { showToast('請先選擇要練習的符號'); return; }
 
@@ -42,7 +42,7 @@ function startZyPractice(selectedItems) {
 }
 
 function buildZpOptions(answer) {
-  var extraPool = zyAllSymbols.filter(function(x) { return zpActiveSymbols.indexOf(x) === -1; });
+  var extraPool = zyActiveSymbols().filter(function(x) { return zpActiveSymbols.indexOf(x) === -1; });
   return buildZyOptions(answer, zpActiveSymbols, extraPool);
 }
 

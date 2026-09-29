@@ -14,8 +14,9 @@ var zeIdx              = 0;
 var zePendingBtn       = null; // 看字選音：已試聽、等待「確認答案」的選項按鈕
 
 function startZyExam() {
-  zeRound1 = shuffle(zyAllSymbols.map(function(s) {
-    return { answer: s, options: buildZyOptions(s, zyAllSymbols, []) };
+  var allSymbols = zyActiveSymbols();
+  zeRound1 = shuffle(allSymbols.map(function(s) {
+    return { answer: s, options: buildZyOptions(s, allSymbols, []) };
   }));
   if (!zeRound1.length) { showToast('沒有可測驗的符號'); return; }
   zeCurrentRound     = 1;
@@ -208,7 +209,7 @@ function finishZeExam() {
     });
   });
 
-  var statusMap = zyDirection === 'listen' ? zySymbolStatus.listenStatus : zySymbolStatus.readStatus;
+  var statusMap = zyActiveStatusMap(zyDirection);
   zeRound1.forEach(function(q) {
     var roundPassed = firstPassRound[q.answer];
     if (roundPassed === 1) {

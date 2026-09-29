@@ -29,10 +29,11 @@ function zySpeak(text) {
   window.speechSynthesis.speak(utt);
 }
 
-/* 點符號本身：有老師錄音就播錄音（比自動朗讀穩定），沒有就退回 TTS 唸符號 */
+/* 點符號本身：有老師錄音就播錄音（比自動朗讀穩定），沒有就退回 TTS 唸符號
+   單音／結合韻各自查自己的資料庫（zyActiveData() 依目前 zySection 回傳對應的那份） */
 function zySpeakSymbol(symbol) {
   sfxTap();
-  var d = zhuyinData[symbol];
+  var d = zyActiveData()[symbol];
   if (d && d.audioData) {
     try {
       new Audio(d.audioData).play();
@@ -45,6 +46,6 @@ function zySpeakSymbol(symbol) {
 /* 點圖片：唸完整口訣，還沒建立口訣的符號就退回唸符號本身 */
 function zySpeakPhrase(symbol) {
   sfxTap();
-  var d = zhuyinData[symbol];
+  var d = zyActiveData()[symbol];
   zySpeak((d && d.phrase) ? d.phrase : symbol);
 }

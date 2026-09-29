@@ -9,12 +9,13 @@ window.addEventListener('load', function() {
   applySound();
   initSoundWrapper();
 
-  showPage('mode-select', false);
-  PAGE_STACK = ['mode-select'];
+  showPage('zy-section-select', false);
+  PAGE_STACK = ['zy-section-select'];
 
   (function waitDb() {
     if (!db) { setTimeout(waitDb, 200); return; }
     loadZhuyinData();
+    loadZhuyinCombinedData();
     _zyAutoLogin();
   })();
 });
@@ -57,8 +58,10 @@ function _zyAutoLogin() {
         name: hub.name, pin: hub.pin, id: hub.id,
         nickname: sData.nickname || '', avatar: sData.avatar || '🐣'
       };
-      zySymbolStatus.listenStatus = pData.listenStatus || {};
-      zySymbolStatus.readStatus  = pData.readStatus  || {};
+      zySymbolStatus.single.listenStatus   = pData.listenStatus         || {};
+      zySymbolStatus.single.readStatus     = pData.readStatus           || {};
+      zySymbolStatus.combined.listenStatus = pData.combinedListenStatus || {};
+      zySymbolStatus.combined.readStatus   = pData.combinedReadStatus   || {};
       _zyApplyTopbar();
     }).catch(function(e) { console.warn('autoLogin error:', e); });
   } catch (e) {}

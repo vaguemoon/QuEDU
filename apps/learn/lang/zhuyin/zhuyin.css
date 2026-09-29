@@ -111,6 +111,9 @@
   .zy-mode-cards { grid-template-columns: 1fr; }
 }
 
+/* 單音／結合韻 區域選擇：只有 2 張卡片，改窄一點置中，不要跟 3 張的模式選擇一樣寬 */
+.zy-section-cards { grid-template-columns: repeat(2, 1fr); max-width: 520px; }
+
 /* ── 練習／測驗：符號選單（page-zy-menu） ── */
 #page-zy-menu { padding-bottom: 88px; }
 .menu-progress-bar {

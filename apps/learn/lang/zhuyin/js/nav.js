@@ -5,16 +5,17 @@
 
 var PAGE_STACK = [];
 var PAGE_CONFIG = {
-  'mode-select':          { title: '🔤 <span>注音趣</span>',   back: false },
-  'grid':                 { title: '🗂️ <span>符號瀏覽</span>', back: true  },
-  'zy-menu':              { title: '',                         back: true  }, // 標題依方向動態設定，見 _zySetDirectionTitle()
+  'zy-section-select':    { title: '🔤 <span>注音趣</span>',   back: false }, // 最頂層：單音／結合韻
+  'mode-select':          { title: '',                         back: true  }, // 標題依區域動態設定，見 enterZySection()
+  'grid':                 { title: '',                         back: true  }, // 標題依區域動態設定，見 enterZyGrid()
+  'zy-menu':              { title: '',                         back: true  }, // 標題依區域＋方向動態設定，見 _zySetDirectionTitle()
   'zy-practice':          { title: '',                         back: true  },
   'zy-exam':              { title: '',                         back: true  },
   'zy-exam-round-result': { title: '',                         back: true  },
   'zy-exam-result':       { title: '',                         back: true  },
   'settings':             { title: '⚙️ <span>設定</span>',     back: true  }
 };
-var currentPage = 'mode-select';
+var currentPage = 'zy-section-select';
 
 function showPage(name, pushHistory) {
   if (pushHistory === undefined) pushHistory = true;
@@ -29,6 +30,12 @@ function showPage(name, pushHistory) {
   var backBtn = document.getElementById('topbar-back');
   if (titleEl) titleEl.innerHTML = cfg.title;
   if (backBtn) backBtn.classList.toggle('hidden', !cfg.back);
+
+  /* 幾個頁面的標題依目前區域／方向動態決定，PAGE_CONFIG 裡只能留空字串。
+     用明確的 enterXxx() 進入時會自己補設標題，但走「← 返回」這種通用路徑
+     （goBack 直接呼叫 showPage）不會經過那些函式，這裡統一補回正確標題，
+     避免返回時 Topbar 顯示空白 */
+  if (typeof _zyRefreshTitleFor === 'function') _zyRefreshTitleFor(name);
 }
 
 function goBack() {

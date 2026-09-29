@@ -1,5 +1,5 @@
 /**
- * admin/zhuyin.js — 注音趣：注音符號圖庫（37 個固定符號，全校共用資料）
+ * admin/zhuyin.js — 注音趣：符號圖庫（單音 37 個＋結合韻 22 個，兩區固定符號，全校共用資料）
  * 依賴：shared.js（db、showToast、escHtml）、init.js（currentTeacher）、word-image.js（_wiCompressToDataUrl）
  * 符號發音錄音功能沿用 admin/audio-clips.js 的 MediaRecorder 錄音模式（WebM/Opus → base64）
  */
@@ -8,7 +8,17 @@
 var ZY_INITIALS = ['ㄅ','ㄆ','ㄇ','ㄈ','ㄉ','ㄊ','ㄋ','ㄌ','ㄍ','ㄎ','ㄏ','ㄐ','ㄑ','ㄒ','ㄓ','ㄔ','ㄕ','ㄖ','ㄗ','ㄘ','ㄙ'];
 var ZY_FINALS   = ['ㄧ','ㄨ','ㄩ','ㄚ','ㄛ','ㄜ','ㄝ','ㄞ','ㄟ','ㄠ','ㄡ','ㄢ','ㄣ','ㄤ','ㄥ','ㄦ'];
 
-var _zyData          = {}; // { symbol: {imageUrl, phrase, audioData} }
+/* 結合韻：教育部標準 22 個，依介符分三組，跟學生端 apps/learn/lang/zhuyin/js/state.js 的清單一致 */
+var ZY_COMBINED_YI = ['ㄧㄚ','ㄧㄛ','ㄧㄝ','ㄧㄞ','ㄧㄠ','ㄧㄡ','ㄧㄢ','ㄧㄣ','ㄧㄤ','ㄧㄥ'];
+var ZY_COMBINED_WU = ['ㄨㄚ','ㄨㄛ','ㄨㄞ','ㄨㄟ','ㄨㄢ','ㄨㄣ','ㄨㄤ','ㄨㄥ'];
+var ZY_COMBINED_YU = ['ㄩㄝ','ㄩㄢ','ㄩㄣ','ㄩㄥ'];
+
+/* 單音／結合韻 兩區共用同一套編輯介面，用 _zyAdminSection 切換要操作哪個 Firestore
+   collection、哪份資料快取——兩區資料互不相關，切換分頁不用重新整理頁面 */
+var _zyAdminSection = 'single'; // 'single' | 'combined'
+var _zyDataSingle    = {}; // { symbol: {imageUrl, phrase, audioData} }
+var _zyDataCombined  = {}; // 結合韻，格式相同
+var _zyData          = _zyDataSingle; // 指向目前分頁對應的那份（_zySwitchAdminSection 會重新指向）
 var _zyEditingSymbol = '';
 var _zyPendingBlob    = null; // 圖片
 var _zyPendingAudio   = null; // 音檔（Blob）
@@ -29,38 +39,65 @@ function loadZhuyinTab() {
   _zyRenderRoot();
 }
 
+function _zyCollectionName() { return _zyAdminSection === 'combined' ? 'zhuyinCombinedSounds' : 'zhuyinSounds'; }
+function _zyAllSymbolsForSection() {
+  return _zyAdminSection === 'combined'
+    ? ZY_COMBINED_YI.concat(ZY_COMBINED_WU, ZY_COMBINED_YU)
+    : ZY_INITIALS.concat(ZY_FINALS);
+}
+function _zyGroupsForAdminSection() {
+  return _zyAdminSection === 'combined'
+    ? [ { title: 'ㄧ系', items: ZY_COMBINED_YI }, { title: 'ㄨ系', items: ZY_COMBINED_WU }, { title: 'ㄩ系', items: ZY_COMBINED_YU } ]
+    : [ { title: '聲符', items: ZY_INITIALS }, { title: '韻符', items: ZY_FINALS } ];
+}
+
+function _zySwitchAdminSection(section) {
+  _zyAdminSection = section;
+  _zyData = section === 'combined' ? _zyDataCombined : _zyDataSingle;
+  _zyRenderRoot();
+}
+
 /* ════════════════════════════════
-   37 個符號列表
+   單音（37）／結合韻（22）符號列表
    ════════════════════════════════ */
 function _zyRenderRoot() {
   var wrap = document.getElementById('zy-main');
   if (!wrap) return;
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
-  db.collection('zhuyinSounds').get().then(function(snap) {
-    _zyData = {};
+  db.collection(_zyCollectionName()).get().then(function(snap) {
+    var freshData = {};
     snap.forEach(function(doc) {
       var d = doc.data();
-      _zyData[doc.id] = { imageUrl: d.imageUrl || '', phrase: d.phrase || '', audioData: d.audioData || '' };
+      freshData[doc.id] = { imageUrl: d.imageUrl || '', phrase: d.phrase || '', audioData: d.audioData || '' };
     });
+    if (_zyAdminSection === 'combined') { _zyDataCombined = freshData; } else { _zyDataSingle = freshData; }
+    _zyData = freshData;
 
-    var allSymbols = ZY_INITIALS.concat(ZY_FINALS);
+    var allSymbols = _zyAllSymbolsForSection();
+    var total      = allSymbols.length;
     var imgCount   = allSymbols.filter(function(s) { return _zyData[s] && _zyData[s].imageUrl; }).length;
     var audioCount = allSymbols.filter(function(s) { return _zyData[s] && _zyData[s].audioData; }).length;
+    var tabHtml =
+      '<div class="app-tabs-mini" style="margin-bottom:14px">' +
+        '<button class="app-tab-mini' + (_zyAdminSection === 'single'   ? ' active' : '') + '" onclick="_zySwitchAdminSection(\'single\')">🔡 單音</button>' +
+        '<button class="app-tab-mini' + (_zyAdminSection === 'combined' ? ' active' : '') + '" onclick="_zySwitchAdminSection(\'combined\')">🔗 結合韻</button>' +
+      '</div>';
+    var groupsHtml = _zyGroupsForAdminSection().map(function(g) {
+      return '<div class="card-title" style="font-size:.92rem;margin:16px 0 10px">' + g.title + '</div>' + _zyBuildGridHtml(g.items);
+    }).join('');
 
     wrap.innerHTML =
-      '<div class="card-title" style="margin-bottom:6px">🔤 注音符號圖庫' +
+      tabHtml +
+      '<div class="card-title" style="margin-bottom:6px">🔤 ' + (_zyAdminSection === 'combined' ? '結合韻圖庫' : '注音符號圖庫') +
         '<span style="font-size:.72rem;font-weight:700;color:var(--muted);margin-left:8px">' +
-          '全校共用・圖片 ' + imgCount + ' / 37・發音錄音 ' + audioCount + ' / 37</span>' +
+          '全校共用・圖片 ' + imgCount + ' / ' + total + '・發音錄音 ' + audioCount + ' / ' + total + '</span>' +
       '</div>' +
       '<p style="font-size:.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6">' +
-        '每個注音符號可以錄一段發音（取代不穩定的自動朗讀）、搭配一張圖片，和一句配對成功時會唸出來的口訣。' +
+        '每個' + (_zyAdminSection === 'combined' ? '結合韻' : '注音符號') + '可以錄一段發音（取代不穩定的自動朗讀）、搭配一張圖片，和一句配對成功時會唸出來的口訣。' +
         '學生端點符號本身：有錄音就播錄音，沒有就退回自動朗讀；點圖片：唸完整口訣。' +
       '</p>' +
-      '<div class="card-title" style="font-size:.92rem;margin:16px 0 10px">聲符</div>' +
-      _zyBuildGridHtml(ZY_INITIALS) +
-      '<div class="card-title" style="font-size:.92rem;margin:20px 0 10px">韻符</div>' +
-      _zyBuildGridHtml(ZY_FINALS);
+      groupsHtml;
   }).catch(function(e) {
     wrap.innerHTML = '<p style="color:var(--red)">載入失敗：' + e.message + '</p>';
   });
@@ -272,7 +309,7 @@ function _zySaveEdit() {
       imageUrl:  imageUrl  || existing.imageUrl  || '',
       audioData: audioData || existing.audioData || ''
     };
-    db.collection('zhuyinSounds').doc(symbol).set(data).then(function() {
+    db.collection(_zyCollectionName()).doc(symbol).set(data).then(function() {
       showToast('✅ 已儲存「' + symbol + '」');
       _zyCloseEdit();
       _zyRenderRoot();
