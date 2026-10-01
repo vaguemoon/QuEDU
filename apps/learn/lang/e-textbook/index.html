@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#4a90d9">
 <title>課文趣｜上學趣</title>
 <link rel="manifest" href="/QuEDU/manifest.json">
+<!-- 注音字型提前預載，不用等 CSS 解析到 @font-face 才開始抓，縮短「字顯示出來但還沒注音」的空窗 -->
+<link rel="preload" href="../../../../assets/font/BPMFZIHIKAISTD-REGULAR.woff2" as="font" type="font/woff2" crossorigin>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <link rel="stylesheet" href="../../../../shared/shared.css">
