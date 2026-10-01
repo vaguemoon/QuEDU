@@ -29,75 +29,75 @@ function enterEtLesson(docId) {
   renderReaderPage();
 }
 
-/* ── 注音字型：用 FontFace API 手動抓檔案、追蹤真實下載進度，確保學生一進閱讀畫面
-   看到的課文「一出現就帶注音」，不會先顯示一般字體再「跳成」注音字體。
-   課文清單頁完全不會觸發這段，只有真的點進某一課才開始載入；載入完成後 document.fonts
-   會記住這顆字型，同一次瀏覽session 裡再開別課、再開同一課都不用重新抓。
-   抓超過 150ms 才顯示讀取條，避免已經快取過的情況也跳一下讀取畫面；
+/* ── 注音字型：用瀏覽器原生 document.fonts.load() 載入（先動態插入含 @font-face 的
+   et-font.css，再請瀏覽器自己把這顆字型抓回來、解析好），不自己手刻 fetch+ReadableStream
+   組字型檔案——那條路線在不同瀏覽器的穩定度落差較大，改交給瀏覽器自己內建、經過充分測試的
+   字型載入管線，確保學生一進閱讀畫面看到的課文「一出現就帶注音」，不會先顯示一般字體
+   再「跳成」注音字體。課文清單頁完全不會觸發這段，只有真的點進某一課才開始載入；
+   載入完成後 document.fonts 會記住，同一次瀏覽 session 裡再開別課、再開同一課都不用重新抓。
+   抓超過 150ms 才顯示讀取條（進度是模擬動畫，瀏覽器沒有給實際位元組進度的管道）；
    抓超過 20 秒還沒完成就放棄等待，直接用一般字體顯示課文，不讓學生卡在讀取畫面出不去 ── */
-var _etFontLoadPromise = null;
-var ET_FONT_URL = '../../../../assets/font/BPMFZIHIKAISTD-REGULAR.woff2';
+var _etFontReady = false;
+var ET_FONT_CSS_URL = 'et-font.css';
 var ET_FONT_LOAD_TIMEOUT_MS = 20000;
 var ET_FONT_SHOW_LOADING_DELAY_MS = 150;
 
 function _etEnsureFontLoaded() {
-  if (_etFontLoadPromise) return _etFontLoadPromise;
-
-  if (window.FontFace && document.fonts && document.fonts.check && document.fonts.check('1em BpmfZihiKai')) {
-    _etFontLoadPromise = Promise.resolve();
-    return _etFontLoadPromise;
-  }
-  if (!window.FontFace || !window.fetch) {
-    _etFontLoadPromise = Promise.resolve(); // 太舊的瀏覽器直接跳過，退回一般字體
-    return _etFontLoadPromise;
-  }
+  if (_etFontReady) return Promise.resolve();
+  if (!document.fonts || !document.fonts.load) return Promise.resolve(); // 太舊的瀏覽器直接跳過，退回一般字體
 
   var showLoadingTimer = setTimeout(function() { _etShowFontLoading(true); }, ET_FONT_SHOW_LOADING_DELAY_MS);
-  var timedOut = false;
-  var timeoutTimer = setTimeout(function() { timedOut = true; }, ET_FONT_LOAD_TIMEOUT_MS);
+  var simPct = 0;
+  var simTimer = setInterval(function() {
+    simPct = Math.min(92, simPct + 4 + Math.random() * 6);
+    _etUpdateFontLoadingProgress(Math.round(simPct));
+  }, 250);
 
-  var fetchPromise = fetch(ET_FONT_URL).then(function(res) {
-    if (!res.ok || !res.body) throw new Error('font fetch failed: ' + res.status);
-    var total  = parseInt(res.headers.get('content-length'), 10) || 0;
-    var loaded = 0;
-    var reader = res.body.getReader();
-    var chunks = [];
-    function pump() {
-      return reader.read().then(function(r) {
-        if (r.done) return;
-        chunks.push(r.value);
-        loaded += r.value.length;
-        if (total) _etUpdateFontLoadingProgress(Math.min(99, Math.round(loaded / total * 100)));
-        return pump();
-      });
-    }
-    return pump().then(function() { return new Blob(chunks).arrayBuffer(); });
-  }).then(function(buf) {
-    var face = new FontFace('BpmfZihiKai', buf);
-    return face.load().then(function(loadedFace) {
-      document.fonts.add(loadedFace);
-      _etUpdateFontLoadingProgress(100);
-    });
-  });
-
-  _etFontLoadPromise = Promise.race([
-    fetchPromise,
-    new Promise(function(resolve) {
-      (function waitTimeout() {
-        if (timedOut) { resolve(); return; }
-        setTimeout(waitTimeout, 200);
-      })();
-    })
-  ]).catch(function(e) {
-    console.warn('注音字型載入失敗，改用一般字體顯示：', e);
-    showToast('⚠️ 注音字型載入失敗，先用一般字體顯示課文');
-  }).then(function() {
+  function finish() {
     clearTimeout(showLoadingTimer);
-    clearTimeout(timeoutTimer);
+    clearInterval(simTimer);
+    _etUpdateFontLoadingProgress(100);
     _etShowFontLoading(false);
+  }
+
+  /* 一定要等 et-font.css 這個 <link> 真的載入、@font-face 規則已經存在於 CSSOM 裡，
+     才能呼叫 document.fonts.load()——插入 <link> 當下規則還沒解析好，馬上呼叫 load()
+     會因為找不到對應的 @font-face 而直接判定「沒什麼好載的」，馬上 resolve，
+     導致畫面直接跳到一般字體，完全沒有真的等字型下載完 */
+  var loadPromise = _etInjectFontCss().then(function() {
+    return document.fonts.load('1em BpmfZihiKai');
+  }).then(function() {
+    _etFontReady = true;
+  }).catch(function(e) {
+    console.error('注音字型載入失敗，改用一般字體顯示：', e);
+    showToast('⚠️ 注音字型載入失敗，先用一般字體顯示課文');
   });
 
-  return _etFontLoadPromise;
+  var timeoutPromise = new Promise(function(resolve) {
+    setTimeout(resolve, ET_FONT_LOAD_TIMEOUT_MS);
+  });
+
+  return Promise.race([loadPromise, timeoutPromise]).then(finish);
+}
+
+/* 注音字型的 @font-face 宣告獨立成 et-font.css，只在真的要進閱讀畫面時才插入 <link>，
+   課文清單頁不會跟著載入這顆 7MB 的字型檔，不會搶走載入課文清單用的 Firestore 查詢的頻寬。
+   回傳一個 Promise，等這個 <link> 真的 load 完（@font-face 規則已經生效）才 resolve */
+var _etFontCssPromise = null;
+function _etInjectFontCss() {
+  if (_etFontCssPromise) return _etFontCssPromise;
+  _etFontCssPromise = new Promise(function(resolve) {
+    var existing = document.getElementById('et-font-link');
+    if (existing) { resolve(); return; }
+    var link = document.createElement('link');
+    link.id = 'et-font-link';
+    link.rel = 'stylesheet';
+    link.href = ET_FONT_CSS_URL;
+    link.onload = resolve;
+    link.onerror = resolve; // 連 CSS 本身都載入失敗就直接放棄，讓外層的逾時機制接手
+    document.head.appendChild(link);
+  });
+  return _etFontCssPromise;
 }
 
 function _etShowFontLoading(show) {
