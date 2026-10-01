@@ -103,8 +103,10 @@ function _etInjectFontCss() {
 function _etShowFontLoading(show) {
   var loadingEl = document.getElementById('et-font-loading');
   var textEl    = document.getElementById('et-text-wrap');
-  if (loadingEl) loadingEl.style.display = show ? '' : 'none';
-  if (textEl)    textEl.style.display    = show ? 'none' : '';
+  /* .et-font-loading 樣式表預設 display:none，清成空字串只是「移除 inline 覆蓋」，
+     會整個退回樣式表的 none，等於永遠顯示不出來——這裡一定要給明確的可見值 */
+  if (loadingEl) loadingEl.style.display = show ? 'block' : 'none';
+  if (textEl)    textEl.style.display    = show ? 'none' : 'block';
 }
 
 function _etUpdateFontLoadingProgress(pct) {
