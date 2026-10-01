@@ -6,5 +6,9 @@
   font-family: 'BpmfZihiKai';
   src: url('../../../../assets/font/BPMFZIHIKAISTD-REGULAR.woff2') format('woff2'),
        url('../../../../assets/font/BPMFZIHIKAISTD-REGULAR.TTF') format('truetype');
+  /* 只有這一顆字重的檔案，但 .et-char 是用 font-weight:700 顯示——沒宣告範圍的話
+     預設只匹配 400，瀏覽器可能判定這個 family 沒有可用的 700 字重而整個跳去下一個
+     font-family，不是單純字重不符就地合成粗體 */
+  font-weight: 400 900;
   font-display: block;
 }

@@ -36,10 +36,10 @@ function enterEtLesson(docId) {
    再「跳成」注音字體。課文清單頁完全不會觸發這段，只有真的點進某一課才開始載入；
    載入完成後 document.fonts 會記住，同一次瀏覽 session 裡再開別課、再開同一課都不用重新抓。
    抓超過 150ms 才顯示讀取條（進度是模擬動畫，瀏覽器沒有給實際位元組進度的管道）；
-   抓超過 20 秒還沒完成就放棄等待，直接用一般字體顯示課文，不讓學生卡在讀取畫面出不去 ── */
+   抓超過 45 秒還沒完成就放棄等待，直接用一般字體顯示課文，不讓學生卡在讀取畫面出不去 ── */
 var _etFontReady = false;
 var ET_FONT_CSS_URL = 'et-font.css';
-var ET_FONT_LOAD_TIMEOUT_MS = 20000;
+var ET_FONT_LOAD_TIMEOUT_MS = 45000;
 var ET_FONT_SHOW_LOADING_DELAY_MS = 150;
 
 function _etEnsureFontLoaded() {
@@ -52,8 +52,11 @@ function _etEnsureFontLoaded() {
     simPct = Math.min(92, simPct + 4 + Math.random() * 6);
     _etUpdateFontLoadingProgress(Math.round(simPct));
   }, 250);
+  var settled = false; // 分辨最後是「真的載入完成」還是「逾時放棄」，兩條路徑現在會給不同提示
 
   function finish() {
+    if (settled) return; // Promise.race 兩邊都可能呼叫到 finish，只處理先到的那個
+    settled = true;
     clearTimeout(showLoadingTimer);
     clearInterval(simTimer);
     _etUpdateFontLoadingProgress(100);
@@ -63,21 +66,32 @@ function _etEnsureFontLoaded() {
   /* 一定要等 et-font.css 這個 <link> 真的載入、@font-face 規則已經存在於 CSSOM 裡，
      才能呼叫 document.fonts.load()——插入 <link> 當下規則還沒解析好，馬上呼叫 load()
      會因為找不到對應的 @font-face 而直接判定「沒什麼好載的」，馬上 resolve，
-     導致畫面直接跳到一般字體，完全沒有真的等字型下載完 */
+     導致畫面直接跳到一般字體，完全沒有真的等字型下載完。
+     載入跟後面渲染時用的字重要一致（.et-char 是 700），不然瀏覽器可能覺得這個 family
+     沒有對應字重可用，整個跳去下一個 font-family，而不是就地合成粗體 */
   var loadPromise = _etInjectFontCss().then(function() {
-    return document.fonts.load('1em BpmfZihiKai');
+    return document.fonts.load('700 1em BpmfZihiKai');
   }).then(function() {
     _etFontReady = true;
+    console.log('[et-font] 注音字型載入成功');
+    finish();
   }).catch(function(e) {
-    console.error('注音字型載入失敗，改用一般字體顯示：', e);
+    console.error('[et-font] 注音字型載入失敗，改用一般字體顯示：', e);
     showToast('⚠️ 注音字型載入失敗，先用一般字體顯示課文');
+    finish();
   });
 
   var timeoutPromise = new Promise(function(resolve) {
-    setTimeout(resolve, ET_FONT_LOAD_TIMEOUT_MS);
+    setTimeout(function() {
+      if (settled) { resolve(); return; }
+      console.warn('[et-font] 注音字型載入逾時（' + (ET_FONT_LOAD_TIMEOUT_MS / 1000) + ' 秒），改用一般字體顯示');
+      showToast('⚠️ 注音字型載入逾時，先用一般字體顯示課文');
+      finish();
+      resolve();
+    }, ET_FONT_LOAD_TIMEOUT_MS);
   });
 
-  return Promise.race([loadPromise, timeoutPromise]).then(finish);
+  return Promise.race([loadPromise, timeoutPromise]);
 }
 
 /* 注音字型的 @font-face 宣告獨立成 et-font.css，只在真的要進閱讀畫面時才插入 <link>，
