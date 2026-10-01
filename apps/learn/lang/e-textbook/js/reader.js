@@ -24,9 +24,21 @@ function renderEtLessonList() {
 }
 
 function enterEtLesson(docId) {
+  _etLoadFontFace();
   openEtLesson(docId);
   showPage('reader');
   renderReaderPage();
+}
+
+/* 注音字型只在真的要進閱讀畫面時才動態插入 <link>，課文清單頁不會跟著載入這顆大字型檔，
+   不會搶走載入課文清單用的 Firestore 查詢的頻寬；只插入一次，重複進出閱讀畫面不會重複載入 */
+function _etLoadFontFace() {
+  if (document.getElementById('et-font-link')) return;
+  var link = document.createElement('link');
+  link.id = 'et-font-link';
+  link.rel = 'stylesheet';
+  link.href = 'et-font.css';
+  document.head.appendChild(link);
 }
 
 /* ── 進入點：畫出這一篇課文 ── */
