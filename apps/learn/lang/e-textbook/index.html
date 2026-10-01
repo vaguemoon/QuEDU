@@ -45,22 +45,27 @@
 
 <!-- ── 課文閱讀 ── -->
 <div id="page-reader" class="page">
-  <div class="et-progress-bar">
-    <div class="et-progress-title">📊 本課生字詞</div>
-    <div class="et-progress-track"><div class="et-progress-fill" id="et-progress-fill" style="width:0%"></div></div>
-    <div class="et-progress-counts" id="et-progress-counts"></div>
-  </div>
-
-  <div class="et-toolbar">
-    <button class="et-tool-btn" id="et-read-toggle" onclick="etToggleReadAloud()">📖 開始朗讀</button>
-    <div class="et-read-controls" id="et-read-controls" style="display:none">
-      <button class="et-read-nav-btn" onclick="etReadPrev()">⏮ 上一句</button>
-      <button class="et-read-nav-btn" onclick="etReadNext()">下一句 ⏭</button>
+  <div class="et-sticky-head">
+    <div class="et-progress-bar">
+      <div class="et-progress-title">📊 本課生字詞</div>
+      <div class="et-progress-track"><div class="et-progress-fill" id="et-progress-fill" style="width:0%"></div></div>
+      <div class="et-progress-counts" id="et-progress-counts"></div>
     </div>
-    <div class="et-rate-group">
-      <span class="et-rate-label">語速</span>
-      <button class="et-rate-btn active" id="et-rate-normal" onclick="etSetRate('normal')">正常</button>
-      <button class="et-rate-btn" id="et-rate-slow" onclick="etSetRate('slow')">慢速</button>
+
+    <div class="et-toolbar">
+      <div class="et-adjust-group">
+        <div class="et-font-group">
+          <span class="et-rate-label">字體</span>
+          <button class="et-font-btn" onclick="etAdjustFontSize(-1)">Ａ－</button>
+          <button class="et-font-btn" onclick="etAdjustFontSize(1)">Ａ＋</button>
+        </div>
+        <div class="et-rate-group">
+          <span class="et-rate-label">語速</span>
+          <button class="et-font-btn" onclick="etAdjustRate(-1)">－</button>
+          <span class="et-rate-value" id="et-rate-value">0.75x</span>
+          <button class="et-font-btn" onclick="etAdjustRate(1)">＋</button>
+        </div>
+      </div>
     </div>
   </div>
 

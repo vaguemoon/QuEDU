@@ -91,6 +91,17 @@
 /* ── 課文閱讀頁 ── */
 #page-reader { padding-bottom: 24px; }
 
+/* 釘住進度列＋工具列，閱讀時往下捲動課文，這一區保持固定不跟著跑；
+   #page-reader 本身是 .page 的捲動容器（position:fixed + overflow-y:auto）。
+   .page 的 padding-top 是 60px，但真正的頂端列 #page-topbar 只有 52px 高，
+   兩者差 8px——sticky 的 top:0 是貼齊 .page 的 padding 邊緣（也就是 60px 那條線），
+   而不是貼齊頂端列底部，中間那 8px 沒有東西遮住，捲動課文時字就會從這條縫隙探出來。
+   用 top:-8px 把釘住的位置往上拉 8px，正好貼齊頂端列底部，補滿縫隙 */
+.et-sticky-head {
+  position: sticky; top: -8px; z-index: 50;
+  background: var(--bg); box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
 .et-progress-bar { max-width: 900px; margin: 0 auto; padding: 10px 16px 12px; }
 .et-progress-title { font-size: .8rem; font-weight: 800; color: var(--muted); margin-bottom: 6px; }
 .et-progress-track { height: 12px; border-radius: 10px; overflow: hidden; background: var(--border); }
@@ -102,28 +113,18 @@
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
   padding: 10px 16px; border-bottom: 1.5px solid var(--border);
 }
-.et-tool-btn {
-  padding: 12px 20px; border: none; border-radius: 12px;
-  background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: white;
-  font-size: 1rem; font-weight: 900; cursor: pointer; font-family: inherit;
-  transition: transform .12s;
-}
-.et-tool-btn:active { transform: scale(.96); }
-.et-read-controls { display: flex; gap: 8px; }
-.et-read-nav-btn {
-  padding: 10px 16px; border: 1.5px solid var(--border); border-radius: 10px;
-  background: white; color: var(--blue-dk); font-weight: 800; font-size: .9rem;
-  cursor: pointer; font-family: inherit;
-}
-.et-read-nav-btn:active { background: var(--blue-lt); }
-.et-rate-group { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-.et-rate-label { font-size: .8rem; font-weight: 700; color: var(--muted); }
-.et-rate-btn {
+/* 字體／語速兩組調整鍵並排在工具列最右側 */
+.et-adjust-group { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+.et-font-group,
+.et-rate-group { display: flex; align-items: center; gap: 6px; }
+.et-font-btn {
   padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 10px;
-  background: white; color: var(--muted); font-weight: 800; font-size: .85rem;
+  background: white; color: var(--blue-dk); font-weight: 900; font-size: .85rem;
   cursor: pointer; font-family: inherit;
 }
-.et-rate-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+.et-font-btn:active { background: var(--blue-lt); }
+.et-rate-label { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.et-rate-value { font-size: .8rem; font-weight: 800; color: var(--blue-dk); min-width: 34px; text-align: center; }
 
 /* 注音字型：字形本身已內含注音，不用逐字查表／不用 ruby 標記。
    自己架設（不依賴系統字型），不論裝置（含 iPad）都能正確顯示；
@@ -135,29 +136,38 @@
   font-display: swap;
 }
 .et-text-wrap {
-  max-width: 900px; margin: 0 auto;
+  max-width: 900px; margin: 0 auto; --et-font-size: 1.7rem;
   padding: 24px 20px; font-family: 'BpmfZihiKai', 'Noto Serif TC', serif;
   line-height: 2.4; user-select: none; -webkit-user-select: none;
 }
 .et-empty { color: var(--muted); font-size: .95rem; text-align: center; padding: 40px 0; }
 .et-line {
+  display: flex; align-items: flex-start; gap: 8px;
   margin-bottom: 8px; padding: 6px 4px; border-radius: 10px; transition: background .3s;
 }
+.et-line-speak-btn {
+  flex-shrink: 0; margin-top: 2px; width: 34px; height: 34px;
+  border: none; border-radius: 50%; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.et-line-speak-btn:active { background: var(--blue); color: white; }
+.et-line-text { flex: 1; }
 .et-line-reading {
   background: var(--blue); box-shadow: 0 2px 10px rgba(0,0,0,.15);
 }
 .et-line-reading .et-char,
 .et-line-reading .et-punct { color: white; }
 .et-line-reading .et-char-found { background: rgba(255,255,255,.3); color: white; }
+.et-line-reading .et-line-speak-btn { background: rgba(255,255,255,.3); color: white; }
 .et-line-blank { height: 18px; margin-bottom: 8px; padding: 0; }
 .et-char {
-  display: inline-block; font-size: 1.7rem; font-weight: 700; padding: 2px 1px;
+  display: inline-block; font-size: var(--et-font-size); font-weight: 700; padding: 2px 1px;
   border-radius: 6px; cursor: pointer; touch-action: none;
 }
 .et-char:active { background: var(--blue-lt); }
 .et-char-selecting { background: var(--orange); color: white; }
 .et-char-found { background: #dcfce7; color: #166534; }
-.et-punct { font-size: 1.7rem; color: var(--muted); }
+.et-punct { font-size: var(--et-font-size); color: var(--muted); }
 
 .et-found-panel { max-width: 900px; margin: 0 auto; padding: 16px 20px 32px; border-top: 1.5px solid var(--border); }
 .et-found-title { font-size: .9rem; font-weight: 900; margin-bottom: 10px; }

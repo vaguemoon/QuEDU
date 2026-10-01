@@ -17,10 +17,28 @@ var etWordImageMap = {};      // { word: imageUrl }，全校詞語圖庫，供�
 var etLookupCache = {};       // 萌典查詢快取 { text: { bopomofo, def } }（沒對到題庫生字詞時的備援）
 var etPronFixes = {};         // { 原字: 替代同音字 }，破音字讀音調整（老師設定），整課同一字元都套用
 
-/* 朗讀語速：這個 App 服務對象需要比一般更慢的預設語速 */
-var ET_RATE_NORMAL = 0.75;
-var ET_RATE_SLOW    = 0.5;
-var etRate = ET_RATE_NORMAL;
+/* 朗讀語速：可調 0.5～1.2，這個 App 服務對象需要比一般更慢的預設語速；
+   用 localStorage 記住這台裝置上次設定的語速／字體大小 */
+var ET_RATE_MIN     = 0.5;
+var ET_RATE_MAX      = 1.2;
+var ET_RATE_STEP     = 0.1;
+var ET_RATE_DEFAULT  = 0.75;
+var etRate = _etLoadNum('et-rate', ET_RATE_DEFAULT, ET_RATE_MIN, ET_RATE_MAX);
+
+var ET_FONT_MIN     = 1.2;
+var ET_FONT_MAX      = 2.6;
+var ET_FONT_STEP     = 0.2;
+var ET_FONT_DEFAULT  = 1.7;
+var etFontSize = _etLoadNum('et-font-size', ET_FONT_DEFAULT, ET_FONT_MIN, ET_FONT_MAX);
+
+function _etLoadNum(key, def, min, max) {
+  var v = parseFloat(localStorage.getItem(key));
+  if (isNaN(v)) return def;
+  return Math.min(max, Math.max(min, v));
+}
+function _etSaveNum(key, v) {
+  try { localStorage.setItem(key, v); } catch (e) {}
+}
 
 /* ── 載入學生班級可讀的課文清單 ── */
 function loadEtLessonList() {
@@ -112,15 +130,20 @@ function _etLoadVocab(lesson) {
   if (!db) { if (typeof _etOnVocabLoaded === 'function') _etOnVocabLoaded(); return; }
   db.collection('questions').where('teacherUid', '==', lesson.teacherUid).where('grade', '==', lesson.grade).get()
   .then(function(snap) {
-    etVocab = {};
+    /* 同一個生字詞可能同時有「詞語解釋」跟「詞語填空」兩種題型，填空題的題幹是帶空格的句子，
+       不是解釋，一定要讓「詞語解釋」優先；Firestore 回傳順序不保證，不能用先到先贏 */
+    var defs = {}, fills = {};
     snap.forEach(function(doc) {
       var d = doc.data();
       if (d.lesson !== lesson.lesson) return;
-      if (d.type !== '詞語解釋' && d.type !== '詞語填空') return;
       var word = (d.answer || '').trim();
       if (!word) return;
-      if (!etVocab[word]) etVocab[word] = d.question || '';
+      if (d.type === '詞語解釋' && !defs[word]) defs[word] = d.question || '';
+      else if (d.type === '詞語填空' && !fills[word]) fills[word] = d.question || '';
     });
+    etVocab = {};
+    Object.keys(fills).forEach(function(w) { etVocab[w] = fills[w]; });
+    Object.keys(defs).forEach(function(w) { etVocab[w] = defs[w]; });
     if (typeof _etOnVocabLoaded === 'function') _etOnVocabLoaded();
   }).catch(function() {
     etVocab = {};

@@ -33,12 +33,14 @@ function enterEtLesson(docId) {
 function renderReaderPage() {
   if (!etCurrentLesson) return;
   etCancelSpeak();
-  etStopReadAloud();
+  etClearReadingHighlight();
   etCloseLookup();
 
   etRenderText();
   etRenderProgress();
   renderFoundWordsPanel();
+  _etRenderRateUI();
+  _etRenderFontSizeUI();
 
   var titleEl = document.getElementById('topbar-title');
   var label = etCurrentLesson.lessonName || ('第 ' + etCurrentLesson.lesson + ' 課');
@@ -79,7 +81,10 @@ function etRenderText() {
       }
       return '<span class="et-punct">' + c.ch + '</span>';
     }).join('');
-    return '<div class="et-line" data-line-idx="' + li + '">' + spans + '</div>';
+    return '<div class="et-line" data-line-idx="' + li + '">' +
+      '<button class="et-line-speak-btn" onclick="etSpeakLine(' + li + ')">🔊</button>' +
+      '<span class="et-line-text">' + spans + '</span>' +
+      '</div>';
   }).join('');
   etHighlightFoundWords();
   etAttachPointerHandlers();
@@ -264,86 +269,42 @@ function renderFoundWordsPanel() {
   panel.innerHTML = html;
 }
 
-/* ── 全文朗讀模式：逐句自動朗讀＋反白跟讀，可暫停/上一句/下一句 ── */
-var etReading       = false;
-var etReadingLineIdx = 0;
-
-function etToggleReadAloud() {
-  if (etReading) etStopReadAloud(); else etStartReadAloud();
-}
-
-function etStartReadAloud() {
-  if (!etLines.length) { showToast('這一課還沒有課文全文'); return; }
-  etReading = true;
-  etReadingLineIdx = 0;
-  _etSetReadToggleLabel();
-  etShowReadControls(true);
-  etReadCurrentLine();
-}
-
-function etStopReadAloud() {
-  if (!etReading) { etClearReadingHighlight(); etShowReadControls(false); return; }
-  etReading = false;
-  etCancelSpeak();
-  _etSetReadToggleLabel();
-  etShowReadControls(false);
+/* ── 單句發音：點每句前面的喇叭，只唸那一句，唸的時候反白那一行 ── */
+function etSpeakLine(li) {
+  var line = etLines[li];
+  if (!line || line.blank || !line.text) return;
   etClearReadingHighlight();
-}
-
-function etReadCurrentLine() {
-  etClearReadingHighlight();
-  var lineEl = document.querySelector('.et-line[data-line-idx="' + etReadingLineIdx + '"]');
-  if (lineEl) {
-    lineEl.classList.add('et-line-reading');
-    lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  var line = etLines[etReadingLineIdx];
-  if (!line) { etFinishReadAloud(); return; }
+  var lineEl = document.querySelector('.et-line[data-line-idx="' + li + '"]');
+  if (lineEl) lineEl.classList.add('et-line-reading');
   etSpeakWithCallback(line.text, function() {
-    if (!etReading) return; // 使用者中途按了停止
-    etReadingLineIdx++;
-    if (etReadingLineIdx >= etLines.length) { etFinishReadAloud(); return; }
-    etReadCurrentLine();
+    if (lineEl) lineEl.classList.remove('et-line-reading');
   });
-}
-
-function etFinishReadAloud() {
-  etReading = false;
-  _etSetReadToggleLabel();
-  etShowReadControls(false);
-  etClearReadingHighlight();
-  sfxCelebrate();
-  saveEtProgress(false);
 }
 
 function etClearReadingHighlight() {
   document.querySelectorAll('.et-line-reading').forEach(function(el) { el.classList.remove('et-line-reading'); });
 }
 
-function etReadPrev() {
-  if (!etReading) return;
-  etReadingLineIdx = Math.max(0, etReadingLineIdx - 1);
-  etReadCurrentLine();
+/* ── 語速調整（－／＋按鍵，0.5～1.2，這個 App 服務對象常需要比一般更慢的語速），
+   記住這台裝置上次設定的值；用 Math.round 避免浮點數相加產生 0.1+0.2=0.30000000000000004 這種誤差 ── */
+function etAdjustRate(dir) {
+  var next = Math.round((etRate + dir * ET_RATE_STEP) * 10) / 10;
+  etRate = Math.min(ET_RATE_MAX, Math.max(ET_RATE_MIN, next));
+  _etSaveNum('et-rate', etRate);
+  _etRenderRateUI();
 }
-function etReadNext() {
-  if (!etReading) return;
-  etReadingLineIdx = Math.min(etLines.length - 1, etReadingLineIdx + 1);
-  etReadCurrentLine();
-}
-function etShowReadControls(show) {
-  var el = document.getElementById('et-read-controls');
-  if (el) el.style.display = show ? '' : 'none';
-}
-function _etSetReadToggleLabel() {
-  var btn = document.getElementById('et-read-toggle');
-  if (btn) btn.textContent = etReading ? '⏹ 停止朗讀' : '📖 開始朗讀';
+function _etRenderRateUI() {
+  var valEl = document.getElementById('et-rate-value');
+  if (valEl) valEl.textContent = etRate.toFixed(1) + 'x';
 }
 
-/* ── 語速切換（正常／慢速，這個 App 服務對象常需要比一般更慢的語速） ── */
-function etSetRate(mode) {
-  etRate = (mode === 'slow') ? ET_RATE_SLOW : ET_RATE_NORMAL;
-  var nBtn = document.getElementById('et-rate-normal');
-  var sBtn = document.getElementById('et-rate-slow');
-  if (nBtn) nBtn.classList.toggle('active', mode !== 'slow');
-  if (sBtn) sBtn.classList.toggle('active', mode === 'slow');
+/* ── 字體大小調整（Ａ－／Ａ＋），記住這台裝置上次設定的值 ── */
+function etAdjustFontSize(dir) {
+  etFontSize = Math.min(ET_FONT_MAX, Math.max(ET_FONT_MIN, etFontSize + dir * ET_FONT_STEP));
+  _etSaveNum('et-font-size', etFontSize);
+  _etRenderFontSizeUI();
+}
+function _etRenderFontSizeUI() {
+  var wrap = document.getElementById('et-text-wrap');
+  if (wrap) wrap.style.setProperty('--et-font-size', etFontSize + 'rem');
 }

@@ -31,7 +31,7 @@ function goBack() {
     PAGE_STACK.pop();
     var prev = PAGE_STACK[PAGE_STACK.length - 1];
     showPage(prev, false);
-    if (prev === 'list' && typeof etCancelSpeak === 'function') { etCancelSpeak(); etStopReadAloud(); }
+    if (prev === 'list' && typeof etCancelSpeak === 'function') { etCancelSpeak(); if (typeof etClearReadingHighlight === 'function') etClearReadingHighlight(); }
   }
 }
 
