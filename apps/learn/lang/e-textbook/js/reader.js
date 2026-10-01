@@ -24,35 +24,110 @@ function renderEtLessonList() {
 }
 
 function enterEtLesson(docId) {
-  _etLoadFontFace();
   openEtLesson(docId);
   showPage('reader');
   renderReaderPage();
 }
 
-/* 注音字型只在真的要進閱讀畫面時才動態插入 <link>，課文清單頁不會跟著載入這顆大字型檔，
-   不會搶走載入課文清單用的 Firestore 查詢的頻寬；只插入一次，重複進出閱讀畫面不會重複載入 */
-function _etLoadFontFace() {
-  if (document.getElementById('et-font-link')) return;
-  var link = document.createElement('link');
-  link.id = 'et-font-link';
-  link.rel = 'stylesheet';
-  link.href = 'et-font.css';
-  document.head.appendChild(link);
+/* ── 注音字型：用 FontFace API 手動抓檔案、追蹤真實下載進度，確保學生一進閱讀畫面
+   看到的課文「一出現就帶注音」，不會先顯示一般字體再「跳成」注音字體。
+   課文清單頁完全不會觸發這段，只有真的點進某一課才開始載入；載入完成後 document.fonts
+   會記住這顆字型，同一次瀏覽session 裡再開別課、再開同一課都不用重新抓。
+   抓超過 150ms 才顯示讀取條，避免已經快取過的情況也跳一下讀取畫面；
+   抓超過 20 秒還沒完成就放棄等待，直接用一般字體顯示課文，不讓學生卡在讀取畫面出不去 ── */
+var _etFontLoadPromise = null;
+var ET_FONT_URL = '../../../../assets/font/BPMFZIHIKAISTD-REGULAR.woff2';
+var ET_FONT_LOAD_TIMEOUT_MS = 20000;
+var ET_FONT_SHOW_LOADING_DELAY_MS = 150;
+
+function _etEnsureFontLoaded() {
+  if (_etFontLoadPromise) return _etFontLoadPromise;
+
+  if (window.FontFace && document.fonts && document.fonts.check && document.fonts.check('1em BpmfZihiKai')) {
+    _etFontLoadPromise = Promise.resolve();
+    return _etFontLoadPromise;
+  }
+  if (!window.FontFace || !window.fetch) {
+    _etFontLoadPromise = Promise.resolve(); // 太舊的瀏覽器直接跳過，退回一般字體
+    return _etFontLoadPromise;
+  }
+
+  var showLoadingTimer = setTimeout(function() { _etShowFontLoading(true); }, ET_FONT_SHOW_LOADING_DELAY_MS);
+  var timedOut = false;
+  var timeoutTimer = setTimeout(function() { timedOut = true; }, ET_FONT_LOAD_TIMEOUT_MS);
+
+  var fetchPromise = fetch(ET_FONT_URL).then(function(res) {
+    if (!res.ok || !res.body) throw new Error('font fetch failed: ' + res.status);
+    var total  = parseInt(res.headers.get('content-length'), 10) || 0;
+    var loaded = 0;
+    var reader = res.body.getReader();
+    var chunks = [];
+    function pump() {
+      return reader.read().then(function(r) {
+        if (r.done) return;
+        chunks.push(r.value);
+        loaded += r.value.length;
+        if (total) _etUpdateFontLoadingProgress(Math.min(99, Math.round(loaded / total * 100)));
+        return pump();
+      });
+    }
+    return pump().then(function() { return new Blob(chunks).arrayBuffer(); });
+  }).then(function(buf) {
+    var face = new FontFace('BpmfZihiKai', buf);
+    return face.load().then(function(loadedFace) {
+      document.fonts.add(loadedFace);
+      _etUpdateFontLoadingProgress(100);
+    });
+  });
+
+  _etFontLoadPromise = Promise.race([
+    fetchPromise,
+    new Promise(function(resolve) {
+      (function waitTimeout() {
+        if (timedOut) { resolve(); return; }
+        setTimeout(waitTimeout, 200);
+      })();
+    })
+  ]).catch(function(e) {
+    console.warn('注音字型載入失敗，改用一般字體顯示：', e);
+    showToast('⚠️ 注音字型載入失敗，先用一般字體顯示課文');
+  }).then(function() {
+    clearTimeout(showLoadingTimer);
+    clearTimeout(timeoutTimer);
+    _etShowFontLoading(false);
+  });
+
+  return _etFontLoadPromise;
 }
 
-/* ── 進入點：畫出這一篇課文 ── */
+function _etShowFontLoading(show) {
+  var loadingEl = document.getElementById('et-font-loading');
+  var textEl    = document.getElementById('et-text-wrap');
+  if (loadingEl) loadingEl.style.display = show ? '' : 'none';
+  if (textEl)    textEl.style.display    = show ? 'none' : '';
+}
+
+function _etUpdateFontLoadingProgress(pct) {
+  var fill  = document.getElementById('et-font-loading-fill');
+  var label = document.getElementById('et-font-loading-pct');
+  if (fill)  fill.style.width = pct + '%';
+  if (label) label.textContent = pct + '%';
+}
+
+/* ── 進入點：畫出這一篇課文——先把跟注音字型無關的部分畫好，字型確定載入完成（或逾時放棄）
+   後才畫課文正文，確保正文一出現就帶注音，不會有「先一般字體、再跳成注音字體」的閃動 ── */
 function renderReaderPage() {
   if (!etCurrentLesson) return;
   etCancelSpeak();
   etClearReadingHighlight();
   etCloseLookup();
 
-  etRenderText();
   etRenderProgress();
   renderFoundWordsPanel();
   _etRenderRateUI();
   _etRenderFontSizeUI();
+  _etUpdateFontLoadingProgress(0);
+  _etEnsureFontLoaded().then(etRenderText);
 
   var titleEl = document.getElementById('topbar-title');
   var label = etCurrentLesson.lessonName || ('第 ' + etCurrentLesson.lesson + ' 課');

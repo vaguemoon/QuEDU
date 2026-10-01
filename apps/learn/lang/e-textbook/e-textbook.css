@@ -126,16 +126,22 @@
 .et-rate-label { font-size: .8rem; font-weight: 700; color: var(--muted); }
 .et-rate-value { font-size: .8rem; font-weight: 800; color: var(--blue-dk); min-width: 34px; text-align: center; }
 
-/* 注音字型：@font-face 宣告搬到 et-font.css，只在進入閱讀畫面時才動態載入（見 js/reader.js
-   的 _etLoadFontFace()）——課文清單頁用不到這顆字型，不應該讓它在一進 App 就跟 Firestore
-   的課文清單查詢搶頻寬。這裡的 font-family 在字型還沒載入前就是單純的 no-op，會先吃到
-   'Noto Serif TC' 當備援 */
+/* 注音字型不是用 @font-face 靜態宣告，是 js/reader.js 的 _etEnsureFontLoaded() 用
+   FontFace API 手動抓檔案、確定載入完成才呼叫 document.fonts.add() 註冊進來——
+   課文正文要「一出現就帶注音」，不能有先顯示一般字體、字型抓完才跳成注音字體的閃動，
+   所以正文渲染（etRenderText）會等字型就緒才執行，不是單純宣告了就交給瀏覽器自己決定時機 */
 .et-text-wrap {
   max-width: 900px; margin: 0 auto; --et-font-size: 1.7rem;
   padding: 24px 20px; font-family: 'BpmfZihiKai', 'Noto Serif TC', serif;
   line-height: 2.4; user-select: none; -webkit-user-select: none;
 }
 .et-empty { color: var(--muted); font-size: .95rem; text-align: center; padding: 40px 0; }
+.et-font-loading {
+  display: none; max-width: 900px; margin: 0 auto; padding: 60px 20px; text-align: center;
+}
+.et-font-loading-label { font-size: .9rem; font-weight: 700; color: var(--muted); margin: 14px 0 10px; }
+.et-font-loading-track { height: 10px; border-radius: 10px; overflow: hidden; background: var(--border); max-width: 280px; margin: 0 auto; }
+.et-font-loading-fill { height: 100%; width: 0%; background: var(--blue); transition: width .2s; }
 .et-line {
   display: flex; align-items: flex-start; gap: 8px;
   margin-bottom: 8px; padding: 6px 4px; border-radius: 10px; transition: background .3s;
