@@ -11,6 +11,8 @@ var currentStudent = null;
 var etLessonList = [];        // 學生班級可讀的課文清單 [{docId, teacherUid, grade, lesson, lessonName, fullText, sharedAt}]
 var etCurrentLesson = null;   // 目前正在讀的那一篇
 var etLines = [];             // 目前課文，依行(句)拆好的陣列 [{ text, chars: [...] }]
+var etLessonChars = [];       // 本課出現過的中文字，依第一次出現順序去重 [ch, ...]
+var etCharStatus = {};        // { 字: 'new'|'practiced'|'mastered' }，來自識字趣的個人學習進度
 var etVocab = {};             // { word: teacherDef }，本課配套生字詞（從題庫抓）
 var etFoundWords = {};        // { word: true }，本課已找到的生字詞（持久保存）
 var etWordImageMap = {};      // { word: imageUrl }，全校詞語圖庫，供圈詞查詢時顯示圖片
@@ -75,18 +77,32 @@ function loadEtLessonList() {
   });
 }
 
-/* ── 選定一篇課文：拆行、抓配套生字詞、載入已找到進度 ── */
+/* ── 選定一篇課文：拆行、抓配套生字詞、載入已找到進度、載入本課生字的識字趣進度 ── */
 function openEtLesson(docId) {
   var lesson = etLessonList.filter(function(l) { return l.docId === docId; })[0];
   if (!lesson) return;
   etCurrentLesson = lesson;
   etLines = _etSplitLines(lesson.fullText || '');
+  etLessonChars = _etCollectLessonChars(etLines);
   etPronFixes = lesson.pronFixes || {};
   etFoundWords = {};
   etVocab = {};
+  etCharStatus = {};
 
   _etLoadVocab(lesson);
   _etLoadLessonProgress();
+  _etLoadCharStatus();
+}
+
+/* 掃課文所有行，收集出現過的中文字，依第一次出現順序去重 */
+function _etCollectLessonChars(lines) {
+  var seen = {}, out = [];
+  lines.forEach(function(line) {
+    (line.chars || []).forEach(function(c) {
+      if (c.interactive && !seen[c.ch]) { seen[c.ch] = true; out.push(c.ch); }
+    });
+  });
+  return out;
 }
 
 /* 把課文全文拆成「行」，每行再拆成一個個 Unicode 字元，
@@ -172,6 +188,25 @@ function _etLoadLessonProgress() {
     })
     .catch(function() {
       if (typeof _etOnProgressLoaded === 'function') _etOnProgressLoaded();
+    });
+}
+
+/* ── 本課生字：讀識字趣的個人學習進度（students/{id}/progress/recognize 的 charStatus），
+   不分課次、以字為單位，課文趣只是拿來對照顯示熟習度，不寫回、不影響識字趣本身的資料 ── */
+function _etLoadCharStatus() {
+  etCharStatus = {};
+  if (!db || !currentStudent || currentStudent.isGuest || currentStudent.isPreview) {
+    if (typeof _etOnCharStatusLoaded === 'function') _etOnCharStatusLoaded();
+    return;
+  }
+  db.collection('students').doc(currentStudent.id)
+    .collection('progress').doc('recognize').get()
+    .then(function(doc) {
+      if (doc.exists) etCharStatus = doc.data().charStatus || {};
+      if (typeof _etOnCharStatusLoaded === 'function') _etOnCharStatusLoaded();
+    })
+    .catch(function() {
+      if (typeof _etOnCharStatusLoaded === 'function') _etOnCharStatusLoaded();
     });
 }
 
