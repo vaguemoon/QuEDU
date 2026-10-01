@@ -135,26 +135,8 @@
        url('../../../../assets/font/BPMFZIHIKAISTD-REGULAR.TTF') format('truetype');
   font-display: swap;
 }
-/* 側邊欄（本課生字）＋課文並列；側邊欄固定寬度，課文吃剩下的空間，最寬封頂 900px，
-   兩者加起來在 768px 的平板最小寬度下也擠得下 */
-.et-reader-body {
-  display: flex; align-items: flex-start; gap: 16px;
-  max-width: 1100px; margin: 0 auto; padding: 0 12px;
-}
-.et-char-panel {
-  flex: 0 0 150px; width: 150px;
-  padding: 16px 8px; border-right: 1.5px solid var(--border);
-}
-.et-char-panel-title { font-size: .8rem; font-weight: 800; color: var(--muted); text-align: center; margin-bottom: 10px; }
-.et-char-panel-empty { font-size: .78rem; color: var(--muted); text-align: center; padding: 10px 4px; }
-.et-char-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.et-char-chip {
-  width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
-  border: none; border-radius: 10px; font-size: 1.3rem; font-weight: 800; cursor: pointer;
-  font-family: 'BpmfZihiKai', 'Noto Serif TC', serif;
-}
 .et-text-wrap {
-  flex: 1; min-width: 0; max-width: 900px; --et-font-size: 1.7rem;
+  max-width: 900px; margin: 0 auto; --et-font-size: 1.7rem;
   padding: 24px 20px; font-family: 'BpmfZihiKai', 'Noto Serif TC', serif;
   line-height: 2.4; user-select: none; -webkit-user-select: none;
 }

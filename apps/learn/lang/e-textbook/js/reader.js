@@ -39,7 +39,6 @@ function renderReaderPage() {
   etRenderText();
   etRenderProgress();
   renderFoundWordsPanel();
-  renderEtCharPanel();
   _etRenderRateUI();
   _etRenderFontSizeUI();
 
@@ -62,11 +61,6 @@ function _etOnProgressLoaded() {
   etHighlightFoundWords();
   etRenderProgress();
   renderFoundWordsPanel();
-}
-
-/* 本課生字（識字趣進度）非同步載入完成後補畫面 */
-function _etOnCharStatusLoaded() {
-  renderEtCharPanel();
 }
 
 /* ── 課文渲染：逐行逐字，中文字可互動，標點/空白純顯示 ── */
@@ -115,31 +109,6 @@ function etHighlightFoundWords() {
       }
     });
   });
-}
-
-/* ── 本課生字側邊欄：掃課文出現過的字，比對識字趣個人進度顯示熟習度 ──
-   缺資料（學生在識字趣裡完全沒看過這個字）視同「新字」，跟識字趣本身的初始化邏輯一致 */
-function renderEtCharPanel() {
-  var panel = document.getElementById('et-char-panel');
-  if (!panel) return;
-  if (!etLessonChars.length) {
-    panel.innerHTML = '<div class="et-char-panel-title">📚 本課生字</div>' +
-      '<div class="et-char-panel-empty">這一課還沒有課文全文</div>';
-    return;
-  }
-  var html = '<div class="et-char-panel-title">📚 本課生字</div><div class="et-char-chip-grid">' +
-    etLessonChars.map(function(ch) {
-      var status = etCharStatus[ch] || 'new';
-      return '<button class="et-char-chip status-' + status + '" onclick="etTapLessonChar(\'' + ch + '\')">' + ch + '</button>';
-    }).join('') +
-    '</div>';
-  panel.innerHTML = html;
-}
-
-/* 點本課生字：發音＋彈出查詢視窗，跟課文裡點字/圈詞一致的互動 */
-function etTapLessonChar(ch) {
-  etSpeak(ch);
-  showEtLookupPopup(ch, false);
 }
 
 /* ── 拖曳圈詞（Pointer Events，滑鼠／觸控通用；限定同一行內，跨行不成立） ── */
