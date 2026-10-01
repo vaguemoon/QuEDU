@@ -1293,7 +1293,10 @@ function buildOutputHtml(docName, group) {
     + 'body.dark{--blue:#58a6ff;--blue-dk:#79c0ff;--blue-lt:#1c2d3f;--fg1:#e6edf3;--fg2:#7d8590;--bg:#0d1117;--white:#161b22;--border:#30363d;--grad-btn:linear-gradient(135deg,#3a7fd4,#2d6fa8);--reading-bg:#2a2010;--reading-border:#d29922;--line-even:#161b22;--line-hover:#1c2d3f}\n'
     + '*{box-sizing:border-box;margin:0;padding:0}\n'
     + 'body{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--fg1);min-height:100vh;transition:background .3s,color .3s}\n'
-    + '@font-face{font-family:"BpmfZihiKai";src:url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.woff2") format("woff2"),url("' + window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF") format("truetype");font-display:swap}\n'
+    /* 字型路徑用 new URL(相對路徑, 目前頁面網址) 算絕對網址，不能用 window.location.origin + 絕對路徑——
+       網站部署在子路徑下（GitHub Pages 的 /QuEDU/），origin 不含子路徑，字型會 404，
+       這份 HTML 直接存進 Firestore 給學生端開啟，以前這裡用 origin 拼出來的網址在正式站一定是錯的 */
+    + '@font-face{font-family:"BpmfZihiKai";src:url("' + new URL('../../../assets/font/BPMFZIHIKAISTD-REGULAR.woff2', window.location.href).href + '") format("woff2"),url("' + new URL('../../../assets/font/BPMFZIHIKAISTD-REGULAR.TTF', window.location.href).href + '") format("truetype");font-display:swap}\n'
     + '#content,.doc-heading{font-family:"BpmfZihiKai","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}\n'
     + 'html.hide-ruby #content,html.hide-ruby .doc-heading{font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}\n'
     + '.controls-bar{background:var(--white);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:0;z-index:40;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:background .3s,border-color .3s}\n'

@@ -125,9 +125,18 @@
 }
 .et-rate-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
 
+/* 注音字型：字形本身已內含注音，不用逐字查表／不用 ruby 標記。
+   自己架設（不依賴系統字型），不論裝置（含 iPad）都能正確顯示；
+   跟測驗列印、報讀庫用同一顆字型檔 */
+@font-face {
+  font-family: 'BpmfZihiKai';
+  src: url('../../../../assets/font/BPMFZIHIKAISTD-REGULAR.woff2') format('woff2'),
+       url('../../../../assets/font/BPMFZIHIKAISTD-REGULAR.TTF') format('truetype');
+  font-display: swap;
+}
 .et-text-wrap {
   max-width: 900px; margin: 0 auto;
-  padding: 24px 20px; font-family: 'Noto Serif TC', serif;
+  padding: 24px 20px; font-family: 'BpmfZihiKai', 'Noto Serif TC', serif;
   line-height: 2.4; user-select: none; -webkit-user-select: none;
 }
 .et-empty { color: var(--muted); font-size: .95rem; text-align: center; padding: 40px 0; }

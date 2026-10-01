@@ -964,9 +964,12 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     sn++;
   });
 
-  /* ─── CSS ─── */
-  var _fontUrl2 = window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.woff2';
-  var _fontUrl  = window.location.origin + '/assets/font/BPMFZIHIKAISTD-REGULAR.TTF';
+  /* ─── CSS ───
+     注意：字型路徑用 new URL(相對路徑, 目前頁面網址) 算出絕對網址，不能用
+     window.location.origin + 絕對路徑——這個網站是部署在子路徑下（如 GitHub Pages 的
+     /QuEDU/），origin 不含子路徑，會漏掉前綴導致字型 404，學生端完全看不到注音字型 */
+  var _fontUrl2 = new URL('../assets/font/BPMFZIHIKAISTD-REGULAR.woff2', window.location.href).href;
+  var _fontUrl  = new URL('../assets/font/BPMFZIHIKAISTD-REGULAR.TTF', window.location.href).href;
   var css = [
     '@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap");',
     '@font-face{font-family:"BpmfZihiKai";src:url("' + _fontUrl2 + '") format("woff2"),url("' + _fontUrl + '") format("truetype");font-display:swap}',
