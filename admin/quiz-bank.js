@@ -330,6 +330,11 @@ var _qbDetailMap = {};   /* grade+lesson key → [question objects] for detail r
 var _qbExpandedKeys = {}; /* detail keys currently expanded */
 var _qbGradeExpanded = {}; /* grade keys currently expanded (collapsed by default) */
 
+/* 課文全文（供課文趣 App 使用）：grade+lesson key → { grade, lesson, lessonName, docId, fullText, sharedClassIds } */
+var _qbTextInfo     = {};
+var _qbTextExpanded = {};
+var _qbTextClassesCache = null; /* 教師自己的班級清單，載入一次快取 */
+
 function loadQuizBankStats() {
   var wrap = document.getElementById('qb-stats-wrap');
   if (!wrap) return;
@@ -343,15 +348,13 @@ function loadQuizBankStats() {
 
   var uid = currentTeacher.uid;
 
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', uid).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').get()
-  ]).then(function(results) {
+  db.collection('questions').where('teacherUid', '==', uid).get()
+    .then(function(snap) {
     var docs = [];
-    results.forEach(function(snap) { snap.forEach(function(d) { docs.push(d); }); });
+    snap.forEach(function(d) { docs.push(d); });
 
     if (docs.length === 0) {
-      wrap.innerHTML = '<p style="color:var(--muted);font-size:.88rem;padding:16px 0">尚未有可用題目。請上傳題庫，或聯絡管理者新增共用題庫。</p>';
+      wrap.innerHTML = '<p style="color:var(--muted);font-size:.88rem;padding:16px 0">尚未有可用題目，請上傳題庫。</p>';
       return;
     }
 
@@ -361,19 +364,16 @@ function loadQuizBankStats() {
       var d   = doc.data();
       var g   = d.grade  || '（未知年級）';
       var l   = d.lesson || '—';
-      var src = d.teacherUid === 'shared' ? 'shared' : 'own';
 
       if (!gradeMap[g])    gradeMap[g]    = {};
-      if (!gradeMap[g][l]) gradeMap[g][l] = { lessonName: d.lessonName || '', types: {}, total: 0, hasOwn: false, hasShared: false };
+      if (!gradeMap[g][l]) gradeMap[g][l] = { lessonName: d.lessonName || '', types: {}, total: 0 };
       gradeMap[g][l].types[d.type] = (gradeMap[g][l].types[d.type] || 0) + 1;
       gradeMap[g][l].total++;
-      if (src === 'own') gradeMap[g][l].hasOwn = true;
-      else               gradeMap[g][l].hasShared = true;
 
       /* Store for detail view */
       var dk = _qbDetailKey(g, l);
       if (!_qbDetailMap[dk]) _qbDetailMap[dk] = [];
-      _qbDetailMap[dk].push({ id: doc.id, type: d.type, question: d.question, answer: d.answer, src: src });
+      _qbDetailMap[dk].push({ id: doc.id, type: d.type, question: d.question, answer: d.answer });
     });
 
     var html = '';
@@ -418,21 +418,18 @@ function loadQuizBankStats() {
         var bg  = i % 2 === 0 ? 'var(--gray-lt)' : '#fff';
         var dk  = _qbDetailKey(grade, lesson);
 
-        var delBtn = '';
-        if (ld.hasOwn) {
-          var key = ++_qbDelCount;
-          _qbDelKeys[key] = { grade: grade, lesson: lesson, lessonName: ld.lessonName };
-          delBtn = '<button onclick="deleteLessonQuestions(' + key + ')" ' +
-            'style="padding:3px 10px;border:1.5px solid var(--red);border-radius:6px;background:white;' +
-            'color:var(--red);font-size:.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s" ' +
-            'onmouseover="this.style.background=\'var(--red-lt)\'" onmouseout="this.style.background=\'white\'">刪除</button>';
-        }
-
-        var srcBadges = '';
-        if (ld.hasOwn)    srcBadges += '<span style="font-size:.68rem;font-weight:800;color:white;background:var(--green);border-radius:4px;padding:1px 5px;margin-right:3px">我的</span>';
-        if (ld.hasShared) srcBadges += '<span style="font-size:.68rem;font-weight:800;color:white;background:var(--blue);border-radius:4px;padding:1px 5px;margin-right:3px">共用</span>';
+        var key = ++_qbDelCount;
+        _qbDelKeys[key] = { grade: grade, lesson: lesson, lessonName: ld.lessonName };
+        var delBtn = '<button onclick="deleteLessonQuestions(' + key + ')" ' +
+          'style="padding:3px 10px;border:1.5px solid var(--red);border-radius:6px;background:white;' +
+          'color:var(--red);font-size:.72rem;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s" ' +
+          'onmouseover="this.style.background=\'var(--red-lt)\'" onmouseout="this.style.background=\'white\'">刪除</button>';
 
         var detailOpen = !!_qbExpandedKeys[dk];
+        var textOpen   = !!_qbTextExpanded[dk];
+        var textBtn = '<button onclick="_qbToggleText(\'' + escHtml(dk) + '\',\'' + _qbEscJs(grade) + '\',\'' + _qbEscJs(lesson) + '\',\'' + _qbEscJs(ld.lessonName) + '\')" ' +
+          'style="padding:3px 10px;border:1.5px solid var(--blue);border-radius:6px;background:white;' +
+          'color:var(--blue-dk);font-size:.72rem;font-weight:800;cursor:pointer;font-family:inherit;margin-right:6px">📖 課文</button>';
 
         /* Summary row */
         html += '<tr style="background:' + bg + '">';
@@ -440,19 +437,25 @@ function loadQuizBankStats() {
           '<button onclick="_qbToggleDetail(\'' + escHtml(dk) + '\',this)" ' +
           'style="background:none;border:none;cursor:pointer;font-size:.75rem;margin-right:4px;color:var(--muted);font-family:inherit;padding:0" ' +
           'title="查看題目">' + (detailOpen ? '▼' : '▶') + '</button>' +
-          '第 ' + escHtml(lesson) + ' 課 ' + srcBadges + '</td>';
+          '第 ' + escHtml(lesson) + ' 課</td>';
         html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">' + escHtml(ld.lessonName) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語填空'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語解釋'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['選擇題']   || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border);font-weight:800">' + ld.total + '</td>';
-        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:right">' + delBtn + '</td>';
+        html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap">' + textBtn + delBtn + '</td>';
         html += '</tr>';
 
         /* Detail row（保留上次展開/收合狀態） */
         html += '<tr id="qb-detail-' + escHtml(dk) + '" style="display:' + (detailOpen ? '' : 'none') + '">';
         html += '<td colspan="7" style="padding:0 10px 12px 28px;border-bottom:1px solid var(--border);background:#fafcff">';
         html += _qbRenderDetailTable(_qbDetailMap[dk] || []);
+        html += '</td></tr>';
+
+        /* 課文全文編輯列（保留上次展開/收合狀態，內容用 _qbLoadTextRow 非同步載入） */
+        html += '<tr id="qb-text-' + escHtml(dk) + '" style="display:' + (textOpen ? '' : 'none') + '">';
+        html += '<td colspan="7" id="qb-text-body-' + escHtml(dk) + '" style="padding:12px 10px 16px 28px;border-bottom:1px solid var(--border);background:#f5f9ff">';
+        html += '<div class="loading-wrap" style="padding:8px 0"><div class="spinner"></div></div>';
         html += '</td></tr>';
       });
 
@@ -510,17 +513,14 @@ function _qbRenderDetailTable(questions) {
     '</tr>';
 
   sorted.forEach(function(q, i) {
-    var srcDot = q.src === 'own'
-      ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle"></span>'
-      : '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue);margin-right:4px;vertical-align:middle"></span>';
-    var rowDelBtn = (q.src === 'own' && q.id)
+    var rowDelBtn = q.id
       ? '<button onclick="deleteSingleQuestion(\'' + _qbEscJs(q.id) + '\',\'' + _qbEscJs(q.question) + '\')" ' +
         'style="padding:2px 8px;border:1.5px solid var(--red);border-radius:6px;background:white;' +
         'color:var(--red);font-size:.7rem;font-weight:800;cursor:pointer;font-family:inherit">刪除</button>'
       : '';
     html += '<tr style="background:' + (i % 2 === 0 ? '#fff' : '#f8faff') + '">';
     html += '<td style="padding:4px 8px;color:var(--muted);white-space:nowrap">' + (i + 1) + '</td>';
-    html += '<td style="padding:4px 8px;white-space:nowrap">' + srcDot + escHtml(q.type) + '</td>';
+    html += '<td style="padding:4px 8px;white-space:nowrap">' + escHtml(q.type) + '</td>';
     html += '<td style="padding:4px 8px;line-height:1.5;max-width:280px">' + escHtml(q.question) + '</td>';
     html += '<td style="padding:4px 8px;font-weight:700;color:var(--blue);white-space:nowrap">' + escHtml(q.answer) + '</td>';
     html += '<td style="padding:4px 8px;text-align:right;white-space:nowrap">' + rowDelBtn + '</td>';
@@ -592,6 +592,270 @@ function deleteSingleQuestion(docId, questionText) {
 
 function _qbEscJs(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+/* ════════════════════════════════════════
+   課文全文（供課文趣 App 使用）
+   身分＝currentTeacher.uid + grade + lesson，跟題庫的課次概念完全共用；
+   配套生字詞不用另外輸入——課文趣自己會去題庫抓「詞語解釋／詞語填空」題型的答案欄當生字詞
+   ════════════════════════════════════════ */
+
+function _qbTextDocId(grade, lesson) {
+  return 't_' + encodeURIComponent(currentTeacher.uid + '|' + grade + '|' + lesson);
+}
+
+function _qbToggleText(dk, grade, lesson, lessonName) {
+  var row = document.getElementById('qb-text-' + dk);
+  if (!row) return;
+  var open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : '';
+  _qbTextExpanded[dk] = !open;
+  if (!open) _qbLoadTextRow(dk, grade, lesson, lessonName);
+}
+
+function _qbLoadTextRow(dk, grade, lesson, lessonName) {
+  var body = document.getElementById('qb-text-body-' + dk);
+  if (!body || !db || !currentTeacher) return;
+  body.innerHTML = '<div class="loading-wrap" style="padding:8px 0"><div class="spinner"></div></div>';
+
+  var docId = _qbTextDocId(grade, lesson);
+  var loadClasses = _qbTextClassesCache
+    ? Promise.resolve(_qbTextClassesCache)
+    : db.collection('classes').where('teacherUid', '==', currentTeacher.uid).get().then(function(snap) {
+        var list = [];
+        snap.forEach(function(doc) {
+          var d = doc.data();
+          list.push({ id: doc.id, name: d.name || d.className || doc.id });
+        });
+        _qbTextClassesCache = list;
+        return list;
+      });
+
+  Promise.all([
+    db.collection('lessonTexts').doc(docId).get(),
+    loadClasses
+  ]).then(function(results) {
+    var textDoc = results[0];
+    var classes = results[1];
+    var fullText = textDoc.exists ? (textDoc.data().fullText || '') : '';
+    var sharedClassIds = textDoc.exists ? (textDoc.data().sharedClassIds || []) : [];
+    var pronFixes = textDoc.exists ? (textDoc.data().pronFixes || {}) : {};
+
+    _qbTextInfo[dk] = { grade: grade, lesson: lesson, lessonName: lessonName, docId: docId, sharedClassIds: sharedClassIds, pronFixes: pronFixes };
+
+    var pronFixKeys = Object.keys(pronFixes);
+    var pronFixRows = pronFixKeys.length
+      ? pronFixKeys.map(function(orig) { return _qbPronFixRowHtml(orig, pronFixes[orig]); }).join('')
+      : _qbPronFixRowHtml('', '');
+
+    var html =
+      '<div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
+        '這一課的課文全文，給「課文趣」App 上課時逐字朗讀＋圈詞用。配套生字詞不用另外輸入，' +
+        '課文趣會自動抓這一課「詞語解釋」「詞語填空」題目的答案當生字詞。' +
+      '</div>' +
+      '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:6px">' +
+        '可上傳 .docx / .txt / .odt / .pdf 自動轉成文字（舊版 .doc 請先另存新檔為 .docx），也能直接手打或貼上。' +
+      '</div>' +
+      '<input type="file" accept=".docx,.doc,.txt,.odt,.pdf" onchange="_qbFullTextFileSelected(\'' + dk + '\', this)" style="margin-bottom:8px">' +
+      '<textarea id="qb-text-ta-' + dk + '" placeholder="課文全文…" style="width:100%;min-height:140px;padding:10px 12px;' +
+        'border:1.5px solid var(--border);border-radius:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:.88rem;' +
+        'line-height:1.8;resize:vertical;box-sizing:border-box">' + _qbEscTA(fullText) + '</textarea>' +
+      '<div style="font-size:.8rem;font-weight:800;margin:14px 0 4px">🔤 破音字讀音調整</div>' +
+      '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
+        '課文裡的破音字（同一個字有不同唸法），可以指定一個「同音字」讓系統改用那個字的發音來唸，' +
+        '查詢彈窗顯示的注音也會一起換成正確讀音（例如「偕」在「馬偕」裡要唸作「街」）。整課同一字元都會套用。' +
+      '</div>' +
+      '<div id="qb-pronfix-rows-' + dk + '">' + pronFixRows + '</div>' +
+      '<div style="margin-bottom:12px">' +
+        '<button type="button" onclick="_qbAddPronFixRow(\'' + dk + '\')" ' +
+          'style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;' +
+          'color:inherit;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">➕ 新增一組</button>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:8px 0 16px">' +
+        '<span id="qb-text-status-' + dk + '" style="font-size:.78rem;font-weight:700;color:var(--muted)"></span>' +
+        '<button onclick="_qbSaveLessonText(\'' + dk + '\')" ' +
+          'style="padding:6px 18px;border:none;border-radius:8px;background:var(--blue);color:white;' +
+          'font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">儲存課文全文</button>' +
+      '</div>' +
+      '<div style="font-size:.8rem;font-weight:800;margin-bottom:8px">📤 分享給班級（課文趣的學生才看得到）</div>';
+
+    if (!classes.length) {
+      html += '<div style="color:var(--muted);font-size:.82rem">尚未建立班級。</div>';
+    } else {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">';
+      classes.forEach(function(cls) {
+        var checked = sharedClassIds.indexOf(cls.id) !== -1;
+        html += '<label style="display:flex;align-items:center;gap:5px;font-size:.85rem;font-weight:700;cursor:pointer">' +
+          '<input type="checkbox" class="qb-text-class-cb" value="' + _qbEscAttr(cls.id) + '"' + (checked ? ' checked' : '') + '>' +
+          escHtml(cls.name) +
+          '</label>';
+      });
+      html += '</div>';
+      html += '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">' +
+        '<span id="qb-share-status-' + dk + '" style="font-size:.78rem;font-weight:700;color:var(--muted)"></span>' +
+        '<button onclick="_qbSaveLessonShare(\'' + dk + '\')" ' +
+          'style="padding:6px 18px;border:none;border-radius:8px;background:var(--green);color:white;' +
+          'font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">更新分享班級</button>' +
+        '</div>';
+    }
+
+    body.innerHTML = html;
+  }).catch(function(e) {
+    body.innerHTML = '<p style="color:var(--red);font-size:.85rem">載入失敗：' + e.message + '</p>';
+  });
+}
+
+function _qbPronFixRowHtml(orig, sub) {
+  return '<div class="qb-pronfix-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
+    '<input type="text" class="qb-pronfix-orig" maxlength="4" placeholder="原字" value="' + _qbEscAttr(orig || '') + '" ' +
+      'style="width:56px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:.9rem;text-align:center">' +
+    '<span style="font-size:.78rem;color:var(--muted);font-weight:700;white-space:nowrap">唸作（同音字）</span>' +
+    '<input type="text" class="qb-pronfix-sub" maxlength="4" placeholder="替代字" value="' + _qbEscAttr(sub || '') + '" ' +
+      'style="width:56px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:.9rem;text-align:center">' +
+    '<button type="button" onclick="this.closest(\'.qb-pronfix-row\').remove()" ' +
+      'style="padding:4px 10px;border:none;border-radius:6px;background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit">✕</button>' +
+  '</div>';
+}
+
+function _qbAddPronFixRow(dk) {
+  var wrap = document.getElementById('qb-pronfix-rows-' + dk);
+  if (!wrap) return;
+  wrap.insertAdjacentHTML('beforeend', _qbPronFixRowHtml('', ''));
+}
+
+function _qbCollectPronFixes(dk) {
+  var fixes = {};
+  document.querySelectorAll('#qb-pronfix-rows-' + dk + ' .qb-pronfix-row').forEach(function(row) {
+    var orig = row.querySelector('.qb-pronfix-orig').value.trim();
+    var sub  = row.querySelector('.qb-pronfix-sub').value.trim();
+    if (orig && sub) fixes[orig] = sub;
+  });
+  return fixes;
+}
+
+function _qbEscTA(s) {
+  return String(s || '').replace(/<\/textarea/gi, '&lt;/textarea');
+}
+function _qbEscAttr(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function _qbFullTextFileSelected(dk, input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var ext = _lftExt(file.name);
+  var statusEl = document.getElementById('qb-text-status-' + dk);
+
+  if (ext === 'doc') {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '⚠️ 偵測到舊版 .doc 格式，請用 Word/WPS/Google 文件另存新檔為 .docx 後再上傳'; }
+    input.value = '';
+    return;
+  }
+  if (LFT_SUPPORTED_EXTS.indexOf(ext) === -1) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '⚠️ 不支援的檔案格式：.' + ext; }
+    input.value = '';
+    return;
+  }
+
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '轉換中…'; }
+  var fr = new FileReader();
+  fr.onload = function(e) {
+    _lftExtractText(ext, e.target.result).then(function(text) {
+      var ta = document.getElementById('qb-text-ta-' + dk);
+      if (ta) ta.value = text;
+      if (statusEl) { statusEl.style.color = 'var(--blue-dk)'; statusEl.textContent = '✅ 已轉換，請檢查內容後按「儲存課文全文」'; }
+      input.value = '';
+    }).catch(function(err) {
+      if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '⚠️ 轉換失敗：' + err.message; }
+      input.value = '';
+    });
+  };
+  if (ext === 'txt') fr.readAsText(file);
+  else fr.readAsArrayBuffer(file);
+}
+
+function _qbSaveLessonText(dk) {
+  var info = _qbTextInfo[dk];
+  var ta   = document.getElementById('qb-text-ta-' + dk);
+  var statusEl = document.getElementById('qb-text-status-' + dk);
+  if (!info || !ta || !db || !currentTeacher) return;
+  var text = ta.value;
+  var pronFixes = _qbCollectPronFixes(dk);
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '儲存中…'; }
+
+  db.collection('lessonTexts').doc(info.docId).set({
+    teacherUid: currentTeacher.uid,
+    grade:      info.grade,
+    lesson:     info.lesson,
+    lessonName: info.lessonName,
+    fullText:   text,
+    pronFixes:  pronFixes,
+    updatedAt:  new Date().toISOString()
+  }, { merge: true }).then(function() {
+    info.pronFixes = pronFixes;
+    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已儲存'; }
+    showToast('✅ 課文全文已儲存');
+  }).catch(function(e) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
+    showToast('❌ 儲存失敗：' + e.message);
+  });
+}
+
+function _qbSaveLessonShare(dk) {
+  var info = _qbTextInfo[dk];
+  var statusEl = document.getElementById('qb-share-status-' + dk);
+  if (!info || !db || !currentTeacher) return;
+
+  var checkboxes = document.querySelectorAll('#qb-text-body-' + dk + ' .qb-text-class-cb');
+  var classIds = [];
+  checkboxes.forEach(function(cb) { if (cb.checked) classIds.push(cb.value); });
+
+  var ta = document.getElementById('qb-text-ta-' + dk);
+  var fullText = ta ? ta.value : '';
+  var pronFixes = _qbCollectPronFixes(dk);
+
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '更新中…'; }
+
+  /* 先確保 lessonTexts 本身（含目前文字框內容）是最新的，分享的班級清單也一併記在這份文件上 */
+  db.collection('lessonTexts').doc(info.docId).set({
+    teacherUid: currentTeacher.uid,
+    grade:      info.grade,
+    lesson:     info.lesson,
+    lessonName: info.lessonName,
+    fullText:   fullText,
+    pronFixes:  pronFixes,
+    sharedClassIds: classIds,
+    updatedAt:  new Date().toISOString()
+  }, { merge: true }).then(function() {
+    /* 每個班級各自存一份「分享列表」快照，供課文趣的學生端查詢班級可讀的課文 */
+    var batch = db.batch();
+    var prevIds = info.sharedClassIds || [];
+    prevIds.forEach(function(cid) {
+      if (classIds.indexOf(cid) === -1) {
+        batch.delete(db.collection('classes').doc(cid).collection('sharedLessonTexts').doc(info.docId));
+      }
+    });
+    classIds.forEach(function(cid) {
+      batch.set(db.collection('classes').doc(cid).collection('sharedLessonTexts').doc(info.docId), {
+        teacherUid: currentTeacher.uid,
+        grade:      info.grade,
+        lesson:     info.lesson,
+        lessonName: info.lessonName,
+        fullText:   fullText,
+        pronFixes:  pronFixes,
+        sharedAt:   new Date().toISOString()
+      });
+    });
+    return batch.commit();
+  }).then(function() {
+    info.sharedClassIds = classIds;
+    info.pronFixes = pronFixes;
+    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已更新'; }
+    showToast('✅ 分享班級已更新');
+  }).catch(function(e) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
+    showToast('❌ 更新失敗：' + e.message);
+  });
 }
 
 /**

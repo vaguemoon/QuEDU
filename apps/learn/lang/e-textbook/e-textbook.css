@@ -1,0 +1,225 @@
+/* e-textbook.css — 課文趣 app 專屬樣式 */
+
+/* ── 頂端列 ── */
+#page-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 52px; display: flex; align-items: center; gap: 6px;
+  background: var(--white); border-bottom: 1.5px solid var(--border);
+  padding: 0 10px; box-shadow: 0 2px 8px rgba(44,100,160,.08);
+}
+.btn-back-hub {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back-hub:active { background: var(--blue); color: white; }
+.btn-back {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: transparent; color: var(--muted);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap;
+}
+.btn-back:active { background: var(--blue-lt); color: var(--blue-dk); }
+.btn-back.hidden { display: none; }
+#topbar-title {
+  flex: 1; text-align: center; font-size: .95rem; font-weight: 900;
+  color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#topbar-title span { color: var(--text); }
+#topbar-title.hidden { display: none; }
+#topbar-breadcrumb {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: 2px; overflow: hidden; min-width: 0;
+}
+#topbar-breadcrumb.hidden { display: none; }
+.tb-crumb {
+  font-size: .78rem; font-weight: 800; color: var(--muted);
+  padding: 4px 10px; border-radius: 14px; white-space: nowrap;
+  max-width: 80px; overflow: hidden; text-overflow: ellipsis;
+  transition: all .15s; cursor: default;
+}
+.tb-crumb.tb-active { color: var(--blue-dk); background: var(--blue-lt); }
+.tb-crumb.tb-link   { cursor: pointer; }
+.tb-crumb.tb-link:hover  { background: var(--blue-lt); color: var(--blue-dk); }
+.tb-crumb.tb-link:active { background: var(--blue); color: white; }
+.tb-sep { color: var(--border); font-size: .85rem; flex-shrink: 0; }
+#topbar-student {
+  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 20px; cursor: pointer;
+  background: var(--blue-lt); border: 1.5px solid var(--border);
+  font-size: .82rem; font-weight: 700; color: var(--blue-dk);
+  position: relative; user-select: none;
+}
+#topbar-avatar { font-size: 1.1rem; line-height: 1; }
+#topbar-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--white); border: 1.5px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow); z-index: 300;
+  display: flex; flex-direction: column; min-width: 130px; overflow: hidden;
+}
+.logout-menu.hidden { display: none; }
+.lm-btn {
+  padding: 11px 16px; border: none; background: none; cursor: pointer;
+  font-family: inherit; font-size: .88rem; font-weight: 800;
+  text-align: left; color: var(--text); transition: background .12s;
+}
+.lm-btn:hover { background: var(--blue-lt); }
+.lm-logout { color: var(--red); }
+
+/* ── 頁面基礎（全畫面使用） ── */
+.page { display: none; position: fixed; inset: 0; overflow-y: auto; padding: 60px 0 0; }
+.page.active { display: block; }
+
+/* ── 課文清單頁（老師分享給班級的課文） ── */
+#page-list { padding-bottom: 24px; }
+.et-page-inner { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+.et-list-title { font-size: 1.05rem; font-weight: 900; margin-bottom: 16px; }
+.et-lesson-card {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 16px 18px; margin-bottom: 10px; border: 2px solid var(--border); border-radius: 16px;
+  background: white; cursor: pointer; font-family: inherit; text-align: left;
+  transition: all .15s;
+}
+.et-lesson-card:hover { border-color: var(--blue); background: var(--blue-lt); }
+.et-lesson-card:active { transform: scale(.98); }
+.et-lesson-icon { font-size: 1.6rem; flex-shrink: 0; }
+.et-lesson-label { flex: 1; font-size: 1rem; font-weight: 800; color: var(--text); }
+.et-lesson-arrow { color: var(--blue); font-weight: 900; }
+
+/* ── 課文閱讀頁 ── */
+#page-reader { padding-bottom: 24px; }
+
+.et-progress-bar { max-width: 900px; margin: 0 auto; padding: 10px 16px 12px; }
+.et-progress-title { font-size: .8rem; font-weight: 800; color: var(--muted); margin-bottom: 6px; }
+.et-progress-track { height: 12px; border-radius: 10px; overflow: hidden; background: var(--border); }
+.et-progress-fill { height: 100%; background: var(--green); transition: width .4s; }
+.et-progress-counts { font-size: .8rem; font-weight: 700; color: var(--muted); margin-top: 5px; }
+
+.et-toolbar {
+  max-width: 900px; margin: 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  padding: 10px 16px; border-bottom: 1.5px solid var(--border);
+}
+.et-tool-btn {
+  padding: 12px 20px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: white;
+  font-size: 1rem; font-weight: 900; cursor: pointer; font-family: inherit;
+  transition: transform .12s;
+}
+.et-tool-btn:active { transform: scale(.96); }
+.et-read-controls { display: flex; gap: 8px; }
+.et-read-nav-btn {
+  padding: 10px 16px; border: 1.5px solid var(--border); border-radius: 10px;
+  background: white; color: var(--blue-dk); font-weight: 800; font-size: .9rem;
+  cursor: pointer; font-family: inherit;
+}
+.et-read-nav-btn:active { background: var(--blue-lt); }
+.et-rate-group { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.et-rate-label { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.et-rate-btn {
+  padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+  background: white; color: var(--muted); font-weight: 800; font-size: .85rem;
+  cursor: pointer; font-family: inherit;
+}
+.et-rate-btn.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+.et-text-wrap {
+  max-width: 900px; margin: 0 auto;
+  padding: 24px 20px; font-family: 'Noto Serif TC', serif;
+  line-height: 2.4; user-select: none; -webkit-user-select: none;
+}
+.et-empty { color: var(--muted); font-size: .95rem; text-align: center; padding: 40px 0; }
+.et-line {
+  margin-bottom: 8px; padding: 6px 4px; border-radius: 10px; transition: background .3s;
+}
+.et-line-reading {
+  background: var(--blue); box-shadow: 0 2px 10px rgba(0,0,0,.15);
+}
+.et-line-reading .et-char,
+.et-line-reading .et-punct { color: white; }
+.et-line-reading .et-char-found { background: rgba(255,255,255,.3); color: white; }
+.et-line-blank { height: 18px; margin-bottom: 8px; padding: 0; }
+.et-char {
+  display: inline-block; font-size: 1.7rem; font-weight: 700; padding: 2px 1px;
+  border-radius: 6px; cursor: pointer; touch-action: none;
+}
+.et-char:active { background: var(--blue-lt); }
+.et-char-selecting { background: var(--orange); color: white; }
+.et-char-found { background: #dcfce7; color: #166534; }
+.et-punct { font-size: 1.7rem; color: var(--muted); }
+
+.et-found-panel { max-width: 900px; margin: 0 auto; padding: 16px 20px 32px; border-top: 1.5px solid var(--border); }
+.et-found-title { font-size: .9rem; font-weight: 900; margin-bottom: 10px; }
+.et-found-empty { font-size: .85rem; color: var(--muted); font-weight: 600; }
+.et-found-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.et-found-chip {
+  display: inline-block; padding: 8px 14px; border-radius: 20px;
+  background: #dcfce7; color: #166534; font-size: 1.1rem; font-weight: 800;
+  font-family: 'Noto Serif TC', serif; cursor: pointer; border: none;
+}
+.et-found-chip:active { transform: scale(.94); }
+.et-jump-btn {
+  display: block; width: 100%; padding: 12px; margin-bottom: 12px;
+  border: none; border-radius: 12px; background: linear-gradient(135deg, var(--green), #1e8449);
+  color: white; font-size: .95rem; font-weight: 900; cursor: pointer; font-family: inherit;
+}
+.et-jump-btn:active { transform: scale(.97); }
+
+/* ── 圈詞查詢彈窗 ── */
+.et-lookup-popup {
+  display: none; position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  z-index: 500; width: min(90vw, 380px); background: white; border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25); padding: 20px; text-align: center;
+  border: 2px solid var(--border);
+}
+.et-lookup-popup.show { display: block; }
+.et-lookup-close {
+  position: absolute; top: 10px; right: 12px; background: none; border: none;
+  font-size: 1rem; color: var(--muted); cursor: pointer;
+}
+.et-lookup-word { font-size: 2.2rem; font-weight: 900; font-family: 'Noto Serif TC', serif; color: var(--blue-dk); }
+.et-lookup-bopomofo { font-size: 1.1rem; font-weight: 700; color: var(--muted); margin: 4px 0 10px; }
+.et-lookup-image { max-width: 100%; max-height: 140px; border-radius: 12px; margin-bottom: 10px; display: none; }
+.et-lookup-def { font-size: .9rem; color: var(--text); line-height: 1.6; }
+.et-lookup-found-badge {
+  display: none; margin-top: 10px; padding: 6px 14px; border-radius: 20px;
+  background: #dcfce7; color: #166534; font-weight: 900; font-size: .88rem;
+}
+
+/* ── 設定頁 ── */
+#page-settings { padding: 68px 16px 24px; }
+.settings-body { max-width: 480px; margin: 0 auto; }
+.settings-section-title {
+  font-size: .82rem; font-weight: 900; color: var(--muted);
+  margin: 20px 0 10px; letter-spacing: .5px;
+}
+#settings-avatar-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+#theme-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.avatar-btn {
+  width: 48px; height: 48px; border-radius: 12px;
+  border: 2px solid var(--border); background: var(--white);
+  font-size: 1.4rem; cursor: pointer; transition: all .12s;
+}
+.avatar-btn.selected { border-color: var(--blue); background: var(--blue-lt); }
+.sound-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.sound-label { font-size: .9rem; font-weight: 800; flex: 1; }
+.sound-toggle-btn {
+  width: 56px; height: 30px; border-radius: 15px;
+  border: none; background: #cbd5e1;
+  position: relative; cursor: pointer; transition: background .2s;
+}
+.sound-toggle-btn.on { background: var(--green); }
+.sound-toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: white; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  transition: left .2s;
+}
+.sound-toggle-knob.on { left: 29px; }
+
+/* ── 手機（≤ 768px）：課文字級略縮小，讓一行放得下更多字 ── */
+@media (max-width: 768px) {
+  .et-char, .et-punct { font-size: 1.4rem; }
+}

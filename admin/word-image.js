@@ -115,16 +115,11 @@ function _wiRenderGradeSelector() {
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
   var uid = currentTeacher.uid;
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', uid).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').get()
-  ]).then(function(results) {
+  db.collection('questions').where('teacherUid', '==', uid).get().then(function(snap) {
     var gradeSet = {};
-    results.forEach(function(snap) {
-      snap.forEach(function(d) {
-        var data = d.data();
-        if (_wiIsWordSourceType(data.type) && data.grade) gradeSet[data.grade] = true;
-      });
+    snap.forEach(function(d) {
+      var data = d.data();
+      if (_wiIsWordSourceType(data.type) && data.grade) gradeSet[data.grade] = true;
     });
     _wiGradeList = Object.keys(gradeSet).sort();
     if (!_wiGradeList.length) {
@@ -156,18 +151,13 @@ function _wiSelectGrade(idx) {
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
   var uid = currentTeacher.uid;
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', uid).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').get()
-  ]).then(function(results) {
+  db.collection('questions').where('teacherUid', '==', uid).get().then(function(snap) {
     var lessonMap = {};
-    results.forEach(function(snap) {
-      snap.forEach(function(d) {
-        var data = d.data();
-        if (data.grade === _wiGrade && _wiIsWordSourceType(data.type) && data.lesson) {
-          if (!lessonMap[data.lesson]) lessonMap[data.lesson] = data.lessonName || '';
-        }
-      });
+    snap.forEach(function(d) {
+      var data = d.data();
+      if (data.grade === _wiGrade && _wiIsWordSourceType(data.type) && data.lesson) {
+        if (!lessonMap[data.lesson]) lessonMap[data.lesson] = data.lessonName || '';
+      }
     });
 
     _wiLessonList = Object.keys(lessonMap).sort(function(a, b) {
@@ -218,16 +208,15 @@ function _wiSelectLesson(idx) {
   var uid = currentTeacher.uid;
   Promise.all([
     db.collection('questions').where('teacherUid', '==', uid).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').get(),
     db.collection('wordImages').where('gradeLesson', '==', gradeLesson).get()
   ]).then(function(results) {
-    var wordMap = _wiBuildWordMap([results[0], results[1]], _wiGrade, _wiLesson);
+    var wordMap = _wiBuildWordMap([results[0]], _wiGrade, _wiLesson);
     _wiWordList = Object.keys(wordMap).map(function(w) {
       return { word: w, definition: wordMap[w] };
     });
 
     _wiImageMap = {};
-    results[2].forEach(function(doc) {
+    results[1].forEach(function(doc) {
       var d = doc.data();
       _wiImageMap[d.word] = { docId: doc.id, imageUrl: d.imageUrl || '' };
     });
@@ -295,11 +284,8 @@ function _wiSyncDefinitions() {
   var uid = currentTeacher.uid;
   showToast('同步中…');
 
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', uid).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').get()
-  ]).then(function(results) {
-    var wordMap = _wiBuildWordMap([results[0], results[1]], _wiGrade, _wiLesson);
+  db.collection('questions').where('teacherUid', '==', uid).get().then(function(snap) {
+    var wordMap = _wiBuildWordMap([snap], _wiGrade, _wiLesson);
 
     _wiWordList.forEach(function(item) {
       if (wordMap[item.word] !== undefined) item.definition = wordMap[item.word];

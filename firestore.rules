@@ -50,6 +50,21 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    // 班級分享的課文全文（課文趣 App 用，配套生字詞取自 questions）—— 學生（無 Auth）可讀，教師可寫
+    match /classes/{classId}/sharedLessonTexts/{docId} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 課文趣：教師自己的課文全文（未分享前只有本人可讀寫，確保各教師資料隔離）
+    // 注意：尚未存過課文的課次，文件不存在，此時 resource 為 null —— 讀取需放行，
+    // 否則每次點開「還沒建立過課文」的課次都會被判定為 permission-denied
+    match /lessonTexts/{docId} {
+      allow read: if request.auth != null && (resource == null || resource.data.teacherUid == request.auth.uid);
+      allow update, delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.teacherUid == request.auth.uid;
+    }
+
     // 學生 —— PIN 登入不走 Firebase Auth，需要公開讀寫
     match /students/{studentId} {
       allow read:  if true;

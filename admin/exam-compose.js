@@ -247,17 +247,12 @@ function _ecUpdateLessonOptions() {
   }
   lessonEl.innerHTML = '<option value="">載入中…</option>';
 
-  Promise.all([
-    db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', _ecGrade).get(),
-    db.collection('questions').where('teacherUid', '==', 'shared').where('grade', '==', _ecGrade).get()
-      .catch(function() { return { forEach: function(){} }; })
-  ]).then(function(snaps) {
+  db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', _ecGrade).get()
+    .then(function(snap) {
     var lessonMap = {};
-    snaps.forEach(function(snap) {
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        if (d.lesson) lessonMap[d.lesson] = d.lessonName || '';
-      });
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      if (d.lesson) lessonMap[d.lesson] = d.lessonName || '';
     });
 
     var lessons = Object.keys(lessonMap).sort(function(a, b) {
@@ -300,17 +295,10 @@ function _ecLoadQuestions() {
 
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
   var coll = _ecSubject === 'math' ? 'mathQuestions' : 'questions';
-  var queries = [db.collection(coll).where('teacherUid', '==', currentTeacher.uid).get()];
-  if (_ecSubject === 'chinese') {
-    queries.push(db.collection(coll).where('teacherUid', '==', 'shared').get()
-      .catch(function() { return { forEach: function() {} }; }));
-  }
 
-  Promise.all(queries).then(function(snaps) {
+  db.collection(coll).where('teacherUid', '==', currentTeacher.uid).get().then(function(snap) {
     _ecAllQ = [];
-    snaps.forEach(function(snap) {
-      snap.forEach(function(doc) { _ecAllQ.push(Object.assign({ id: doc.id }, doc.data())); });
-    });
+    snap.forEach(function(doc) { _ecAllQ.push(Object.assign({ id: doc.id }, doc.data())); });
     _ecAllQSub = _ecSubject;
     if (!_ecAllQ.length) {
       wrap.innerHTML = '<p style="color:var(--muted);padding:16px;font-size:.88rem">題庫中尚無題目。請先至「資料庫」上傳題目。</p>';

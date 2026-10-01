@@ -180,6 +180,24 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'e-textbook', file: 'apps/learn/lang/e-textbook/index.html',
+    icon: '📖', name: '課文趣', desc: '電子課本・圈詞・朗讀跟讀',
+    type: 'learn', category: 'chinese', studentMode: true, // 需要 classIds 才能查班級分享的課文，比照考卷報讀
+    theme: 'theme-blue', badge: '課文趣', badgeClass: 'blue',
+    getLevel: function() { return Promise.resolve('課文趣'); },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('eTextbook').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var lessons = doc.data().lessons || {};
+          var totalFound = Object.keys(lessons).reduce(function(sum, k) {
+            return sum + Object.keys(lessons[k].foundWords || {}).length;
+          }, 0);
+          return totalFound ? { sub: '累計圈到 ' + totalFound + ' 個生字詞', score: totalFound + ' 個' } : null;
+        }).catch(function() { return null; });
+    }
+  },
+  {
     id: 'radical', file: 'apps/learn/lang/radical/index.html',
     icon: '🧩', name: '部件趣', desc: '部件・部首拆字練習',
     type: 'learn', category: 'chinese',
@@ -301,9 +319,10 @@ var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','�
 var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
-  'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub'];
+  'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub',
+  'e-textbook-back-to-hub'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
-  'geometry-logout','english-logout','radical-logout','zhuyin-logout'];
+  'geometry-logout','english-logout','radical-logout','zhuyin-logout','e-textbook-logout'];
 
 // ── Hub 渲染 ──
 

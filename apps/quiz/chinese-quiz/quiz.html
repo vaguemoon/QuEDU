@@ -331,13 +331,10 @@ function loadQuestions() {
   var lesson     = settings.lesson;
   var teacherUid = settings.teacherUid || '';
 
-  /* Two queries: teacher's own bank + shared bank.
-     Each uses (teacherUid, grade) which maps to the composite index.
-     Lesson is filtered client-side to avoid a third index field. */
-  var queries = [
-    db.collection('questions').where('teacherUid', '==', 'shared').where('grade', '==', grade).get()
-  ];
-  if (teacherUid && teacherUid !== 'shared') {
+  /* 每位老師的題庫各自獨立管理，這裡只查該場測驗建立者自己的題庫。
+     用 (teacherUid, grade) 對應複合索引，lesson 交給前端過濾，避免多加一個索引欄位。 */
+  var queries = [];
+  if (teacherUid) {
     queries.push(
       db.collection('questions').where('teacherUid', '==', teacherUid).where('grade', '==', grade).get()
     );
