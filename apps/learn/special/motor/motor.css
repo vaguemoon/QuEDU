@@ -1,0 +1,266 @@
+/* motor.css — 知動趣 app 專屬樣式 */
+
+/* ══════════════════════════════════════
+   頁面骨架
+   ══════════════════════════════════════ */
+.page { display: none; }
+.page.active { display: block; padding-top: 56px; min-height: 100vh; }
+.page-fill.active { display: flex; flex-direction: column; padding-top: 56px; min-height: 100vh; }
+.hidden { display: none !important; }
+
+/* ══════════════════════════════════════
+   Topbar
+   ══════════════════════════════════════ */
+#page-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 56px; display: flex; align-items: center; gap: 6px;
+  background: var(--white); border-bottom: 1.5px solid var(--border);
+  padding: 0 10px; box-shadow: 0 2px 8px rgba(44,100,160,.08);
+}
+.btn-back-hub {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: var(--blue-lt); color: var(--blue-dk);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back-hub:active { background: var(--blue); color: white; }
+.btn-back {
+  flex-shrink: 0; padding: 6px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: transparent; color: var(--muted);
+  font-size: .82rem; font-weight: 800; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: all .15s;
+}
+.btn-back:active { background: var(--blue-lt); color: var(--blue-dk); }
+#topbar-title {
+  flex: 1; text-align: center; font-size: .95rem; font-weight: 900;
+  color: var(--blue-dk); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+#topbar-title span { color: var(--text); }
+#topbar-right { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+#topbar-student {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 20px; cursor: pointer;
+  background: var(--blue-lt); border: 1.5px solid var(--border);
+  font-size: .82rem; font-weight: 700; color: var(--blue-dk);
+  position: relative; user-select: none; transition: background .15s;
+}
+#topbar-student:active { background: #d0e8f8; }
+#topbar-avatar { font-size: 1.1rem; line-height: 1; }
+#topbar-name { max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.logout-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: white; border: 1.5px solid var(--border);
+  border-radius: 14px; box-shadow: var(--shadow); padding: 6px;
+  display: flex; flex-direction: column; gap: 4px; min-width: 120px; z-index: 300;
+}
+.logout-menu.hidden { display: none; }
+.lm-btn {
+  padding: 9px 14px; border: none; border-radius: 10px; background: var(--blue-lt);
+  color: var(--blue-dk); font-size: .85rem; font-weight: 800; cursor: pointer;
+  font-family: inherit; text-align: left; transition: all .15s; white-space: nowrap;
+}
+.lm-btn:active { background: var(--blue); color: white; }
+.lm-logout { background: #fff0f0; color: var(--red); }
+.lm-logout:active { background: var(--red); color: white; }
+
+/* ══════════════════════════════════════
+   首頁
+   ══════════════════════════════════════ */
+.home-wrap {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 20px; padding: 24px 20px;
+}
+.home-title { font-size: 2rem; font-weight: 900; color: var(--blue-dk); text-align: center; }
+.home-sub { font-size: .95rem; color: var(--muted); font-weight: 700; margin-top: -10px; }
+.module-cards {
+  display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 400px;
+}
+.module-card {
+  width: 100%; padding: 22px 20px;
+  border: 2.5px solid var(--border); border-radius: var(--radius);
+  background: white; cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: var(--shadow); transition: all .18s; text-align: left;
+}
+.module-card:active { transform: scale(.97); box-shadow: none; }
+.module-card-icon {
+  font-size: 2.2rem; line-height: 1; flex-shrink: 0; width: 48px;
+  text-align: center; color: var(--blue);
+}
+.module-card-info { display: flex; flex-direction: column; gap: 3px; }
+.module-card-title { font-size: 1.2rem; font-weight: 900; color: var(--text); }
+.module-card-sub { font-size: .82rem; font-weight: 700; color: var(--muted); }
+.module-card--dot2dot { border-left: 5px solid var(--blue); }
+.module-card--tracing { border-left: 5px solid #27ae60; }
+
+/* ══════════════════════════════════════
+   選擇關卡頁
+   ══════════════════════════════════════ */
+.select-body { max-width: 560px; margin: 0 auto; padding: 24px 20px; }
+.select-title { font-size: 1.3rem; font-weight: 900; color: var(--blue-dk); margin-bottom: 20px; }
+.btn-chain-start {
+  display: block; width: 100%; margin-bottom: 20px; padding: 14px 18px;
+  border: none; border-radius: 16px; cursor: pointer; font-family: inherit;
+  font-size: 1rem; font-weight: 900; color: white; text-align: center;
+  background: linear-gradient(135deg, var(--orange), #e67e22);
+  box-shadow: 0 4px 16px rgba(230,126,34,.35); transition: all .15s;
+}
+.btn-chain-start:active { transform: scale(.98); box-shadow: none; }
+.level-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+.level-btn {
+  position: relative; padding: 20px 10px; border: 2.5px solid var(--border); border-radius: 16px;
+  background: white; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  box-shadow: var(--shadow); transition: all .15s;
+}
+.level-btn:active { transform: scale(.96); }
+.level-btn.completed { border-color: var(--green); background: #f0fff4; }
+.level-btn-icon { font-size: 2.2rem; line-height: 1; }
+.level-btn-label { font-size: .95rem; font-weight: 800; color: var(--text); text-align: center; }
+.level-btn-star { position: absolute; top: 6px; right: 8px; font-size: 1.1rem; }
+
+/* ══════════════════════════════════════
+   遊戲頁
+   ══════════════════════════════════════ */
+#page-game.active { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+.game-layout { flex: 1; display: grid; overflow: hidden; grid-template-columns: 300px 1fr; }
+.game-left {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; padding: 16px 16px 20px;
+  overflow-y: auto; border-right: 2px solid var(--border); background: white;
+}
+.game-right { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); position: relative; }
+
+.game-title { font-size: 1.15rem; font-weight: 900; color: var(--blue-dk); text-align: center; }
+.chain-badge {
+  font-size: .78rem; font-weight: 800; color: white; text-align: center;
+  padding: 4px 12px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--orange), #e67e22);
+}
+.stats-row { display: flex; gap: 10px; width: 100%; justify-content: center; }
+.stat-item {
+  flex: 1; background: white; border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 8px; text-align: center; box-shadow: var(--shadow);
+}
+.stat-label { display: block; font-size: .78rem; font-weight: 800; color: var(--muted); margin-bottom: 2px; }
+.stat-val   { display: block; font-size: 1.5rem; font-weight: 900; color: var(--blue-dk); }
+.game-hint {
+  font-size: .88rem; font-weight: 700; color: var(--muted); text-align: center;
+  background: var(--blue-lt); border-radius: 12px; padding: 10px 12px;
+}
+.btn-end-practice {
+  margin-top: auto; padding: 12px 28px; border: 2px solid var(--border);
+  border-radius: 20px; background: white; color: var(--muted);
+  font-size: .9rem; font-weight: 800; cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.btn-end-practice:active { background: var(--red); color: white; border-color: var(--red); }
+
+/* #motor-svg 的 viewBox 是正方形，這裡讓它實際顯示也是正方形並置中——
+   width:auto + height:100% + aspect-ratio 讓瀏覽器自動算出正方形邊長，
+   max-width 則處理面板比較窄、改成受寬度限制的情況（兩者都設，瀏覽器
+   會自動依比例縮小取較小的一邊，不會變形）。
+   這跟 js/state.js 的 svgPointFromEvent() 兩邊都要正確，才不會有觸控／
+   拖曳座標跟畫面對不起來的問題。 */
+#motor-sandbox {
+  padding: 14px; height: 100%; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center;
+}
+#motor-svg {
+  width: auto; height: 100%; max-width: 100%; aspect-ratio: 1 / 1;
+  background: white; border: 1.5px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow); display: block; touch-action: none;
+  /* 防止桌機滑鼠把 svg 裡的數字/圖形當成文字選取或原生拖曳內容 */
+  user-select: none; -webkit-user-select: none; -webkit-user-drag: none;
+}
+#motor-svg * { -webkit-user-drag: none; }
+
+/* ── 連連看 ──
+   互動完全由 #motor-svg 根層級的 pointer 事件＋座標運算判定（見 dot2dot.js），
+   子元素一律 pointer-events:none，避免瀏覽器對子元素做 hit-test 而中斷手勢 */
+.d2d-dot circle { fill: white; stroke: var(--blue); stroke-width: 2.5; pointer-events: none; }
+.d2d-dot text {
+  font-size: 11px; font-weight: 900; fill: var(--blue-dk); font-family: inherit;
+  pointer-events: none;
+}
+.d2d-dot.done circle { fill: var(--blue-lt); stroke: var(--muted); opacity: .55; }
+.d2d-dot.done text { fill: var(--muted); opacity: .55; }
+.d2d-line-done { stroke: var(--blue-dk); stroke-width: 3.5; stroke-linecap: round; pointer-events: none; }
+.d2d-line-new { animation: d2dPop .35s ease; }
+@keyframes d2dPop { from { stroke-width: 7; stroke: var(--green); } to { stroke-width: 3.5; stroke: var(--blue-dk); } }
+.d2d-rubber { stroke: var(--orange); stroke-width: 3; stroke-dasharray: 5 4; pointer-events: none; }
+
+/* ── 線條練習（同樣全部 pointer-events:none，互動只交給 #motor-svg） ── */
+.trace-guide {
+  fill: none; stroke: var(--border); stroke-width: 6;
+  stroke-linecap: round; stroke-dasharray: 2 10; pointer-events: none;
+}
+.trace-glow-dot { fill: var(--border); transition: fill .15s, r .15s; pointer-events: none; }
+.trace-glow-dot.lit { fill: var(--yellow); r: 5; }
+.trace-start-arrow { fill: var(--green-dk); pointer-events: none; }
+.trace-end-flag-outer { fill: none; stroke: var(--red); stroke-width: 2.5; pointer-events: none; }
+.trace-end-flag-inner { fill: var(--red); pointer-events: none; }
+.trace-ink { fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.trace-ink-on  { stroke: var(--green); }
+.trace-ink-off { stroke: var(--orange); opacity: .7; }
+
+/* ══════════════════════════════════════
+   結果頁
+   ══════════════════════════════════════ */
+.result-wrap {
+  max-width: 400px; margin: 40px auto; padding: 32px 24px;
+  background: white; border: 1.5px solid var(--border);
+  border-radius: 20px; box-shadow: var(--shadow); text-align: center;
+}
+.result-icon  { font-size: 3.5rem; margin-bottom: 10px; }
+.result-title { font-size: 1.6rem; font-weight: 900; color: var(--blue-dk); margin-bottom: 6px; }
+.result-sub   { font-size: 1rem; font-weight: 700; color: var(--muted); margin-bottom: 24px; }
+.result-btns  { display: flex; flex-direction: column; gap: 10px; }
+.btn-result {
+  padding: 13px 20px; border: none; border-radius: 12px;
+  background: var(--blue-lt); color: var(--blue-dk);
+  font-size: 1rem; font-weight: 900; cursor: pointer; font-family: inherit; transition: all .15s;
+}
+.btn-result:active { background: var(--blue); color: white; }
+.btn-result-home { background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: white; }
+.btn-result-home:active { opacity: .85; }
+
+/* ══════════════════════════════════════
+   設定頁
+   ══════════════════════════════════════ */
+.settings-body { max-width: 420px; margin: 0 auto; padding: 20px 16px; }
+.settings-section-title {
+  font-size: .8rem; font-weight: 900; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 10px;
+}
+.avatar-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.avatar-btn {
+  width: 44px; height: 44px; border: 2px solid var(--border);
+  border-radius: 50%; background: white; font-size: 1.3rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.avatar-btn.selected { border-color: var(--blue); background: var(--blue-lt); }
+.sound-row { display: flex; align-items: center; justify-content: space-between; }
+.sound-label { font-size: .9rem; font-weight: 700; color: var(--text); }
+.sound-toggle-btn {
+  width: 52px; height: 28px; border-radius: 14px;
+  background: var(--border); border: none; cursor: pointer; position: relative; transition: background .2s;
+}
+.sound-toggle-btn.on { background: var(--blue); }
+.sound-toggle-knob {
+  width: 22px; height: 22px; border-radius: 50%; background: white;
+  position: absolute; top: 3px; left: 3px; transition: left .2s; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.sound-toggle-btn.on .sound-toggle-knob { left: 27px; }
+
+/* ══════════════════════════════════════
+   響應式
+   ══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .game-layout { grid-template-columns: 1fr; }
+  #page-game.active { height: auto; overflow: visible; }
+  .game-right { height: 60vh; }
+  #motor-sandbox { height: 100%; }
+}

@@ -310,6 +310,15 @@ var SUBJECTS = [
           return { sub: '已完成 ' + total + ' 次練習', score: total + ' 次' };
         });
     }
+  },
+  {
+    id: 'motor', file: 'apps/learn/special/motor/index.html',
+    icon: '🧩', name: '知動趣', desc: '連連看・線條練習',
+    type: 'learn', category: 'special',
+    theme: 'theme-orange', badge: '知動趣', badgeClass: 'orange',
+    // 無 LV 稱號，卡片只顯示固定科目名；進度存在裝置 localStorage，不讀 Firestore
+    getLevel: function() { return Promise.resolve('知動趣'); },
+    activity: function() { return Promise.resolve(null); }
   }
 ];
 
@@ -320,9 +329,9 @@ var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-qui
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
   'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub',
-  'e-textbook-back-to-hub'];
+  'e-textbook-back-to-hub','motor-back-to-hub'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
-  'geometry-logout','english-logout','radical-logout','zhuyin-logout','e-textbook-logout'];
+  'geometry-logout','english-logout','radical-logout','zhuyin-logout','e-textbook-logout','motor-logout'];
 
 // ── Hub 渲染 ──
 
@@ -357,7 +366,8 @@ function renderHub() {
   var groups = [
     { key: 'chinese', label: '📖 國語' },
     { key: 'english', label: '🌐 英文' },
-    { key: 'math',    label: '🔢 數學' }
+    { key: 'math',    label: '🔢 數學' },
+    { key: 'special', label: '🎯 特需' }
   ];
   learnGrid.innerHTML = groups.map(function(g) {
     var subs = learnSubjects.filter(function(s) { return s.category === g.key; });
