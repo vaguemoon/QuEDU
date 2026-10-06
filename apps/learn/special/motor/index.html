@@ -57,6 +57,20 @@
           <div class="module-card-sub">跟著虛線描出直線、曲線、圓圈</div>
         </div>
       </button>
+      <button class="module-card module-card--match" onclick="openModule('match')">
+        <div class="module-card-icon">🔍</div>
+        <div class="module-card-info">
+          <div class="module-card-title">找一樣</div>
+          <div class="module-card-sub">從四個選項找出跟範本一樣的圖案</div>
+        </div>
+      </button>
+      <button class="module-card module-card--grid" onclick="openModule('grid')">
+        <div class="module-card-icon">🔢</div>
+        <div class="module-card-info">
+          <div class="module-card-title">方格抄寫</div>
+          <div class="module-card-sub">看圖例把圖案換成數字填進格子</div>
+        </div>
+      </button>
     </div>
   </div>
 </div>
@@ -93,6 +107,30 @@
       <div id="motor-sandbox">
         <svg id="motor-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"
              preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+
+      <div id="match-sandbox" class="hidden">
+        <div class="match-reference">
+          <div class="match-ref-label">範本</div>
+          <svg id="match-ref-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <div class="match-options" id="match-options"></div>
+      </div>
+
+      <div id="grid-sandbox" class="hidden">
+        <div class="grid-legend" id="grid-legend"></div>
+        <div class="grid-pair">
+          <div class="grid-box">
+            <div class="grid-box-label">看這個</div>
+            <div class="grid-cells" id="grid-source"></div>
+          </div>
+          <div class="grid-arrow">➡️</div>
+          <div class="grid-box">
+            <div class="grid-box-label">填這個</div>
+            <div class="grid-cells" id="grid-target"></div>
+          </div>
+        </div>
+        <div class="grid-picker hidden" id="grid-picker"></div>
       </div>
     </div>
 
@@ -135,10 +173,15 @@
 <script src="../../../../shared/shared.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/state.js"></script>
+<script src="js/voice.js"></script>
 <script src="js/dot2dot-data.js"></script>
 <script src="js/dot2dot.js"></script>
 <script src="js/tracing-data.js"></script>
 <script src="js/tracing.js"></script>
+<script src="js/match-data.js"></script>
+<script src="js/match.js"></script>
+<script src="js/grid-data.js"></script>
+<script src="js/grid.js"></script>
 <script src="js/game.js"></script>
 <script src="js/init.js"></script>
 <link rel="stylesheet" href="../../../../shared/report.css">

@@ -1,12 +1,14 @@
 'use strict';
 
 var currentStudent  = null;
-var currentModule   = '';   // 'dot2dot' | 'tracing'
+var currentModule   = '';   // 'dot2dot' | 'tracing' | 'match' | 'grid'
 var currentLevelIdx = 0;
 
 var STAR_KEY = {
   dot2dot: 'motor_dot2dot_stars',
-  tracing: 'motor_tracing_stars'
+  tracing: 'motor_tracing_stars',
+  match:   'motor_match_stars',
+  grid:    'motor_grid_stars'
 };
 
 function getStars(module) {
@@ -25,7 +27,17 @@ function addStar(module, levelId) {
 }
 
 function totalStars() {
-  return getStars('dot2dot').length + getStars('tracing').length;
+  return Object.keys(STAR_KEY).reduce(function(sum, m) { return sum + getStars(m).length; }, 0);
+}
+
+/* 遊戲頁右側一次只會有一種玩法在用（SVG 畫布 / 找一樣 / 方格抄寫），
+ * 切換模組時用這個統一顯示/隱藏，不用每個遊戲各自記著要關掉別人的畫面 */
+var SANDBOX_IDS = ['motor-sandbox', 'match-sandbox', 'grid-sandbox'];
+function showSandbox(id) {
+  SANDBOX_IDS.forEach(function(sid) {
+    var el = document.getElementById(sid);
+    if (el) el.classList.toggle('hidden', sid !== id);
+  });
 }
 
 /* 將 pointer event 轉成 SVG 內部座標（viewBox 0 0 200 200）。

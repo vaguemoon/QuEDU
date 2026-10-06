@@ -92,6 +92,8 @@
 .module-card-sub { font-size: .82rem; font-weight: 700; color: var(--muted); }
 .module-card--dot2dot { border-left: 5px solid var(--blue); }
 .module-card--tracing { border-left: 5px solid #27ae60; }
+.module-card--match   { border-left: 5px solid #8e44ad; }
+.module-card--grid    { border-left: 5px solid #e67e22; }
 
 /* ══════════════════════════════════════
    選擇關卡頁
@@ -192,17 +194,28 @@
 @keyframes d2dPop { from { stroke-width: 7; stroke: var(--green); } to { stroke-width: 3.5; stroke: var(--blue-dk); } }
 .d2d-rubber { stroke: var(--orange); stroke-width: 3; stroke-dasharray: 5 4; pointer-events: none; }
 
+/* 起點標示——不管標籤是不是從 1 或 ㄅ 開始，第一個點永遠用綠色圈＋「起點」字樣標出來 */
+.d2d-dot-start circle { stroke: var(--green-dk); stroke-width: 4; animation: d2dStartPulse 1.4s ease-in-out infinite; }
+@keyframes d2dStartPulse {
+  0%, 100% { stroke-width: 4; }
+  50%      { stroke-width: 6; }
+}
+.d2d-start-tag {
+  font-size: 10px; font-weight: 900; fill: var(--green-dk); font-family: inherit;
+  pointer-events: none;
+}
+
 /* ── 線條練習（同樣全部 pointer-events:none，互動只交給 #motor-svg） ── */
 .trace-guide {
-  fill: none; stroke: var(--border); stroke-width: 6;
+  fill: none; stroke: var(--border); stroke-width: 4;
   stroke-linecap: round; stroke-dasharray: 2 10; pointer-events: none;
 }
 .trace-glow-dot { fill: var(--border); transition: fill .15s, r .15s; pointer-events: none; }
-.trace-glow-dot.lit { fill: var(--yellow); r: 5; }
+.trace-glow-dot.lit { fill: var(--yellow); r: 3.5; }
 .trace-start-arrow { fill: var(--green-dk); pointer-events: none; }
 .trace-end-flag-outer { fill: none; stroke: var(--red); stroke-width: 2.5; pointer-events: none; }
 .trace-end-flag-inner { fill: var(--red); pointer-events: none; }
-.trace-ink { fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.trace-ink { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .trace-ink-on  { stroke: var(--row-color, var(--green)); }
 .trace-ink-off { stroke: var(--orange); opacity: .7; }
 
@@ -211,6 +224,84 @@
 .trace-start-arrow.trace-row-done { fill: var(--green); opacity: .5; }
 .trace-end-flag-outer.trace-row-done { stroke: var(--green); opacity: .5; }
 .trace-end-flag-inner.trace-row-done { fill: var(--green); opacity: .5; }
+
+/* ══════════════════════════════════════
+   找一樣的圖案
+   ══════════════════════════════════════ */
+#match-sandbox {
+  width: 100%; height: 100%; padding: 20px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  border: 1.5px solid transparent; border-radius: 14px; /* 給 flashBox 的 border-color 動畫一個可以變的底 */
+}
+.match-reference { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.match-ref-label { font-size: .85rem; font-weight: 800; color: var(--muted); }
+#match-ref-svg {
+  width: 120px; height: 120px; background: white;
+  border: 2.5px solid var(--blue); border-radius: 16px; box-shadow: var(--shadow);
+}
+.match-options { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.match-option-btn {
+  width: 92px; height: 92px; padding: 8px; background: white;
+  border: 2.5px solid var(--border); border-radius: 16px; cursor: pointer;
+  box-shadow: var(--shadow); transition: all .15s;
+}
+.match-option-btn:active { transform: scale(.95); }
+.match-option-btn svg { width: 100%; height: 100%; }
+.match-option-btn.match-correct { border-color: var(--green); background: #f0fff4; }
+.match-option-btn.match-wrong { animation: matchShake .4s; border-color: var(--red); }
+@keyframes matchShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+}
+
+/* ══════════════════════════════════════
+   方格抄寫
+   ══════════════════════════════════════ */
+#grid-sandbox {
+  width: 100%; height: 100%; padding: 24px; box-sizing: border-box; overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(20px, 4vh, 44px);
+  border: 1.5px solid transparent; border-radius: 14px;
+}
+.grid-legend { display: flex; gap: clamp(14px, 2.5vw, 28px); flex-wrap: wrap; justify-content: center; }
+.grid-legend-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+  background: white; border: 1.5px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
+}
+.grid-legend-item svg { width: clamp(32px, 5vw, 52px); height: clamp(32px, 5vw, 52px); }
+.grid-legend-eq { font-size: 1.3rem; font-weight: 900; color: var(--muted); }
+.grid-legend-num {
+  font-size: clamp(1.2rem, 2.4vw, 1.7rem); font-weight: 900; color: var(--blue-dk);
+  font-family: 'Courier New', monospace;
+}
+.grid-pair { display: flex; align-items: center; gap: clamp(16px, 3vw, 36px); }
+.grid-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.grid-box-label { font-size: 1rem; font-weight: 800; color: var(--muted); }
+.grid-cells {
+  display: grid; gap: clamp(5px, 1vw, 10px); padding: 14px; background: white;
+  border: 1.5px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+}
+.grid-cell {
+  width: clamp(50px, 8vw, 76px); height: clamp(50px, 8vw, 76px);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  background: var(--bg); display: flex; align-items: center; justify-content: center;
+}
+.grid-cell svg { width: 100%; height: 100%; }
+.grid-cell-target { background: white; cursor: pointer; transition: all .15s; }
+.grid-cell-target.selected { border-color: var(--blue); border-width: 3px; background: var(--blue-lt); }
+.grid-cell-target.grid-cell-done {
+  cursor: default; background: #f0fff4; border-color: var(--green);
+  font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 900; color: var(--green-dk); font-family: 'Courier New', monospace;
+}
+.grid-arrow { font-size: clamp(1.8rem, 3vw, 2.6rem); }
+.grid-picker { display: flex; gap: clamp(12px, 2.5vw, 22px); }
+.grid-picker-btn {
+  width: clamp(50px, 8vw, 76px); height: clamp(50px, 8vw, 76px); border: 2.5px solid var(--border); border-radius: 16px;
+  background: white; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 900; color: var(--blue-dk);
+  font-family: 'Courier New', monospace; cursor: pointer; box-shadow: var(--shadow); transition: all .15s;
+}
+.grid-picker-btn:active { transform: scale(.92); background: var(--blue-lt); }
+.grid-picker-btn.grid-picker-wrong { animation: matchShake .4s; border-color: var(--red); }
 
 /* ══════════════════════════════════════
    結果頁

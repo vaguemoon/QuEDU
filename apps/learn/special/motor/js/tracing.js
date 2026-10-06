@@ -5,8 +5,8 @@ var _trRows      = [];   // [{ samples, covered, color, done, inkGroupEl }]
 var _trActiveRow = -1;   // 目前正在描的行；-1 表示沒有在拖曳
 var _trDragging  = false;
 var _trCurSeg    = null; // { onTrack, el, pts }
-var TR_TOLERANCE   = 16;
-var TR_START_TOL   = 30;
+var TR_TOLERANCE   = 9;    // 判定用的容許半徑——原本 16 比畫面上的點/線視覺粗細寬鬆很多，縮小讓「描到」更接近真的描到
+var TR_START_TOL   = 30;   // 這個是「抓到起點」的容許度，跟描線精準度無關，維持原樣不然會很難起手
 var TR_PASS_RATIO  = 0.92; // 幾乎每個點都要碰到才算過關，不能只描一部分
 var TR_END_SAMPLES = 3;    // 結尾這幾個取樣點至少要碰到一個，不能半路放開手就過關
 
@@ -40,6 +40,7 @@ function openTracing(levelIdx) {
   }
 
   document.getElementById('game-title').textContent = _trLevel.title;
+  showSandbox('motor-sandbox');
   renderTracing();
   showPage('game');
 }
@@ -77,7 +78,7 @@ function renderTracing() {
     samples.forEach(function(p, idx) {
       if (idx % 6 !== 0) return;
       var dot = document.createElementNS(SVGNS, 'circle');
-      dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); dot.setAttribute('r', 3.5);
+      dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); dot.setAttribute('r', 2.5);
       dot.setAttribute('class', 'trace-glow-dot' + (row.done ? ' lit' : ''));
       dot.setAttribute('data-row', ri);
       dot.setAttribute('data-idx', idx);
@@ -180,18 +181,25 @@ function _trPointerUp(e) {
 
   if (pct >= TR_PASS_RATIO && reachedEnd) {
     row.done = true;
+    flashBox('motor-svg', 'green');
     renderTracing(); // 重繪成「已完成」樣式（虛線/發光點/箭頭都變暗），順便清掉其他行未完成的墨水線
     var allDone = _trRows.every(function(r) { return r.done; });
     if (allDone) {
       addStar('tracing', _trLevel.id);
-      showResult(true, _trLevel.title, 'tracing');
+      showResult(_trLevel.title, 'tracing');
     } else {
+      sfxCorrect();
       showToast('✨ 這行完成了！繼續下一行～');
     }
-  } else if (_trRows.length > 1) {
-    showToast('再描一次這行看看！');
   } else {
-    showResult(false, _trLevel.title, 'tracing');
+    // 沒描好：直接發錯誤音效、把剛剛畫歪的筆跡整個擦掉、原地讓他重畫，
+    // 不留著錯的線在畫面上（不然小朋友會搞不清楚哪些是剛剛失敗的、哪些還算數），
+    // 也不跳頁、不用再多一次「要不要重來」的確認
+    sfxWrong();
+    flashBox('motor-svg', 'red');
+    row.inkGroupEl.innerHTML = '';
+    _trCurSeg = null;
+    showToast(_trRows.length > 1 ? '再描一次這行看看！' : '沒描好，再試一次！');
   }
 }
 

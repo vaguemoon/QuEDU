@@ -2,32 +2,35 @@
 
 /* 連連看關卡資料 — viewBox 0 0 200 200
  * points: 依序 0..N-1，連線時把 progress（已完成邊數）對應到 points[progress]→points[progress+1]
- * labels：不給就用數字 1..N；給了就用自訂文字（例如注音符號）
+ * labelMode：'number' 每次開關卡隨機選一個起始數字（1~30內）往下接；
+ *            'zhuyin' 每次開關卡隨機從注音表（37個符號，標準順序）選一段連續的開始；
+ *            都不給則固定用數字 1..N（目前沒有關卡用這個，保留給未來）
+ * 同一個圖形每次玩到的題目都不一樣，不能靠背位置矇過去，要真的看清楚當下標的是什麼。
  */
 var DOT2DOT_LEVELS = [
   {
-    id: 'house', title: '🏠 小房子', icon: '🏠',
+    id: 'house', title: '🏠 小房子', icon: '🏠', labelMode: 'number',
     points: [
       { x: 40,  y: 170 }, { x: 40,  y: 90 }, { x: 100, y: 30 },
       { x: 160, y: 90 },  { x: 160, y: 170 }
     ]
   },
   {
-    id: 'car', title: '🚗 小汽車', icon: '🚗',
+    id: 'car', title: '🚗 小汽車', icon: '🚗', labelMode: 'number',
     points: [
       { x: 15,  y: 150 }, { x: 15,  y: 120 }, { x: 55,  y: 120 }, { x: 75,  y: 90 },
       { x: 125, y: 90 },  { x: 145, y: 120 }, { x: 185, y: 120 }, { x: 185, y: 150 }
     ]
   },
   {
-    id: 'rocket', title: '🚀 火箭', icon: '🚀',
+    id: 'rocket', title: '🚀 火箭', icon: '🚀', labelMode: 'number',
     points: [
       { x: 100, y: 10 }, { x: 125, y: 70 }, { x: 125, y: 150 }, { x: 150, y: 180 },
       { x: 100, y: 160 }, { x: 50,  y: 180 }, { x: 75,  y: 150 }, { x: 75,  y: 70 }
     ]
   },
   {
-    id: 'dino', title: '🦕 恐龍', icon: '🦕',
+    id: 'dino', title: '🦕 恐龍', icon: '🦕', labelMode: 'number',
     points: [
       { x: 20,  y: 170 }, { x: 20,  y: 120 }, { x: 40,  y: 100 }, { x: 55,  y: 75 },
       { x: 70,  y: 95 },  { x: 85,  y: 65 },  { x: 100, y: 95 },  { x: 115, y: 70 },
@@ -35,7 +38,7 @@ var DOT2DOT_LEVELS = [
     ]
   },
   {
-    id: 'balloon', title: '🎈 氣球', icon: '🎈',
+    id: 'balloon', title: '🎈 氣球', icon: '🎈', labelMode: 'number',
     points: [
       { x: 100, y: 35 }, { x: 132, y: 46 }, { x: 152, y: 73 }, { x: 152, y: 107 },
       { x: 132, y: 135 }, { x: 100, y: 145 }, { x: 68,  y: 135 }, { x: 48,  y: 107 },
@@ -43,7 +46,7 @@ var DOT2DOT_LEVELS = [
     ]
   },
   {
-    id: 'fish', title: '🐟 大魚（數字挑戰）', icon: '🐟',
+    id: 'fish', title: '🐟 大魚（數字挑戰）', icon: '🐟', labelMode: 'number',
     points: [
       { x: 30,  y: 100 }, { x: 40,  y: 75 },  { x: 60,  y: 60 },  { x: 90,  y: 55 },
       { x: 120, y: 60 },  { x: 140, y: 75 },  { x: 165, y: 60 },  { x: 150, y: 100 },
@@ -52,12 +55,77 @@ var DOT2DOT_LEVELS = [
     ]
   },
   {
-    id: 'star-zhuyin', title: '⭐ 星星（注音挑戰）', icon: '⭐',
-    labels: ['ㄅ', 'ㄆ', 'ㄇ', 'ㄈ', 'ㄉ', 'ㄊ', 'ㄋ', 'ㄌ', 'ㄍ', 'ㄎ'],
+    id: 'star-zhuyin', title: '⭐ 星星（注音挑戰）', icon: '⭐', labelMode: 'zhuyin',
     points: [
       { x: 100, y: 20 }, { x: 119, y: 74 },  { x: 176, y: 75 },  { x: 130, y: 110 },
       { x: 147, y: 165 }, { x: 100, y: 132 }, { x: 53,  y: 165 }, { x: 70,  y: 110 },
       { x: 24,  y: 75 },  { x: 81,  y: 74 }
     ]
+  },
+  {
+    id: 'zhuyin2', title: '🎈 氣球（注音挑戰）', icon: '🎈', labelMode: 'zhuyin',
+    points: [
+      { x: 100, y: 35 }, { x: 132, y: 46 }, { x: 152, y: 73 }, { x: 152, y: 107 },
+      { x: 132, y: 135 }, { x: 100, y: 145 }, { x: 68,  y: 135 }, { x: 48,  y: 107 },
+      { x: 48,  y: 73 },  { x: 68,  y: 46 }
+    ]
+  },
+  {
+    id: 'zhuyin3', title: '🌸 花朵（注音挑戰）', icon: '🌸', labelMode: 'zhuyin',
+    points: [
+      { x: 100, y: 25 },   { x: 128.2, y: 61.2 }, { x: 171.3, y: 76.8 }, { x: 145.7, y: 114.8 },
+      { x: 144.1, y: 160.7 }, { x: 100, y: 148 },  { x: 55.9, y: 160.7 }, { x: 54.3, y: 114.8 },
+      { x: 28.7, y: 76.8 }, { x: 71.8, y: 61.2 }
+    ]
+  },
+  {
+    id: 'zhuyin4', title: '☀️ 太陽（注音挑戰）', icon: '☀️', labelMode: 'zhuyin',
+    points: [
+      { x: 100, y: 15 },   { x: 122.3, y: 69.3 }, { x: 180.8, y: 73.7 }, { x: 136.1, y: 111.7 },
+      { x: 150, y: 168.8 }, { x: 100, y: 138 },    { x: 50, y: 168.8 },   { x: 63.9, y: 111.7 },
+      { x: 19.2, y: 73.7 }, { x: 77.7, y: 69.3 }
+    ]
+  },
+  {
+    id: 'zhuyin5', title: '☁️ 雲朵（注音挑戰）', icon: '☁️', labelMode: 'zhuyin',
+    points: [
+      { x: 100, y: 28 },   { x: 132.9, y: 54.7 }, { x: 168.5, y: 77.8 }, { x: 153.3, y: 117.3 },
+      { x: 142.3, y: 158.2 }, { x: 100, y: 156 },  { x: 57.7, y: 158.2 }, { x: 46.7, y: 117.3 },
+      { x: 31.5, y: 77.8 }, { x: 67.1, y: 54.7 }
+    ]
   }
 ];
+
+/* 標準注音表順序（聲母→介音→韻母），共 37 個，隨機挑起點時從這裡連續取一段 */
+var ZHUYIN_SEQUENCE = [
+  'ㄅ', 'ㄆ', 'ㄇ', 'ㄈ', 'ㄉ', 'ㄊ', 'ㄋ', 'ㄌ', 'ㄍ', 'ㄎ', 'ㄏ',
+  'ㄐ', 'ㄑ', 'ㄒ', 'ㄓ', 'ㄔ', 'ㄕ', 'ㄖ', 'ㄗ', 'ㄘ', 'ㄙ',
+  'ㄧ', 'ㄨ', 'ㄩ',
+  'ㄚ', 'ㄛ', 'ㄜ', 'ㄝ', 'ㄞ', 'ㄟ', 'ㄠ', 'ㄡ', 'ㄢ', 'ㄣ', 'ㄤ', 'ㄥ', 'ㄦ'
+];
+
+function _randomZhuyinLabels(n) {
+  var maxStart = ZHUYIN_SEQUENCE.length - n;
+  var start = Math.floor(Math.random() * (maxStart + 1));
+  return ZHUYIN_SEQUENCE.slice(start, start + n);
+}
+
+/* 數字關卡每次隨機挑起點，但把最大值壓在 30 以內，符合小朋友目前的數字範圍 */
+function _randomNumberLabels(n) {
+  var maxFinal = 30;
+  var maxStart = Math.max(1, maxFinal - n + 1);
+  var start = Math.floor(Math.random() * maxStart) + 1;
+  var labels = [];
+  for (var i = 0; i < n; i++) labels.push(start + i);
+  return labels;
+}
+
+/* 依關卡的 labelMode 產生這一次要用的標籤（每次呼叫結果都不同） */
+function generateDot2DotLabels(level) {
+  var n = level.points.length;
+  if (level.labelMode === 'zhuyin') return _randomZhuyinLabels(n);
+  if (level.labelMode === 'number') return _randomNumberLabels(n);
+  var fallback = [];
+  for (var i = 0; i < n; i++) fallback.push(i + 1);
+  return fallback;
+}

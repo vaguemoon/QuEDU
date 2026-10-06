@@ -3,6 +3,7 @@
 var SVGNS = 'http://www.w3.org/2000/svg';
 
 var _d2dLevel      = null;
+var _d2dLabels     = null;   // 這一次玩到的標籤（每次開關卡都重新隨機產生，見 dot2dot-data.js）
 var _d2dProgress   = 0;      // 已完成的邊數（0 ~ N-1）
 var _d2dDragFrom   = -1;     // 拖曳起點的 point index
 var _d2dRubberLine = null;
@@ -12,11 +13,18 @@ function openDot2Dot(levelIdx) {
   currentModule   = 'dot2dot';
   currentLevelIdx = levelIdx;
   _d2dLevel    = DOT2DOT_LEVELS[levelIdx];
+  _d2dLabels   = generateDot2DotLabels(_d2dLevel);
   _d2dProgress = 0;
   document.getElementById('game-title').textContent = _d2dLevel.title;
-  document.getElementById('game-hint').textContent = '把數字 1 拖到 2、2 拖到 3⋯依序連起來！';
+  document.getElementById('game-hint').textContent = _d2dLevel.labelMode === 'zhuyin'
+    ? '從綠色「起點」開始，照注音順序一個接一個連起來！'
+    : '從綠色「起點」開始，數字一個接一個連起來！（不一定從 1 開始喔）';
+  showSandbox('motor-sandbox');
   renderDot2Dot();
   showPage('game');
+  setTimeout(function() {
+    speakDotLabel(_d2dLabels[0], _d2dLevel.labelMode === 'zhuyin');
+  }, 400); // 等畫面切換動畫跑完再唸，不然聲音會卡在轉場中間
 }
 
 function _d2dUpdateStats() {
@@ -31,7 +39,7 @@ function renderDot2Dot() {
   _d2dUpdateStats();
 
   var pts = _d2dLevel.points;
-  var labels = _d2dLevel.labels;
+  var labels = _d2dLabels;
 
   // 已完成的線段
   var lineGroup = document.createElementNS(SVGNS, 'g');
@@ -52,8 +60,11 @@ function renderDot2Dot() {
   dotGroup.id = 'd2d-dot-group';
   svg.appendChild(dotGroup);
   pts.forEach(function(p, idx) {
+    // 起點標示：不能只靠數字/注音符號本身暗示「這是第一個」（例如注音關卡不一定從 ㄅ 開始），
+    // 所以第一個點在還沒連出去之前，一律用顏色＋「起點」字樣明確標出來
+    var isStart = (idx === 0 && _d2dProgress === 0);
     var g = document.createElementNS(SVGNS, 'g');
-    g.setAttribute('class', 'd2d-dot' + (idx < _d2dProgress ? ' done' : ''));
+    g.setAttribute('class', 'd2d-dot' + (idx < _d2dProgress ? ' done' : '') + (isStart ? ' d2d-dot-start' : ''));
     g.setAttribute('data-idx', idx);
 
     var c = document.createElementNS(SVGNS, 'circle');
@@ -66,6 +77,16 @@ function renderDot2Dot() {
     t.setAttribute('dominant-baseline', 'central');
     t.textContent = labels ? labels[idx] : (idx + 1);
     g.appendChild(t);
+
+    if (isStart) {
+      var tagBelow = p.y < 40; // 點太靠近畫布上緣時，字牌改標在下面，避免被裁掉
+      var tag = document.createElementNS(SVGNS, 'text');
+      tag.setAttribute('x', p.x); tag.setAttribute('y', tagBelow ? p.y + 26 : p.y - 18);
+      tag.setAttribute('text-anchor', 'middle');
+      tag.setAttribute('class', 'd2d-start-tag');
+      tag.textContent = tagBelow ? '起點 ▲' : '▼ 起點';
+      g.appendChild(tag);
+    }
 
     dotGroup.appendChild(g);
   });
@@ -147,11 +168,21 @@ function _d2dOnCorrectEdge() {
   _d2dDrawSegment(pts[_d2dProgress], pts[_d2dProgress + 1], true);
   _d2dProgress++;
   _d2dUpdateStats();
+  sfxCorrect();
   showToast('✨ 接對了！');
+  setTimeout(function() {
+    speakDotLabel(_d2dLabels[_d2dProgress], _d2dLevel.labelMode === 'zhuyin');
+  }, 180); // 讓短音效先播完，唸出來的符號/數字才不會被蓋過去
 
   document.querySelectorAll('#d2d-dot-group .d2d-dot').forEach(function(g) {
     var idx = Number(g.getAttribute('data-idx'));
     g.classList.toggle('done', idx <= _d2dProgress);
+    if (idx === 0) {
+      // 第一段連出去之後，起點標示就沒用了（而且會疊在已變暗的點上很奇怪），拿掉
+      g.classList.remove('d2d-dot-start');
+      var tag = g.querySelector('.d2d-start-tag');
+      if (tag) tag.remove();
+    }
   });
 
   if (_d2dProgress === pts.length - 1) {
@@ -164,10 +195,12 @@ function _d2dOnCorrectEdge() {
 
 function _d2dOnWrongEdge() {
   if (navigator.vibrate) { try { navigator.vibrate(80); } catch(e) {} }
-  showToast('再試試看，從數字 ' + (_d2dProgress + 1) + ' 接到 ' + (_d2dProgress + 2) + ' 哦！');
+  sfxWrong();
+  // 原本這裡寫死「數字」+索引號，注音關卡會唸/顯示錯——改用這次實際產生的標籤
+  showToast('再試試看，從 ' + _d2dLabels[_d2dProgress] + ' 接到 ' + _d2dLabels[_d2dProgress + 1] + ' 哦！');
 }
 
 function _d2dOnComplete() {
   addStar('dot2dot', _d2dLevel.id);
-  showResult(true, _d2dLevel.title, 'dot2dot');
+  showResult(_d2dLevel.title, 'dot2dot');
 }
