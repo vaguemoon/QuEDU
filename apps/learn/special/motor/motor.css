@@ -128,10 +128,10 @@
    遊戲頁
    ══════════════════════════════════════ */
 #page-game.active { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-.game-layout { flex: 1; display: grid; overflow: hidden; grid-template-columns: 300px 1fr; }
+.game-layout { flex: 1; display: grid; overflow: hidden; grid-template-columns: 240px 1fr; }
 .game-left {
   display: flex; flex-direction: column; align-items: center;
-  gap: 14px; padding: 16px 16px 20px;
+  gap: 14px; padding: 14px 12px 20px;
   overflow-y: auto; border-right: 2px solid var(--border); background: white;
 }
 .game-right { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); position: relative; }
@@ -258,32 +258,44 @@
 /* ══════════════════════════════════════
    方格抄寫
    ══════════════════════════════════════ */
+/* 這整塊都用「容器相對」尺寸（%、fr、aspect-ratio），不用 vw——
+ * vw 是相對整個瀏覽器視窗寬度，但這裡實際可用空間是扣掉左側 .game-left 側欄之後的
+ * .game-right，兩者不一樣寬；平板或比較窄的視窗上用 vw 算出來的尺寸會比真正可用空間
+ * 還大，格子就會被切掉、超出畫面。改成 flex:1 + min-width:0 + aspect-ratio 之後，
+ * 格子大小完全由 .grid-pair 實際被分配到的寬度決定，不會再算錯。 */
 #grid-sandbox {
-  width: 100%; height: 100%; padding: 24px; box-sizing: border-box; overflow-y: auto;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(20px, 4vh, 44px);
+  width: 100%; height: 100%; padding: 16px; box-sizing: border-box; overflow: auto;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
   border: 1.5px solid transparent; border-radius: 14px;
 }
-.grid-legend { display: flex; gap: clamp(14px, 2.5vw, 28px); flex-wrap: wrap; justify-content: center; }
+.grid-legend { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
 .grid-legend-item {
-  display: flex; align-items: center; gap: 10px; padding: 10px 18px;
-  background: white; border: 1.5px solid var(--border); border-radius: 14px; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: white; border: 1.5px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
 }
-.grid-legend-item svg { width: clamp(32px, 5vw, 52px); height: clamp(32px, 5vw, 52px); }
-.grid-legend-eq { font-size: 1.3rem; font-weight: 900; color: var(--muted); }
+.grid-legend-item svg { width: 32px; height: 32px; flex-shrink: 0; }
+.grid-legend-eq { font-size: 1.1rem; font-weight: 900; color: var(--muted); }
 .grid-legend-num {
-  font-size: clamp(1.2rem, 2.4vw, 1.7rem); font-weight: 900; color: var(--blue-dk);
+  font-size: 1.3rem; font-weight: 900; color: var(--blue-dk);
   font-family: 'Courier New', monospace;
 }
-.grid-pair { display: flex; align-items: center; gap: clamp(16px, 3vw, 36px); }
-.grid-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.grid-box-label { font-size: 1rem; font-weight: 800; color: var(--muted); }
+.grid-pair {
+  display: flex; align-items: center; gap: 3%;
+  width: 100%; max-width: 640px; /* 限制總寬上限，實際可用空間更窄時下面 flex:1 會再縮小 */
+}
+.grid-box {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  flex: 1 1 0; min-width: 0; /* min-width:0 是關鍵——沒有這行，flex 子項不會真的縮小，格子就會把它撐爆 */
+}
+.grid-box-label { font-size: .9rem; font-weight: 800; color: var(--muted); }
 .grid-cells {
-  display: grid; gap: clamp(5px, 1vw, 10px); padding: 14px; background: white;
+  display: grid; gap: 4%; padding: 6%; background: white;
   border: 1.5px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+  width: 100%; box-sizing: border-box;
 }
 .grid-cell {
-  width: clamp(50px, 8vw, 76px); height: clamp(50px, 8vw, 76px);
-  border: 1.5px solid var(--border); border-radius: 12px;
+  width: 100%; aspect-ratio: 1 / 1; /* 正方形永遠成立，大小完全跟著 .grid-cells 實際寬度走 */
+  border: 1.5px solid var(--border); border-radius: 18%;
   background: var(--bg); display: flex; align-items: center; justify-content: center;
 }
 .grid-cell svg { width: 100%; height: 100%; }
@@ -291,14 +303,15 @@
 .grid-cell-target.selected { border-color: var(--blue); border-width: 3px; background: var(--blue-lt); }
 .grid-cell-target.grid-cell-done {
   cursor: default; background: #f0fff4; border-color: var(--green);
-  font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 900; color: var(--green-dk); font-family: 'Courier New', monospace;
+  font-size: 1.4rem; font-weight: 900; color: var(--green-dk); font-family: 'Courier New', monospace;
 }
-.grid-arrow { font-size: clamp(1.8rem, 3vw, 2.6rem); }
-.grid-picker { display: flex; gap: clamp(12px, 2.5vw, 22px); }
+.grid-arrow { font-size: 1.8rem; flex-shrink: 0; }
+.grid-picker { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .grid-picker-btn {
-  width: clamp(50px, 8vw, 76px); height: clamp(50px, 8vw, 76px); border: 2.5px solid var(--border); border-radius: 16px;
-  background: white; font-size: clamp(1.4rem, 2.6vw, 2rem); font-weight: 900; color: var(--blue-dk);
+  width: 64px; height: 64px; border: 2.5px solid var(--border); border-radius: 16px;
+  background: white; font-size: 1.6rem; font-weight: 900; color: var(--blue-dk);
   font-family: 'Courier New', monospace; cursor: pointer; box-shadow: var(--shadow); transition: all .15s;
+  flex-shrink: 0;
 }
 .grid-picker-btn:active { transform: scale(.92); background: var(--blue-lt); }
 .grid-picker-btn.grid-picker-wrong { animation: matchShake .4s; border-color: var(--red); }
@@ -359,5 +372,5 @@
   .game-layout { grid-template-columns: 1fr; }
   #page-game.active { height: auto; overflow: visible; }
   .game-right { height: 60vh; }
-  #motor-sandbox { height: 100%; }
+  #motor-sandbox, #match-sandbox, #grid-sandbox { height: 100%; }
 }
