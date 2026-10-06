@@ -203,8 +203,14 @@
 .trace-end-flag-outer { fill: none; stroke: var(--red); stroke-width: 2.5; pointer-events: none; }
 .trace-end-flag-inner { fill: var(--red); pointer-events: none; }
 .trace-ink { fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-.trace-ink-on  { stroke: var(--green); }
+.trace-ink-on  { stroke: var(--row-color, var(--green)); }
 .trace-ink-off { stroke: var(--orange); opacity: .7; }
+
+/* 練習簿模式：一行描完後，那一行的虛線/發光點/箭頭都轉成淡綠色，一眼就看出哪幾行做完了 */
+.trace-guide.trace-row-done { stroke: var(--green); opacity: .6; }
+.trace-start-arrow.trace-row-done { fill: var(--green); opacity: .5; }
+.trace-end-flag-outer.trace-row-done { stroke: var(--green); opacity: .5; }
+.trace-end-flag-inner.trace-row-done { fill: var(--green); opacity: .5; }
 
 /* ══════════════════════════════════════
    結果頁

@@ -78,7 +78,15 @@ var TRACING_LEVELS = [
       { type: 'line', p0: { x: 70,  y: 110 }, p1: { x: 24,  y: 75 } },
       { type: 'line', p0: { x: 24,  y: 75 },  p1: { x: 81,  y: 74 } },
       { type: 'line', p0: { x: 81,  y: 74 },  p1: { x: 100, y: 20 } }
-    ] }
+    ] },
+
+  /* ── 練習簿模式：一關有好幾行同款式的線，像紙本練字簿一樣一行一行描 ── */
+  { id: 'ws-stairs', title: '🪜 階梯練習（4行）', icon: '📋', type: 'worksheet',
+    rows: _makeWorksheetRows(_makeSquareWaveParts,
+      ['#e84444', '#4a90d9', '#ff8c42', '#52c97a']) },
+  { id: 'ws-zigzag', title: '⚡ 鋸齒練習（4行）', icon: '📋', type: 'worksheet',
+    rows: _makeWorksheetRows(_makeZigzagParts,
+      ['#4a90d9', '#d63384', '#1e2d3d', '#52c97a']) }
 ];
 
 /* 依關卡類型取樣出路徑上的點（同時用來畫虛線引導路徑與判斷描繪準確度）
@@ -139,4 +147,67 @@ function buildTraceSamples(level, n) {
     }
   }
   return pts;
+}
+
+/* ════════════════════════════════════════
+   練習簿模式用的圖案產生器
+   ════════════════════════════════════════
+   每一行用連續的直線段拼出重複的方波（階梯）或鋸齒圖案，
+   回傳 parts 陣列可以直接塞進 { type:'multi', parts:[...] } 用。 */
+function _lineChain(points) {
+  var parts = [];
+  for (var k = 0; k < points.length - 1; k++) {
+    parts.push({ type: 'line', p0: points[k], p1: points[k + 1] });
+  }
+  return parts;
+}
+
+function _makeSquareWaveParts(x0, x1, yTop, yBottom, repeats) {
+  var unit = (x1 - x0) / repeats;
+  var pts = [{ x: x0, y: yBottom }];
+  for (var i = 0; i < repeats; i++) {
+    var xa = x0 + i * unit;
+    var xRise = xa + unit * 0.22;
+    var xFall = xa + unit * 0.78;
+    var xEnd  = xa + unit;
+    pts.push({ x: xRise, y: yBottom });
+    pts.push({ x: xRise, y: yTop });
+    pts.push({ x: xFall, y: yTop });
+    pts.push({ x: xFall, y: yBottom });
+    pts.push({ x: xEnd,  y: yBottom });
+  }
+  return _lineChain(pts);
+}
+
+function _makeZigzagParts(x0, x1, yTop, yBottom, repeats) {
+  var unit = (x1 - x0) / repeats;
+  var pts = [{ x: x0, y: yBottom }];
+  for (var i = 0; i < repeats; i++) {
+    var xMid = x0 + i * unit + unit / 2;
+    var xEnd = x0 + (i + 1) * unit;
+    pts.push({ x: xMid, y: yTop });
+    pts.push({ x: xEnd, y: yBottom });
+  }
+  return _lineChain(pts);
+}
+
+/* 把同一種圖案依 colors.length 切成好幾個水平帶（行），
+ * 每行指派一個顏色（墨水線顏色，呼應紙本練字簿每行換色的設計）。 */
+function _makeWorksheetRows(patternFn, colors) {
+  var n = colors.length;
+  var marginTop = 20, marginBottom = 15;
+  var band = (200 - marginTop - marginBottom) / n;
+  var amp = Math.min(30, band * 0.62);
+  var rows = [];
+  for (var i = 0; i < n; i++) {
+    var bandTop = marginTop + i * band;
+    var yTop = bandTop + (band - amp) / 2;
+    var yBottom = yTop + amp;
+    rows.push({
+      parts: patternFn(20, 180, yTop, yBottom, 3),
+      color: colors[i],
+      samples: 56
+    });
+  }
+  return rows;
 }
