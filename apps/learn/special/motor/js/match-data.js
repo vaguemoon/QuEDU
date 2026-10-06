@@ -82,17 +82,18 @@ var MATCH_ICON_FAMILIES = {
     }
   },
   target: {
+    /* 同心圓本身是完全旋轉對稱的圖形，之前這裡還有一個 rotation 參數，
+     * 但旋轉同心圓畫出來的結果完全一樣——等於有時候干擾項「唯一換掉的參數」
+     * 根本沒有視覺效果，變成兩個看起來一模一樣的選項。已拿掉這個參數，
+     * 改用 gap 的粗細對比拉大（1 → 5），讓這個參數本身就是明確可辨的差異。 */
     paramSpecs: {
       rings: [2, 3, 4],
       colorIdx: [0, 1, 2, 3, 4],
-      rotation: [0, 45, 90, 135],
       gap: ['thin', 'thick']
     },
     render: function(svg, p) {
-      var g = document.createElementNS(SVGNS, 'g');
-      g.setAttribute('transform', 'rotate(' + p.rotation + ' 50 50)');
       var maxR = 38, step = maxR / p.rings;
-      var gapW = p.gap === 'thick' ? 3 : 1;
+      var gapW = p.gap === 'thick' ? 5 : 1;
       for (var i = p.rings; i >= 1; i--) {
         var c = document.createElementNS(SVGNS, 'circle');
         c.setAttribute('cx', 50); c.setAttribute('cy', 50);
@@ -100,12 +101,27 @@ var MATCH_ICON_FAMILIES = {
         c.setAttribute('fill', i % 2 === 1 ? MATCH_PALETTE[p.colorIdx] : 'white');
         c.setAttribute('stroke', MATCH_PALETTE[p.colorIdx]);
         c.setAttribute('stroke-width', 1.5);
-        g.appendChild(c);
+        svg.appendChild(c);
       }
-      svg.appendChild(g);
     }
   }
 };
+
+/* 「視覺特徵碼」——用來保證範本＋3個干擾項彼此看起來都不一樣（不只是跟範本比，
+ * 干擾項互相之間也不能撞），避免像星星在某些 points 下旋轉剛好對稱、看起來跟沒換一樣
+ * 這種「參數不同但畫出來一樣」的情況漏網。星星有 N 個尖角時，每 360/N 度會重複一次，
+ * 所以 rotation 要先對這個週期取餘數再比較，不然同一個外觀會被誤判成不同的兩個選項。 */
+function _matchSignature(family, p) {
+  if (family === 'star') {
+    var period = 360 / p.points;
+    var normRot = Math.round(((p.rotation % period) + period) % period);
+    return ['star', p.points, normRot, p.colorIdx, p.depth].join('|');
+  }
+  if (family === 'target') {
+    return ['target', p.rings, p.colorIdx, p.gap].join('|');
+  }
+  return ['face', p.eyeStyle, p.mouthStyle, p.colorIdx].join('|');
+}
 
 var MATCH_FAMILY_NAMES = Object.keys(MATCH_ICON_FAMILIES);
 
@@ -134,16 +150,28 @@ function _matchDistractorParams(base, family, changeCount) {
   return variant;
 }
 
-/* 產生一題：{ family, reference, options:[{params,correct}], correctIdx } */
+/* 產生一題：{ family, reference, options:[{params,correct}], correctIdx }
+ * 每個干擾項都要跟範本、也跟其他已經生成的干擾項「視覺特徵碼」不同，
+ * 不然會出現兩個選項看起來一模一樣、根本分不出哪個才是對的（辨別度等於零）。
+ * changeCount 只決定差異有多細微，不決定「有沒有差異」——這裡強制保證一定要有差異。 */
 function generateMatchRound(difficulty) {
   var family = MATCH_FAMILY_NAMES[Math.floor(Math.random() * MATCH_FAMILY_NAMES.length)];
   var base = _matchRandomParams(family);
   var changeCount = difficulty === 'hard' ? 1 : (difficulty === 'medium' ? 2 : 4);
 
-  var options = [];
   var correctIdx = Math.floor(Math.random() * 4);
+  var options = [];
+  var signatures = [_matchSignature(family, base)];
   for (var i = 0; i < 4; i++) {
-    options.push(i === correctIdx ? base : _matchDistractorParams(base, family, changeCount));
+    if (i === correctIdx) { options.push(base); continue; }
+    var variant, sig, attempts = 0;
+    do {
+      variant = _matchDistractorParams(base, family, changeCount);
+      sig = _matchSignature(family, variant);
+      attempts++;
+    } while (signatures.indexOf(sig) !== -1 && attempts < 25);
+    signatures.push(sig);
+    options.push(variant);
   }
   return { family: family, reference: base, options: options, correctIdx: correctIdx };
 }
