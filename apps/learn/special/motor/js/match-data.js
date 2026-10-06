@@ -81,27 +81,83 @@ var MATCH_ICON_FAMILIES = {
       svg.appendChild(mouth);
     }
   },
-  target: {
-    /* 同心圓本身是完全旋轉對稱的圖形，之前這裡還有一個 rotation 參數，
-     * 但旋轉同心圓畫出來的結果完全一樣——等於有時候干擾項「唯一換掉的參數」
-     * 根本沒有視覺效果，變成兩個看起來一模一樣的選項。已拿掉這個參數，
-     * 改用 gap 的粗細對比拉大（1 → 5），讓這個參數本身就是明確可辨的差異。 */
+  /* 原本這裡是「同心圓」家族，換成交通工具／生活用品，比較貼近小二生活經驗，
+   * 也順便避開同心圓那種「奇偶圈數決定填色深淺」造成某些組合看起來特別小/淡的問題——
+   * 這裡每個參數都是「整塊實色形狀」等級的差異，不會有畫出來幾乎看不見的情況。 */
+  car: {
     paramSpecs: {
-      rings: [2, 3, 4],
+      bodyStyle: ['sedan', 'van'],
       colorIdx: [0, 1, 2, 3, 4],
-      gap: ['thin', 'thick']
+      wheelStyle: ['plain', 'spoked']
     },
     render: function(svg, p) {
-      var maxR = 38, step = maxR / p.rings;
-      var gapW = p.gap === 'thick' ? 5 : 1;
-      for (var i = p.rings; i >= 1; i--) {
-        var c = document.createElementNS(SVGNS, 'circle');
-        c.setAttribute('cx', 50); c.setAttribute('cy', 50);
-        c.setAttribute('r', step * i - gapW);
-        c.setAttribute('fill', i % 2 === 1 ? MATCH_PALETTE[p.colorIdx] : 'white');
-        c.setAttribute('stroke', MATCH_PALETTE[p.colorIdx]);
-        c.setAttribute('stroke-width', 1.5);
-        svg.appendChild(c);
+      var color = MATCH_PALETTE[p.colorIdx];
+      var body = document.createElementNS(SVGNS, 'path');
+      body.setAttribute('d', p.bodyStyle === 'van'
+        ? 'M 8,68 L 8,38 Q 8,32 16,32 L 84,32 Q 92,32 92,38 L 92,68 Z'
+        : 'M 8,68 L 8,56 L 24,44 L 40,38 L 66,38 L 80,50 L 92,56 L 92,68 Z');
+      body.setAttribute('fill', color);
+      svg.appendChild(body);
+
+      var win = document.createElementNS(SVGNS, 'rect');
+      win.setAttribute('x', 34); win.setAttribute('y', p.bodyStyle === 'van' ? 38 : 44);
+      win.setAttribute('width', 32); win.setAttribute('height', 14); win.setAttribute('rx', 2);
+      win.setAttribute('fill', 'white');
+      svg.appendChild(win);
+
+      [28, 72].forEach(function(wx) {
+        var wheel = document.createElementNS(SVGNS, 'circle');
+        wheel.setAttribute('cx', wx); wheel.setAttribute('cy', 68); wheel.setAttribute('r', 11);
+        wheel.setAttribute('fill', '#1e2d3d');
+        svg.appendChild(wheel);
+        if (p.wheelStyle === 'spoked') {
+          for (var a = 0; a < 3; a++) {
+            var rad = (a * 60) * Math.PI / 180;
+            var line = document.createElementNS(SVGNS, 'line');
+            line.setAttribute('x1', wx); line.setAttribute('y1', 68);
+            line.setAttribute('x2', wx + 8 * Math.cos(rad)); line.setAttribute('y2', 68 + 8 * Math.sin(rad));
+            line.setAttribute('stroke', 'white'); line.setAttribute('stroke-width', 2);
+            svg.appendChild(line);
+          }
+        } else {
+          var hub = document.createElementNS(SVGNS, 'circle');
+          hub.setAttribute('cx', wx); hub.setAttribute('cy', 68); hub.setAttribute('r', 4);
+          hub.setAttribute('fill', 'white');
+          svg.appendChild(hub);
+        }
+      });
+    }
+  },
+  cup: {
+    paramSpecs: {
+      handleSide: ['left', 'right'],
+      colorIdx: [0, 1, 2, 3, 4],
+      pattern: ['plain', 'striped']
+    },
+    render: function(svg, p) {
+      var color = MATCH_PALETTE[p.colorIdx];
+      var body = document.createElementNS(SVGNS, 'rect');
+      body.setAttribute('x', 28); body.setAttribute('y', 28);
+      body.setAttribute('width', 44); body.setAttribute('height', 48); body.setAttribute('rx', 6);
+      body.setAttribute('fill', color);
+      svg.appendChild(body);
+
+      var hx = p.handleSide === 'left' ? 28 : 72;
+      var sign = p.handleSide === 'left' ? -1 : 1;
+      var handle = document.createElementNS(SVGNS, 'path');
+      handle.setAttribute('d', 'M ' + hx + ',40 Q ' + (hx + sign * 20) + ',52 ' + hx + ',64');
+      handle.setAttribute('fill', 'none'); handle.setAttribute('stroke', color); handle.setAttribute('stroke-width', 7);
+      handle.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(handle);
+
+      if (p.pattern === 'striped') {
+        [36, 46, 56, 66].forEach(function(y) {
+          var stripe = document.createElementNS(SVGNS, 'rect');
+          stripe.setAttribute('x', 28); stripe.setAttribute('y', y);
+          stripe.setAttribute('width', 44); stripe.setAttribute('height', 4);
+          stripe.setAttribute('fill', 'white');
+          svg.appendChild(stripe);
+        });
       }
     }
   }
@@ -117,8 +173,11 @@ function _matchSignature(family, p) {
     var normRot = Math.round(((p.rotation % period) + period) % period);
     return ['star', p.points, normRot, p.colorIdx, p.depth].join('|');
   }
-  if (family === 'target') {
-    return ['target', p.rings, p.colorIdx, p.gap].join('|');
+  if (family === 'car') {
+    return ['car', p.bodyStyle, p.colorIdx, p.wheelStyle].join('|');
+  }
+  if (family === 'cup') {
+    return ['cup', p.handleSide, p.colorIdx, p.pattern].join('|');
   }
   return ['face', p.eyeStyle, p.mouthStyle, p.colorIdx].join('|');
 }
@@ -159,17 +218,23 @@ function generateMatchRound(difficulty) {
   var base = _matchRandomParams(family);
   var changeCount = difficulty === 'hard' ? 1 : (difficulty === 'medium' ? 2 : 4);
 
+  var paramCount = Object.keys(MATCH_ICON_FAMILIES[family].paramSpecs).length;
   var correctIdx = Math.floor(Math.random() * 4);
   var options = [];
   var signatures = [_matchSignature(family, base)];
   for (var i = 0; i < 4; i++) {
     if (i === correctIdx) { options.push(base); continue; }
-    var variant, sig, attempts = 0;
-    do {
-      variant = _matchDistractorParams(base, family, changeCount);
-      sig = _matchSignature(family, variant);
-      attempts++;
-    } while (signatures.indexOf(sig) !== -1 && attempts < 25);
+    // car/cup 這種參數值域很小的家族，在 hard 難度（只換1個參數）有時候 30 次都剛好
+    // 撞到已經用過的組合——與其無限加大重試次數賭運氣，找不到就多換一個參數再試，
+    // 保證一定找得到（car/cup 全部參數隨機組合有 20 種，4 個選項絕對夠用）。
+    var variant, sig, found = false;
+    for (var cc = Math.min(changeCount, paramCount); cc <= paramCount && !found; cc++) {
+      for (var attempts = 0; attempts < 30 && !found; attempts++) {
+        variant = _matchDistractorParams(base, family, cc);
+        sig = _matchSignature(family, variant);
+        if (signatures.indexOf(sig) === -1) found = true;
+      }
+    }
     signatures.push(sig);
     options.push(variant);
   }
