@@ -5,6 +5,7 @@ var _trRows      = [];   // [{ samples, covered, color, done, inkGroupEl }]
 var _trActiveRow = -1;   // 目前正在描的行；-1 表示沒有在拖曳
 var _trDragging  = false;
 var _trCurSeg    = null; // { onTrack, el, pts }
+var _trWentOffTrack = false; // 這次拖曳有沒有出現過橘色（超出容許誤差）的線——有的話就不算過
 var TR_TOLERANCE   = 9;    // 判定用的容許半徑——原本 16 比畫面上的點/線視覺粗細寬鬆很多，縮小讓「描到」更接近真的描到
 var TR_START_TOL   = 30;   // 這個是「抓到起點」的容許度，跟描線精準度無關，維持原樣不然會很難起手
 var TR_PASS_RATIO  = 0.92; // 幾乎每個點都要碰到才算過關，不能只描一部分
@@ -151,6 +152,7 @@ function _trPointerDown(e) {
   row.covered = row.samples.map(function() { return false; });
   row.inkGroupEl.innerHTML = '';
   _trCurSeg = null;
+  _trWentOffTrack = false;
   _trMarkCovered(best, 0);
   _trAppendInkPoint(pt, true);
   try { svg.setPointerCapture(e.pointerId); } catch(err) {}
@@ -164,6 +166,7 @@ function _trPointerMove(e) {
   var near = _trNearestSample(row.samples, pt);
   var onTrack = near.dist <= TR_TOLERANCE;
   if (onTrack) _trMarkCovered(_trActiveRow, near.idx);
+  else _trWentOffTrack = true; // 畫出橘色線 = 這次整輪就不算過，不管後面描得多準
   _trAppendInkPoint(pt, onTrack);
   _trUpdateRowProgressGlow();
 }
@@ -179,7 +182,7 @@ function _trPointerUp(e) {
   var pct = doneCount / row.covered.length;
   var reachedEnd = row.covered.slice(-TR_END_SAMPLES).indexOf(true) !== -1;
 
-  if (pct >= TR_PASS_RATIO && reachedEnd) {
+  if (pct >= TR_PASS_RATIO && reachedEnd && !_trWentOffTrack) {
     row.done = true;
     flashBox('motor-svg', 'green');
     renderTracing(); // 重繪成「已完成」樣式（虛線/發光點/箭頭都變暗），順便清掉其他行未完成的墨水線
