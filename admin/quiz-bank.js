@@ -675,7 +675,10 @@ function _qbLoadTextRow(dk, grade, lesson, lessonName) {
           'style="padding:6px 18px;border:none;border-radius:8px;background:var(--blue);color:white;' +
           'font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">儲存課文全文</button>' +
       '</div>' +
-      '<div style="font-size:.8rem;font-weight:800;margin-bottom:8px">📤 分享給班級（課文趣的學生才看得到）</div>';
+      '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📤 分享給班級（課文趣的學生才看得到）</div>' +
+      '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px">' +
+        '已經分享過的班級，之後按「儲存課文全文」內容就會自動同步給他們；這裡只有在要改變「分享給哪些班級」時才需要用。' +
+      '</div>';
 
     if (!classes.length) {
       html += '<div style="color:var(--muted);font-size:.82rem">尚未建立班級。</div>';
@@ -967,6 +970,34 @@ function _qbFullTextFileSelected(dk, input) {
   else fr.readAsArrayBuffer(file);
 }
 
+/* 每個已分享的班級各自存一份「分享快照」，供課文趣的學生端查詢班級可讀的課文——
+   學生讀的是這份快照，不是 lessonTexts 本身，所以內容異動都要同步到這裡才會反映到學生畫面。
+   prevIds（上一次分享的班級，若有變動要把不在新名單裡的刪掉）可省略，省略時只新增/覆蓋不刪除，
+   適合「內容變了但分享班級沒變」這種情境（_qbSaveLessonText 存檔時自動同步用）。 */
+function _qbSyncSharedSnapshots(info, fullText, pronFixes, classIds, prevIds) {
+  var batch = db.batch();
+  (prevIds || []).forEach(function(cid) {
+    if (classIds.indexOf(cid) === -1) {
+      batch.delete(db.collection('classes').doc(cid).collection('sharedLessonTexts').doc(info.docId));
+    }
+  });
+  classIds.forEach(function(cid) {
+    batch.set(db.collection('classes').doc(cid).collection('sharedLessonTexts').doc(info.docId), {
+      teacherUid: currentTeacher.uid,
+      grade:      info.grade,
+      lesson:     info.lesson,
+      lessonName: info.lessonName,
+      fullText:   fullText,
+      pronFixes:  pronFixes,
+      sharedAt:   new Date().toISOString()
+    });
+  });
+  return batch.commit();
+}
+
+/* 存課文全文（含破音字設定）。如果這一課已經分享給班級，存檔後會順便自動把分享快照也同步更新，
+   不用每次改完內容都要記得再手動按一次「更新分享班級」——那個按鈕只在「要改分享的班級名單」
+   時才需要用到。 */
 function _qbSaveLessonText(dk) {
   var info = _qbTextInfo[dk];
   var ta   = document.getElementById('qb-text-ta-' + dk);
@@ -985,8 +1016,15 @@ function _qbSaveLessonText(dk) {
     pronFixes:  pronFixes,
     updatedAt:  new Date().toISOString()
   }, { merge: true }).then(function() {
+    var sharedIds = info.sharedClassIds || [];
+    if (!sharedIds.length) return null;
+    return _qbSyncSharedSnapshots(info, text, pronFixes, sharedIds);
+  }).then(function(synced) {
     info.pronFixes = pronFixes;
-    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已儲存'; }
+    if (statusEl) {
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = synced !== null ? '✅ 已儲存（已同步更新到已分享的班級）' : '✅ 已儲存';
+    }
     showToast('✅ 課文全文已儲存');
   }).catch(function(e) {
     if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
@@ -1020,26 +1058,7 @@ function _qbSaveLessonShare(dk) {
     sharedClassIds: classIds,
     updatedAt:  new Date().toISOString()
   }, { merge: true }).then(function() {
-    /* 每個班級各自存一份「分享列表」快照，供課文趣的學生端查詢班級可讀的課文 */
-    var batch = db.batch();
-    var prevIds = info.sharedClassIds || [];
-    prevIds.forEach(function(cid) {
-      if (classIds.indexOf(cid) === -1) {
-        batch.delete(db.collection('classes').doc(cid).collection('sharedLessonTexts').doc(info.docId));
-      }
-    });
-    classIds.forEach(function(cid) {
-      batch.set(db.collection('classes').doc(cid).collection('sharedLessonTexts').doc(info.docId), {
-        teacherUid: currentTeacher.uid,
-        grade:      info.grade,
-        lesson:     info.lesson,
-        lessonName: info.lessonName,
-        fullText:   fullText,
-        pronFixes:  pronFixes,
-        sharedAt:   new Date().toISOString()
-      });
-    });
-    return batch.commit();
+    return _qbSyncSharedSnapshots(info, fullText, pronFixes, classIds, info.sharedClassIds || []);
   }).then(function() {
     info.sharedClassIds = classIds;
     info.pronFixes = pronFixes;
