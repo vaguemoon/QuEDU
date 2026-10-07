@@ -55,16 +55,40 @@ function numberToChinese(n) {
   return CN_DIGITS[tens] + '十' + (ones ? CN_DIGITS[ones] : '');
 }
 
+/* 播放錄音用的共用 Audio 元素——平板上連點連得快時，每次都 new 一個全新 Audio 物件
+ * 容易撞到瀏覽器的併發播放限制而被默默擋掉；重複使用同一個元素、播放前先 pause 一次，
+ * 才能保證上一段還沒播完時不會卡住下一段 */
+var _motorAudioEl = null;
+function _motorPlayClip(audioData) {
+  if (!_motorAudioEl) _motorAudioEl = new Audio();
+  try { _motorAudioEl.pause(); } catch (e) {}
+  _motorAudioEl.src = audioData;
+  return _motorAudioEl.play();
+}
+
 /* 連到一個點時唸出那個點的標籤
- * label：注音符號字串，或數字（number 或 numeric string） */
+ * label：注音符號字串，或數字（number 或 numeric string）
+ *
+ * audio.play() 回傳的是 Promise，平板上常因為瀏覽器的自動播放限制或資源不足而「非同步」
+ * 被拒絕（reject）——這種拒絕不會被同步的 try/catch 接住，一定要另外接 .catch()，
+ * 不然會整個播放失敗又沒有退回 TTS，變成完全沒聲音、也看不出任何錯誤（這就是平板上
+ * 「有時候注音不會唸」的主因）。 */
 function speakDotLabel(label, isZhuyin) {
   if (!soundEnabled) return;
   if (isZhuyin) {
     var audioData = _motorZhuyinAudio[label];
     if (audioData) {
-      try { new Audio(audioData).play(); return; } catch (e) {}
+      var started = false;
+      try {
+        var playPromise = _motorPlayClip(audioData);
+        started = true;
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function() { _motorSpeak(label); });
+        }
+      } catch (e) { started = false; }
+      if (started) return;
     }
-    _motorSpeak(label); // 這個符號還沒有老師錄音，退回 TTS 唸符號本身
+    _motorSpeak(label); // 這個符號還沒有老師錄音，或錄音播放失敗，退回 TTS 唸符號本身
   } else {
     _motorSpeak(numberToChinese(Number(label)));
   }
