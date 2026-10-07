@@ -180,7 +180,7 @@ function etRenderText() {
     }
     var spans = line.chars.map(function(c, ci) {
       if (c.interactive) {
-        return '<span class="et-char" data-line="' + li + '" data-ci="' + ci + '">' + c.ch + '</span>';
+        return '<span class="et-char" data-line="' + li + '" data-ci="' + ci + '">' + c.ch + _etReadingVS(li, ci) + '</span>';
       }
       return '<span class="et-punct">' + c.ch + '</span>';
     }).join('');
@@ -282,14 +282,16 @@ function etFinalizeSelection() {
   if (!line) return;
   var text = line.chars.slice(lo, hi + 1).map(function(c) { return c.ch; }).join('');
   if (!text) return;
-  etHandleCircledText(text);
+  etHandleCircledText(text, { line: etDragLineIdx, ci: lo });
 }
 
-/* ── 圈到／點到文字後：一律先發音＋查詢，符合本課生字詞的話額外標記＋算進度 ── */
-function etHandleCircledText(text) {
-  etSpeak(text);
+/* ── 圈到／點到文字後：一律先發音＋查詢，符合本課生字詞的話額外標記＋算進度 ──
+   posCtx（{line, ci}）是這段文字在課文裡的起始位置，用來精準套用該位置的破音字讀音調整；
+   從「已找到」清單複習點進來時沒有 posCtx（不知道原本在課文哪個位置），就不套用調整 */
+function etHandleCircledText(text, posCtx) {
+  etSpeak(text, posCtx);
   var matched = etMatchOfficial(text);
-  showEtLookupPopup(text, matched);
+  showEtLookupPopup(text, matched, posCtx);
   if (matched && !etFoundWords[text]) {
     etFoundWords[text] = true;
     sfxCorrect();
@@ -301,7 +303,7 @@ function etHandleCircledText(text) {
 }
 
 /* ── 查詢彈窗：本課生字詞優先顯示老師自己的解釋，其餘退回萌典 ── */
-function showEtLookupPopup(text, matched) {
+function showEtLookupPopup(text, matched, posCtx) {
   var popup = document.getElementById('et-lookup-popup');
   if (!popup) return;
   document.getElementById('et-lookup-word').textContent = text;
@@ -322,7 +324,7 @@ function showEtLookupPopup(text, matched) {
   popup.style.display = '';
   popup.classList.add('show');
 
-  lookupWord(text).then(function(info) {
+  lookupWord(text, posCtx).then(function(info) {
     var bEl = document.getElementById('et-lookup-bopomofo');
     var dEl = document.getElementById('et-lookup-def');
     if (bEl) bEl.textContent = info.bopomofo || (info.fromTeacher ? '（老師的解釋）' : '（查無注音）');
@@ -387,7 +389,7 @@ function etSpeakLine(li) {
   if (lineEl) lineEl.classList.add('et-line-reading');
   etSpeakWithCallback(line.text, function() {
     if (lineEl) lineEl.classList.remove('et-line-reading');
-  });
+  }, { line: li, ci: 0 });
 }
 
 function etClearReadingHighlight() {

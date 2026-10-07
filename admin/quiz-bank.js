@@ -642,11 +642,7 @@ function _qbLoadTextRow(dk, grade, lesson, lessonName) {
     var pronFixes = textDoc.exists ? (textDoc.data().pronFixes || {}) : {};
 
     _qbTextInfo[dk] = { grade: grade, lesson: lesson, lessonName: lessonName, docId: docId, sharedClassIds: sharedClassIds, pronFixes: pronFixes };
-
-    var pronFixKeys = Object.keys(pronFixes);
-    var pronFixRows = pronFixKeys.length
-      ? pronFixKeys.map(function(orig) { return _qbPronFixRowHtml(orig, pronFixes[orig]); }).join('')
-      : _qbPronFixRowHtml('', '');
+    _qbPendingPronFixes[dk] = pronFixes;
 
     var html =
       '<div style="font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
@@ -668,18 +664,11 @@ function _qbLoadTextRow(dk, grade, lesson, lessonName) {
         '<span style="font-size:.74rem;color:var(--muted);font-weight:600">把游標放在要分段的地方再按這個按鈕</span>' +
       '</div>' +
       '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📄 分段預覽（學生在課文趣實際看到的樣子）</div>' +
-      '<div id="qb-text-preview-' + dk + '" style="margin-bottom:16px"></div>' +
-      '<div style="font-size:.8rem;font-weight:800;margin:14px 0 4px">🔤 破音字讀音調整</div>' +
       '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
-        '課文裡的破音字（同一個字有不同唸法），可以指定一個「同音字」讓系統改用那個字的發音來唸，' +
-        '查詢彈窗顯示的注音也會一起換成正確讀音（例如「偕」在「馬偕」裡要唸作「街」）。整課同一字元都會套用。' +
+        '文字下面有虛線的字是多音字，點一下可以選這個字在這裡要唸的讀音（只影響這一次出現，' +
+        '課文裡其他地方的同一個字不受影響）；畫面上的注音會直接換成選的讀音。' +
       '</div>' +
-      '<div id="qb-pronfix-rows-' + dk + '">' + pronFixRows + '</div>' +
-      '<div style="margin-bottom:12px">' +
-        '<button type="button" onclick="_qbAddPronFixRow(\'' + dk + '\')" ' +
-          'style="padding:5px 14px;border:1.5px solid var(--border);border-radius:8px;background:white;' +
-          'color:inherit;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">➕ 新增一組</button>' +
-      '</div>' +
+      '<div id="qb-text-preview-' + dk + '" style="margin-bottom:16px"></div>' +
       '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:8px 0 16px">' +
         '<span id="qb-text-status-' + dk + '" style="font-size:.78rem;font-weight:700;color:var(--muted)"></span>' +
         '<button onclick="_qbSaveLessonText(\'' + dk + '\')" ' +

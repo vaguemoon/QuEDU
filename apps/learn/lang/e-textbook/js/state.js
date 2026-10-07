@@ -15,7 +15,8 @@ var etVocab = {};             // { word: teacherDef }，本課配套生字詞（
 var etFoundWords = {};        // { word: true }，本課已找到的生字詞（持久保存）
 var etWordImageMap = {};      // { word: imageUrl }，全校詞語圖庫，供圈詞查詢時顯示圖片
 var etLookupCache = {};       // 萌典查詢快取 { text: { bopomofo, def } }（沒對到題庫生字詞時的備援）
-var etPronFixes = {};         // { 原字: 替代同音字 }，破音字讀音調整（老師設定），整課同一字元都套用
+var etPronFixes = {};         // { "行:字元序": {ch, readingIndex, homophone} }，破音字讀音調整（老師設定）
+                               // 用「行:字元序」精準指到課文裡的某一次出現，不會牽連到同一個字的其他出現
 
 /* 朗讀語速：可調 0.5～1.2，這個 App 服務對象需要比一般更慢的預設語速；
    用 localStorage 記住這台裝置上次設定的語速／字體大小 */
@@ -112,14 +113,41 @@ function _etSplitLines(fullText) {
   return lines;
 }
 
-/* ── 破音字讀音調整：把文字裡設定過的原字換成老師指定的同音字，供「發音」與「注音查詢」共用 ──
-   只影響發出去聽／查的那一份字串，畫面顯示的原文完全不受影響 */
-function etApplyPronFixes(text) {
-  if (!text || !etPronFixes) return text;
+/* ── 破音字讀音調整：指到課文裡「某一行、第幾個字」的精準位置設定，不是整課同一字元都套用 ──
+   每個字元在編輯課文全文之後都可能被老師增刪字移位，所以套用前一定要先核對
+   etLines 裡那個位置「現在」還是不是當初設定的那個字，字不一樣就當作沒設定過（安全失效，
+   不會誤套到編輯後跑位的其他字上） */
+function _etReadingFixAt(line, ci) {
+  var fix = etPronFixes[line + ':' + ci];
+  if (!fix) return null;
+  var lineObj = etLines[line];
+  var charObj = lineObj && lineObj.chars && lineObj.chars[ci];
+  if (!charObj || charObj.ch !== fix.ch) return null;
+  return fix;
+}
+
+/* 畫面顯示用：這個位置若有設定正確讀音，回傳接在字元後面的隱形「異體字選擇子」（IVS），
+   注音字型（BpmfZihiKai／字嗨注音楷體）看到這個字元+選擇子的組合，就會畫出對應讀音的字形——
+   字元本身完全不用換，瀏覽器複製貼上、朗讀文字抽取都還是原字。沒設定或 readingIndex 是
+   預設讀音（0）就不用加，字型本來就是先顯示第一讀音 */
+function _etReadingVS(line, ci) {
+  var fix = _etReadingFixAt(line, ci);
+  if (!fix || !fix.readingIndex) return '';
+  return String.fromCodePoint(0xE01E0 + fix.readingIndex);
+}
+
+/* 破音字讀音調整：把 posCtx（{line, ci}，text 在課文裡的起始位置）範圍內、有設定「朗讀同音字」
+   的字元換成老師指定的同音字，供「發音」與「注音查詢」共用；沒有 posCtx（例如點「已找到」
+   清單裡的詞語複習，已經不知道原本在課文裡哪個位置）就不套用任何調整，唸/查原字預設讀音。
+   只影響發出去聽／查的那一份字串，畫面顯示的原文完全不受影響——顯示用的異體字選擇子是
+   etRenderText() 另外處理的 */
+function etApplyPronFixes(text, posCtx) {
+  if (!text) return text;
+  if (!posCtx) return text;
   var out = '';
   for (var i = 0; i < text.length; i++) {
-    var ch = text[i];
-    out += Object.prototype.hasOwnProperty.call(etPronFixes, ch) ? etPronFixes[ch] : ch;
+    var fix = _etReadingFixAt(posCtx.line, posCtx.ci + i);
+    out += (fix && fix.homophone) ? fix.homophone : text[i];
   }
   return out;
 }
@@ -214,27 +242,34 @@ function _etFetchMoedict(q) {
     .catch(function() { return null; });
 }
 
-function lookupWord(text) {
+function lookupWord(text, posCtx) {
   /* 優先用老師自己在題庫寫的解釋，比萌典的通用解釋更貼近學生程度 */
   if (etVocab[text]) return Promise.resolve({ bopomofo: '', def: etVocab[text], fromTeacher: true });
 
-  /* 破音字讀音調整：注音顯示改用老師設定的同音字查到的讀音，但解釋仍查原字，避免誤用替代字的字義 */
-  var subText  = etApplyPronFixes(text);
-  var hasFix   = subText !== text;
-  var cacheKey = hasFix ? (text + '␟' + subText) : text;
+  /* 破音字讀音調整：單一字元、且這個位置有設定正確讀音時，注音直接用老師選的讀音（本地讀音表，
+     不用再查字典猜），解釋則在萌典回傳的多筆讀音裡找跟這個讀音對得上的那一筆，對不到才退回第一筆 */
+  var fixedReading = null;
+  if (posCtx && text.length === 1) {
+    var fix = _etReadingFixAt(posCtx.line, posCtx.ci);
+    if (fix && HETERONYM_READINGS[fix.ch] && HETERONYM_READINGS[fix.ch][fix.readingIndex]) {
+      fixedReading = HETERONYM_READINGS[fix.ch][fix.readingIndex];
+    }
+  }
+  var cacheKey = fixedReading ? (text + '␟' + fixedReading) : text;
   if (etLookupCache[cacheKey]) return Promise.resolve(etLookupCache[cacheKey]);
 
-  var queries = hasFix ? [_etFetchMoedict(text), _etFetchMoedict(subText)] : [_etFetchMoedict(text)];
-  return Promise.all(queries).then(function(results) {
-    var data = results[0], subData = results[1];
+  return _etFetchMoedict(text).then(function(data) {
     var result = { bopomofo: '', def: '', fromTeacher: false };
     if (data && data.heteronyms && data.heteronyms.length) {
       var h = data.heteronyms[0];
-      result.bopomofo = h.bopomofo || '';
+      if (fixedReading) {
+        var matched = data.heteronyms.filter(function(x) { return x.bopomofo === fixedReading; })[0];
+        if (matched) h = matched;
+      }
+      result.bopomofo = fixedReading || h.bopomofo || '';
       if (h.definitions && h.definitions[0]) result.def = _etStripHtml(h.definitions[0].def);
-    }
-    if (subData && subData.heteronyms && subData.heteronyms.length) {
-      result.bopomofo = subData.heteronyms[0].bopomofo || result.bopomofo;
+    } else if (fixedReading) {
+      result.bopomofo = fixedReading;
     }
     etLookupCache[cacheKey] = result;
     return result;
