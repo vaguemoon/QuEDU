@@ -3,6 +3,7 @@
 var SVGNS = 'http://www.w3.org/2000/svg';
 
 var _d2dLevel      = null;
+var _d2dMode       = null;   // 這一次玩到的出題方式（'zhuyin' 或 'number'），開關卡時決定一次、全程不變
 var _d2dLabels     = null;   // 這一次玩到的標籤（每次開關卡都重新隨機產生，見 dot2dot-data.js）
 var _d2dProgress   = 0;      // 已完成的邊數（0 ~ N-1）
 var _d2dDragFrom   = -1;     // 拖曳起點的 point index
@@ -13,17 +14,18 @@ function openDot2Dot(levelIdx) {
   currentModule   = 'dot2dot';
   currentLevelIdx = levelIdx;
   _d2dLevel    = DOT2DOT_LEVELS[levelIdx];
-  _d2dLabels   = generateDot2DotLabels(_d2dLevel);
+  _d2dMode     = _d2dPickMode(_d2dLevel);
+  _d2dLabels   = generateDot2DotLabels(_d2dLevel, _d2dMode);
   _d2dProgress = 0;
   document.getElementById('game-title').textContent = _d2dLevel.title;
-  document.getElementById('game-hint').textContent = _d2dLevel.labelMode === 'zhuyin'
+  document.getElementById('game-hint').textContent = _d2dMode === 'zhuyin'
     ? '從綠色「起點」開始，照注音順序一個接一個連起來！'
     : '從綠色「起點」開始，數字一個接一個連起來！（不一定從 1 開始喔）';
   showSandbox('motor-sandbox');
   renderDot2Dot();
   showPage('game');
   setTimeout(function() {
-    speakDotLabel(_d2dLabels[0], _d2dLevel.labelMode === 'zhuyin');
+    speakDotLabel(_d2dLabels[0], _d2dMode === 'zhuyin');
   }, 400); // 等畫面切換動畫跑完再唸，不然聲音會卡在轉場中間
 }
 
@@ -171,7 +173,7 @@ function _d2dOnCorrectEdge() {
   sfxCorrect();
   showToast('✨ 接對了！');
   setTimeout(function() {
-    speakDotLabel(_d2dLabels[_d2dProgress], _d2dLevel.labelMode === 'zhuyin');
+    speakDotLabel(_d2dLabels[_d2dProgress], _d2dMode === 'zhuyin');
   }, 180); // 讓短音效先播完，唸出來的符號/數字才不會被蓋過去
 
   document.querySelectorAll('#d2d-dot-group .d2d-dot').forEach(function(g) {
