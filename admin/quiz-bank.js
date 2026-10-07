@@ -704,33 +704,11 @@ function _qbLoadTextRow(dk, grade, lesson, lessonName) {
   });
 }
 
-function _qbPronFixRowHtml(orig, sub) {
-  return '<div class="qb-pronfix-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px">' +
-    '<input type="text" class="qb-pronfix-orig" maxlength="4" placeholder="原字" value="' + _qbEscAttr(orig || '') + '" ' +
-      'style="width:56px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:.9rem;text-align:center">' +
-    '<span style="font-size:.78rem;color:var(--muted);font-weight:700;white-space:nowrap">唸作（同音字）</span>' +
-    '<input type="text" class="qb-pronfix-sub" maxlength="4" placeholder="替代字" value="' + _qbEscAttr(sub || '') + '" ' +
-      'style="width:56px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:.9rem;text-align:center">' +
-    '<button type="button" onclick="this.closest(\'.qb-pronfix-row\').remove()" ' +
-      'style="padding:4px 10px;border:none;border-radius:6px;background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit">✕</button>' +
-  '</div>';
-}
-
-function _qbAddPronFixRow(dk) {
-  var wrap = document.getElementById('qb-pronfix-rows-' + dk);
-  if (!wrap) return;
-  wrap.insertAdjacentHTML('beforeend', _qbPronFixRowHtml('', ''));
-}
-
-function _qbCollectPronFixes(dk) {
-  var fixes = {};
-  document.querySelectorAll('#qb-pronfix-rows-' + dk + ' .qb-pronfix-row').forEach(function(row) {
-    var orig = row.querySelector('.qb-pronfix-orig').value.trim();
-    var sub  = row.querySelector('.qb-pronfix-sub').value.trim();
-    if (orig && sub) fixes[orig] = sub;
-  });
-  return fixes;
-}
+/* dk -> { "行:字元序": {ch, readingIndex, homophone} }，老師正在編輯中、尚未按下「儲存課文全文」
+   的破音字調整（開啟這一列時先用 Firestore 存的值初始化，_qbCollectPronFixes() 存檔時讀這份） */
+var _qbPendingPronFixes = {};
+var _qbHeteronymPopoverDk  = null;
+var _qbHeteronymPopoverPos = null; // {line, ci, ch}
 
 function _qbEscTA(s) {
   return String(s || '').replace(/<\/textarea/gi, '&lt;/textarea');
@@ -739,43 +717,203 @@ function _qbEscAttr(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-/* 把課文全文拆成「段落」——跟課文趣 apps/learn/lang/e-textbook/js/state.js 的
-   _etSplitLines() 用同一個判斷方式（一行以上空行＝一個分段），這樣老師在這裡看到的
-   分段效果，才會跟學生實際在課文趣看到的完全一致，不是另外猜一套邏輯。 */
-function _qbSplitParagraphs(text) {
+/* 把課文全文拆成「行」，每行再拆成一個個 Unicode 字元——跟課文趣
+   apps/learn/lang/e-textbook/js/state.js 的 _etSplitLines() 用同一套邏輯（含中文字元判斷），
+   確保這裡算出來的「行:字元序」位置，跟學生端 etLines 的位置編號完全一致，老師點的那個字
+   才會精準對應到學生畫面上的同一個字。 */
+function _qbSplitLines(text) {
   var rawLines = String(text || '').split(/\r?\n/);
-  var paragraphs = [];
-  var current = [];
+  var lines = [];
   rawLines.forEach(function(line) {
-    if (line.trim() === '') {
-      if (current.length) { paragraphs.push(current.join('\n')); current = []; }
-    } else {
-      current.push(line);
+    var trimmed = line.trim();
+    if (!trimmed) {
+      if (lines.length && !lines[lines.length - 1].blank) lines.push({ text: '', chars: [], blank: true });
+      return;
     }
+    var chars = Array.from(trimmed).map(function(ch) {
+      return { ch: ch, interactive: /[一-鿿㐀-䶿]/.test(ch) };
+    });
+    lines.push({ text: trimmed, chars: chars, blank: false });
   });
-  if (current.length) paragraphs.push(current.join('\n'));
-  return paragraphs;
+  while (lines.length && lines[lines.length - 1].blank) lines.pop();
+  return lines;
 }
 
-/* 分段預覽——每一段各自用一個有邊框、有編號標籤的卡片呈現，段落之間明顯有間距，
-   不用再靠「文字框裡有沒有空一行」這種很容易看漏的方式去判斷分段有沒有抓對。 */
+/* 存檔用：只收集「現在文字框內容」位置還真的對得上那個字的設定——老師編輯課文全文時
+   增刪字可能讓位置跑掉，跑掉的設定就當作失效、不存檔，不會悄悄套到編輯後跑位的其他字上 */
+function _qbCollectPronFixes(dk) {
+  var ta = document.getElementById('qb-text-ta-' + dk);
+  var pending = _qbPendingPronFixes[dk] || {};
+  if (!ta) return pending;
+  var lines = _qbSplitLines(ta.value);
+  var out = {};
+  Object.keys(pending).forEach(function(key) {
+    var fix = pending[key];
+    var parts = key.split(':');
+    var charObj = lines[parts[0]] && lines[parts[0]].chars[parts[1]];
+    if (charObj && charObj.ch === fix.ch) out[key] = fix;
+  });
+  return out;
+}
+
+/* 分段預覽——每一段各自用一個有邊框、有編號標籤的卡片呈現（跟學生端 _etSplitLines() 同一套
+   分段判斷：一行以上空行＝一個分段）。多音字（HETERONYM_READINGS 裡有收錄的字）加上虛線底線、
+   可以點擊；點了開 _qbCharClick() 的讀音選單，已經設定過的字額外標色，滑鼠移上去用 title
+   顯示目前選的讀音。 */
 function _qbRenderTextPreview(dk) {
   var ta = document.getElementById('qb-text-ta-' + dk);
   var el = document.getElementById('qb-text-preview-' + dk);
   if (!ta || !el) return;
-  var paragraphs = _qbSplitParagraphs(ta.value);
-  if (!paragraphs.length) {
+  var lines = _qbSplitLines(ta.value);
+  if (!lines.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:4px 0">尚未輸入內容，預覽會顯示在這裡</div>';
     return;
   }
-  el.innerHTML = paragraphs.map(function(p, i) {
+  var fixes = _qbPendingPronFixes[dk] || {};
+  var paragraphs = [];
+  var current = [];
+  lines.forEach(function(line, li) {
+    if (line.blank) { if (current.length) { paragraphs.push(current); current = []; } }
+    else current.push(li);
+  });
+  if (current.length) paragraphs.push(current);
+
+  el.innerHTML = paragraphs.map(function(lineIdxs, pi) {
+    var body = lineIdxs.map(function(li, k) {
+      var line = lines[li];
+      var charsHtml = line.chars.map(function(c, ci) {
+        if (!c.interactive) return escHtml(c.ch);
+        var readings = HETERONYM_READINGS[c.ch];
+        if (!readings) return '<span>' + escHtml(c.ch) + '</span>';
+        var fix = fixes[li + ':' + ci];
+        var hasFix = fix && fix.ch === c.ch;
+        var title = hasFix ? ('目前讀音：' + (readings[fix.readingIndex] || '')) : '多音字，點選可調整這一個字的讀音';
+        return '<span class="qb-het-char" data-line="' + li + '" data-ci="' + ci + '" title="' + _qbEscAttr(title) + '" ' +
+          'onclick="_qbCharClick(\'' + dk + '\',' + li + ',' + ci + ',\'' + c.ch + '\',this)" ' +
+          'style="cursor:pointer;border-bottom:2px dashed ' + (hasFix ? 'var(--blue)' : 'var(--muted)') + ';' +
+          (hasFix ? 'background:var(--blue-lt);border-radius:3px' : '') + '">' + escHtml(c.ch) + '</span>';
+      }).join('');
+      return charsHtml + (k < lineIdxs.length - 1 ? '\n' : '');
+    }).join('');
     return '<div style="position:relative;background:white;border:1.5px solid var(--border);border-radius:8px;' +
       'padding:10px 12px 10px 44px;margin-bottom:10px;font-size:.88rem;line-height:1.8;white-space:pre-wrap">' +
       '<span style="position:absolute;left:8px;top:9px;font-size:.68rem;font-weight:800;color:var(--blue-dk);' +
-      'background:var(--blue-lt);padding:2px 6px;border-radius:6px;white-space:nowrap">第' + (i + 1) + '段</span>' +
-      escHtml(p) +
+      'background:var(--blue-lt);padding:2px 6px;border-radius:6px;white-space:nowrap">第' + (pi + 1) + '段</span>' +
+      body +
     '</div>';
   }).join('');
+}
+
+/* ── 破音字讀音選單：點預覽裡的多音字彈出來，選讀音＋選填朗讀同音字，即點即生效 ── */
+function _qbEnsureHeteronymPopover() {
+  var pop = document.getElementById('qb-heteronym-popover');
+  if (pop) return pop;
+  pop = document.createElement('div');
+  pop.id = 'qb-heteronym-popover';
+  pop.style.cssText = 'position:fixed;z-index:9999;display:none;background:white;border:1.5px solid var(--border);' +
+    'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px;min-width:220px;max-width:280px;' +
+    'font-family:"Noto Sans TC",sans-serif';
+  document.body.appendChild(pop);
+  document.addEventListener('pointerdown', function(e) {
+    if (pop.style.display === 'none') return;
+    if (pop.contains(e.target) || (e.target.classList && e.target.classList.contains('qb-het-char'))) return;
+    _qbCloseHeteronymPopover();
+  });
+  return pop;
+}
+
+function _qbCloseHeteronymPopover() {
+  var pop = document.getElementById('qb-heteronym-popover');
+  if (pop) pop.style.display = 'none';
+  _qbHeteronymPopoverDk  = null;
+  _qbHeteronymPopoverPos = null;
+}
+
+function _qbCharClick(dk, line, ci, ch, el) {
+  if (!HETERONYM_READINGS[ch]) return;
+  var pop = _qbEnsureHeteronymPopover();
+  _qbHeteronymPopoverDk  = dk;
+  _qbHeteronymPopoverPos = { line: line, ci: ci, ch: ch };
+  _qbRenderHeteronymPopoverContent();
+  pop.style.display = '';
+  var rect = el.getBoundingClientRect();
+  pop.style.top  = (rect.bottom + 6) + 'px';
+  pop.style.left = rect.left + 'px';
+  requestAnimationFrame(function() {
+    var pw = pop.offsetWidth;
+    if (rect.left + pw > window.innerWidth - 10) pop.style.left = Math.max(10, window.innerWidth - pw - 10) + 'px';
+  });
+}
+
+function _qbRenderHeteronymPopoverContent() {
+  var pop = document.getElementById('qb-heteronym-popover');
+  var dk = _qbHeteronymPopoverDk, pos = _qbHeteronymPopoverPos;
+  if (!pop || !dk || !pos) return;
+  var readings = HETERONYM_READINGS[pos.ch] || [];
+  var existing = (_qbPendingPronFixes[dk] || {})[pos.line + ':' + pos.ci];
+  var curIndex = (existing && existing.ch === pos.ch) ? existing.readingIndex : 0;
+  var curHomophone = (existing && existing.ch === pos.ch) ? (existing.homophone || '') : '';
+
+  pop.innerHTML =
+    '<div style="font-size:.78rem;font-weight:800;margin-bottom:8px">「' + escHtml(pos.ch) + '」選正確讀音</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">' +
+    readings.map(function(r, idx) {
+      var active = idx === curIndex;
+      return '<button type="button" onclick="_qbPickHeteronymReading(' + idx + ')" ' +
+        'style="padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.95rem;font-weight:700;' +
+        (active
+          ? 'border:2px solid var(--blue);background:var(--blue-lt);color:var(--blue-dk)'
+          : 'border:1.5px solid var(--border);background:white;color:inherit') +
+        '">' + escHtml(r) + '</button>';
+    }).join('') +
+    '</div>' +
+    '<label style="display:block;font-size:.74rem;color:var(--muted);font-weight:700;margin-bottom:4px">' +
+      '朗讀同音字（選填，只影響朗讀發音，不影響畫面注音）</label>' +
+    '<input type="text" id="qb-het-homophone" maxlength="4" value="' + _qbEscAttr(curHomophone) + '" placeholder="例：住" ' +
+      'oninput="_qbSetHeteronymHomophone(this.value)" ' +
+      'style="width:70px;padding:5px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;' +
+      'font-size:.9rem;text-align:center;margin-bottom:10px;display:block">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px">' +
+      '<button type="button" onclick="_qbClearHeteronymFix()" style="padding:5px 12px;border:none;border-radius:8px;' +
+        'background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.8rem">清除設定</button>' +
+      '<button type="button" onclick="_qbCloseHeteronymPopover()" style="padding:5px 12px;border:1.5px solid var(--border);' +
+        'border-radius:8px;background:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:.8rem">關閉</button>' +
+    '</div>';
+}
+
+function _qbPickHeteronymReading(idx) {
+  var dk = _qbHeteronymPopoverDk, pos = _qbHeteronymPopoverPos;
+  if (!dk || !pos) return;
+  var homophoneInput = document.getElementById('qb-het-homophone');
+  var homophone = homophoneInput ? homophoneInput.value.trim() : '';
+  if (!_qbPendingPronFixes[dk]) _qbPendingPronFixes[dk] = {};
+  var key = pos.line + ':' + pos.ci;
+  if (idx === 0 && !homophone) delete _qbPendingPronFixes[dk][key];
+  else _qbPendingPronFixes[dk][key] = { ch: pos.ch, readingIndex: idx, homophone: homophone };
+  _qbRenderTextPreview(dk);
+  _qbRenderHeteronymPopoverContent();
+}
+
+function _qbSetHeteronymHomophone(val) {
+  var dk = _qbHeteronymPopoverDk, pos = _qbHeteronymPopoverPos;
+  if (!dk || !pos) return;
+  val = val.trim();
+  if (!_qbPendingPronFixes[dk]) _qbPendingPronFixes[dk] = {};
+  var key = pos.line + ':' + pos.ci;
+  var existing = _qbPendingPronFixes[dk][key];
+  var curIndex = (existing && existing.ch === pos.ch) ? existing.readingIndex : 0;
+  if (curIndex === 0 && !val) delete _qbPendingPronFixes[dk][key];
+  else _qbPendingPronFixes[dk][key] = { ch: pos.ch, readingIndex: curIndex, homophone: val };
+  /* 只重畫底下的預覽標記，popover 裡的輸入框保持原樣、不重畫，不然打字打到一半會失焦 */
+  _qbRenderTextPreview(dk);
+}
+
+function _qbClearHeteronymFix() {
+  var dk = _qbHeteronymPopoverDk, pos = _qbHeteronymPopoverPos;
+  if (!dk || !pos) return;
+  if (_qbPendingPronFixes[dk]) delete _qbPendingPronFixes[dk][pos.line + ':' + pos.ci];
+  _qbRenderTextPreview(dk);
+  _qbRenderHeteronymPopoverContent();
 }
 
 /* 在游標位置插入一個明確的分段（一個空行），不用自己手動按空白鍵去空一行、
