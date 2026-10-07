@@ -14,7 +14,8 @@ var MODULE_REGISTRY = {
   dot2dot: { levelsVar: 'DOT2DOT_LEVELS', title: '🔢 連連看',   name: '連連看',   openFn: 'openDot2Dot' },
   tracing: { levelsVar: 'TRACING_LEVELS', title: '✏️ 線條練習', name: '線條練習', openFn: 'openTracing', randomChainOrder: true },
   match:   { levelsVar: 'MATCH_LEVELS',   title: '🔍 找一樣',   name: '找一樣',   openFn: 'openMatch' },
-  grid:    { levelsVar: 'GRID_LEVELS',    title: '🔢 方格抄寫', name: '方格抄寫', openFn: 'openGrid' }
+  grid:    { levelsVar: 'GRID_LEVELS',    title: '🔢 方格抄寫', name: '方格抄寫', openFn: 'openGrid' },
+  color:   { levelsVar: 'COLOR_LEVELS',   title: '🎨 著色小畫家', name: '著色小畫家', openFn: 'openColor' }
 };
 function _moduleLevels(m) { return window[MODULE_REGISTRY[m].levelsVar]; }
 

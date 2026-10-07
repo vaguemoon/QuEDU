@@ -94,6 +94,7 @@
 .module-card--tracing { border-left: 5px solid #27ae60; }
 .module-card--match   { border-left: 5px solid #8e44ad; }
 .module-card--grid    { border-left: 5px solid #e67e22; }
+.module-card--color   { border-left: 5px solid #e91e8c; }
 
 /* ══════════════════════════════════════
    選擇關卡頁
@@ -327,6 +328,38 @@
 .grid-picker-btn.grid-picker-wrong { animation: matchShake .4s; border-color: var(--red); }
 
 /* ══════════════════════════════════════
+   著色小畫家
+   ══════════════════════════════════════ */
+#color-sandbox {
+  width: 100%; height: 100%; padding: 16px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+}
+#color-svg {
+  width: auto; height: auto; max-width: 100%; max-height: 72%; aspect-ratio: 1 / 1;
+  background: white; border: 1.5px solid var(--border); border-radius: 14px;
+  box-shadow: var(--shadow); display: block; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none; -webkit-user-drag: none;
+}
+.color-region { cursor: pointer; stroke: #333; stroke-width: 2.5; transition: fill .15s; }
+.color-region-done { cursor: default; }
+.color-region-wrong { animation: matchShake .4s; }
+.color-region-label {
+  font-size: 13px; font-weight: 900; fill: #333; font-family: 'Noto Sans TC', sans-serif;
+}
+.color-palette { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
+.color-swatch-btn {
+  width: 58px; height: 58px; border: 3px solid white; border-radius: 50%;
+  box-shadow: var(--shadow); cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.color-swatch-btn:active { transform: scale(.92); }
+.color-swatch-btn.selected { border-color: var(--blue-dk); box-shadow: 0 0 0 3px var(--blue-lt), var(--shadow); }
+.color-swatch-label {
+  font-size: 1.1rem; font-weight: 900; color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,.5); pointer-events: none;
+}
+
+/* ══════════════════════════════════════
    結果頁
    ══════════════════════════════════════ */
 .result-wrap {
@@ -382,5 +415,5 @@
   .game-layout { grid-template-columns: 1fr; }
   #page-game.active { height: auto; overflow: visible; }
   .game-right { height: 60vh; }
-  #motor-sandbox, #match-sandbox, #grid-sandbox { height: 100%; }
+  #motor-sandbox, #match-sandbox, #grid-sandbox, #color-sandbox { height: 100%; }
 }
