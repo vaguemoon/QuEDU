@@ -173,9 +173,9 @@ function _randomZhuyinLabels(n) {
   return ZHUYIN_SEQUENCE.slice(start, start + n);
 }
 
-/* 數字關卡每次隨機挑起點，但把最大值壓在 30 以內，符合小朋友目前的數字範圍 */
+/* 數字關卡每次隨機挑起點，把最大值壓在 99 以內 */
 function _randomNumberLabels(n) {
-  var maxFinal = 30;
+  var maxFinal = 99;
   var maxStart = Math.max(1, maxFinal - n + 1);
   var start = Math.floor(Math.random() * maxStart) + 1;
   var labels = [];
