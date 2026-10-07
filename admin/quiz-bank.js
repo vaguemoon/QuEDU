@@ -657,9 +657,18 @@ function _qbLoadTextRow(dk, grade, lesson, lessonName) {
         '可上傳 .docx / .txt / .odt / .pdf 自動轉成文字（舊版 .doc 請先另存新檔為 .docx），也能直接手打或貼上。' +
       '</div>' +
       '<input type="file" accept=".docx,.doc,.txt,.odt,.pdf" onchange="_qbFullTextFileSelected(\'' + dk + '\', this)" style="margin-bottom:8px">' +
-      '<textarea id="qb-text-ta-' + dk + '" placeholder="課文全文…" style="width:100%;min-height:140px;padding:10px 12px;' +
+      '<textarea id="qb-text-ta-' + dk + '" placeholder="課文全文…（段落之間空一行就會分段）" ' +
+        'oninput="_qbRenderTextPreview(\'' + dk + '\')" style="width:100%;min-height:140px;padding:10px 12px;' +
         'border:1.5px solid var(--border);border-radius:8px;font-family:\'Noto Sans TC\',sans-serif;font-size:.88rem;' +
         'line-height:1.8;resize:vertical;box-sizing:border-box">' + _qbEscTA(fullText) + '</textarea>' +
+      '<div style="display:flex;align-items:center;gap:10px;margin:8px 0 14px">' +
+        '<button type="button" onclick="_qbInsertParaBreak(\'' + dk + '\')" ' +
+          'style="padding:5px 14px;border:1.5px solid var(--blue);border-radius:8px;background:var(--blue-lt);' +
+          'color:var(--blue-dk);font-size:.8rem;font-weight:800;cursor:pointer;font-family:inherit">⏎ 插入分段</button>' +
+        '<span style="font-size:.74rem;color:var(--muted);font-weight:600">把游標放在要分段的地方再按這個按鈕</span>' +
+      '</div>' +
+      '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📄 分段預覽（學生在課文趣實際看到的樣子）</div>' +
+      '<div id="qb-text-preview-' + dk + '" style="margin-bottom:16px"></div>' +
       '<div style="font-size:.8rem;font-weight:800;margin:14px 0 4px">🔤 破音字讀音調整</div>' +
       '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
         '課文裡的破音字（同一個字有不同唸法），可以指定一個「同音字」讓系統改用那個字的發音來唸，' +
@@ -700,6 +709,7 @@ function _qbLoadTextRow(dk, grade, lesson, lessonName) {
     }
 
     body.innerHTML = html;
+    _qbRenderTextPreview(dk);
   }).catch(function(e) {
     body.innerHTML = '<p style="color:var(--red);font-size:.85rem">載入失敗：' + e.message + '</p>';
   });
@@ -740,6 +750,61 @@ function _qbEscAttr(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+/* 把課文全文拆成「段落」——跟課文趣 apps/learn/lang/e-textbook/js/state.js 的
+   _etSplitLines() 用同一個判斷方式（一行以上空行＝一個分段），這樣老師在這裡看到的
+   分段效果，才會跟學生實際在課文趣看到的完全一致，不是另外猜一套邏輯。 */
+function _qbSplitParagraphs(text) {
+  var rawLines = String(text || '').split(/\r?\n/);
+  var paragraphs = [];
+  var current = [];
+  rawLines.forEach(function(line) {
+    if (line.trim() === '') {
+      if (current.length) { paragraphs.push(current.join('\n')); current = []; }
+    } else {
+      current.push(line);
+    }
+  });
+  if (current.length) paragraphs.push(current.join('\n'));
+  return paragraphs;
+}
+
+/* 分段預覽——每一段各自用一個有邊框、有編號標籤的卡片呈現，段落之間明顯有間距，
+   不用再靠「文字框裡有沒有空一行」這種很容易看漏的方式去判斷分段有沒有抓對。 */
+function _qbRenderTextPreview(dk) {
+  var ta = document.getElementById('qb-text-ta-' + dk);
+  var el = document.getElementById('qb-text-preview-' + dk);
+  if (!ta || !el) return;
+  var paragraphs = _qbSplitParagraphs(ta.value);
+  if (!paragraphs.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:4px 0">尚未輸入內容，預覽會顯示在這裡</div>';
+    return;
+  }
+  el.innerHTML = paragraphs.map(function(p, i) {
+    return '<div style="position:relative;background:white;border:1.5px solid var(--border);border-radius:8px;' +
+      'padding:10px 12px 10px 44px;margin-bottom:10px;font-size:.88rem;line-height:1.8;white-space:pre-wrap">' +
+      '<span style="position:absolute;left:8px;top:9px;font-size:.68rem;font-weight:800;color:var(--blue-dk);' +
+      'background:var(--blue-lt);padding:2px 6px;border-radius:6px;white-space:nowrap">第' + (i + 1) + '段</span>' +
+      escHtml(p) +
+    '</div>';
+  }).join('');
+}
+
+/* 在游標位置插入一個明確的分段（一個空行），不用自己手動按空白鍵去空一行、
+   也不會因為不小心只空半行而沒生效——前後都會自動補上乾淨的換行。 */
+function _qbInsertParaBreak(dk) {
+  var ta = document.getElementById('qb-text-ta-' + dk);
+  if (!ta) return;
+  var start = ta.selectionStart, end = ta.selectionEnd;
+  var before = ta.value.slice(0, start);
+  var after  = ta.value.slice(end);
+  var insertion = '\n\n';
+  ta.value = before + insertion + after;
+  var newPos = before.length + insertion.length;
+  ta.focus();
+  ta.setSelectionRange(newPos, newPos);
+  _qbRenderTextPreview(dk);
+}
+
 function _qbFullTextFileSelected(dk, input) {
   var file = input.files && input.files[0];
   if (!file) return;
@@ -763,6 +828,7 @@ function _qbFullTextFileSelected(dk, input) {
     _lftExtractText(ext, e.target.result).then(function(text) {
       var ta = document.getElementById('qb-text-ta-' + dk);
       if (ta) ta.value = text;
+      _qbRenderTextPreview(dk);
       if (statusEl) { statusEl.style.color = 'var(--blue-dk)'; statusEl.textContent = '✅ 已轉換，請檢查內容後按「儲存課文全文」'; }
       input.value = '';
     }).catch(function(err) {
