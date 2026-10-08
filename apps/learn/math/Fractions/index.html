@@ -124,6 +124,11 @@ var fields        = [];
 var activeField   = -1;
 var answered      = false;
 
+/* 分數除法教學步驟狀態：教學重點是「除以分數＝乘以倒數」這個轉換動作本身，
+   所以不直接給乘法算式，要學生自己點＝把「÷」點成「×」、把除數分數點成倒數，
+   兩個都做完才會出現可以作答的乘法算式跟輸入格。見 buildQHtml() 的 'divfrac' case。 */
+var dv = { opFlipped: false, recipFlipped: false };
+
 /* ═══ Math helpers ═══ */
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function lcm(a, b) { return (a / gcd(a, b)) * b; }
@@ -402,12 +407,43 @@ function buildQHtml(q) {
         h('div', 'q-body',
           fracHtml(q.n, q.d) + h('span', 'q-op', '×') + h('span', 'q-int', q.k) + h('span', 'q-op', '＝') + inputFracHtml(0, 1));
 
-    case 'divfrac':
-      return h('div', 'q-label', '分數除法') +
+    case 'divfrac': {
+      var opPart = dv.opFlipped
+        ? h('span', 'q-op', '×')
+        : '<button type="button" class="q-op-btn" onclick="_divFlipOp()">÷</button>';
+      var divisorPart = dv.recipFlipped
+        ? fracHtml(q.d, q.c)
+        : '<button type="button" class="frac-tap" onclick="_divFlipRecip()">' + fracHtml(q.c, q.d) + '</button>';
+      var ready = dv.opFlipped && dv.recipFlipped;
+      var label = ready ? '分數除法 — 算出答案' : '分數除法 — 先把除法變成乘法';
+      return h('div', 'q-label', label) +
         h('div', 'q-body',
-          fracHtml(q.a, q.b) + h('span', 'q-op', '÷') + fracHtml(q.c, q.d) + h('span', 'q-op', '＝') + inputFracHtml(0, 1));
+          fracHtml(q.a, q.b) + opPart + divisorPart +
+          (ready ? h('span', 'q-op', '＝') + inputFracHtml(0, 1) : '')) +
+        (ready ? '' : h('div', 'q-hint', '點一下「÷」變成「×」，再點一下除數讓它上下交換（取倒數）'));
+    }
   }
   return '';
+}
+
+/* 分數除法的兩個轉換步驟——點一次就定住（不能再點回去），兩個都點完才重畫出
+   可作答的乘法算式＋輸入格並自動聚焦第一格，跟其他題型一樣的作答流程 */
+function _divFlipOp() {
+  if (answered || dv.opFlipped) return;
+  dv.opFlipped = true;
+  _refreshDivQ();
+}
+function _divFlipRecip() {
+  if (answered || dv.recipFlipped) return;
+  dv.recipFlipped = true;
+  _refreshDivQ();
+}
+function _refreshDivQ() {
+  var q = questions[qIndex];
+  document.getElementById('q-card').innerHTML = buildQHtml(q);
+  registerFields(q);
+  document.getElementById('fill-ok-btn').disabled = fields.length === 0;
+  if (fields.length > 0) tapField(0);
 }
 
 /* ═══ Fields ═══ */
@@ -416,7 +452,10 @@ function registerFields(q) {
   switch (q.type) {
     case 'expand':
       fields = [{ id:0, role: q.blank, value:'' }]; break;
-    case 'reduce': case 'addsub': case 'mulint': case 'divfrac':
+    case 'divfrac':
+      if (dv.opFlipped && dv.recipFlipped) fields = [{ id:0, role:'num', value:'' }, { id:1, role:'den', value:'' }];
+      break;
+    case 'reduce': case 'addsub': case 'mulint':
       fields = [{ id:0, role:'num', value:'' }, { id:1, role:'den', value:'' }]; break;
     case 'imp2mix':
       fields = [{ id:0, role:'int', value:'' }, { id:1, role:'num', value:'' }]; break;
@@ -505,6 +544,7 @@ function refreshFld(id) {
 function submitAns() {
   if (rv.q && (rv.phase === 'fill' || rv.phase === 'final')) { submitReduceAns(); return; }
   if (answered) return;
+  if (fields.length === 0) return; // 還沒到可以作答的階段（例如分數除法還沒完成轉換步驟）
   var q = questions[qIndex];
   var allFilled = true;
   fields.forEach(function(f) {
@@ -608,6 +648,7 @@ function startModule(moduleId) {
 
 function renderQ() {
   rv.q = null; rv.phase = 'div';
+  dv.opFlipped = false; dv.recipFlipped = false;
   document.getElementById('div-col').classList.add('hidden');
   answered = false; fields = []; activeField = -1;
   var q = questions[qIndex];
@@ -617,11 +658,11 @@ function renderQ() {
   var symRow = document.getElementById('sym-row');
   q.type === 'common-cmp' ? symRow.classList.remove('hidden') : symRow.classList.add('hidden');
   document.getElementById('btn-next').classList.add('hidden');
-  document.getElementById('fill-ok-btn').disabled = false;
   var fb = document.getElementById('fb-row');
   fb.className = 'feedback-row'; fb.textContent = '';
   document.getElementById('q-card').innerHTML = buildQHtml(q);
   registerFields(q);
+  document.getElementById('fill-ok-btn').disabled = fields.length === 0;
   if (fields.length > 0) tapField(0);
 }
 

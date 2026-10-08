@@ -116,7 +116,16 @@
 .q-op   { font-size: 1.8rem; font-weight: 900; color: var(--text); }
 .q-word { font-size: 1.1rem; font-weight: 700; color: var(--muted); }
 .q-int  { font-size: 2rem;   font-weight: 900; color: var(--text); }
-.q-hint { font-size: .78rem; color: var(--muted); font-weight: 700; }
+.q-hint { font-size: .78rem; color: var(--muted); font-weight: 700; margin-top: 10px; text-align: center; }
+
+/* ── 分數除法教學步驟：點一下完成一個轉換動作（÷→×、除數取倒數） ── */
+.q-op-btn, .frac-tap {
+  font-family: inherit; cursor: pointer; transition: transform .15s, background .15s;
+  background: var(--blue-lt); border: 3px solid var(--blue); border-radius: 10px;
+}
+.q-op-btn { font-size: 1.8rem; font-weight: 900; color: var(--blue-dk); padding: 2px 12px; }
+.frac-tap { padding: 4px 8px; display: inline-flex; }
+.q-op-btn:active, .frac-tap:active { transform: scale(.92); }
 .mixed-static { display: flex; align-items: center; gap: 8px; }
 .frac-int-st  { font-size: 2rem; font-weight: 900; color: var(--text); }
 
