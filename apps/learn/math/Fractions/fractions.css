@@ -47,8 +47,6 @@
   gap: 12px;
   width: 100%; max-width: 480px;
 }
-/* 7 modules: last card spans full row */
-.mc:last-child { grid-column: span 2; }
 
 .mc {
   width: 100%; padding: 22px 16px;

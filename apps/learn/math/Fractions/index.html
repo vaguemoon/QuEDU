@@ -109,7 +109,8 @@ var MODULES = [
   { id: 'mix2imp',     label: '帶分數→假分數', icon: '🔼', color: '#6c3483', desc: '帶分數化成假分數' },
   { id: 'common-cmp',  label: '通分 & 比大小',icon: '⚖️', color: '#2980b9', desc: '通分後比較大小' },
   { id: 'add-sub',     label: '分數加減',     icon: '➕', color: '#27ae60', desc: '同分母與異分母加減' },
-  { id: 'mul-int',     label: '分數乘整數',   icon: '✖️', color: '#e67e22', desc: '分數乘以整數' }
+  { id: 'mul-int',     label: '分數乘整數',   icon: '✖️', color: '#e67e22', desc: '分數乘以整數' },
+  { id: 'div-frac',    label: '分數除法',     icon: '➗', color: '#16a085', desc: '除以分數＝乘以倒數' }
 ];
 
 var TOTAL_Q = 10;
@@ -307,6 +308,25 @@ function genMulInt() {
   return qs;
 }
 
+/* 分數除法：a/b ÷ c/d＝a/b × d/c（除以分數＝乘以倒數），兩個都是真分數。
+   避免 c===a 或 d===b 導致除數剛好等於被除數本身的倒數關係以外的退化情況不用特別擋，
+   但跟 mulint 一樣要重抽到答案不是整數（維持跟其他模組一致的「兩格分子分母」作答介面，
+   不用額外處理整數答案要怎麼輸入）。 */
+function genDivFrac() {
+  var qs = [];
+  for (var i = 0; i < TOTAL_Q; i++) {
+    var b, a, d, c, s, att = 0;
+    do {
+      b = rand(2, 9); a = rand(1, b - 1);
+      d = rand(2, 9); c = rand(1, d - 1);
+      s = simplify(a * d, b * c);
+      att++;
+    } while (s.d === 1 && att < 50);
+    qs.push({ type: 'divfrac', a: a, b: b, c: c, d: d, ans: [s.n, s.d] });
+  }
+  return qs;
+}
+
 /* ═══ HTML helpers ═══ */
 function h(tag, cls, inner) { return '<' + tag + ' class="' + cls + '">' + inner + '</' + tag + '>'; }
 
@@ -381,6 +401,11 @@ function buildQHtml(q) {
       return h('div', 'q-label', '分數乘整數') +
         h('div', 'q-body',
           fracHtml(q.n, q.d) + h('span', 'q-op', '×') + h('span', 'q-int', q.k) + h('span', 'q-op', '＝') + inputFracHtml(0, 1));
+
+    case 'divfrac':
+      return h('div', 'q-label', '分數除法') +
+        h('div', 'q-body',
+          fracHtml(q.a, q.b) + h('span', 'q-op', '÷') + fracHtml(q.c, q.d) + h('span', 'q-op', '＝') + inputFracHtml(0, 1));
   }
   return '';
 }
@@ -391,7 +416,7 @@ function registerFields(q) {
   switch (q.type) {
     case 'expand':
       fields = [{ id:0, role: q.blank, value:'' }]; break;
-    case 'reduce': case 'addsub': case 'mulint':
+    case 'reduce': case 'addsub': case 'mulint': case 'divfrac':
       fields = [{ id:0, role:'num', value:'' }, { id:1, role:'den', value:'' }]; break;
     case 'imp2mix':
       fields = [{ id:0, role:'int', value:'' }, { id:1, role:'num', value:'' }]; break;
@@ -532,7 +557,7 @@ function checkAns(q) {
 function correctStr(q) {
   switch (q.type) {
     case 'expand': return String(q.ans);
-    case 'reduce': case 'addsub': case 'mulint': return q.ans[0] + ' / ' + q.ans[1];
+    case 'reduce': case 'addsub': case 'mulint': case 'divfrac': return q.ans[0] + ' / ' + q.ans[1];
     case 'imp2mix': return q.ans[0] + ' ' + q.ans[1] + '/' + q.d;
     case 'mix2imp': return q.ans[0] + ' / ' + q.d;
     case 'common-cmp':
@@ -573,6 +598,7 @@ function startModule(moduleId) {
       case 'common-cmp':  return genCommonCmp();
       case 'add-sub':     return genAddSub();
       case 'mul-int':     return genMulInt();
+      case 'div-frac':    return genDivFrac();
     }
     return [];
   })(moduleId);
