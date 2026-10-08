@@ -29,10 +29,13 @@ var COLOR_LEVELS = [
       { shape: 'polygon', attrs: { points: '60,95 140,95 100,50' },    role: 0 }, // 上層樹葉
       { shape: 'rect',    attrs: { x: 85, y: 165, width: 30, height: 28 }, role: 1 }, // 樹幹
       { shape: 'polygon', attrs: { points: '100,12 104.7,25.5 119,25.8 107.6,34.5 111.8,48.2 100,40 88.2,48.2 92.4,34.5 81,25.8 95.3,25.5' }, role: 2 }, // 星星
-      { shape: 'circle', attrs: { cx: 70,  cy: 145, r: 8 }, role: 3 },
-      { shape: 'circle', attrs: { cx: 130, cy: 145, r: 8 }, role: 4 },
-      { shape: 'circle', attrs: { cx: 100, cy: 108, r: 7 }, role: 3 },
-      { shape: 'circle', attrs: { cx: 85,  cy: 70,  r: 6 }, role: 4 }
+      /* 裝飾球：每層樹葉各放一顆，位置是程式算出「離所有樹層的邊界都最遠」的點
+         （不只算自己這一層——樹層交疊的接縫處本來就擠，球放在那附近，上一層的底邊
+         跟下一層的斜邊會一起從球中間穿過去，裡面的注音符號會被蓋住看不清楚）。
+         半徑也縮小成 5，留更多安全間距。 */
+      { shape: 'circle', attrs: { cx: 88,  cy: 148, r: 5 }, role: 3 }, // 下層
+      { shape: 'circle', attrs: { cx: 92,  cy: 109, r: 5 }, role: 4 }, // 中層
+      { shape: 'circle', attrs: { cx: 100, cy: 71,  r: 5 }, role: 3 }  // 上層
     ]
   }
 ];
