@@ -78,6 +78,13 @@
           <div class="module-card-sub">看注音選顏色，把圖案塗上色</div>
         </div>
       </button>
+      <button class="module-card module-card--leftright" onclick="openModule('leftright')">
+        <div class="module-card-icon">👂</div>
+        <div class="module-card-info">
+          <div class="module-card-title">辨認左右</div>
+          <div class="module-card-sub">聽指令拍對應的左右箭頭</div>
+        </div>
+      </button>
     </div>
   </div>
 </div>
@@ -145,6 +152,14 @@
              preserveAspectRatio="xMidYMid meet"></svg>
         <div class="color-palette" id="color-palette"></div>
       </div>
+
+      <div id="leftright-sandbox" class="hidden">
+        <div class="lr-ear-icon" id="lr-ear-icon">🔊</div>
+        <div class="lr-btn-row">
+          <button class="lr-btn" id="lr-btn-left" disabled onclick="lrTap('left')">⬅️</button>
+          <button class="lr-btn" id="lr-btn-right" disabled onclick="lrTap('right')">➡️</button>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -197,6 +212,8 @@
 <script src="js/grid.js"></script>
 <script src="js/color-data.js"></script>
 <script src="js/color.js"></script>
+<script src="js/leftright-data.js"></script>
+<script src="js/leftright.js"></script>
 <script src="js/game.js"></script>
 <script src="js/init.js"></script>
 <link rel="stylesheet" href="../../../../shared/report.css">

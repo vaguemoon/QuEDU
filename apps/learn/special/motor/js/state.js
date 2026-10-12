@@ -1,15 +1,16 @@
 'use strict';
 
 var currentStudent  = null;
-var currentModule   = '';   // 'dot2dot' | 'tracing' | 'match' | 'grid' | 'color'
+var currentModule   = '';   // 'dot2dot' | 'tracing' | 'match' | 'grid' | 'color' | 'leftright'
 var currentLevelIdx = 0;
 
 var STAR_KEY = {
-  dot2dot: 'motor_dot2dot_stars',
-  tracing: 'motor_tracing_stars',
-  match:   'motor_match_stars',
-  grid:    'motor_grid_stars',
-  color:   'motor_color_stars'
+  dot2dot:   'motor_dot2dot_stars',
+  tracing:   'motor_tracing_stars',
+  match:     'motor_match_stars',
+  grid:      'motor_grid_stars',
+  color:     'motor_color_stars',
+  leftright: 'motor_leftright_stars'
 };
 
 function getStars(module) {
@@ -33,7 +34,7 @@ function totalStars() {
 
 /* 遊戲頁右側一次只會有一種玩法在用（SVG 畫布 / 找一樣 / 方格抄寫），
  * 切換模組時用這個統一顯示/隱藏，不用每個遊戲各自記著要關掉別人的畫面 */
-var SANDBOX_IDS = ['motor-sandbox', 'match-sandbox', 'grid-sandbox', 'color-sandbox'];
+var SANDBOX_IDS = ['motor-sandbox', 'match-sandbox', 'grid-sandbox', 'color-sandbox', 'leftright-sandbox'];
 function showSandbox(id) {
   SANDBOX_IDS.forEach(function(sid) {
     var el = document.getElementById(sid);

@@ -95,6 +95,7 @@
 .module-card--match   { border-left: 5px solid #8e44ad; }
 .module-card--grid    { border-left: 5px solid #e67e22; }
 .module-card--color   { border-left: 5px solid #e91e8c; }
+.module-card--leftright { border-left: 5px solid #16a085; }
 
 /* ══════════════════════════════════════
    選擇關卡頁
@@ -360,6 +361,33 @@
 }
 
 /* ══════════════════════════════════════
+   辨認左右
+   ══════════════════════════════════════ */
+#leftright-sandbox {
+  width: 100%; height: 100%; padding: 16px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
+}
+.lr-ear-icon { font-size: 3.4rem; opacity: .3; transition: opacity .2s; }
+.lr-ear-icon.lr-ear-pulse { opacity: 1; animation: lrPulse .6s ease-in-out infinite; }
+@keyframes lrPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+.lr-btn-row {
+  display: flex; gap: 5%; width: 100%; max-width: 640px; justify-content: center;
+}
+.lr-btn {
+  flex: 1 1 0; min-width: 0; max-width: 260px; aspect-ratio: 1 / 1;
+  font-size: 4.5rem; background: white; border: 3px solid var(--border); border-radius: 24px;
+  box-shadow: var(--shadow); cursor: pointer; transition: all .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.lr-btn:disabled { opacity: .4; cursor: default; }
+.lr-btn:active:not(:disabled) { transform: scale(.94); }
+.lr-btn.lr-correct { border-color: var(--green); background: #f0fff4; }
+.lr-btn.lr-wrong { animation: matchShake .4s; border-color: var(--red); }
+
+/* ══════════════════════════════════════
    結果頁
    ══════════════════════════════════════ */
 .result-wrap {
@@ -415,5 +443,5 @@
   .game-layout { grid-template-columns: 1fr; }
   #page-game.active { height: auto; overflow: visible; }
   .game-right { height: 60vh; }
-  #motor-sandbox, #match-sandbox, #grid-sandbox, #color-sandbox { height: 100%; }
+  #motor-sandbox, #match-sandbox, #grid-sandbox, #color-sandbox, #leftright-sandbox { height: 100%; }
 }
