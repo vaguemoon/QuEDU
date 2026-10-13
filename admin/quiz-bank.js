@@ -799,12 +799,51 @@ function _qbRenderTextPreview(dk) {
       return charsHtml + (k < lineIdxs.length - 1 ? '\n' : '');
     }).join('');
     return '<div style="position:relative;background:white;border:1.5px solid var(--border);border-radius:8px;' +
-      'padding:10px 12px 10px 44px;margin-bottom:10px;font-size:.88rem;line-height:1.8;white-space:pre-wrap">' +
+      'padding:10px 40px 10px 44px;margin-bottom:10px;font-size:.88rem;line-height:1.8;white-space:pre-wrap">' +
       '<span style="position:absolute;left:8px;top:9px;font-size:.68rem;font-weight:800;color:var(--blue-dk);' +
       'background:var(--blue-lt);padding:2px 6px;border-radius:6px;white-space:nowrap">第' + (pi + 1) + '段</span>' +
+      '<button type="button" onclick="_qbSpeakParagraph(\'' + dk + '\',[' + lineIdxs.join(',') + '])" ' +
+        'title="試聽這一段（會套用目前設定的破音字讀音）" ' +
+        'style="position:absolute;right:8px;top:7px;width:26px;height:26px;border:none;border-radius:50%;' +
+        'background:var(--blue-lt);color:var(--blue-dk);cursor:pointer;font-size:.85rem;line-height:1">🔊</button>' +
       body +
     '</div>';
   }).join('');
+}
+
+/* ── 試聽：套用目前已設定的破音字朗讀同音字，讓老師聽到的發音跟學生在課文趣實際聽到的一樣 ── */
+var _qbZhVoice = null;
+function _qbLoadVoices() {
+  if (!window.speechSynthesis) return;
+  var voices = window.speechSynthesis.getVoices();
+  if (voices && voices.length) _qbZhVoice = pickBestZhVoice(voices);
+}
+if (window.speechSynthesis) {
+  _qbLoadVoices();
+  window.speechSynthesis.onvoiceschanged = _qbLoadVoices;
+}
+
+function _qbSpeakParagraph(dk, lineIdxs) {
+  var ta = document.getElementById('qb-text-ta-' + dk);
+  if (!ta || !window.speechSynthesis) return;
+  var lines = _qbSplitLines(ta.value);
+  var fixes = _qbPendingPronFixes[dk] || {};
+  var text = lineIdxs.map(function(li) {
+    var line = lines[li];
+    if (!line) return '';
+    return line.chars.map(function(c, ci) {
+      var fix = fixes[li + ':' + ci];
+      return (fix && fix.ch === c.ch && fix.homophone) ? fix.homophone : c.ch;
+    }).join('');
+  }).join('，'); // 行與行之間用頓號接，讓 TTS 自然停頓一下，不會整段黏在一起唸
+  if (!text) return;
+
+  if (window.speechSynthesis.speaking || window.speechSynthesis.pending) window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-TW';
+  u.rate = 0.9;
+  if (_qbZhVoice) u.voice = _qbZhVoice;
+  window.speechSynthesis.speak(u);
 }
 
 /* ── 破音字讀音選單：點預覽裡的多音字彈出來，選讀音＋選填朗讀同音字，即點即生效 ── */
