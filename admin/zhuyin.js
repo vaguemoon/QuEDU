@@ -1,7 +1,8 @@
 /**
  * admin/zhuyin.js — 注音趣：符號圖庫（單音 37 個＋結合韻 22 個，兩區固定符號，全校共用資料）
  * 依賴：shared.js（db、showToast、escHtml）、init.js（currentTeacher）、word-image.js（_wiCompressToDataUrl）
- * 符號發音錄音功能沿用 admin/audio-clips.js 的 MediaRecorder 錄音模式（WebM/Opus → base64）
+ * 符號發音錄音：MediaRecorder 錄完不管是什麼格式，一律用 Web Audio API 解碼再轉成 WAV 存檔
+ * （iPad 上 WebM 完全無法播放，WAV 是純 PCM 沒有這個問題，見 _zyTranscodeToWav）
  */
 'use strict';
 
@@ -258,11 +259,70 @@ function _zyStopRecording() {
   if (recBtn) { recBtn.textContent = '🎙 開始錄音'; recBtn.className = 'ac-rec-btn'; }
 }
 
+/* 選 MP4 優先錄（上面的 mimeType 清單）結果還是在 iPad 上放不出來——跨瀏覽器猜
+   MediaRecorder 到底支援錄哪個格式太不可靠，改成不管瀏覽器錄成什麼格式，錄完都用
+   Web Audio API 解碼、再手動編碼成 WAV（純 PCM，沒有容器/編碼支援的問題，所有瀏覽器
+   包含 iPad Safari 都原生看得懂）。符號發音最長只錄 8 秒（ZY_MAX_SECONDS），轉成 WAV
+   即使不壓縮檔案也頂多幾百 KB，在 Firestore 900KB 上限內綽綽有餘。*/
+function _zyEncodeWav(audioBuffer) {
+  var sampleRate = audioBuffer.sampleRate;
+  var samples = audioBuffer.getChannelData(0); // 只取第一聲道，人聲錄音不需要立體聲
+  var buffer = new ArrayBuffer(44 + samples.length * 2);
+  var view = new DataView(buffer);
+
+  function writeStr(offset, str) {
+    for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);          // PCM
+  view.setUint16(22, 1, true);          // 單聲道
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);         // 16-bit
+  writeStr(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+
+  var offset = 44;
+  for (var i = 0; i < samples.length; i++, offset += 2) {
+    var s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+function _zyTranscodeToWav(blob, callback) {
+  var AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) { callback(blob); return; } // 太舊的瀏覽器沒有 Web Audio API，退回原始錄音格式
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var ctx = new AudioCtx();
+    ctx.decodeAudioData(e.target.result, function(audioBuffer) {
+      var wavBlob = _zyEncodeWav(audioBuffer);
+      ctx.close();
+      callback(wavBlob);
+    }, function(err) {
+      console.error('轉成 WAV 失敗，改存原始錄音格式', err);
+      ctx.close();
+      callback(blob); // 轉檔失敗就退回原始格式，不要卡住整個存檔流程
+    });
+  };
+  reader.readAsArrayBuffer(blob);
+}
+
 function _zyOnAudioStopped() {
   if (!_zyChunks.length) return;
   var blob = new Blob(_zyChunks, { type: _zyChunks[0].type || 'audio/webm' });
   _zyAudioDuration = _zyElapsed;
-  _zySetAudioBlob(blob);
+  _zyAudioError('轉檔中…');
+  _zyTranscodeToWav(blob, function(finalBlob) {
+    _zySetAudioBlob(finalBlob);
+  });
 }
 
 function _zyAudioFileSelected(input) {
