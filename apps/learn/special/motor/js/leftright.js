@@ -13,7 +13,7 @@ function openLeftRight(levelIdx) {
   _lrIndex = 0;
 
   document.getElementById('game-title').textContent = _lrLevel.title;
-  document.getElementById('game-hint').textContent = '仔細聽！聽到「左邊」拍左箭頭，聽到「右邊」拍右箭頭';
+  document.getElementById('game-hint').textContent = '仔細聽！聽到「左」拍左箭頭，聽到「右」拍右箭頭';
   showSandbox('leftright-sandbox');
   showPage('game');
   _lrUpdateStats();
@@ -38,7 +38,7 @@ function _lrPlayRound() {
   if (ear) ear.classList.add('lr-ear-pulse');
 
   var target = _lrSeq[_lrIndex];
-  _motorSpeak(target === 'left' ? '左邊' : '右邊');
+  _motorSpeak(target === 'left' ? '左' : '右');
 
   /* 固定節奏，不計時：給一段緩衝時間讓語音講完才開放拍按鈕，不是講話同時就能亂拍矇答案 */
   setTimeout(function() {
@@ -54,7 +54,7 @@ function _lrPlayRound() {
 function lrReplay() {
   if (!_lrSeq || _lrIndex >= _lrLevel.rounds) return;
   var target = _lrSeq[_lrIndex];
-  _motorSpeak(target === 'left' ? '左邊' : '右邊');
+  _motorSpeak(target === 'left' ? '左' : '右');
   var ear = document.getElementById('lr-ear-icon');
   if (ear) {
     ear.classList.add('lr-ear-pulse');
