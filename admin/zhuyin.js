@@ -219,8 +219,14 @@ function _zyStartRecording() {
     _zyChunks = []; _zyElapsed = 0; _zyPendingAudio = null;
     _zyAudioError('');
 
-    var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus' : '';
+    /* 優先選 AAC/MP4：iPad 上所有瀏覽器都被迫用 Safari 的 WebKit 引擎，WebM 容器完全無法
+       播放（不管哪個 codec 都一樣）——這是平板上「TTS 正常、但自己錄的音檔放不出來」的
+       真正原因，不是自動播放限制或時機問題。MP4/AAC 桌機瀏覽器錄、iPad 播放都支援；
+       只有在錄音瀏覽器真的不支援 MP4 錄製時才退回 WebM（退回後那筆錄音在 iPad 上一樣會
+       播不出來，但至少不會讓完全不支援 MediaRecorder mimeType 限制的舊瀏覽器直接整個失敗）。*/
+    var mime = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].filter(function(m) {
+      return MediaRecorder.isTypeSupported(m);
+    })[0] || '';
     _zyRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
 
     _zyRecorder.ondataavailable = function(e) { if (e.data.size > 0) _zyChunks.push(e.data); };

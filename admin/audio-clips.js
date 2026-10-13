@@ -1,7 +1,7 @@
 /**
  * admin/audio-clips.js — 音檔管理
  * 支援麥克風錄音（max 10s）或上傳音檔（max 500KB）
- * 儲存：WebM/Opus base64 → Firestore audioClips
+ * 儲存：MP4/AAC（iPad可播放），瀏覽器不支援才退回 WebM/Opus → base64 → Firestore audioClips
  * 依賴：shared.js（db、showToast）、init.js（currentTeacher）
  */
 'use strict';
@@ -172,8 +172,10 @@ function _acStartRecording() {
     if (preview) { preview.src = ''; preview.style.display = 'none'; }
     _acError('');
 
-    var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-      ? 'audio/webm;codecs=opus' : '';
+    /* 優先選 AAC/MP4，iPad 上播放才放得出來——見 admin/zhuyin.js 同一段程式碼的註解說明 */
+    var mime = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].filter(function(m) {
+      return MediaRecorder.isTypeSupported(m);
+    })[0] || '';
     _acRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
 
     _acRecorder.ondataavailable = function(e) { if (e.data.size > 0) _acChunks.push(e.data); };
