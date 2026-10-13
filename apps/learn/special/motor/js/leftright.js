@@ -49,6 +49,19 @@ function _lrPlayRound() {
   }, 700);
 }
 
+/* 喇叭圖示可以重複點，再聽一次這一題的指令——不管當下是「還沒開放拍」還是「已經可以拍」
+   都能點，讓學生沒聽清楚時隨時可以再聽，不用等下一輪 */
+function lrReplay() {
+  if (!_lrSeq || _lrIndex >= _lrLevel.rounds) return;
+  var target = _lrSeq[_lrIndex];
+  _motorSpeak(target === 'left' ? '左邊' : '右邊');
+  var ear = document.getElementById('lr-ear-icon');
+  if (ear) {
+    ear.classList.add('lr-ear-pulse');
+    setTimeout(function() { ear.classList.remove('lr-ear-pulse'); }, 700);
+  }
+}
+
 function lrTap(side) {
   if (!_lrAccepting) return;
   var target = _lrSeq[_lrIndex];
