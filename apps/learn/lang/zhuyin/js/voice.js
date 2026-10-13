@@ -29,16 +29,34 @@ function zySpeak(text) {
   window.speechSynthesis.speak(utt);
 }
 
+/* 播放錄音用的共用 Audio 元素——重複使用、播放前先 pause 一次，不要每次都 new 一個全新物件
+ * （平板上連點連得快時，一堆物件搶著播容易被瀏覽器擋掉） */
+var _zyAudioEl = null;
+function _zyPlayClip(audioData) {
+  if (!_zyAudioEl) _zyAudioEl = new Audio();
+  try { _zyAudioEl.pause(); } catch (e) {}
+  _zyAudioEl.src = audioData;
+  return _zyAudioEl.play();
+}
+
 /* 點符號本身：有老師錄音就播錄音（比自動朗讀穩定），沒有就退回 TTS 唸符號
-   單音／結合韻各自查自己的資料庫（zyActiveData() 依目前 zySection 回傳對應的那份） */
+   單音／結合韻各自查自己的資料庫（zyActiveData() 依目前 zySection 回傳對應的那份）
+   audio.play() 回傳的 Promise 在平板上常因自動播放限制或連點太快而非同步被 reject，
+   同步 try/catch 接不到，一定要另外接 .catch()，不然播放失敗會整個沒聲音、也不會
+   退回 TTS（這就是平板上「自己錄的音檔不會播」的主因，TTS 走另一條路線所以不受影響） */
 function zySpeakSymbol(symbol) {
   sfxTap();
   var d = zyActiveData()[symbol];
   if (d && d.audioData) {
+    var started = false;
     try {
-      new Audio(d.audioData).play();
-      return;
-    } catch (e) {}
+      var playPromise = _zyPlayClip(d.audioData);
+      started = true;
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(function() { zySpeak(symbol); });
+      }
+    } catch (e) { started = false; }
+    if (started) return;
   }
   zySpeak(symbol);
 }
