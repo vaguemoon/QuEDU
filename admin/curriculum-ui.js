@@ -290,23 +290,33 @@ function _renderLessonOverrideBody(key, body) {
     body.innerHTML = '<div style="color:var(--muted);font-size:.82rem">此課無生字。</div>';
     return;
   }
+  var heteronymCount = data.chars.filter(function(c) { return !!HETERONYM_READINGS[c]; }).length;
   var html =
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:10px;line-height:1.6">' +
-      '<b>注音</b>：直接輸入正確注音（如 ㄆㄤˋ），優先於萌典 API。' +
+      '<b>注音</b>：直接輸入正確注音（如 ㄆㄤˋ），優先於萌典 API——字框藍色外框的是多音字，' +
+      '可以直接點「選讀音」從收錄的讀音挑，不用自己打注音符號。' +
       '　<b>詞語</b>：輸入含該字的詞，TTS 讀整個詞以引導正確讀音（如 胖 → 肥胖）。' +
+      (heteronymCount ? '<br>這一課生字裡有 ' + heteronymCount + ' 個多音字。' : '') +
     '</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
   data.chars.forEach(function(char) {
     var ov = (data.charOverrides[char] && data.charOverrides[char].ttsText) || '';
     var zh = (data.charOverrides[char] && data.charOverrides[char].zhuyin)  || '';
     var hi = (ov || zh) ? 'border-color:var(--blue)' : '';
+    var isHet = !!HETERONYM_READINGS[char];
     html +=
       '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px;' +
-        'border:1.5px solid var(--border);' + hi + ';border-radius:10px;background:white;min-width:64px">' +
+        'border:1.5px solid ' + (isHet ? 'var(--blue)' : 'var(--border)') + ';' + hi + ';border-radius:10px;' +
+        'background:white;min-width:64px">' +
         '<div style="font-size:1.4rem;font-family:\'Noto Sans TC\',sans-serif;font-weight:900;line-height:1">' + char + '</div>' +
-        '<input type="text" data-zhuyin="' + char + '" value="' + _escQ(zh) + '" placeholder="注音"' +
+        '<input type="text" id="lo-zy-' + key + '-' + char + '" data-zhuyin="' + char + '" value="' + _escQ(zh) + '" placeholder="注音"' +
           ' style="width:58px;border:1.5px solid var(--border);border-radius:6px;padding:3px 5px;' +
           'font-size:.8rem;font-family:inherit;text-align:center;outline:none;color:var(--blue-dk)">' +
+        (isHet ?
+          '<button type="button" class="lo-het-btn" onclick="_loOpenHeteronymPicker(\'' + key + '\',\'' + char + '\',this)" ' +
+            'style="width:58px;padding:2px 0;border:none;border-radius:6px;background:var(--blue-lt);' +
+            'color:var(--blue-dk);font-size:.68rem;font-weight:800;cursor:pointer;font-family:inherit">選讀音</button>'
+          : '') +
         '<input type="text" data-char="' + char + '" value="' + _escQ(ov) + '" placeholder="詞語"' +
           ' style="width:58px;border:1.5px solid var(--border);border-radius:6px;padding:3px 5px;' +
           'font-size:.75rem;font-family:\'Noto Sans TC\',sans-serif;text-align:center;outline:none">' +
@@ -321,6 +331,66 @@ function _renderLessonOverrideBody(key, body) {
         'font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">儲存</button>' +
     '</div>';
   body.innerHTML = html;
+}
+
+/* ── 多音字讀音選單：點「選讀音」彈出這個字收錄的讀音，點一下直接填進注音欄位，
+   不用自己打注音符號、也不會選到沒收錄過的讀音。跟課文編輯的破音字選單同一套互動邏輯
+   （見 admin/quiz-bank.js 的 _qbCharClick 等函式），但這裡是單純把讀音文字填進一個
+   輸入框，不用像課文編輯那樣處理「課文裡某一次出現」的位置問題，所以邏輯簡化很多。 ── */
+var _loHetKey  = null;
+var _loHetChar = null;
+
+function _loEnsureHeteronymPopover() {
+  var pop = document.getElementById('lo-het-popover');
+  if (pop) return pop;
+  pop = document.createElement('div');
+  pop.id = 'lo-het-popover';
+  pop.style.cssText = 'position:fixed;z-index:9999;display:none;background:white;border:1.5px solid var(--border);' +
+    'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px;min-width:160px;' +
+    'font-family:"Noto Sans TC",sans-serif';
+  document.body.appendChild(pop);
+  document.addEventListener('pointerdown', function(e) {
+    if (pop.style.display === 'none') return;
+    if (pop.contains(e.target) || (e.target.classList && e.target.classList.contains('lo-het-btn'))) return;
+    pop.style.display = 'none';
+  });
+  return pop;
+}
+
+function _loOpenHeteronymPicker(key, char, btnEl) {
+  var readings = HETERONYM_READINGS[char];
+  if (!readings) return;
+  _loHetKey = key;
+  _loHetChar = char;
+  var pop = _loEnsureHeteronymPopover();
+  pop.innerHTML =
+    '<div style="font-size:.74rem;font-weight:800;margin-bottom:6px">「' + char + '」選讀音</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
+    readings.map(function(r) {
+      return '<button type="button" onclick="_loPickHeteronymReading(\'' + _escQ(r) + '\')" ' +
+        'style="padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;background:white;' +
+        'color:inherit;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit">' + r + '</button>';
+    }).join('') +
+    '</div>';
+  pop.style.display = '';
+  var rect = btnEl.getBoundingClientRect();
+  pop.style.top  = (rect.bottom + 6) + 'px';
+  pop.style.left = rect.left + 'px';
+  requestAnimationFrame(function() {
+    var pw = pop.offsetWidth;
+    if (rect.left + pw > window.innerWidth - 10) pop.style.left = Math.max(10, window.innerWidth - pw - 10) + 'px';
+  });
+}
+
+function _loPickHeteronymReading(reading) {
+  if (!_loHetKey || !_loHetChar) return;
+  var input = document.getElementById('lo-zy-' + _loHetKey + '-' + _loHetChar);
+  if (input) {
+    input.value = reading;
+    input.style.borderColor = 'var(--blue)';
+  }
+  var pop = document.getElementById('lo-het-popover');
+  if (pop) pop.style.display = 'none';
 }
 
 function saveLessonOverride(key) {
