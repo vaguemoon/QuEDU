@@ -290,36 +290,30 @@ function _renderLessonOverrideBody(key, body) {
     body.innerHTML = '<div style="color:var(--muted);font-size:.82rem">此課無生字。</div>';
     return;
   }
-  var heteronymCount = data.chars.filter(function(c) { return !!HETERONYM_READINGS[c]; }).length;
+  var hetChars = data.chars.filter(function(c) { return !!HETERONYM_READINGS[c]; });
+  if (!hetChars.length) {
+    body.innerHTML = '<div style="color:var(--muted);font-size:.82rem">此課生字沒有多音字，不用設定。</div>';
+    return;
+  }
   var html =
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:10px;line-height:1.6">' +
-      '<b>注音</b>：直接輸入正確注音（如 ㄆㄤˋ），優先於萌典 API——字框藍色外框的是多音字，' +
-      '可以直接點「選讀音」從收錄的讀音挑，不用自己打注音符號。' +
-      '　<b>詞語</b>：輸入含該字的詞，TTS 讀整個詞以引導正確讀音（如 胖 → 肥胖）。' +
-      (heteronymCount ? '<br>這一課生字裡有 ' + heteronymCount + ' 個多音字。' : '') +
+      '這一課生字裡有 ' + hetChars.length + ' 個多音字，點「選讀音」挑這個字在這一課要唸的讀音。' +
     '</div>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
-  data.chars.forEach(function(char) {
-    var ov = (data.charOverrides[char] && data.charOverrides[char].ttsText) || '';
-    var zh = (data.charOverrides[char] && data.charOverrides[char].zhuyin)  || '';
-    var hi = (ov || zh) ? 'border-color:var(--blue)' : '';
-    var isHet = !!HETERONYM_READINGS[char];
+  hetChars.forEach(function(char) {
+    var zh = (data.charOverrides[char] && data.charOverrides[char].zhuyin) || '';
     html +=
       '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px;' +
-        'border:1.5px solid ' + (isHet ? 'var(--blue)' : 'var(--border)') + ';' + hi + ';border-radius:10px;' +
-        'background:white;min-width:64px">' +
+        'border:1.5px solid var(--blue);border-radius:10px;background:white;min-width:64px">' +
         '<div style="font-size:1.4rem;font-family:\'Noto Sans TC\',sans-serif;font-weight:900;line-height:1">' + char + '</div>' +
-        '<input type="text" id="lo-zy-' + key + '-' + char + '" data-zhuyin="' + char + '" value="' + _escQ(zh) + '" placeholder="注音"' +
-          ' style="width:58px;border:1.5px solid var(--border);border-radius:6px;padding:3px 5px;' +
-          'font-size:.8rem;font-family:inherit;text-align:center;outline:none;color:var(--blue-dk)">' +
-        (isHet ?
-          '<button type="button" class="lo-het-btn" onclick="_loOpenHeteronymPicker(\'' + key + '\',\'' + char + '\',this)" ' +
-            'style="width:58px;padding:2px 0;border:none;border-radius:6px;background:var(--blue-lt);' +
-            'color:var(--blue-dk);font-size:.68rem;font-weight:800;cursor:pointer;font-family:inherit">選讀音</button>'
-          : '') +
-        '<input type="text" data-char="' + char + '" value="' + _escQ(ov) + '" placeholder="詞語"' +
-          ' style="width:58px;border:1.5px solid var(--border);border-radius:6px;padding:3px 5px;' +
-          'font-size:.75rem;font-family:\'Noto Sans TC\',sans-serif;text-align:center;outline:none">' +
+        '<div id="lo-zy-' + key + '-' + char + '" data-char="' + char + '" data-reading="' + _escQ(zh) + '" ' +
+          'style="width:58px;min-height:18px;border:1.5px solid var(--border);border-radius:6px;padding:3px 5px;' +
+          'font-size:.8rem;font-family:inherit;text-align:center;color:' + (zh ? 'var(--blue-dk)' : 'var(--muted)') + '">' +
+          (zh || '未選') +
+        '</div>' +
+        '<button type="button" class="lo-het-btn" onclick="_loOpenHeteronymPicker(\'' + key + '\',\'' + char + '\',this)" ' +
+          'style="width:58px;padding:2px 0;border:none;border-radius:6px;background:var(--blue-lt);' +
+          'color:var(--blue-dk);font-size:.68rem;font-weight:800;cursor:pointer;font-family:inherit">選讀音</button>' +
       '</div>';
   });
   html += '</div>';
@@ -365,13 +359,16 @@ function _loOpenHeteronymPicker(key, char, btnEl) {
   var pop = _loEnsureHeteronymPopover();
   pop.innerHTML =
     '<div style="font-size:.74rem;font-weight:800;margin-bottom:6px">「' + char + '」選讀音</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
+    '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">' +
     readings.map(function(r) {
       return '<button type="button" onclick="_loPickHeteronymReading(\'' + _escQ(r) + '\')" ' +
         'style="padding:4px 9px;border:1.5px solid var(--border);border-radius:7px;background:white;' +
         'color:inherit;font-size:.88rem;font-weight:700;cursor:pointer;font-family:inherit">' + r + '</button>';
     }).join('') +
-    '</div>';
+    '</div>' +
+    '<button type="button" onclick="_loClearHeteronymReading()" ' +
+      'style="padding:4px 10px;border:none;border-radius:7px;background:var(--red-lt);color:var(--red);' +
+      'font-size:.76rem;font-weight:800;cursor:pointer;font-family:inherit">清除</button>';
   pop.style.display = '';
   var rect = btnEl.getBoundingClientRect();
   pop.style.top  = (rect.bottom + 6) + 'px';
@@ -382,15 +379,25 @@ function _loOpenHeteronymPicker(key, char, btnEl) {
   });
 }
 
-function _loPickHeteronymReading(reading) {
-  if (!_loHetKey || !_loHetChar) return;
-  var input = document.getElementById('lo-zy-' + _loHetKey + '-' + _loHetChar);
-  if (input) {
-    input.value = reading;
-    input.style.borderColor = 'var(--blue)';
+function _loSetReadingDisplay(reading) {
+  var el = document.getElementById('lo-zy-' + _loHetKey + '-' + _loHetChar);
+  if (el) {
+    el.textContent = reading || '未選';
+    el.dataset.reading = reading || '';
+    el.style.color = reading ? 'var(--blue-dk)' : 'var(--muted)';
   }
   var pop = document.getElementById('lo-het-popover');
   if (pop) pop.style.display = 'none';
+}
+
+function _loPickHeteronymReading(reading) {
+  if (!_loHetKey || !_loHetChar) return;
+  _loSetReadingDisplay(reading);
+}
+
+function _loClearHeteronymReading() {
+  if (!_loHetKey || !_loHetChar) return;
+  _loSetReadingDisplay('');
 }
 
 function saveLessonOverride(key) {
@@ -401,16 +408,10 @@ function saveLessonOverride(key) {
   if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '儲存中…'; }
 
   var overrides = {};
-  body.querySelectorAll('input[data-char]').forEach(function(input) {
-    var c   = input.dataset.char;
-    var tts = input.value.trim();
-    var zhEl = body.querySelector('input[data-zhuyin="' + c + '"]');
-    var zh   = zhEl ? zhEl.value.trim() : '';
-    if (tts || zh) {
-      overrides[c] = {};
-      if (tts) overrides[c].ttsText = tts;
-      if (zh)  overrides[c].zhuyin  = zh;
-    }
+  body.querySelectorAll('[data-char]').forEach(function(el) {
+    var c  = el.dataset.char;
+    var zh = (el.dataset.reading || '').trim();
+    if (zh) overrides[c] = { zhuyin: zh };
   });
   data.charOverrides = overrides;
   saveCharOverrides(data.vId, data.lessonId, overrides, statusEl);
