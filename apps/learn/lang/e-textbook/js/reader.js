@@ -167,6 +167,25 @@ function _etOnProgressLoaded() {
 }
 
 /* ── 課文渲染：逐行逐字，中文字可互動，標點/空白純顯示 ── */
+function _etRenderLineHtml(li) {
+  var line = etLines[li];
+  var spans = line.chars.map(function(c, ci) {
+    if (c.interactive) {
+      return '<span class="et-char" data-line="' + li + '" data-ci="' + ci + '">' + c.ch + _etReadingVS(li, ci) + '</span>';
+    }
+    return '<span class="et-punct">' + c.ch + '</span>';
+  }).join('');
+  return '<div class="et-line" data-line-idx="' + li + '">' +
+    '<button class="et-line-speak-btn" onclick="etSpeakLine(' + li + ')">🔊</button>' +
+    '<span class="et-line-text">' + spans + '</span>' +
+    '</div>';
+}
+
+/* 課文正文渲染。插入過圖片的課文（［圖:docId］標記行，見課文編輯後台「插入圖片」）改成
+   左右兩欄的 grid：左欄課文、右欄配圖，圖片行不會插在閱讀動線中間打斷閱讀——
+   插入點之後緊接的那一段文字，才是這張圖真正要配的段落，所以圖片歸給「它後面那一段」，
+   跟它同一個 grid row，兩欄高度各自撐開、靠 grid 自動對齊，不用量座標算 CSS top。
+   完全沒有插圖的課文（多數情況）維持原本的單欄排版，不用為了用不到的圖片欄位多留白邊。 */
 function etRenderText() {
   var wrap = document.getElementById('et-text-wrap');
   if (!wrap) return;
@@ -174,21 +193,49 @@ function etRenderText() {
     wrap.innerHTML = '<div class="et-empty">這一課還沒有課文全文，請請老師到後台補上。</div>';
     return;
   }
-  wrap.innerHTML = etLines.map(function(line, li) {
-    if (line.blank) {
-      return '<div class="et-line et-line-blank" data-line-idx="' + li + '"></div>';
-    }
-    var spans = line.chars.map(function(c, ci) {
-      if (c.interactive) {
-        return '<span class="et-char" data-line="' + li + '" data-ci="' + ci + '">' + c.ch + _etReadingVS(li, ci) + '</span>';
-      }
-      return '<span class="et-punct">' + c.ch + '</span>';
+
+  var hasImage = etLines.some(function(l) { return !!l.image; });
+
+  if (!hasImage) {
+    wrap.classList.remove('et-text-wrap-wide');
+    wrap.innerHTML = etLines.map(function(line, li) {
+      if (line.blank) return '<div class="et-line et-line-blank" data-line-idx="' + li + '"></div>';
+      return _etRenderLineHtml(li);
     }).join('');
-    return '<div class="et-line" data-line-idx="' + li + '">' +
-      '<button class="et-line-speak-btn" onclick="etSpeakLine(' + li + ')">🔊</button>' +
-      '<span class="et-line-text">' + spans + '</span>' +
-      '</div>';
-  }).join('');
+    etHighlightFoundWords();
+    etAttachPointerHandlers();
+    return;
+  }
+
+  /* 依空行分段（圖片標記行自己單獨成一組時，歸給後面那一段當配圖，不單獨佔一個 row） */
+  var groups = [];
+  var current = [];
+  etLines.forEach(function(line, li) {
+    if (line.blank) { if (current.length) { groups.push(current); current = []; } return; }
+    current.push(li);
+  });
+  if (current.length) groups.push(current);
+
+  var rows = [];
+  var pendingImage = null;
+  groups.forEach(function(lineIdxs) {
+    if (lineIdxs.length === 1 && etLines[lineIdxs[0]].image) {
+      pendingImage = etLines[lineIdxs[0]].image;
+      return;
+    }
+    rows.push({ lineIdxs: lineIdxs, image: pendingImage });
+    pendingImage = null;
+  });
+  if (pendingImage) rows.push({ lineIdxs: [], image: pendingImage });
+
+  wrap.classList.add('et-text-wrap-wide');
+  wrap.innerHTML = '<div class="et-para-grid">' + rows.map(function(row) {
+    var textHtml = row.lineIdxs.map(function(li) { return _etRenderLineHtml(li); }).join('');
+    var url = row.image ? etWordImageById[row.image] : '';
+    var imageHtml = url ? '<img class="et-para-img" src="' + url + '" alt="">' : '';
+    return '<div class="et-para">' + textHtml + '</div><div class="et-para-image">' + imageHtml + '</div>';
+  }).join('') + '</div>';
+
   etHighlightFoundWords();
   etAttachPointerHandlers();
 }

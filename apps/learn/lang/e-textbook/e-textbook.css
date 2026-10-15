@@ -135,6 +135,15 @@
   padding: 24px 20px; font-family: 'BpmfZihiKai', 'Noto Serif TC', serif;
   line-height: 2.4; user-select: none; -webkit-user-select: none;
 }
+/* 課文裡有插圖時用，右側多留一欄放圖，寬度要跟著放大一點，不然課文那欄會被擠得比沒插圖時窄 */
+.et-text-wrap-wide { max-width: 1180px; }
+.et-para-grid { display: grid; grid-template-columns: 1fr 200px; gap: 6px 24px; align-items: start; }
+.et-para-image { display: flex; align-items: flex-start; justify-content: center; padding-top: 6px; }
+.et-para-img { max-width: 180px; max-height: 180px; border-radius: 12px; border: 2px solid var(--border); object-fit: contain; }
+@media (max-width: 768px) {
+  .et-para-grid { grid-template-columns: 1fr; }
+  .et-para-image { justify-content: flex-start; padding-top: 0; margin-bottom: 8px; }
+}
 .et-empty { color: var(--muted); font-size: .95rem; text-align: center; padding: 40px 0; }
 .et-font-loading {
   display: none; max-width: 900px; margin: 0 auto; padding: 60px 20px; text-align: center;

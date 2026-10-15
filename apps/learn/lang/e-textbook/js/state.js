@@ -14,6 +14,7 @@ var etLines = [];             // 目前課文，依行(句)拆好的陣列 [{ te
 var etVocab = {};             // { word: teacherDef }，本課配套生字詞（從題庫抓）
 var etFoundWords = {};        // { word: true }，本課已找到的生字詞（持久保存）
 var etWordImageMap = {};      // { word: imageUrl }，全校詞語圖庫，供圈詞查詢時顯示圖片
+var etWordImageById = {};     // { docId: imageUrl }，同一份圖庫資料，給課文裡插入的圖片（［圖:docId］行）用
 var etLookupCache = {};       // 萌典查詢快取 { text: { bopomofo, def } }（沒對到題庫生字詞時的備援）
 var etPronFixes = {};         // { "行:字元序": {ch, readingIndex, homophone} }，破音字讀音調整（老師設定）
                                // 用「行:字元序」精準指到課文裡的某一次出現，不會牽連到同一個字的其他出現
@@ -102,6 +103,13 @@ function _etSplitLines(fullText) {
       if (lines.length && !lines[lines.length - 1].blank) {
         lines.push({ text: '', chars: [], blank: true });
       }
+      return;
+    }
+    /* 課文編輯後台「插入圖片」留下的標記行，不是真的課文文字，不用拆字元／不互動，
+       etRenderText() 看到 line.image 會畫成圖片、不會逐字朗讀或可圈選 */
+    var imgMatch = trimmed.match(/^［圖:([^］]+)］$/);
+    if (imgMatch) {
+      lines.push({ text: trimmed, chars: [], blank: false, image: imgMatch[1] });
       return;
     }
     var chars = Array.from(trimmed).map(function(ch) {
@@ -221,9 +229,11 @@ function loadEtWordImageMap() {
   if (!db) return;
   db.collection('wordImages').get().then(function(snap) {
     etWordImageMap = {};
+    etWordImageById = {};
     snap.forEach(function(doc) {
       var d = doc.data();
       if (d.word && d.imageUrl) etWordImageMap[d.word] = d.imageUrl;
+      if (d.imageUrl) etWordImageById[doc.id] = d.imageUrl;
     });
   }).catch(function() {});
 }
