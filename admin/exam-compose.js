@@ -18,6 +18,7 @@ var _ecLessonName = '';        // 課次名稱，e.g. "走進博物館"
 var _ecSections   = [];        // [{ title, key, collapsed, questions:[{id,label}] }]
 var _ecAllQ       = [];        // 從 Firestore 讀入（含 id）
 var _ecAllQSub    = '';        // _ecAllQ 對應的 subject（快取判斷用）
+var _ecAllLessonTexts = [];    // 課文編輯的課文（lessonTexts），語文科才會查；課次下拉/句子重組選句子用
 var _ecSelected   = {};        // { docId: true }
 var _ecMatchSections = [];   // [{title,source,gradeLesson,categoryId,pairCount,wordIds:[],words:[]}]
 
@@ -307,11 +308,21 @@ function _ecLoadQuestions() {
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
   var coll = _ecSubject === 'math' ? 'mathQuestions' : 'questions';
 
-  db.collection(coll).where('teacherUid', '==', currentTeacher.uid).get().then(function(snap) {
+  var qQ  = db.collection(coll).where('teacherUid', '==', currentTeacher.uid).get();
+  /* 課次清單／句子重組挑句子都需要課文編輯的資料，語文科才查；數學科沒有這個概念 */
+  var qLT = _ecSubject === 'chinese'
+    ? db.collection('lessonTexts').where('teacherUid', '==', currentTeacher.uid).get()
+    : Promise.resolve({ forEach: function() {} });
+
+  Promise.all([qQ, qLT]).then(function(results) {
     _ecAllQ = [];
-    snap.forEach(function(doc) { _ecAllQ.push(Object.assign({ id: doc.id }, doc.data())); });
+    results[0].forEach(function(doc) { _ecAllQ.push(Object.assign({ id: doc.id }, doc.data())); });
     _ecAllQSub = _ecSubject;
-    if (!_ecAllQ.length) {
+
+    _ecAllLessonTexts = [];
+    results[1].forEach(function(doc) { _ecAllLessonTexts.push(Object.assign({ docId: doc.id }, doc.data())); });
+
+    if (!_ecAllQ.length && !_ecAllLessonTexts.length) {
       wrap.innerHTML = '<p style="color:var(--muted);padding:16px;font-size:.88rem">題庫中尚無題目。請先至「資料庫」上傳題目。</p>';
       return;
     }
@@ -393,6 +404,15 @@ function _ecUpdateCatFilter() {
     if (q[catKey]) cats[q[catKey]] = true;
     if (_ecSubject === 'chinese' && q.lesson && q.lessonName) lessonNames[q.lesson] = q.lessonName;
   });
+  /* 課次清單不能只看 questions——課文編輯可能已經存了課文、但這一課還沒出過任何題目，
+     questions 裡查不到，這裡也要補上，否則「選到課次才看得到課文」這個功能自己就先卡住了 */
+  if (_ecSubject === 'chinese') {
+    (_ecAllLessonTexts || []).forEach(function(lt) {
+      if (grade && lt.grade !== grade) return;
+      if (lt.lesson) cats[lt.lesson] = true;
+      if (lt.lesson && lt.lessonName) lessonNames[lt.lesson] = lt.lessonName;
+    });
+  }
 
   catEl.innerHTML = '<option value="">' + pholder + '</option>' +
     Object.keys(cats).sort(function(a, b) {
@@ -428,9 +448,14 @@ function _ecFilterAndRender() {
   if (cntEl) cntEl.textContent = Object.keys(_ecSelected).length;
 
   /* 句子重組這個題型沒有 Excel 批次匯入（需要照本課語詞即時拆解，沒辦法用表格打），篩到這個
-     題型時在清單上方放一個「+ 新增」入口——只在選到這個題型才出現，不是額外獨立的區塊 */
+     題型時在清單上方放一個「+ 新增」入口——只在選到這個題型才出現，不是額外獨立的區塊。
+     如果同時選了specific 課次，直接把那一課的課文列出來，點句子就能直接帶進新增視窗，
+     不用老師自己切去課文編輯複製貼上 */
   var srRow = document.getElementById('ec-sr-create-row');
-  if (srRow) srRow.style.display = (type === '句子重組') ? '' : 'none';
+  if (srRow) {
+    if (type === '句子重組') { srRow.style.display = ''; _ecRenderSrCreateRow(grade, cat); }
+    else { srRow.style.display = 'none'; }
+  }
 
   var wrap = document.getElementById('ec-q-list');
   if (!wrap) return;
@@ -1127,6 +1152,7 @@ function _ecExtractFillAnswer(label) {
    ════════════════════════════════ */
 function _ecEsc(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _ecEscA(s) { return String(s).replace(/"/g,'&quot;'); }
+function _ecEscJs(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 /* 將字串轉成帶 <ruby> 標記的 HTML（逐字查注音字典）*/
 function _zhToRuby(s) {
@@ -1177,14 +1203,17 @@ function _ecCloseMatchModal() {
 /* 句子重組：開窗用 Step 1 已經選好的年級/課次預填，存檔完（_srOnSaved hook，定義在
    admin/quiz-bank.js 的 _srSaveQuestion 裡）直接把新題目塞進 _ecAllQ 並勾選起來，
    這份測驗馬上就帶著這一題，不用使用者自己再去選題清單裡找 */
-function _ecOpenSrModal() {
+/* lesson/lessonName 選填——從課文挑句子點進來時，帶的是「目前篩選中的那一課」，不一定跟
+   Step 1 選的是同一課（老師可能在 Step 2 另外切了課次篩選瀏覽）；單純按「+新增」才退回用
+   Step 1 的 _ecLesson/_ecLessonName */
+function _ecOpenSrModal(prefillSentence, lesson, lessonName) {
   var modal = document.getElementById('sr-modal');
   if (!modal) return;
   document.getElementById('sr-grade').value = _ecGrade;
   document.getElementById('sr-grade-display').textContent = _ecGrade || '（請先回第一步選版本冊次）';
-  document.getElementById('sr-lesson').value = _ecLesson || '';
-  document.getElementById('sr-lesson-name').value = _ecLessonName || '';
-  document.getElementById('sr-sentence').value = '';
+  document.getElementById('sr-lesson').value = lesson || _ecLesson || '';
+  document.getElementById('sr-lesson-name').value = lessonName || _ecLessonName || '';
+  document.getElementById('sr-sentence').value = prefillSentence || '';
   document.getElementById('sr-pieces-wrap').style.display = 'none';
   var statusEl = document.getElementById('sr-status');
   if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = ''; }
@@ -1197,6 +1226,38 @@ function _ecOpenSrModal() {
     _srCloseModal();
   };
   modal.style.display = 'flex';
+  if (prefillSentence) _srSegmentSentence(); /* 從課文點句子進來的，直接先拆好給老師看，不用再按一次 */
+}
+
+/* 句子重組的「+新增」入口：沒選特定課次時只有按鈕；選了特定課次，而且課文編輯那邊剛好
+   有這一課的課文，就把課文列出來（按標點斷句），點一句直接帶進新增視窗並預先拆好詞 */
+function _ecRenderSrCreateRow(grade, lesson) {
+  var row = document.getElementById('ec-sr-create-row');
+  if (!row) return;
+  var html = '<button onclick="_ecOpenSrModal()" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">🧩 新增一題句子重組題</button>';
+
+  if (lesson) {
+    var lt = (_ecAllLessonTexts || []).filter(function(x) { return x.grade === grade && x.lesson === lesson; })[0];
+    if (lt && lt.fullText) {
+      var sentences = lt.fullText
+        .split(/[。！？\n]+/)
+        .map(function(s) { return s.replace(/^［圖:[^］]+］$/, '').trim(); })
+        .filter(Boolean);
+      if (sentences.length) {
+        html += '<div style="margin-top:10px;font-size:.78rem;color:var(--muted);font-weight:700">' +
+          '或從「' + _ecEsc(lt.lessonName || ('第' + lesson + '課')) + '」課文挑一句：</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">' +
+          sentences.map(function(s) {
+            return '<button type="button" onclick="_ecOpenSrModal(\'' + _ecEscJs(s) + '\',\'' +
+              _ecEscJs(lesson) + '\',\'' + _ecEscJs(lt.lessonName || '') + '\')" ' +
+              'style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;background:white;' +
+              'font-size:.82rem;cursor:pointer;font-family:inherit">' + _ecEsc(s) + '</button>';
+          }).join('') +
+          '</div>';
+      }
+    }
+  }
+  row.innerHTML = html;
 }
 
 function _ecMatchSourceChange(source) {
