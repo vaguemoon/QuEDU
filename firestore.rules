@@ -64,6 +64,23 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.teacherUid == request.auth.uid;
     }
+    // 課文編輯的子集合（版本歷史、本課語詞）—— match 不會自動套用到子集合，一定要各自寫一條規則，
+    // 否則預設全部拒絕（曾經因為漏寫這條，功能在畫面上看起來成功、其實 Firestore 寫入全部被擋下）。
+    // 擁有者判斷要回頭查母文件的 teacherUid；課文還沒儲存過（母文件不存在）時先放行，跟上面母文件
+    // 規則「resource == null 時放行」是同一個理由——docId 本身已經用 currentTeacher.uid 編碼過，
+    // 不會跟別人的課文撞到。
+    match /lessonTexts/{docId}/vocab/{word} {
+      allow read, write: if request.auth != null && (
+        !exists(/databases/$(database)/documents/lessonTexts/$(docId)) ||
+        get(/databases/$(database)/documents/lessonTexts/$(docId)).data.teacherUid == request.auth.uid
+      );
+    }
+    match /lessonTexts/{docId}/versions/{versionId} {
+      allow read, write: if request.auth != null && (
+        !exists(/databases/$(database)/documents/lessonTexts/$(docId)) ||
+        get(/databases/$(database)/documents/lessonTexts/$(docId)).data.teacherUid == request.auth.uid
+      );
+    }
 
     // 學生 —— PIN 登入不走 Firebase Auth，需要公開讀寫
     match /students/{studentId} {

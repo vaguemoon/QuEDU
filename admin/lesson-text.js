@@ -229,8 +229,9 @@ function _ltEnsureEditorStyle() {
   style.id = 'lt-editor-style';
   style.textContent =
     '.lt-editor-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start;margin-bottom:16px}' +
-    '.lt-vocab-col{position:sticky;top:12px}' +
-    '@media (max-width:1000px){.lt-editor-grid{grid-template-columns:1fr}.lt-vocab-col{position:static}}';
+    '.lt-vocab-col{position:sticky;top:12px;border-left:1.5px solid var(--border);padding-left:20px}' +
+    '@media (max-width:1000px){.lt-editor-grid{grid-template-columns:1fr}' +
+      '.lt-vocab-col{position:static;border-left:none;padding-left:0;border-top:1.5px solid var(--border);padding-top:16px}}';
   document.head.appendChild(style);
 }
 
@@ -270,6 +271,7 @@ function _ltRenderEditor(classes) {
       '<span style="font-size:.74rem;color:var(--muted)">把游標放在要分段的地方再按「插入分段」</span>' +
     '</div>' +
     '<div id="lt-stats" style="font-size:.76rem;color:var(--muted);font-weight:700;margin-bottom:10px"></div>' +
+    '<div style="border-top:1.5px solid var(--border);margin:14px 0"></div>' +
     '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📄 分段預覽（學生在課文趣實際看到的樣子）</div>' +
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
       '文字下面有虛線的字是多音字，點一下可以選這個字在這裡要唸的讀音（只影響這一次出現）；' +
@@ -277,6 +279,7 @@ function _ltRenderEditor(classes) {
       '畫面上的注音會直接換成選的讀音。拖曳選取文字可以加入或移除本課語詞。' +
     '</div>' +
     '<div id="lt-preview" style="margin-bottom:16px"></div>' +
+    '<div style="border-top:1.5px solid var(--border);margin:14px 0"></div>' +
     '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:8px 0 10px">' +
       '<button onclick="_ltToggleVersions()" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;' +
         'background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🕐 版本歷史</button>' +
@@ -297,6 +300,7 @@ function _ltRenderEditor(classes) {
       '<div id="lt-vocab-panel"></div>' +
     '</div>' +
     '</div>' +
+    '<div style="border-top:1.5px solid var(--border);margin:20px 0 16px"></div>' +
     '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📤 分享給班級（課文趣的學生才看得到）</div>' +
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px">' +
       '已經分享過的班級，之後按「儲存課文全文」內容就會自動同步給他們；這裡只有在要改變「分享給哪些班級」時才需要用。' +
