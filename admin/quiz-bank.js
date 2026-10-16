@@ -709,7 +709,7 @@ function _srSegmentIntoAtoms(sentence, vocabWords) {
 }
 
 function _srSegmentSentence() {
-  var grade    = (document.getElementById('qb-grade').value || '').trim();
+  var grade    = (document.getElementById('sr-grade').value || '').trim();
   var lesson   = (document.getElementById('sr-lesson').value || '').trim();
   var sentence = (document.getElementById('sr-sentence').value || '').trim();
   var statusEl = document.getElementById('sr-status');
@@ -763,31 +763,44 @@ function _srComputePieces() {
   return pieces;
 }
 
+function _srCloseModal() {
+  var modal = document.getElementById('sr-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+/* 存完之後要做什麼由呼叫端決定（_ecOpenSrModal 開窗時會設定這個 hook，把新題目直接
+   加進目前這份測驗並勾選），這裡存完一律也刷新「我的題庫」的快取，兩邊都不用互相知道細節 */
+var _srOnSaved = null;
+
 function _srSaveQuestion() {
-  var grade      = (document.getElementById('qb-grade').value || '').trim();
+  var grade      = (document.getElementById('sr-grade').value || '').trim();
   var lesson     = (document.getElementById('sr-lesson').value || '').trim();
   var lessonName = (document.getElementById('sr-lesson-name').value || '').trim();
   var statusEl   = document.getElementById('sr-status');
   var pieces = _srComputePieces();
+  if (!grade) { if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '請先在第一步選版本與冊次'; } return; }
+  if (!lesson) { if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '請填課次'; } return; }
   if (pieces.length < 2) {
-    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '至少要有兩個片段才能出題，請再調整分界'; }
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '至少要有兩個片段才能出題，請先拆解句子、調整分界'; }
     return;
   }
   if (!db || !currentTeacher) return;
   var sentence = pieces.join('');
   if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '儲存中…'; }
 
-  db.collection('questions').add({
+  var docData = {
     grade: grade, lesson: lesson, lessonName: lessonName, type: '句子重組',
     question: sentence, answer: sentence, options: pieces,
     teacherUid: currentTeacher.uid, createdAt: new Date().toISOString()
-  }).then(function() {
+  };
+  db.collection('questions').add(docData).then(function(ref) {
     showToast('✅ 已新增句子重組題：' + sentence);
     document.getElementById('sr-sentence').value = '';
     document.getElementById('sr-pieces-wrap').style.display = 'none';
     _srAtoms = []; _srBoundaries = [];
-    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已儲存'; }
+    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = ''; }
     loadQuizBankStats();
+    if (typeof _srOnSaved === 'function') _srOnSaved(ref.id, docData);
   }).catch(function(e) {
     if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
   });

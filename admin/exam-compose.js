@@ -28,7 +28,7 @@ var _CN_MAP = {
   '十六':16,'十七':17,'十八':18,'十九':19,'二十':20
 };
 /* 語文大題預設順序 */
-var _EC_TYPE_ORDER = ['詞語填空', '詞語解釋', '選擇題'];
+var _EC_TYPE_ORDER = ['詞語填空', '詞語解釋', '選擇題', '句子重組'];
 /* 大題編號（中文數字） */
 var _EC_CN = ['一','二','三','四','五','六','七','八','九','十'];
 
@@ -1152,6 +1152,31 @@ function _ecOpenMatchModal() {
 function _ecCloseMatchModal() {
   var modal = document.getElementById('ec-match-modal');
   if (modal) modal.style.display = 'none';
+}
+
+/* 句子重組：開窗用 Step 1 已經選好的年級/課次預填，存檔完（_srOnSaved hook，定義在
+   admin/quiz-bank.js 的 _srSaveQuestion 裡）直接把新題目塞進 _ecAllQ 並勾選起來，
+   這份測驗馬上就帶著這一題，不用使用者自己再去選題清單裡找 */
+function _ecOpenSrModal() {
+  var modal = document.getElementById('sr-modal');
+  if (!modal) return;
+  document.getElementById('sr-grade').value = _ecGrade;
+  document.getElementById('sr-grade-display').textContent = _ecGrade || '（請先回第一步選版本冊次）';
+  document.getElementById('sr-lesson').value = _ecLesson || '';
+  document.getElementById('sr-lesson-name').value = _ecLessonName || '';
+  document.getElementById('sr-sentence').value = '';
+  document.getElementById('sr-pieces-wrap').style.display = 'none';
+  var statusEl = document.getElementById('sr-status');
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = ''; }
+
+  _srOnSaved = function(docId, data) {
+    _ecAllQ.push(Object.assign({ id: docId }, data));
+    _ecSelected[docId] = true;
+    _ecBuildFilters();
+    _ecFilterAndRender();
+    _srCloseModal();
+  };
+  modal.style.display = 'flex';
 }
 
 function _ecMatchSourceChange(source) {
