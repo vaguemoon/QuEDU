@@ -23,7 +23,8 @@ var _ltClassesCache   = null;
 var _ltGlobalHints    = null; // 跨課讀音建議：{ch: {readingIndex: 出現次數}}，整個分頁載入一次
 var _ltVocab           = {};  // 這一課配套生字詞聯集（題庫衍生＋本課語詞），用來在預覽裡標記
 var _ltVocabFromQuestions = {}; // 詞語題庫衍生（詞語解釋/詞語填空答案），唯讀
-var _ltVocabManual     = {};  // 本課語詞子集合（lessonTexts/{docId}/vocab），可在課文預覽裡直接增刪
+var _ltVocabManual     = {};  // 本課語詞子集合（lessonTexts/{docId}/vocab）裡「存在」的字，聯集用
+var _ltVocabSource     = {};  // word -> 'manual'|'questions'，上面那份子集合每個字實際的來源，面板標籤/能不能移除看這個
 var _ltDragging        = false; // 拖曳選字狀態（設定本課語詞用）
 var _ltDragLineIdx     = null;
 var _ltDragStartCi     = null;
@@ -202,6 +203,7 @@ function _ltOpenEditor(info) {
   _ltPendingPronFixes = JSON.parse(JSON.stringify(info.pronFixes || {}));
   _ltWysiwyg = false;
   _ltVersions = [];
+  _ltVocabSyncFailed = false;
 
   document.getElementById('lt-list-view').classList.add('hidden');
   var ev = document.getElementById('lt-editor-view');
@@ -298,8 +300,9 @@ function _ltRenderEditor(classes) {
     '<div class="lt-vocab-col">' +
       '<div style="font-size:.93rem;font-weight:800;margin-bottom:4px">🏷️ 本課語詞</div>' +
       '<div style="font-size:.85rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.5">' +
-        '點圖示可以搜圖／上傳；手動加入的語詞才能用 ✕ 移除，來自題庫的要到題庫改。' +
+        '點圖示可以搜圖／上傳；點字可以編輯詞語解釋／填空題；手動加入的語詞才能用 ✕ 移除，來自題庫的要到題庫改。' +
       '</div>' +
+      '<div id="lt-vocab-sync-status"></div>' +
       '<div id="lt-vocab-panel"></div>' +
     '</div>' +
     '</div>' +
@@ -499,13 +502,17 @@ function _ltFetchVocab(grade, lesson, docId) {
     Object.keys(defs).forEach(function(w) { _ltVocabFromQuestions[w] = true; });
 
     _ltVocabManual = {};
+    _ltVocabSource = {};
     results[1].forEach(function(doc) {
-      var w = (doc.data().word || '').trim();
-      if (w) _ltVocabManual[w] = true;
+      var d = doc.data();
+      var w = (d.word || '').trim();
+      if (!w) return;
+      _ltVocabManual[w] = true;
+      _ltVocabSource[w] = d.source === 'questions' ? 'questions' : 'manual'; // 舊資料沒有 source 欄位，當手動（向下相容）
     });
 
     _ltRecomputeVocabUnion();
-  }).catch(function() { _ltVocabFromQuestions = {}; _ltVocabManual = {}; _ltVocab = {}; _ltQuestionDocs = {}; });
+  }).catch(function() { _ltVocabFromQuestions = {}; _ltVocabManual = {}; _ltVocabSource = {}; _ltVocab = {}; _ltQuestionDocs = {}; });
 }
 function _ltCacheQuestionDoc(word, type, docId, question) {
   if (!_ltQuestionDocs[word]) _ltQuestionDocs[word] = {};
@@ -607,13 +614,16 @@ function _ltCloseVocabPopover() {
 function _ltShowVocabPopover(word, x, y) {
   var pop = _ltEnsureVocabPopover();
   _ltPendingVocabWord = word;
-  var already = !!_ltVocabManual[word];
+  var isManual = _ltVocabSource[word] === 'manual';
+  var isFromQuestions = !isManual && (_ltVocabSource[word] === 'questions' || !!_ltVocabFromQuestions[word]);
   pop.innerHTML =
     '<div style="font-size:1.03rem;font-weight:800;margin-bottom:10px;text-align:center">「' + escHtml(word) + '」</div>' +
-    (already
+    (isManual
       ? '<button type="button" onclick="_ltConfirmRemoveVocab()" style="padding:6px 14px;border:none;border-radius:8px;' +
         'width:100%;background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.93rem">' +
         '－ 從本課語詞移除</button>'
+      : isFromQuestions
+      ? '<div style="font-size:.84rem;color:var(--muted);text-align:center;line-height:1.5">已經是本課語詞（來自題庫），<br>要移除請到題庫處理</div>'
       : '<button type="button" onclick="_ltConfirmAddVocab()" style="padding:6px 14px;border:none;border-radius:8px;' +
         'width:100%;background:var(--blue);color:white;font-weight:800;cursor:pointer;font-family:inherit;font-size:.93rem">' +
         '＋ 加入本課語詞</button>');
@@ -637,9 +647,10 @@ function _ltConfirmRemoveVocab() {
 function _ltAddVocabWord(word) {
   if (!word || !_ltCurrent || !db) return;
   db.collection('lessonTexts').doc(_ltCurrent.docId).collection('vocab').doc(word).set({
-    word: word, addedAt: new Date().toISOString()
+    word: word, addedAt: new Date().toISOString(), source: 'manual'
   }).then(function() {
     _ltVocabManual[word] = true;
+    _ltVocabSource[word] = 'manual';
     _ltRecomputeVocabUnion();
     _ltRenderTextPreview();
     _ltRenderVocabPanel();
@@ -650,8 +661,13 @@ function _ltAddVocabWord(word) {
 
 function _ltRemoveVocabWord(word) {
   if (!word || !_ltCurrent || !db) return;
+  if (_ltVocabSource[word] === 'questions') {
+    showToast('這個字是題庫「詞語解釋／填空」帶出來的，要移除請改到題庫刪除對應題目，或點 ✏️ 清空內容');
+    return;
+  }
   db.collection('lessonTexts').doc(_ltCurrent.docId).collection('vocab').doc(word).delete().then(function() {
     delete _ltVocabManual[word];
+    delete _ltVocabSource[word];
     _ltRecomputeVocabUnion();
     _ltRenderTextPreview();
     _ltRenderVocabPanel();
@@ -691,7 +707,9 @@ function _ltRenderVocabPanel() {
   var gradeLesson = _ltCurrent.grade + '_' + _ltCurrent.lesson;
   panel.innerHTML = words.map(function(w) {
     var img = (_ltWordImages || []).filter(function(x) { return x.word === w && x.gradeLesson === gradeLesson; })[0];
-    var manual = !!_ltVocabManual[w];
+    var manual = _ltVocabSource[w] === 'manual';
+    var qd = _ltQuestionDocs[w];
+    var hasQuestion = !!(qd && (qd['詞語解釋'] || qd['詞語填空']));
     return '<div style="background:white;border:1.5px solid var(--border);border-radius:10px;padding:8px;margin-bottom:8px;' +
       'display:flex;align-items:center;gap:8px">' +
       (img
@@ -705,6 +723,8 @@ function _ltRenderVocabPanel() {
         'title="編輯詞語解釋／填空題（跟題庫共用）">' +
         '<div style="font-weight:800;font-size:1.03rem">' + escHtml(w) + ' <span style="font-size:.81rem">✏️</span></div>' +
         '<div style="font-size:.81rem;color:var(--muted);font-weight:700">' + (manual ? '手動加入' : '來自題庫') + '</div>' +
+        (hasQuestion ? '' : '<div style="font-size:.76rem;color:var(--red);font-weight:700;margin-top:2px">' +
+          '⚠️ 題庫還沒有這題，點字補上</div>') +
       '</div>' +
       (manual
         ? '<button type="button" onclick="_ltRemoveVocabWord(\'' + _ltEscJs(w) + '\')" title="移除" ' +
@@ -782,15 +802,46 @@ function _ltSaveWordEdit() {
     _ltUpsertQuestion(word, '詞語解釋', defVal),
     _ltUpsertQuestion(word, '詞語填空', fillVal)
   ]).then(function() {
-    return _ltFetchVocab(info.grade, info.lesson, info.docId);
+    return _ltFetchVocab(info.grade, info.lesson, info.docId); // 兩個 upsert 的最終狀態都反映出來之後，才判斷要不要同步本課語詞
+  }).then(function() {
+    return _ltSyncVocabWithQuestions(word);
   }).then(function() {
     _ltRenderTextPreview();
     _ltRenderVocabPanel();
+    _ltResyncSharedVocabIfNeeded();
     _ltCloseWordEditModal();
     showToast('✅ 已儲存「' + word + '」的題庫內容');
   }).catch(function(e) {
     if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
   });
+}
+/* 題庫內容存檔後，反向確保「本課語詞」清單跟著對：
+   有題目但還不是語詞 → 補上（source:'questions'）；題目都清光了、而且這個字當初只是因為
+   題庫才變語詞（source:'questions'，不是老師手動加的）→ 清掉，避免沒有題目又沒人手動加的字
+   卡在語詞清單裡。手動加的字（source:'manual'）不管題目有沒有，都不會被這裡自動清掉。 */
+function _ltSyncVocabWithQuestions(word) {
+  var info = _ltCurrent;
+  var qd = _ltQuestionDocs[word];
+  var hasQuestion = !!(qd && (qd['詞語解釋'] || qd['詞語填空']));
+  var hasVocabDoc = !!_ltVocabSource[word];
+
+  if (hasQuestion && !hasVocabDoc) {
+    return db.collection('lessonTexts').doc(info.docId).collection('vocab').doc(word).set({
+      word: word, addedAt: new Date().toISOString(), source: 'questions'
+    }).then(function() {
+      _ltVocabManual[word] = true;
+      _ltVocabSource[word] = 'questions';
+      _ltRecomputeVocabUnion();
+    });
+  }
+  if (!hasQuestion && _ltVocabSource[word] === 'questions') {
+    return db.collection('lessonTexts').doc(info.docId).collection('vocab').doc(word).delete().then(function() {
+      delete _ltVocabManual[word];
+      delete _ltVocabSource[word];
+      _ltRecomputeVocabUnion();
+    });
+  }
+  return Promise.resolve();
 }
 /* 留空就刪掉對應的題目（如果原本有的話），有內容就 upsert——跟 _ltAssignWordImage 同樣的
    「先查有沒有既有文件，有就更新同一份、沒有才新增」邏輯，用 word+type+grade+lesson 當身分 */
@@ -1066,13 +1117,30 @@ function _ltSyncSharedSnapshots(info, fullText, pronFixes, classIds, prevIds, vo
 /* 本課語詞（手動加入那份）有變動時，如果這課已經分享給班級了，立刻重新同步，
    不用等老師按「儲存課文全文」——跟拖曳選字當下就會生效的體驗一致。
    fullText/pronFixes 用 info 上次儲存的版本（不是 textarea 目前還沒存檔的內容），
-   只是把 vocabWords 覆寫上去，不會動到其他欄位。 */
+   只是把 vocabWords 覆寫上去，不會動到其他欄位。
+   失敗時不能只跳一個會消失的 toast——網路不穩或多分頁同時編輯，老師不會注意到，畫面上會
+   一直顯示「已經加入」但學生端其實沒更新；改成在語詞面板留一個持續可見的重試提示。 */
+var _ltVocabSyncFailed = false;
 function _ltResyncSharedVocabIfNeeded() {
   var info = _ltCurrent;
   if (!info || !db) return Promise.resolve();
   var sharedIds = info.sharedClassIds || [];
-  if (!sharedIds.length) return Promise.resolve();
-  return _ltSyncSharedSnapshots(info, info.fullText, info.pronFixes, sharedIds, sharedIds, Object.keys(_ltVocabManual));
+  if (!sharedIds.length) { _ltVocabSyncFailed = false; _ltRenderVocabSyncStatus(); return Promise.resolve(); }
+  return _ltSyncSharedSnapshots(info, info.fullText, info.pronFixes, sharedIds, sharedIds, Object.keys(_ltVocabManual))
+    .then(function() { _ltVocabSyncFailed = false; _ltRenderVocabSyncStatus(); })
+    .catch(function() { _ltVocabSyncFailed = true; _ltRenderVocabSyncStatus(); });
+}
+function _ltRenderVocabSyncStatus() {
+  var el = document.getElementById('lt-vocab-sync-status');
+  if (!el) return;
+  el.innerHTML = _ltVocabSyncFailed
+    ? '<div style="background:var(--red-lt);color:var(--red);border-radius:7px;padding:7px 10px;font-size:.82rem;' +
+      'font-weight:700;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px">' +
+      '<span>⚠️ 語詞還沒同步給學生</span>' +
+      '<button type="button" onclick="_ltResyncSharedVocabIfNeeded()" style="border:none;background:var(--red);' +
+      'color:white;padding:3px 10px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.78rem;' +
+      'font-weight:800">重試</button></div>'
+    : '';
 }
 
 function _ltSaveLessonText() {

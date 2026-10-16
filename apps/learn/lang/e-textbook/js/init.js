@@ -15,7 +15,7 @@ window.addEventListener('load', function() {
   (function waitDb() {
     if (!db) { setTimeout(waitDb, 200); return; }
     _etAutoLogin();
-    loadEtWordImageMap();
+    /* loadEtWordImageMap() 現在需要知道是哪一課才能精準比對圖片，改成 openEtLesson() 裡呼叫 */
   })();
 });
 

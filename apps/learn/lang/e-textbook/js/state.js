@@ -89,6 +89,7 @@ function openEtLesson(docId) {
 
   _etLoadVocab(lesson);
   _etLoadLessonProgress();
+  loadEtWordImageMap(lesson);
 }
 
 /* 把課文全文拆成「行」，每行再拆成一個個 Unicode 字元，
@@ -229,16 +230,30 @@ function saveEtProgress(markCompleted) {
   }).catch(function(e) { console.warn('saveEtProgress error:', e); });
 }
 
-/* ── 詞語圖庫（wordImages）：圈到的詞若剛好有教學圖片就一起顯示 ── */
-function loadEtWordImageMap() {
+/* ── 詞語圖庫（wordImages）：圈到的詞若剛好有教學圖片就一起顯示 ──
+   課文編輯那邊設定圖片是用 word+gradeLesson 精準指定「這個字在這一課用哪張圖」（同一個字
+   不同課可以放不同圖）。這裡要照同一個精準度查，不能整個 wordImages 不分課次、不分老師地撈，
+   不然同名詞在別課/別的老師手上設定的圖片可能蓋過這一課真正設定的那張。
+   只在開啟某一課的當下查（openEtLesson 呼叫），不是 App 一開始就查一次全校共用。 */
+function loadEtWordImageMap(lesson) {
   if (!db) return;
-  db.collection('wordImages').get().then(function(snap) {
-    etWordImageMap = {};
-    etWordImageById = {};
+  etWordImageMap = {};
+  etWordImageById = {};
+  if (!lesson || !lesson.teacherUid) return;
+  var gradeLesson = lesson.grade + '_' + lesson.lesson;
+  db.collection('wordImages').where('teacherUid', '==', lesson.teacherUid).get().then(function(snap) {
+    var fallback = {}; // 同一個老師、但不是這一課設定的同名詞圖片，當退回候補用
     snap.forEach(function(doc) {
       var d = doc.data();
-      if (d.word && d.imageUrl) etWordImageMap[d.word] = d.imageUrl;
-      if (d.imageUrl) etWordImageById[doc.id] = d.imageUrl;
+      if (!d.imageUrl) return;
+      if (d.word) {
+        if (d.gradeLesson === gradeLesson) etWordImageMap[d.word] = d.imageUrl;
+        else if (!(d.word in fallback)) fallback[d.word] = d.imageUrl;
+      }
+      etWordImageById[doc.id] = d.imageUrl;
+    });
+    Object.keys(fallback).forEach(function(w) {
+      if (!(w in etWordImageMap)) etWordImageMap[w] = fallback[w];
     });
   }).catch(function() {});
 }

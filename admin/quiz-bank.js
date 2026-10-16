@@ -313,6 +313,9 @@ function uploadQuizBank() {
 
   Promise.all(batches.map(function(b) { return b.commit(); }))
     .then(function() {
+      return _qbSyncVocabFromImport(qbParsedData);
+    })
+    .then(function() {
       showToast('✅ 成功上傳 ' + qbParsedData.length + ' 筆題目！');
       clearQuizBankPreview();
       loadQuizBankStats();
@@ -321,6 +324,43 @@ function uploadQuizBank() {
       showToast('❌ 上傳失敗：' + e.message);
       if (btn) { btn.disabled = false; btn.textContent = '⬆️ 上傳至 Firebase'; }
     });
+}
+
+/* Excel 匯入「詞語解釋／詞語填空」題時，答案欄的詞語同步補進對應課文的 lessonTexts/{docId}/vocab，
+   課文編輯那邊才看得到（不用老師兩邊各自維護）。只補「這個字完全沒有記錄」的，不動已經存在的
+   （不管是老師手動加的還是之前匯入過的），避免蓋掉老師自己的設定。docId 算法要跟
+   admin/lesson-text.js 的 _ltDocId 完全一致：'t_' + encodeURIComponent(teacherUid + '|' + grade + '|' + lesson)。
+   單一課次同步失敗不擋住整個上傳流程（已經上傳的題目不該因為這一步失敗而跳錯誤）。 */
+function _qbSyncVocabFromImport(items) {
+  if (!db || !currentTeacher) return Promise.resolve();
+  var wordsByLesson = {};
+  items.forEach(function(item) {
+    if (item.type !== '詞語解釋' && item.type !== '詞語填空') return;
+    var word = (item.answer || '').trim();
+    if (!word) return;
+    var docId = 't_' + encodeURIComponent(currentTeacher.uid + '|' + item.grade + '|' + item.lesson);
+    if (!wordsByLesson[docId]) wordsByLesson[docId] = {};
+    wordsByLesson[docId][word] = true;
+  });
+  var docIds = Object.keys(wordsByLesson);
+  if (!docIds.length) return Promise.resolve();
+
+  return Promise.all(docIds.map(function(docId) {
+    return db.collection('lessonTexts').doc(docId).collection('vocab').get().then(function(snap) {
+      var existing = {};
+      snap.forEach(function(doc) { existing[doc.id] = true; });
+      var batch = db.batch();
+      var writes = 0;
+      Object.keys(wordsByLesson[docId]).forEach(function(word) {
+        if (existing[word]) return;
+        batch.set(db.collection('lessonTexts').doc(docId).collection('vocab').doc(word), {
+          word: word, addedAt: new Date().toISOString(), source: 'questions'
+        });
+        writes++;
+      });
+      return writes ? batch.commit() : Promise.resolve();
+    }).catch(function() {});
+  }));
 }
 
 /* ════════════════════════════════════════
