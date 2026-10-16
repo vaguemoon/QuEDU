@@ -793,11 +793,14 @@ function _srComputePieces() {
 function _srCloseModal() {
   var modal = document.getElementById('sr-modal');
   if (modal) modal.style.display = 'none';
+  _srEditDocId = null;
 }
 
 /* 存完之後要做什麼由呼叫端決定（_ecOpenSrModal 開窗時會設定這個 hook，把新題目直接
    加進目前這份測驗並勾選），這裡存完一律也刷新「我的題庫」的快取，兩邊都不用互相知道細節 */
-var _srOnSaved = null;
+var _srOnSaved   = null;
+var _srOnDeleted = null;
+var _srEditDocId = null; /* null=新增一題；有值=正在編輯這一題，存檔時用 .set() 更新同一份文件而不是新增 */
 
 function _srSaveQuestion() {
   var grade      = (document.getElementById('sr-grade').value || '').trim();
@@ -820,15 +823,36 @@ function _srSaveQuestion() {
     question: sentence, answer: sentence, options: pieces,
     teacherUid: currentTeacher.uid, createdAt: new Date().toISOString()
   };
-  db.collection('questions').add(docData).then(function(ref) {
-    showToast('✅ 已新增句子重組題：' + sentence);
+  var isEdit = !!_srEditDocId;
+  var save = isEdit
+    ? db.collection('questions').doc(_srEditDocId).set(docData)
+    : db.collection('questions').add(docData);
+  Promise.resolve(save).then(function(ref) {
+    var docId = isEdit ? _srEditDocId : ref.id;
+    showToast(isEdit ? ('✅ 已更新句子重組題：' + sentence) : ('✅ 已新增句子重組題：' + sentence));
     document.getElementById('sr-sentence').value = '';
     document.getElementById('sr-pieces-wrap').style.display = 'none';
-    _srAtoms = []; _srBoundaries = [];
+    _srAtoms = []; _srBoundaries = []; _srEditDocId = null;
     if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = ''; }
     loadQuizBankStats();
-    if (typeof _srOnSaved === 'function') _srOnSaved(ref.id, docData);
+    if (typeof _srOnSaved === 'function') _srOnSaved(docId, docData, isEdit);
   }).catch(function(e) {
     if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
+  });
+}
+
+/* 只有在編輯既有題目（_srEditDocId 有值）時才會顯示刪除按鈕，新增模式沒有東西可刪 */
+function _srDeleteQuestion() {
+  if (!_srEditDocId || !db) return;
+  if (!confirm('確定要刪除這一題句子重組題嗎？\n\n此操作無法復原。')) return;
+  var docId = _srEditDocId;
+  db.collection('questions').doc(docId).delete().then(function() {
+    showToast('✅ 已刪除這一題');
+    _srCloseModal();
+    loadQuizBankStats();
+    if (typeof _srOnDeleted === 'function') _srOnDeleted(docId);
+  }).catch(function(e) {
+    var statusEl = document.getElementById('sr-status');
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ 刪除失敗：' + e.message; }
   });
 }

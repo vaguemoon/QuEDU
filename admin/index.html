@@ -764,7 +764,7 @@
         <!-- 句子重組 modal -->
         <div id="sr-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center">
           <div style="background:var(--card-bg,#fff);border-radius:14px;padding:24px;max-width:560px;width:92%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.22)">
-            <div style="font-size:1rem;font-weight:800;margin-bottom:12px">🧩 新增句子重組題</div>
+            <div id="sr-modal-title" style="font-size:1rem;font-weight:800;margin-bottom:12px">🧩 新增句子重組題</div>
             <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px;line-height:1.7">
               給特教學生練習「把打散的句子排回正確順序」。系統會依照這一課已經設定好的「本課語詞」自動拆解句子，
               詞語不會被拆開；拆完可以手動調整分界，加入後會直接列入這份測驗。
@@ -795,9 +795,12 @@
               <div id="sr-pieces" style="display:flex;flex-wrap:wrap;align-items:center;gap:0;margin-bottom:10px"></div>
             </div>
             <div id="sr-status" style="font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:10px"></div>
-            <div style="display:flex;justify-content:flex-end;gap:10px">
-              <button class="btn btn-secondary" onclick="_srCloseModal()">取消</button>
-              <button class="btn btn-primary" onclick="_srSaveQuestion()">加入這份測驗</button>
+            <div style="display:flex;justify-content:space-between;gap:10px">
+              <button id="sr-delete-btn" onclick="_srDeleteQuestion()" style="display:none;padding:7px 16px;border:1.5px solid var(--red);border-radius:8px;background:white;color:var(--red);font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">🗑 刪除這一題</button>
+              <div style="display:flex;gap:10px;margin-left:auto">
+                <button class="btn btn-secondary" onclick="_srCloseModal()">取消</button>
+                <button id="sr-save-btn" class="btn btn-primary" onclick="_srSaveQuestion()">加入這份測驗</button>
+              </div>
             </div>
           </div>
         </div>

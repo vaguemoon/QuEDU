@@ -479,11 +479,14 @@ function _ecFilterAndRender() {
       : (_ecSubject === 'math' && q.answer
           ? ' <span style="font-size:.7rem;color:var(--muted)">答：' + _ecEsc(q.answer) + '</span>'
           : '');
-    return '<label style="display:flex;align-items:flex-start;gap:10px;padding:8px 4px;cursor:pointer;border-bottom:1px solid var(--border)">' +
+    /* checkbox 跟「點題目開編輯/刪除視窗」分開，不能再用 <label> 整包包起來（點哪裡都會
+       觸發 checkbox），checkbox 自己管自己的勾選，文字部分自己管自己的點擊 */
+    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border)">' +
       '<input type="checkbox"' + chk + ' onchange="_ecToggleQ(\'' + q.id + '\',this.checked)"' +
         ' style="margin-top:3px;width:16px;height:16px;flex-shrink:0;cursor:pointer">' +
-      '<span style="font-size:.85rem;line-height:1.5">' + text + badge + '</span>' +
-    '</label>';
+      '<span style="font-size:.85rem;line-height:1.5;cursor:pointer" onclick="_ecOpenQuestionPopup(\'' + q.id + '\')" ' +
+        'title="點一下可以編輯或刪除這一題">' + text + badge + ' <span style="color:var(--muted);font-size:.72rem">✎</span></span>' +
+    '</div>';
   }).join('');
 
   if (filtered.length > 150) {
@@ -496,6 +499,24 @@ function _ecToggleQ(id, checked) {
   else         delete _ecSelected[id];
   var el = document.getElementById('ec-selected-count');
   if (el) el.textContent = Object.keys(_ecSelected).length;
+}
+
+/* 點清單裡一題既有題目：句子重組有現成的編輯器，直接開編輯模式；
+   其他題型（Excel 匯入，詞語填空/解釋/選擇題）這裡還沒有完整編輯介面，先提供刪除，
+   要改內容請到「資料庫 > 語文題庫」重新匯入同一課次（會自動略過沒變動的題目） */
+function _ecOpenQuestionPopup(docId) {
+  var q = null;
+  for (var k = 0; k < _ecAllQ.length; k++) { if (_ecAllQ[k].id === docId) { q = _ecAllQ[k]; break; } }
+  if (!q) return;
+  if (q.type === '句子重組') { _ecOpenSrModalForEdit(docId); return; }
+  var label = q.question || q.word || '（無題幹）';
+  if (!confirm('「' + label + '」\n\n這個題型目前只能在這裡刪除，內容要改請到「資料庫 > 語文題庫」重新匯入。\n\n確定要刪除這一題嗎？此操作無法復原。')) return;
+  if (!db) return;
+  var coll = _ecSubject === 'math' ? 'mathQuestions' : 'questions';
+  db.collection(coll).doc(docId).delete().then(function() {
+    showToast('✅ 已刪除這一題');
+    _ecSrOnDeletedHandler(docId);
+  }).catch(function(e) { showToast('❌ 刪除失敗：' + e.message); });
 }
 
 function _ecSelectAll() {
@@ -1214,6 +1235,10 @@ function _ecCloseMatchModal() {
 function _ecOpenSrModal(prefillSentence, lesson, lessonName) {
   var modal = document.getElementById('sr-modal');
   if (!modal) return;
+  _srEditDocId = null;
+  document.getElementById('sr-modal-title').textContent = '🧩 新增句子重組題';
+  document.getElementById('sr-delete-btn').style.display = 'none';
+  document.getElementById('sr-save-btn').textContent = '加入這份測驗';
   document.getElementById('sr-grade').value = _ecGrade;
   document.getElementById('sr-grade-display').textContent = _ecGrade || '（請先回第一步選版本冊次）';
   document.getElementById('sr-lesson').value = lesson || _ecLesson || '';
@@ -1223,15 +1248,66 @@ function _ecOpenSrModal(prefillSentence, lesson, lessonName) {
   var statusEl = document.getElementById('sr-status');
   if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = ''; }
 
-  _srOnSaved = function(docId, data) {
-    _ecAllQ.push(Object.assign({ id: docId }, data));
-    _ecSelected[docId] = true;
-    _ecBuildFilters();
-    _ecFilterAndRender();
-    _srCloseModal();
-  };
+  _srOnSaved   = _ecSrOnSavedHandler;
+  _srOnDeleted = _ecSrOnDeletedHandler;
   modal.style.display = 'flex';
   if (prefillSentence) _srSegmentSentence(); /* 從課文點句子進來的，直接先拆好給老師看，不用再按一次 */
+}
+
+/* 點清單裡已經存在的句子重組題 → 用同一個 modal，但是編輯模式：直接用存檔時的片段
+   （不重新跑斷詞，保留老師原本調整過的分界），存檔時更新同一份文件，並多顯示刪除按鈕 */
+function _ecOpenSrModalForEdit(docId) {
+  var q = null;
+  for (var k = 0; k < _ecAllQ.length; k++) { if (_ecAllQ[k].id === docId) { q = _ecAllQ[k]; break; } }
+  if (!q) return;
+  var modal = document.getElementById('sr-modal');
+  if (!modal) return;
+
+  _srEditDocId = docId;
+  document.getElementById('sr-modal-title').textContent = '🧩 編輯句子重組題';
+  document.getElementById('sr-delete-btn').style.display = '';
+  document.getElementById('sr-save-btn').textContent = '儲存變更';
+  document.getElementById('sr-grade').value = q.grade || _ecGrade;
+  document.getElementById('sr-grade-display').textContent = q.grade || _ecGrade || '';
+  document.getElementById('sr-lesson').value = q.lesson || '';
+  document.getElementById('sr-lesson-name').value = q.lessonName || '';
+  document.getElementById('sr-sentence').value = (q.options || []).join('');
+  var statusEl = document.getElementById('sr-status');
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = ''; }
+
+  /* 既有片段直接當 atom，邊界全部設成「分開」——保留老師原本存檔時的合併結果，
+     不用重新跑一次斷詞；想整個重新拆解還是可以再按一次「拆解句子」 */
+  _srAtoms = (q.options || []).slice();
+  _srBoundaries = _srAtoms.map(function() { return true; }).slice(0, _srAtoms.length - 1);
+  document.getElementById('sr-pieces-wrap').style.display = '';
+  _srRenderPieces();
+
+  _srOnSaved   = _ecSrOnSavedHandler;
+  _srOnDeleted = _ecSrOnDeletedHandler;
+  modal.style.display = 'flex';
+}
+
+function _ecSrOnSavedHandler(docId, data, isEdit) {
+  var idx = -1;
+  for (var k = 0; k < _ecAllQ.length; k++) { if (_ecAllQ[k].id === docId) { idx = k; break; } }
+  if (idx !== -1) {
+    _ecAllQ[idx] = Object.assign({ id: docId }, data);
+  } else {
+    _ecAllQ.push(Object.assign({ id: docId }, data));
+    if (!isEdit) _ecSelected[docId] = true; /* 新增的題目自動勾選進這份測驗；編輯既有題目不動原本的勾選狀態 */
+  }
+  _ecBuildFilters();
+  _ecFilterAndRender();
+  _srCloseModal();
+}
+
+function _ecSrOnDeletedHandler(docId) {
+  var kept = [];
+  for (var k = 0; k < _ecAllQ.length; k++) { if (_ecAllQ[k].id !== docId) kept.push(_ecAllQ[k]); }
+  _ecAllQ = kept;
+  delete _ecSelected[docId];
+  _ecBuildFilters();
+  _ecFilterAndRender();
 }
 
 /* 句子重組的「+新增」入口：沒選特定課次時只有按鈕；選了特定課次，而且課文編輯那邊剛好
