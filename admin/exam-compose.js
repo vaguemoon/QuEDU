@@ -247,12 +247,23 @@ function _ecUpdateLessonOptions() {
   }
   lessonEl.innerHTML = '<option value="">載入中…</option>';
 
-  db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', _ecGrade).get()
-    .then(function(snap) {
+  /* 課次清單不能只看 questions——課文編輯（lessonTexts）可能已經存了課文、但這一課還沒出過任何
+     題目，questions 裡完全查不到，課次選單就會漏掉它（使用者實際遇到的狀況：課文編輯裡「運動會」
+     已經存在，這裡卻選不到）。兩邊都查，用課次號碼聯集起來，課名優先用 lessonTexts 的（比較可能
+     是老師正式打的課名），questions 那邊沒有獨立的課文課名欄位可比，只能當備援。 */
+  var qQuestions   = db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', _ecGrade).get();
+  var qLessonTexts = db.collection('lessonTexts').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', _ecGrade).get();
+
+  Promise.all([qQuestions, qLessonTexts]).then(function(results) {
     var lessonMap = {};
-    snap.forEach(function(doc) {
+    results[0].forEach(function(doc) {
       var d = doc.data();
-      if (d.lesson) lessonMap[d.lesson] = d.lessonName || '';
+      if (d.lesson && !lessonMap[d.lesson]) lessonMap[d.lesson] = d.lessonName || '';
+    });
+    results[1].forEach(function(doc) {
+      var d = doc.data();
+      if (!d.lesson) return;
+      if (!lessonMap[d.lesson] || d.lessonName) lessonMap[d.lesson] = d.lessonName || lessonMap[d.lesson] || '';
     });
 
     var lessons = Object.keys(lessonMap).sort(function(a, b) {
@@ -271,7 +282,7 @@ function _ecUpdateLessonOptions() {
         '第 ' + _ecEsc(l) + ' 課' + (name ? '　' + _ecEsc(name) : '') + '</option>';
     });
     if (!lessons.length) {
-      opts += '<option value="" disabled style="color:var(--muted)">（此年級無題庫，可忽略）</option>';
+      opts += '<option value="" disabled style="color:var(--muted)">（此年級還沒有題庫或課文，可忽略）</option>';
     }
     lessonEl.innerHTML = opts;
     if (_ecLesson) lessonEl.value = _ecLesson;
