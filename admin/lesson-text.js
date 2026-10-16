@@ -29,6 +29,8 @@ var _ltDragLineIdx     = null;
 var _ltDragStartCi     = null;
 var _ltDragEndCi       = null;
 var _ltPendingVocabWord = null; // 目前彈窗指到、待確認加入/移除的詞
+var _ltImagePickerMode = 'insert'; // 圖片彈窗目前的用途：'insert'=插入課文內文｜'word'=設定某個語詞的圖片
+var _ltImagePickerWord  = null;    // mode='word' 時，目前指到哪個語詞
 var _ltFontReady      = false;
 var _ltWysiwyg        = false;
 var _ltVersions       = [];
@@ -220,9 +222,22 @@ function _ltOpenEditor(info) {
   });
 }
 
+/* 雙欄版面（左：課文編輯／右：本課語詞）只需要注入一次 */
+function _ltEnsureEditorStyle() {
+  if (document.getElementById('lt-editor-style')) return;
+  var style = document.createElement('style');
+  style.id = 'lt-editor-style';
+  style.textContent =
+    '.lt-editor-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start;margin-bottom:16px}' +
+    '.lt-vocab-col{position:sticky;top:12px}' +
+    '@media (max-width:1000px){.lt-editor-grid{grid-template-columns:1fr}.lt-vocab-col{position:static}}';
+  document.head.appendChild(style);
+}
+
 function _ltRenderEditor(classes) {
   var info = _ltCurrent;
   var ev = document.getElementById('lt-editor-view');
+  _ltEnsureEditorStyle();
 
   var html =
     '<button onclick="_ltBackToList()" style="margin-bottom:12px;padding:5px 12px;border:1.5px solid var(--border);' +
@@ -231,8 +246,10 @@ function _ltRenderEditor(classes) {
       (info.lessonName ? '　' + escHtml(info.lessonName) : '') + '</div>' +
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:10px;line-height:1.6">' +
       '給「課文趣」App 上課時逐字朗讀＋圈詞用。本課語詞會自動抓這一課「詞語解釋」「詞語填空」題目的答案，' +
-      '也可以直接在下面的分段預覽裡拖曳選字，加入或移除本課語詞。' +
+      '也可以直接在下面的分段預覽裡拖曳選字，加入或移除本課語詞——右邊的語詞清單會即時跟著變。' +
     '</div>' +
+    '<div class="lt-editor-grid">' +
+    '<div class="lt-editor-main">' +
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:6px">' +
       '可上傳 .docx / .txt / .odt / .pdf 自動轉成文字（舊版 .doc 請先另存新檔為 .docx），也能直接手打或貼上。' +
     '</div>' +
@@ -271,6 +288,15 @@ function _ltRenderEditor(classes) {
     '</div>' +
     '<div id="lt-versions-panel" class="hidden" style="background:var(--gray-lt);border:1.5px solid var(--border);' +
       'border-radius:8px;padding:10px;margin-bottom:16px;font-size:.8rem"></div>' +
+    '</div>' +
+    '<div class="lt-vocab-col">' +
+      '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">🏷️ 本課語詞</div>' +
+      '<div style="font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.5">' +
+        '點圖示可以搜圖／上傳；手動加入的語詞才能用 ✕ 移除，來自題庫的要到題庫改。' +
+      '</div>' +
+      '<div id="lt-vocab-panel"></div>' +
+    '</div>' +
+    '</div>' +
     '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📤 分享給班級（課文趣的學生才看得到）</div>' +
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px">' +
       '已經分享過的班級，之後按「儲存課文全文」內容就會自動同步給他們；這裡只有在要改變「分享給哪些班級」時才需要用。' +
@@ -296,6 +322,7 @@ function _ltRenderEditor(classes) {
 
   ev.innerHTML = html;
   _ltRenderTextPreview();
+  _ltRenderVocabPanel();
   _ltUpdateStats();
 }
 
@@ -599,6 +626,7 @@ function _ltAddVocabWord(word) {
     _ltVocabManual[word] = true;
     _ltRecomputeVocabUnion();
     _ltRenderTextPreview();
+    _ltRenderVocabPanel();
     showToast('✅ 已加入本課語詞：' + word);
   }).catch(function(e) { showToast('❌ 加入失敗：' + e.message); });
 }
@@ -609,8 +637,63 @@ function _ltRemoveVocabWord(word) {
     delete _ltVocabManual[word];
     _ltRecomputeVocabUnion();
     _ltRenderTextPreview();
+    _ltRenderVocabPanel();
     showToast('已從本課語詞移除：' + word);
   }).catch(function(e) { showToast('❌ 移除失敗：' + e.message); });
+}
+
+/* ════════════════════════════════════════
+   右側「本課語詞」面板——跟左邊預覽共用同一份 _ltVocab／_ltVocabManual 狀態，
+   新增/移除語詞時兩邊一起重畫，天生同步，不需要額外的監聽機制
+   ════════════════════════════════════════ */
+function _ltLoadWordImages() {
+  if (_ltWordImages) return Promise.resolve(_ltWordImages);
+  return db.collection('wordImages').where('teacherUid', '==', currentTeacher.uid).get().then(function(snap) {
+    var list = [];
+    snap.forEach(function(doc) {
+      var d = doc.data();
+      if (d.imageUrl) list.push({ docId: doc.id, word: d.word || '', imageUrl: d.imageUrl, gradeLesson: d.gradeLesson || '' });
+    });
+    _ltWordImages = list;
+    return list;
+  }).catch(function() { return _ltWordImages || []; });
+}
+
+function _ltRenderVocabPanel() {
+  var panel = document.getElementById('lt-vocab-panel');
+  if (!panel || !_ltCurrent) return;
+  if (!_ltWordImages) { _ltLoadWordImages().then(function() { _ltRenderVocabPanel(); }); }
+
+  var words = Object.keys(_ltVocab).sort();
+  if (!words.length) {
+    panel.innerHTML = '<div style="color:var(--muted);font-size:.78rem;line-height:1.6">' +
+      '還沒有語詞。可以在左邊的分段預覽拖曳選字加入，或是到題庫出「詞語解釋／詞語填空」題，答案會自動變成語詞。</div>';
+    return;
+  }
+  var gradeLesson = _ltCurrent.grade + '_' + _ltCurrent.lesson;
+  panel.innerHTML = words.map(function(w) {
+    var img = (_ltWordImages || []).filter(function(x) { return x.word === w && x.gradeLesson === gradeLesson; })[0];
+    var manual = !!_ltVocabManual[w];
+    return '<div style="background:white;border:1.5px solid var(--border);border-radius:10px;padding:8px;margin-bottom:8px;' +
+      'display:flex;align-items:center;gap:8px">' +
+      (img
+        ? '<img src="' + img.imageUrl + '" onclick="_ltOpenWordImagePicker(\'' + _ltEscJs(w) + '\')" title="點圖片可以換一張" ' +
+          'style="width:44px;height:44px;object-fit:contain;border-radius:6px;border:1px solid var(--border);' +
+          'flex-shrink:0;cursor:pointer">'
+        : '<button type="button" onclick="_ltOpenWordImagePicker(\'' + _ltEscJs(w) + '\')" title="搜圖／上傳" ' +
+          'style="width:44px;height:44px;flex-shrink:0;border:1.5px dashed var(--border);border-radius:6px;' +
+          'background:var(--gray-lt);cursor:pointer;font-size:1rem;color:var(--muted)">🔍</button>') +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-weight:800;font-size:.9rem">' + escHtml(w) + '</div>' +
+        '<div style="font-size:.68rem;color:var(--muted);font-weight:700">' + (manual ? '手動加入' : '來自題庫') + '</div>' +
+      '</div>' +
+      (manual
+        ? '<button type="button" onclick="_ltRemoveVocabWord(\'' + _ltEscJs(w) + '\')" title="移除" ' +
+          'style="border:none;background:none;color:var(--red);cursor:pointer;font-size:1rem;flex-shrink:0;' +
+          'font-family:inherit">✕</button>'
+        : '') +
+    '</div>';
+  }).join('');
 }
 
 /* ════════════════════════════════════════
@@ -1025,23 +1108,36 @@ function _ltToggleWysiwyg(checked) {
 }
 
 /* ════════════════════════════════════════
-   插入圖片（詞語圖庫）
+   圖片彈窗——身兼兩種用途（用 _ltImagePickerMode 區分）：
+   'insert'＝插進課文內文當一行圖片（原本的功能）
+   'word'  ＝指定「本課語詞」某個字的圖卡（_ltOpenWordImagePicker 開的）
    ════════════════════════════════════════ */
 function _ltOpenImagePicker() {
+  _ltImagePickerMode = 'insert';
+  _ltImagePickerWord = null;
+  _ltShowImageModal('');
+}
+function _ltOpenWordImagePicker(word) {
+  _ltImagePickerMode = 'word';
+  _ltImagePickerWord = word;
+  _ltShowImageModal(word);
+}
+function _ltShowImageModal(prefillQuery) {
   var modal = _ltEnsureImageModal();
   modal.style.display = '';
-  var loadImgs = _ltWordImages
-    ? Promise.resolve(_ltWordImages)
-    : db.collection('wordImages').where('teacherUid', '==', currentTeacher.uid).get().then(function(snap) {
-        var list = [];
-        snap.forEach(function(doc) {
-          var d = doc.data();
-          if (d.imageUrl) list.push({ docId: doc.id, word: d.word || '', imageUrl: d.imageUrl });
-        });
-        _ltWordImages = list;
-        return list;
-      });
-  loadImgs.then(function(list) { _ltRenderImageModal(list); });
+  var titleEl = document.getElementById('lt-image-modal-title');
+  if (titleEl) titleEl.textContent = _ltImagePickerMode === 'word' ? ('設定「' + prefillQuery + '」的圖片') : '選一張圖片插入課文';
+  var searchInput = document.getElementById('lt-image-search');
+  if (searchInput) searchInput.value = prefillQuery || '';
+  var wordInput = document.getElementById('lt-image-upload-word');
+  if (wordInput) wordInput.value = prefillQuery || '';
+  var uploadBtn = document.getElementById('lt-image-upload-btn');
+  if (uploadBtn) uploadBtn.textContent = _ltImagePickerMode === 'word' ? '上傳並設定' : '上傳並插入';
+  _ltLoadWordImages().then(function() { _ltFilterImageModal(prefillQuery || ''); });
+}
+function _ltCloseImageModal() {
+  var modal = document.getElementById('lt-image-modal');
+  if (modal) modal.style.display = 'none';
 }
 function _ltEnsureImageModal() {
   var modal = document.getElementById('lt-image-modal');
@@ -1052,8 +1148,8 @@ function _ltEnsureImageModal() {
     'align-items:center;justify-content:center';
   modal.innerHTML = '<div style="background:white;border-radius:12px;padding:18px;max-width:520px;max-height:70vh;' +
     'overflow:auto;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
-    '<div style="font-weight:900">選一張圖片插入課文</div>' +
-    '<button onclick="document.getElementById(\'lt-image-modal\').style.display=\'none\'" ' +
+    '<div id="lt-image-modal-title" style="font-weight:900">選一張圖片插入課文</div>' +
+    '<button onclick="_ltCloseImageModal()" ' +
     'style="border:none;background:none;font-size:1.2rem;cursor:pointer">✕</button></div>' +
     '<input id="lt-image-search" placeholder="搜尋詞語…" oninput="_ltFilterImageModal(this.value)" ' +
     'style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;' +
@@ -1066,13 +1162,13 @@ function _ltEnsureImageModal() {
         'style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;' +
         'font-size:.85rem;margin-bottom:8px;box-sizing:border-box">' +
       '<div style="display:flex;align-items:center;gap:10px">' +
-        '<button type="button" onclick="_ltUploadNewImage()" style="padding:6px 16px;border:none;border-radius:8px;' +
-          'background:var(--blue);color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">' +
-          '上傳並插入</button>' +
+        '<button type="button" id="lt-image-upload-btn" onclick="_ltUploadNewImage()" style="padding:6px 16px;border:none;' +
+          'border-radius:8px;background:var(--blue);color:white;font-size:.82rem;font-weight:800;cursor:pointer;' +
+          'font-family:inherit">上傳並插入</button>' +
         '<span id="lt-image-upload-status" style="font-size:.76rem;font-weight:700;color:var(--muted)"></span>' +
       '</div>' +
     '</div></div>';
-  modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
+  modal.addEventListener('click', function(e) { if (e.target === modal) _ltCloseImageModal(); });
   document.body.appendChild(modal);
   return modal;
 }
@@ -1080,11 +1176,11 @@ function _ltRenderImageModal(list) {
   var grid = document.getElementById('lt-image-grid');
   if (!grid) return;
   if (!list.length) {
-    grid.innerHTML = '<div style="color:var(--muted);font-size:.82rem;grid-column:1/-1">詞語圖庫還沒有圖片，請先到「詞語圖庫」上傳。</div>';
+    grid.innerHTML = '<div style="color:var(--muted);font-size:.82rem;grid-column:1/-1">還沒有符合的圖片，可以用下面「上傳新圖片」新增。</div>';
     return;
   }
   grid.innerHTML = list.map(function(w) {
-    return '<button onclick="_ltInsertImage(\'' + _ltEscJs(w.docId) + '\')" style="border:1.5px solid var(--border);' +
+    return '<button onclick="_ltImageModalPick(\'' + _ltEscJs(w.docId) + '\')" style="border:1.5px solid var(--border);' +
       'border-radius:8px;padding:4px;background:white;cursor:pointer;display:flex;flex-direction:column;' +
       'align-items:center;gap:3px;font-family:inherit">' +
       '<img src="' + w.imageUrl + '" style="width:60px;height:60px;object-fit:contain">' +
@@ -1096,6 +1192,10 @@ function _ltFilterImageModal(q) {
   var list = (_ltWordImages || []).filter(function(w) { return !q || w.word.indexOf(q) !== -1; });
   _ltRenderImageModal(list);
 }
+function _ltImageModalPick(docId) {
+  if (_ltImagePickerMode === 'word') _ltAssignWordImage(docId);
+  else _ltInsertImage(docId);
+}
 function _ltInsertImage(docId) {
   var ta = document.getElementById('lt-ta');
   if (!ta) return;
@@ -1105,14 +1205,41 @@ function _ltInsertImage(docId) {
   var needsLeadNL = before.length > 0 && !/\n$/.test(before);
   var marker = (needsLeadNL ? '\n\n' : '') + '［圖:' + docId + '］\n\n';
   ta.value = before + marker + after;
-  var modal = document.getElementById('lt-image-modal');
-  if (modal) modal.style.display = 'none';
+  _ltCloseImageModal();
   _ltOnTextInput();
 }
 
+/* 把一張既有的詞語圖庫圖片指定成「這一課、這個語詞」的圖卡。
+   跟 word-image.js 同一套慣例，用 word+gradeLesson 當這張圖卡的身分——
+   如果這一課這個字已經有圖了就直接更新那一份（同一個 docId），不是這個字第一次設定才新增。 */
+function _ltAssignWordImage(docId) {
+  var word = _ltImagePickerWord;
+  var info = _ltCurrent;
+  if (!word || !info || !db) return;
+  var img = (_ltWordImages || []).filter(function(x) { return x.docId === docId; })[0];
+  if (!img) return;
+  var gradeLesson = info.grade + '_' + info.lesson;
+  var existing = (_ltWordImages || []).filter(function(x) { return x.word === word && x.gradeLesson === gradeLesson; })[0];
+  var docData = { teacherUid: currentTeacher.uid, word: word, gradeLesson: gradeLesson, imageUrl: img.imageUrl, createdAt: new Date().toISOString() };
+  var save = existing
+    ? db.collection('wordImages').doc(existing.docId).set(docData)
+    : db.collection('wordImages').add(docData);
+  Promise.resolve(save).then(function(ref) {
+    if (existing) {
+      existing.imageUrl = img.imageUrl;
+    } else {
+      _ltWordImages.unshift({ docId: ref.id, word: word, imageUrl: img.imageUrl, gradeLesson: gradeLesson });
+    }
+    _ltCloseImageModal();
+    _ltRenderVocabPanel();
+    showToast('✅ 已設定「' + word + '」的圖片');
+  }).catch(function(e) { showToast('❌ 設定失敗：' + e.message); });
+}
+
 /* 從電腦上傳新圖片——不是只能從已經上傳過的詞語圖庫裡選。重用 word-image.js 的
-   _wiCompressToDataUrl()（跟詞語圖庫上傳同一套壓縮設定），存進同一個 wordImages collection，
-   這張圖之後在詞語圖庫也會看到；上傳完直接插入課文，不用使用者再點一次。 */
+   _wiCompressToDataUrl()（跟詞語圖庫上傳同一套壓縮設定），存進同一個 wordImages collection。
+   mode='insert' 時維持原行為（上傳完直接插入課文）；mode='word' 時存成這個字這一課的圖卡
+   （用 word+gradeLesson 跟 _ltAssignWordImage 同一套 upsert 邏輯，不會重複建立）。 */
 function _ltUploadNewImage() {
   var fileInput  = document.getElementById('lt-image-upload-file');
   var wordInput  = document.getElementById('lt-image-upload-word');
@@ -1124,12 +1251,33 @@ function _ltUploadNewImage() {
   }
   if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '上傳中…'; }
   _wiCompressToDataUrl(file, 800, 0.82, function(dataUrl) {
-    var word = (wordInput && wordInput.value.trim()) || ('課文插圖 ' + new Date().toLocaleDateString('zh-TW'));
+    if (_ltImagePickerMode === 'word') {
+      var word = _ltImagePickerWord;
+      var info = _ltCurrent;
+      var gradeLesson = info.grade + '_' + info.lesson;
+      var existing = (_ltWordImages || []).filter(function(x) { return x.word === word && x.gradeLesson === gradeLesson; })[0];
+      var docData = { teacherUid: currentTeacher.uid, word: word, gradeLesson: gradeLesson, imageUrl: dataUrl, createdAt: new Date().toISOString() };
+      var save = existing
+        ? db.collection('wordImages').doc(existing.docId).set(docData)
+        : db.collection('wordImages').add(docData);
+      Promise.resolve(save).then(function(ref) {
+        if (!_ltWordImages) _ltWordImages = [];
+        if (existing) existing.imageUrl = dataUrl;
+        else _ltWordImages.unshift({ docId: ref.id, word: word, imageUrl: dataUrl, gradeLesson: gradeLesson });
+        _ltCloseImageModal();
+        _ltRenderVocabPanel();
+        showToast('✅ 已設定「' + word + '」的圖片');
+      }).catch(function(e) {
+        if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '上傳失敗：' + e.message; }
+      });
+      return;
+    }
+    var w = (wordInput && wordInput.value.trim()) || ('課文插圖 ' + new Date().toLocaleDateString('zh-TW'));
     db.collection('wordImages').add({
-      teacherUid: currentTeacher.uid, word: word, imageUrl: dataUrl, createdAt: new Date().toISOString()
+      teacherUid: currentTeacher.uid, word: w, imageUrl: dataUrl, createdAt: new Date().toISOString()
     }).then(function(ref) {
       if (!_ltWordImages) _ltWordImages = [];
-      _ltWordImages.unshift({ docId: ref.id, word: word, imageUrl: dataUrl });
+      _ltWordImages.unshift({ docId: ref.id, word: w, imageUrl: dataUrl, gradeLesson: '' });
       _ltInsertImage(ref.id); // 這裡面會關閉 modal、重畫預覽
       showToast('✅ 圖片已上傳並插入');
     }).catch(function(e) {
