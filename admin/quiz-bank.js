@@ -765,9 +765,10 @@ function _srRenderPieces() {
       'color:var(--blue-dk);border-radius:20px;font-weight:800;font-size:.98rem;font-family:inherit">' + inner + '</span>';
     if (gi === groups.length - 1) return piece;
     var mergeBtn = '<button type="button" onclick="_srToggleBoundary(' + g.atomEnd + ')" title="把這兩個詞合併成一塊" ' +
-      'style="margin:0 4px;padding:4px 10px;border:1.5px dashed var(--border);border-radius:14px;background:white;' +
-      'color:var(--blue-dk);cursor:pointer;font-size:.82rem;font-weight:800;font-family:inherit;white-space:nowrap">' +
-      '＋合併</button>';
+      'style="margin:0 4px;width:26px;height:26px;border:1.5px dashed var(--border);border-radius:50%;background:white;' +
+      'color:var(--blue-dk);cursor:pointer;font-size:1rem;font-weight:800;font-family:inherit;line-height:1;' +
+      'display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">' +
+      '＋</button>';
     return piece + mergeBtn;
   }).join('');
 }
