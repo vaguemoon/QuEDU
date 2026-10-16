@@ -427,8 +427,10 @@ function _ltRenderTextPreview() {
         var inVocab = hasImg || vocabSets.plain[ci];
         var bg = hasImg ? 'background:var(--green-lt);' : (inVocab ? 'background:#fff6d6;' : (hasFix ? 'background:var(--blue-lt);' : ''));
         if (!readings) {
-          return '<span class="lt-char" data-line="' + li + '" data-ci="' + ci + '" style="' + bg +
-            (inVocab ? 'border-radius:3px' : '') + ';' + fontStyle + '">' + escHtml(c.ch) + vs + '</span>';
+          return '<span class="lt-char" data-line="' + li + '" data-ci="' + ci + '" title="點一下可以設定/移除這個字當本課語詞" ' +
+            'onclick="_ltCharClick(' + li + ',' + ci + ',\'' + c.ch + '\',this)" ' +
+            'style="cursor:pointer;' + bg + (inVocab ? 'border-radius:3px' : '') + ';' + fontStyle + '">' +
+            escHtml(c.ch) + vs + '</span>';
         }
         var title = hasFix ? ('目前讀音：' + (readings[fix.readingIndex] || '')) : '多音字，點選可調整這一個字的讀音';
         return '<span class="lt-char lt-het-char" data-line="' + li + '" data-ci="' + ci + '" title="' + _ltEscAttr(title) + '" ' +
@@ -655,6 +657,7 @@ function _ltAddVocabWord(word) {
     _ltRenderTextPreview();
     _ltRenderVocabPanel();
     _ltResyncSharedVocabIfNeeded();
+    if (_ltHetPos && _ltHetPos.ch === word) _ltRenderHetPopoverContent(); /* 從多音字彈窗裡順便加的，按鈕狀態要跟著換 */
     showToast('✅ 已加入本課語詞：' + word);
   }).catch(function(e) { showToast('❌ 加入失敗：' + e.message); });
 }
@@ -672,6 +675,7 @@ function _ltRemoveVocabWord(word) {
     _ltRenderTextPreview();
     _ltRenderVocabPanel();
     _ltResyncSharedVocabIfNeeded();
+    if (_ltHetPos && _ltHetPos.ch === word) _ltRenderHetPopoverContent();
     showToast('已從本課語詞移除：' + word);
   }).catch(function(e) { showToast('❌ 移除失敗：' + e.message); });
 }
@@ -927,7 +931,14 @@ function _ltCloseHetPopover() {
   _ltHetPos = null;
 }
 function _ltCharClick(line, ci, ch, el) {
-  if (!HETERONYM_READINGS[ch]) return;
+  if (!HETERONYM_READINGS[ch]) {
+    /* 不是多音字的單字——拖曳選字只認「真的跨字移動」，單一個字點一下不會觸發那套邏輯，
+       這裡補上：點這個字直接開「設定/移除本課語詞」彈窗，解決「有些詞只有一個字，卻只能
+       拖兩個字以上才能加入」的問題 */
+    var rect = el.getBoundingClientRect();
+    _ltShowVocabPopover(ch, rect.left, rect.bottom + 6);
+    return;
+  }
   var pop = _ltEnsureHetPopover();
   _ltHetPos = { line: line, ci: ci, ch: ch };
   _ltRenderHetPopoverContent();
@@ -971,12 +982,32 @@ function _ltRenderHetPopoverContent() {
     '<input type="text" id="lt-het-homophone" maxlength="4" value="' + _ltEscAttr(curHomophone) + '" placeholder="例：住" ' +
       'oninput="_ltSetHeteronymHomophone(this.value)" style="width:70px;padding:5px 6px;border:1.5px solid var(--border);' +
       'border-radius:6px;font-family:inherit;font-size:1.03rem;text-align:center;margin-bottom:10px;display:block">' +
-    '<div style="display:flex;justify-content:space-between;gap:8px">' +
+    '<div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:10px">' +
       '<button type="button" onclick="_ltClearHeteronymFix()" style="padding:5px 12px;border:none;border-radius:8px;' +
         'background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.93rem">清除設定</button>' +
       '<button type="button" onclick="_ltCloseHetPopover()" style="padding:5px 12px;border:1.5px solid var(--border);' +
         'border-radius:8px;background:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:.93rem">關閉</button>' +
-    '</div>';
+    '</div>' +
+    _ltHetVocabSectionHtml(pos.ch);
+}
+/* 多音字彈窗附帶的「設定本課語詞」區塊——單字詞語詞（例如只有一個字的語詞）沒辦法用拖曳
+   選字（那套邏輯只認真的跨字移動），點單一個字如果剛好是多音字，就從這裡順便給個入口 */
+function _ltHetVocabSectionHtml(ch) {
+  var isManual = _ltVocabSource[ch] === 'manual';
+  var isFromQuestions = !isManual && (_ltVocabSource[ch] === 'questions' || !!_ltVocabFromQuestions[ch]);
+  var inner;
+  if (isManual) {
+    inner = '<button type="button" onclick="_ltRemoveVocabWord(\'' + ch + '\')" style="width:100%;padding:6px 12px;' +
+      'border:none;border-radius:8px;background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;' +
+      'font-family:inherit;font-size:.88rem">－ 從本課語詞移除「' + escHtml(ch) + '」</button>';
+  } else if (isFromQuestions) {
+    inner = '<div style="font-size:.8rem;color:var(--muted);text-align:center">「' + escHtml(ch) + '」已經是本課語詞（來自題庫）</div>';
+  } else {
+    inner = '<button type="button" onclick="_ltAddVocabWord(\'' + ch + '\')" style="width:100%;padding:6px 12px;' +
+      'border:none;border-radius:8px;background:var(--blue);color:white;font-weight:800;cursor:pointer;' +
+      'font-family:inherit;font-size:.88rem">＋ 把「' + escHtml(ch) + '」設為本課語詞</button>';
+  }
+  return '<div style="border-top:1px solid var(--border);padding-top:10px">' + inner + '</div>';
 }
 function _ltPickHeteronymReading(idx) {
   var pos = _ltHetPos;
