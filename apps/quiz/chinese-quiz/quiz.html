@@ -152,7 +152,7 @@ function confirmBack() {
   var hasInput = Object.keys(blanks).some(function(k){ return blanks[k]; }) ||
                  Object.keys(mcAnswers).length > 0 ||
                  Object.keys(matchConnections).some(function(si){ return Object.keys(matchConnections[si] || {}).length > 0; }) ||
-                 Object.keys(srAnswers).some(function(k){ return (srAnswers[k] || []).length > 0; });
+                 Object.keys(srAnswers).some(function(k){ return (srAnswers[k] || []).some(function(v){ return v !== undefined; }); });
   if (!graded && hasInput && !confirm('作答尚未完成，確定要離開嗎？')) return;
   returnToHub();
 }
@@ -162,7 +162,8 @@ function getAnswer(i) {
   if (q.type === '選擇題') return mcAnswers[i];
   if (q.type === '句子重組') {
     var placed = srAnswers[i] || [];
-    return placed.length === (q.options || []).length ? placed : undefined;
+    var complete = placed.length === (q.options || []).length && placed.every(function(v) { return v !== undefined; });
+    return complete ? placed : undefined;
   }
   return blanks[i];
 }
@@ -419,7 +420,7 @@ function startQuiz(qs, settings, matchLoaded) {
 
   quizData.forEach(function(q, i) {
     if (q.type !== '句子重組') return;
-    srAnswers[i]   = [];
+    srAnswers[i]   = new Array((q.options || []).length); /* 依「格子位置」索引，不是依「放入順序」——拖曳可以放到任何一格 */
     srBankUsed[i]  = {};
     srBankOrder[i] = shuffle((q.options || []).map(function(_, idx) { return idx; }));
   });
@@ -680,16 +681,31 @@ function renderQuestion(q, qIdx, num) {
   return renderExplain(q, qIdx, num);
 }
 
-/* 句子重組：點詞卡依序放進空格，不用拖曳。渲染只搭骨架，實際內容由 renderSrPieces()
-   （跟 renderPools/renderBlanks 同一套呼叫時機，在 renderAll() 裡）填進去。 */
+/* 句子重組：詞卡池拖曳到格子裡（沿用既有的拖曳機制，跟填空/解釋同一套 pointer 事件），
+   格子裡的字也可以再拖到別格調整順序，或拖出格子退回詞卡池。渲染只搭骨架，實際內容由
+   renderSrPieces()（跟 renderPools/renderBlanks 同一套呼叫時機，在 renderAll() 裡）填進去。 */
 function renderSentenceReorder(q, qIdx, num) {
   return '<div class="q-row sr-row" id="qr-' + qIdx + '">' +
-    '<span class="q-num">' + num + '.</span>' +
+    '<div class="sr-head">' +
+      '<span class="q-num">' + num + '.</span>' +
+      '<button type="button" class="sr-listen-btn" onclick="srSpeakAssembled(' + qIdx + ')" ' +
+        'title="聽聽看目前排的句子通不通順">🔊 聽聽看</button>' +
+    '</div>' +
     '<div class="sr-wrap">' +
       '<div class="sr-slots" id="sr-slots-' + qIdx + '"></div>' +
       '<div class="sr-bank"  id="sr-bank-'  + qIdx + '"></div>' +
     '</div>' +
   '</div>';
+}
+
+/* 把目前排在格子裡的字（不管排滿了沒）接起來唸一次，給學生自己檢查通不通順用 */
+function srSpeakAssembled(qIdx) {
+  var q = quizData[qIdx];
+  if (!q) return;
+  var placed = srAnswers[qIdx] || [];
+  var text = placed.map(function(oi) { return oi !== undefined ? q.options[oi] : ''; }).join('');
+  if (!text) { showToast('還沒排任何字喔'); return; }
+  speakText(text);
 }
 
 /* Click anywhere on the question text → speaks the full sentence */
@@ -750,7 +766,9 @@ function renderAll() {
   renderMatchSections();
 }
 
-/* ════════════ 句子重組互動（tap-only，不用拖曳） ════════════ */
+/* ════════════ 句子重組互動（拖曳，沿用詞語池同一套 pointer 拖曳機制）════════════
+   srAnswers[qIdx] 是依「格子位置」索引的陣列（不是依「放入順序」）——拖到哪一格就佔哪一格，
+   可以跳著放、可以把已經放的字再拖到別格互換，也可以拖出格子外退回詞卡池。 */
 function renderSrPieces() {
   quizData.forEach(function(q, i) {
     if (q.type !== '句子重組') return;
@@ -759,55 +777,73 @@ function renderSrPieces() {
     if (!slotsEl || !bankEl) return;
     var placed = srAnswers[i] || [];
     var total  = (q.options || []).length;
+    var isDraggingHere = dragging && dragging.dragKind === 'sr' && dragging.qIdx === i;
 
     var slotsHtml = '';
     for (var pos = 0; pos < total; pos++) {
-      if (pos < placed.length) {
-        var isLast = pos === placed.length - 1;
-        slotsHtml += '<div class="sr-slot sr-slot-filled' + (isLast ? ' sr-slot-removable' : '') + '"' +
-          (isLast ? ' onclick="srRemoveLast(' + i + ')" title="點一下移除，重新排"' : '') + '>' +
-          escHtml(q.options[placed[pos]]) + '</div>';
+      var origIdx = placed[pos];
+      var hide = isDraggingHere && dragging.fromPos === pos; /* 正在把這一格的字拖走，拖曳途中先讓格子看起來是空的 */
+      if (origIdx !== undefined && !hide) {
+        slotsHtml += '<div class="sr-slot sr-slot-filled" data-qidx="' + i + '" data-pos="' + pos + '">' +
+          escHtml(q.options[origIdx]) + '</div>';
       } else {
-        slotsHtml += '<div class="sr-slot sr-slot-empty"></div>';
+        slotsHtml += '<div class="sr-slot sr-slot-empty" data-qidx="' + i + '" data-pos="' + pos + '"></div>';
       }
     }
     slotsEl.innerHTML = slotsHtml;
 
     var order = srBankOrder[i] || [];
     var used  = srBankUsed[i]  || {};
-    var bankHtml = order.filter(function(origIdx) { return !used[origIdx]; }).map(function(origIdx) {
-      return '<button class="sr-piece" onclick="srPlacePiece(' + i + ',' + origIdx + ')">' +
+    var hideBankOrigIdx = (isDraggingHere && dragging.fromPos === null) ? dragging.origIdx : null;
+    var bankHtml = order.filter(function(origIdx) {
+      return !used[origIdx] && origIdx !== hideBankOrigIdx;
+    }).map(function(origIdx) {
+      return '<button class="sr-piece" data-qidx="' + i + '" data-origidx="' + origIdx + '">' +
         escHtml(q.options[origIdx]) + '</button>';
     }).join('');
     bankEl.innerHTML = bankHtml || '<span class="pool-empty">（詞卡已全部放入）</span>';
   });
 }
 
-function srPlacePiece(qIdx, origIdx) {
-  if (graded) return;
-  var q = quizData[qIdx];
-  if (!q || !q.options) return;
-  if (!srAnswers[qIdx])  srAnswers[qIdx]  = [];
-  if (!srBankUsed[qIdx]) srBankUsed[qIdx] = {};
-  if (srBankUsed[qIdx][origIdx]) return;           /* 保險：理論上按鈕渲染時已經移除 */
-  if (srAnswers[qIdx].length >= q.options.length) return;
-  srAnswers[qIdx].push(origIdx);
-  srBankUsed[qIdx][origIdx] = true;
-  speakText(q.options[origIdx]);
-  renderSrPieces();
-  if (srAnswers[qIdx].length === q.options.length) {
-    var full = srAnswers[qIdx].map(function(oi) { return q.options[oi]; }).join('');
-    setTimeout(function() { speakText(full); }, 500); /* 排完整句自動唸一次當回饋，跟最後一塊的發音錯開 */
+/* 把 origIdx 這個片段放進 qIdx 題的 toPos 格：
+   - fromPos 是 null：從詞卡池拖過來的；如果目標格已經有別的字，那個字要退回詞卡池
+   - fromPos 有值：從另一格拖過來的（互換）；原本那格變成被擠出來的那個字（目標格本來是空的，原本那格就跟著變空） */
+function srDoPlace(qIdx, origIdx, fromPos, toPos) {
+  var arr = srAnswers[qIdx];
+  if (!arr) return;
+  var displaced = arr[toPos];
+  if (fromPos !== null) {
+    arr[fromPos] = displaced;
+  } else if (displaced !== undefined) {
+    srBankUsed[qIdx][displaced] = false;
   }
+  arr[toPos] = origIdx;
+  srBankUsed[qIdx][origIdx] = true;
+  renderSrPieces();
+  speakText(quizData[qIdx].options[origIdx]);
 }
 
-function srRemoveLast(qIdx) {
-  if (graded) return;
-  var placed = srAnswers[qIdx];
-  if (!placed || !placed.length) return;
-  var origIdx = placed.pop();
-  if (srBankUsed[qIdx]) delete srBankUsed[qIdx][origIdx];
-  renderSrPieces();
+/* 拖出格子外、沒放到任何格子上：退回詞卡池 */
+function srRemovePiece(qIdx, pos) {
+  var arr = srAnswers[qIdx];
+  if (!arr) return;
+  var origIdx = arr[pos];
+  if (origIdx === undefined) return;
+  arr[pos] = undefined;
+  srBankUsed[qIdx][origIdx] = false;
+}
+
+function findDropSrSlot(x, y, info) {
+  var best = null, bestDist = Infinity;
+  document.querySelectorAll('.sr-slot').forEach(function(el) {
+    if (parseInt(el.dataset.qidx) !== info.qIdx) return; /* 句子重組只能在同一題內部移動，不能跨題 */
+    var r = el.getBoundingClientRect();
+    if (x < r.left - DROP_TOL || x > r.right  + DROP_TOL ||
+        y < r.top  - DROP_TOL || y > r.bottom + DROP_TOL) return;
+    var dist = Math.sqrt(Math.pow(x - (r.left + r.width/2), 2) + Math.pow(y - (r.top + r.height/2), 2));
+    if (dist < bestDist) { bestDist = dist; best = el; }
+  });
+  return best;
 }
 
 function renderPools() {
@@ -911,6 +947,30 @@ function onDelegatedPointerDown(e) {
     e.preventDefault();
     pendingDrag = { dragKind: 'text', word: word, poolKey: POOL_KEY[quizData[qIdx].type],
                     fromQIdx: qIdx, sx: e.clientX, sy: e.clientY };
+    _addPendingListeners();
+    return;
+  }
+
+  /* 句子重組：詞卡池裡的片段 */
+  var srPiece = e.target.closest('.sr-piece');
+  if (srPiece && !graded) {
+    e.preventDefault();
+    pendingDrag = { dragKind: 'sr', qIdx: parseInt(srPiece.dataset.qidx), origIdx: parseInt(srPiece.dataset.origidx),
+                    fromPos: null, word: srPiece.textContent, sx: e.clientX, sy: e.clientY };
+    _addPendingListeners();
+    return;
+  }
+
+  /* 句子重組：已經放進格子裡的片段（可以拖到別格調整順序，或單純點一下聽發音） */
+  var srSlot = e.target.closest('.sr-slot-filled');
+  if (srSlot && !graded) {
+    var srQIdx = parseInt(srSlot.dataset.qidx);
+    var srPos  = parseInt(srSlot.dataset.pos);
+    var srOrigIdx = (srAnswers[srQIdx] || [])[srPos];
+    if (srOrigIdx === undefined) return;
+    e.preventDefault();
+    pendingDrag = { dragKind: 'sr', qIdx: srQIdx, origIdx: srOrigIdx, fromPos: srPos,
+                    word: quizData[srQIdx].options[srOrigIdx], sx: e.clientX, sy: e.clientY };
     _addPendingListeners();
     return;
   }
@@ -1052,6 +1112,14 @@ function onDragMove(e) {
     return;
   }
 
+  if (dragging.dragKind === 'sr') {
+    posGhost(dragging.ghost, e.clientX, e.clientY);
+    document.querySelectorAll('.sr-slot').forEach(function(s){ s.classList.remove('drag-over'); });
+    var ts = findDropSrSlot(e.clientX, e.clientY, dragging);
+    if (ts) ts.classList.add('drag-over');
+    return;
+  }
+
   posGhost(dragging.ghost, e.clientX, e.clientY);
   document.querySelectorAll('.q-blank').forEach(function(b){ b.classList.remove('drag-over'); });
   var t = findDropBlank(e.clientX, e.clientY, dragging);
@@ -1078,6 +1146,21 @@ function onDragEnd(e) {
       doConnect(si, imgPos, wordPos);
     } else {
       updateMatchSvg(si); /* clear rubber-band */
+    }
+    return;
+  }
+
+  if (info.dragKind === 'sr') {
+    document.querySelectorAll('.sr-slot').forEach(function(s){ s.classList.remove('drag-over'); });
+    if (info.ghost) info.ghost.remove();
+    var srTarget = findDropSrSlot(e.clientX, e.clientY, info);
+    if (srTarget) {
+      srDoPlace(info.qIdx, info.origIdx, info.fromPos, parseInt(srTarget.dataset.pos));
+    } else if (info.fromPos !== null) {
+      srRemovePiece(info.qIdx, info.fromPos); /* 從格子拖出去、沒放到任何格子上 → 退回詞卡池 */
+      renderSrPieces();
+    } else {
+      renderSrPieces(); /* 從詞卡池拖出來但沒放到格子上 → 什麼都沒變，只是重畫讓它歸位 */
     }
     return;
   }
@@ -1125,7 +1208,7 @@ function submitQuiz() {
   }).length;
   var srUnanswered = 0;
   quizData.forEach(function(q, i) {
-    if (q.type === '句子重組' && (srAnswers[i] || []).length === 0) srUnanswered++;
+    if (q.type === '句子重組' && !(srAnswers[i] || []).some(function(v){ return v !== undefined; })) srUnanswered++;
   });
   var matchUnanswered = 0;
   matchData.forEach(function(msec, si) {
@@ -1169,9 +1252,10 @@ function submitQuiz() {
     srTotal += opts.length;
     srCorrect += rightCount;
     if (rightCount < opts.length) {
+      var hasAny = placedIdx.some(function(oi) { return oi !== undefined; });
       wrongSrQuestions.push({
         correctSentence: opts.join(''),
-        yourSentence: placedIdx.length ? placedIdx.map(function(oi){ return opts[oi]; }).join('') : '未作答'
+        yourSentence: hasAny ? placedIdx.map(function(oi){ return oi !== undefined ? opts[oi] : '＿'; }).join('') : '未作答'
       });
     }
   });

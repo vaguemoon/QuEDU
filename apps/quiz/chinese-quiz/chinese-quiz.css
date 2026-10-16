@@ -206,8 +206,22 @@ body {
 .q-row.graded-correct { border-color: var(--correct); background: var(--correct-lt); animation: grade-pop .22s ease-out; }
 .q-row.graded-wrong   { border-color: var(--wrong);   background: var(--wrong-lt);   animation: grade-pop .22s ease-out; }
 
-/* ═══ 句子重組（tap 式，給特教生用，字塊夠大、不用拖曳） ═══ */
+/* ═══ 句子重組（拖曳，沿用詞語池同一套拖曳手感，字塊夠大給特教生好抓） ═══ */
 .sr-row { flex-direction: column; align-items: stretch; gap: 10px; }
+.sr-head { display: flex; align-items: center; gap: 10px; }
+.sr-listen-btn {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: .82rem;
+  font-weight: 800;
+  color: var(--accent);
+  background: rgba(45,111,168,.08);
+  border: 1.5px solid var(--accent);
+  border-radius: 20px;
+  padding: 5px 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.sr-listen-btn:active { transform: scale(.96); }
 .sr-wrap { display: flex; flex-direction: column; gap: 12px; flex: 1; }
 .sr-slots {
   display: flex;
@@ -230,11 +244,17 @@ body {
   font-family: 'Noto Sans TC', sans-serif;
   font-size: 1.15rem;
   font-weight: 800;
+  transition: border-color .15s, background .15s;
 }
 .sr-slot-empty   { border: 2px dashed var(--rule); background: #fff; }
-.sr-slot-filled  { border: 2px solid var(--accent); background: #fff; color: var(--accent); }
-.sr-slot-removable { cursor: pointer; }
-.sr-slot-removable:active { transform: scale(.94); }
+.sr-slot-filled  { border: 2px solid var(--accent); background: #fff; color: var(--accent); cursor: grab; touch-action: none; }
+.sr-slot-filled:active { cursor: grabbing; }
+.sr-slot.drag-over {
+  background: rgba(45,111,168,.22);
+  border-color: var(--accent);
+  border-style: solid;
+  border-bottom-width: 3px;
+}
 .sr-slot.graded-correct { border-color: var(--correct); background: var(--correct-lt); color: var(--correct); }
 .sr-slot.graded-wrong   { border-color: var(--wrong);   background: var(--wrong-lt);   color: var(--wrong); }
 .sr-bank {
@@ -253,14 +273,14 @@ body {
   border: 1.5px solid var(--rule);
   border-radius: 10px;
   padding: 9px 20px;
-  cursor: pointer;
-  touch-action: manipulation;
+  cursor: grab;
+  touch-action: none;
   user-select: none;
   box-shadow: 0 2px 4px var(--shadow);
   transition: border-color .15s, box-shadow .15s, transform .1s;
 }
 .sr-piece:hover  { border-color: var(--accent); box-shadow: 0 3px 8px var(--shadow); }
-.sr-piece:active { transform: scale(.95); }
+.sr-piece:active { cursor: grabbing; transform: scale(.95); }
 
 .q-num {
   font-family: 'Noto Serif TC', serif;
