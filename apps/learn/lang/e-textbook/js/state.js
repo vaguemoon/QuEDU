@@ -63,7 +63,7 @@ function loadEtLessonList() {
           list.push({
             docId: doc.id, teacherUid: d.teacherUid, grade: d.grade,
             lesson: d.lesson, lessonName: d.lessonName || '', fullText: d.fullText || '',
-            pronFixes: d.pronFixes || {}, sharedAt: d.sharedAt || ''
+            pronFixes: d.pronFixes || {}, vocabWords: d.vocabWords || [], sharedAt: d.sharedAt || ''
           });
         });
         return list;
@@ -180,6 +180,11 @@ function _etLoadVocab(lesson) {
     etVocab = {};
     Object.keys(fills).forEach(function(w) { etVocab[w] = fills[w]; });
     Object.keys(defs).forEach(function(w) { etVocab[w] = defs[w]; });
+    /* 課文編輯後台「拖曳選字設定本課語詞」加的字，不一定有對應的題庫題目——
+       這些字也要算進本課生字詞，只是沒有老師解釋可顯示（lookupWord 查詢時會退回萌典） */
+    (lesson.vocabWords || []).forEach(function(w) {
+      if (w && !Object.prototype.hasOwnProperty.call(etVocab, w)) etVocab[w] = '';
+    });
     if (typeof _etOnVocabLoaded === 'function') _etOnVocabLoaded();
   }).catch(function() {
     etVocab = {};

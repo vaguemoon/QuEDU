@@ -643,6 +643,7 @@ function _ltAddVocabWord(word) {
     _ltRecomputeVocabUnion();
     _ltRenderTextPreview();
     _ltRenderVocabPanel();
+    _ltResyncSharedVocabIfNeeded();
     showToast('✅ 已加入本課語詞：' + word);
   }).catch(function(e) { showToast('❌ 加入失敗：' + e.message); });
 }
@@ -654,6 +655,7 @@ function _ltRemoveVocabWord(word) {
     _ltRecomputeVocabUnion();
     _ltRenderTextPreview();
     _ltRenderVocabPanel();
+    _ltResyncSharedVocabIfNeeded();
     showToast('已從本課語詞移除：' + word);
   }).catch(function(e) { showToast('❌ 移除失敗：' + e.message); });
 }
@@ -1045,7 +1047,7 @@ function _ltFullTextFileSelected(input) {
 /* ════════════════════════════════════════
    儲存／分享同步
    ════════════════════════════════════════ */
-function _ltSyncSharedSnapshots(info, fullText, pronFixes, classIds, prevIds) {
+function _ltSyncSharedSnapshots(info, fullText, pronFixes, classIds, prevIds, vocabWords) {
   var batch = db.batch();
   (prevIds || []).forEach(function(cid) {
     if (classIds.indexOf(cid) === -1) {
@@ -1055,10 +1057,22 @@ function _ltSyncSharedSnapshots(info, fullText, pronFixes, classIds, prevIds) {
   classIds.forEach(function(cid) {
     batch.set(db.collection('classes').doc(cid).collection('sharedLessonTexts').doc(info.docId), {
       teacherUid: currentTeacher.uid, grade: info.grade, lesson: info.lesson, lessonName: info.lessonName,
-      fullText: fullText, pronFixes: pronFixes, sharedAt: new Date().toISOString()
+      fullText: fullText, pronFixes: pronFixes, vocabWords: vocabWords || [], sharedAt: new Date().toISOString()
     });
   });
   return batch.commit();
+}
+
+/* 本課語詞（手動加入那份）有變動時，如果這課已經分享給班級了，立刻重新同步，
+   不用等老師按「儲存課文全文」——跟拖曳選字當下就會生效的體驗一致。
+   fullText/pronFixes 用 info 上次儲存的版本（不是 textarea 目前還沒存檔的內容），
+   只是把 vocabWords 覆寫上去，不會動到其他欄位。 */
+function _ltResyncSharedVocabIfNeeded() {
+  var info = _ltCurrent;
+  if (!info || !db) return Promise.resolve();
+  var sharedIds = info.sharedClassIds || [];
+  if (!sharedIds.length) return Promise.resolve();
+  return _ltSyncSharedSnapshots(info, info.fullText, info.pronFixes, sharedIds, sharedIds, Object.keys(_ltVocabManual));
 }
 
 function _ltSaveLessonText() {
@@ -1078,7 +1092,7 @@ function _ltSaveLessonText() {
   }).then(function() {
     var sharedIds = info.sharedClassIds || [];
     if (!sharedIds.length) return null;
-    return _ltSyncSharedSnapshots(info, text, pronFixes, sharedIds);
+    return _ltSyncSharedSnapshots(info, text, pronFixes, sharedIds, sharedIds, Object.keys(_ltVocabManual));
   }).then(function(synced) {
     info.fullText = text;
     info.pronFixes = pronFixes;
@@ -1110,7 +1124,7 @@ function _ltSaveLessonShare() {
     teacherUid: currentTeacher.uid, grade: info.grade, lesson: info.lesson, lessonName: info.lessonName,
     fullText: fullText, pronFixes: pronFixes, sharedClassIds: classIds, updatedAt: new Date().toISOString()
   }, { merge: true }).then(function() {
-    return _ltSyncSharedSnapshots(info, fullText, pronFixes, classIds, info.sharedClassIds || []);
+    return _ltSyncSharedSnapshots(info, fullText, pronFixes, classIds, info.sharedClassIds || [], Object.keys(_ltVocabManual));
   }).then(function() {
     info.sharedClassIds = classIds;
     info.pronFixes = pronFixes;
