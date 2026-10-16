@@ -730,19 +730,45 @@ function _srSegmentSentence() {
   });
 }
 
+/* 把目前的 atoms/boundaries 整理成一組組「塊」，每塊紀錄涵蓋哪個範圍的 atom index，
+   畫面渲染跟「拆開」都要知道一塊裡面實際有哪些 atom，用這個共用算出來，不要各自重算一次 */
+function _srComputeGroups() {
+  var groups = [];
+  var start = 0;
+  for (var i = 1; i <= _srAtoms.length; i++) {
+    if (i === _srAtoms.length || _srBoundaries[i - 1]) {
+      groups.push({ atomStart: start, atomEnd: i - 1 });
+      start = i;
+    }
+  }
+  return groups;
+}
+
+/* 畫面上直接把「同一塊」的字框在一起變成一個藥丸形狀（視覺上真的像一個詞），
+   塊跟塊之間放一個明顯的「+ 合併」按鈕；如果一塊裡面不小心合了好幾個字、想拆開，
+   塊內字跟字中間有不顯眼的細直線可以點（比較少用到，不用太搶眼） */
 function _srRenderPieces() {
   var el = document.getElementById('sr-pieces');
   if (!el) return;
-  el.innerHTML = _srAtoms.map(function(atom, i) {
-    var html = '<span style="padding:7px 10px;background:var(--blue-lt);color:var(--blue-dk);border-radius:7px;' +
-      'font-weight:800;font-size:.95rem;font-family:inherit">' + escHtml(atom) + '</span>';
-    if (i < _srAtoms.length - 1) {
-      var active = _srBoundaries[i];
-      html += '<span onclick="_srToggleBoundary(' + i + ')" title="' + (active ? '點一下合併成同一塊' : '點一下拆開') + '" ' +
-        'style="width:22px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;' +
-        'color:var(--muted);font-weight:900;font-size:1.1rem;user-select:none">' + (active ? '｜' : '·') + '</span>';
+  var groups = _srComputeGroups();
+  el.innerHTML = groups.map(function(g, gi) {
+    var inner = '';
+    for (var a = g.atomStart; a <= g.atomEnd; a++) {
+      inner += escHtml(_srAtoms[a]);
+      if (a < g.atomEnd) {
+        inner += '<span onclick="event.stopPropagation();_srToggleBoundary(' + a + ')" title="點一下把這裡拆開" ' +
+          'style="display:inline-block;width:10px;text-align:center;cursor:pointer;color:var(--blue-dk);' +
+          'opacity:.3;font-weight:900">｜</span>';
+      }
     }
-    return html;
+    var piece = '<span style="display:inline-flex;align-items:center;padding:7px 12px;background:var(--blue-lt);' +
+      'color:var(--blue-dk);border-radius:20px;font-weight:800;font-size:.98rem;font-family:inherit">' + inner + '</span>';
+    if (gi === groups.length - 1) return piece;
+    var mergeBtn = '<button type="button" onclick="_srToggleBoundary(' + g.atomEnd + ')" title="把這兩個詞合併成一塊" ' +
+      'style="margin:0 4px;padding:4px 10px;border:1.5px dashed var(--border);border-radius:14px;background:white;' +
+      'color:var(--blue-dk);cursor:pointer;font-size:.82rem;font-weight:800;font-family:inherit;white-space:nowrap">' +
+      '＋合併</button>';
+    return piece + mergeBtn;
   }).join('');
 }
 

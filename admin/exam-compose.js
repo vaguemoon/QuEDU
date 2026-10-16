@@ -394,6 +394,7 @@ function _ecOnGradeChange() {
 function _ecUpdateCatFilter() {
   var catEl  = document.getElementById('ec-filter-cat');
   if (!catEl) return;
+  var prevCat = catEl.value; /* 重建清單後要是還選得到同一課，就留著不要跳回「全部課次」 */
   var grade  = _ecGrade || ((document.getElementById('ec-filter-grade') || {}).value || '');
   var catKey = _ecSubject === 'math' ? 'category' : 'lesson';
   var pholder = _ecSubject === 'math' ? '全部類別' : '全部課次';
@@ -423,7 +424,7 @@ function _ecUpdateCatFilter() {
       var lbl = lessonNames[c] ? c + ' ' + lessonNames[c] : c;
       return '<option value="' + _ecEscA(c) + '">' + _ecEsc(lbl) + '</option>';
     }).join('');
-  catEl.value = '';
+  catEl.value = prevCat; /* 選不到（例如年級真的換了）瀏覽器會自動留空，效果等同原本強制重置 */
 }
 
 function _ecFilterAndRender() {
@@ -468,7 +469,11 @@ function _ecFilterAndRender() {
   var shown = filtered.slice(0, 150);
   wrap.innerHTML = shown.map(function(q) {
     var chk   = _ecSelected[q.id] ? ' checked' : '';
-    var text  = _ecEsc(q.question || q.word || '—');
+    /* 句子重組看不出題幹跟答案的分別——直接把切好的片段用分隔號接起來顯示，老師一眼就看得出
+       斷詞斷在哪，不用另外點開才知道 */
+    var text  = q.type === '句子重組' && q.options && q.options.length
+      ? q.options.map(_ecEsc).join('<span style="color:var(--blue);font-weight:900">｜</span>')
+      : _ecEsc(q.question || q.word || '—');
     var badge = _ecSubject === 'chinese' && q.type
       ? ' <span style="font-size:.7rem;color:var(--muted)">[' + _ecEsc(q.type) + ']</span>'
       : (_ecSubject === 'math' && q.answer
