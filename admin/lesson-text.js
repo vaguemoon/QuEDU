@@ -21,7 +21,14 @@ var _ltPendingPronFixes = {}; // "行:字元序" -> {ch, readingIndex, homophone
 var _ltHetPos         = null; // 破音字選單目前指到的位置 {line, ci, ch}
 var _ltClassesCache   = null;
 var _ltGlobalHints    = null; // 跨課讀音建議：{ch: {readingIndex: 出現次數}}，整個分頁載入一次
-var _ltVocab          = {};   // 這一課配套生字詞（詞語解釋/詞語填空），用來在預覽裡標記
+var _ltVocab           = {};  // 這一課配套生字詞聯集（題庫衍生＋本課語詞），用來在預覽裡標記
+var _ltVocabFromQuestions = {}; // 詞語題庫衍生（詞語解釋/詞語填空答案），唯讀
+var _ltVocabManual     = {};  // 本課語詞子集合（lessonTexts/{docId}/vocab），可在課文預覽裡直接增刪
+var _ltDragging        = false; // 拖曳選字狀態（設定本課語詞用）
+var _ltDragLineIdx     = null;
+var _ltDragStartCi     = null;
+var _ltDragEndCi       = null;
+var _ltPendingVocabWord = null; // 目前彈窗指到、待確認加入/移除的詞
 var _ltFontReady      = false;
 var _ltWysiwyg        = false;
 var _ltVersions       = [];
@@ -208,7 +215,7 @@ function _ltOpenEditor(info) {
         return list;
       });
 
-  Promise.all([loadClasses, _ltFetchVocab(info.grade, info.lesson)]).then(function(results) {
+  Promise.all([loadClasses, _ltFetchVocab(info.grade, info.lesson, info.docId)]).then(function(results) {
     _ltRenderEditor(results[0]);
   });
 }
@@ -223,8 +230,8 @@ function _ltRenderEditor(classes) {
     '<div style="font-size:1.05rem;font-weight:900;margin-bottom:4px">' + escHtml(info.grade) + '　第 ' + escHtml(info.lesson) + ' 課' +
       (info.lessonName ? '　' + escHtml(info.lessonName) : '') + '</div>' +
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:10px;line-height:1.6">' +
-      '給「課文趣」App 上課時逐字朗讀＋圈詞用。配套生字詞不用另外輸入，課文趣會自動抓這一課' +
-      '「詞語解釋」「詞語填空」題目的答案當生字詞。' +
+      '給「課文趣」App 上課時逐字朗讀＋圈詞用。本課語詞會自動抓這一課「詞語解釋」「詞語填空」題目的答案，' +
+      '也可以直接在下面的分段預覽裡拖曳選字，加入或移除本課語詞。' +
     '</div>' +
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:6px">' +
       '可上傳 .docx / .txt / .odt / .pdf 自動轉成文字（舊版 .doc 請先另存新檔為 .docx），也能直接手打或貼上。' +
@@ -250,7 +257,7 @@ function _ltRenderEditor(classes) {
     '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
       '文字下面有虛線的字是多音字，點一下可以選這個字在這裡要唸的讀音（只影響這一次出現）；' +
       (Object.keys(_ltVocab).length ? '黃色網底是這一課配套生字詞；' : '') +
-      '畫面上的注音會直接換成選的讀音。' +
+      '畫面上的注音會直接換成選的讀音。拖曳選取文字可以加入或移除本課語詞。' +
     '</div>' +
     '<div id="lt-preview" style="margin-bottom:16px"></div>' +
     '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:8px 0 10px">' +
@@ -344,6 +351,7 @@ function _ltRenderTextPreview() {
   var ta = document.getElementById('lt-ta');
   var el = document.getElementById('lt-preview');
   if (!ta || !el) return;
+  _ltAttachVocabPointerHandlers(el);
   var lines = _ltSplitLines(ta.value);
   if (!lines.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:4px 0">尚未輸入內容，預覽會顯示在這裡</div>';
@@ -381,10 +389,11 @@ function _ltRenderTextPreview() {
         var inVocab = inVocabWord[ci];
         var bg = inVocab ? 'background:#fff6d6;' : (hasFix ? 'background:var(--blue-lt);' : '');
         if (!readings) {
-          return '<span style="' + bg + (inVocab ? 'border-radius:3px' : '') + ';' + fontStyle + '">' + escHtml(c.ch) + vs + '</span>';
+          return '<span class="lt-char" data-line="' + li + '" data-ci="' + ci + '" style="' + bg +
+            (inVocab ? 'border-radius:3px' : '') + ';' + fontStyle + '">' + escHtml(c.ch) + vs + '</span>';
         }
         var title = hasFix ? ('目前讀音：' + (readings[fix.readingIndex] || '')) : '多音字，點選可調整這一個字的讀音';
-        return '<span class="lt-het-char" data-line="' + li + '" data-ci="' + ci + '" title="' + _ltEscAttr(title) + '" ' +
+        return '<span class="lt-char lt-het-char" data-line="' + li + '" data-ci="' + ci + '" title="' + _ltEscAttr(title) + '" ' +
           'onclick="_ltCharClick(' + li + ',' + ci + ',\'' + c.ch + '\',this)" ' +
           'style="cursor:pointer;border-bottom:2px dashed ' + (hasFix ? 'var(--blue)' : 'var(--muted)') + ';' +
           bg + 'border-radius:3px;' + fontStyle + '">' + escHtml(c.ch) + vs + '</span>';
@@ -421,24 +430,187 @@ function _ltVocabCharSet(lines, li) {
 }
 
 /* ════════════════════════════════════════
-   配套生字詞（給預覽標記用，邏輯跟課文趣 _etLoadVocab 一致）
+   配套生字詞（給預覽標記用）：
+   聯集兩個來源——詞語題庫衍生（唯讀，邏輯跟課文趣 _etLoadVocab 一致）＋
+   本課語詞子集合 lessonTexts/{docId}/vocab（可在預覽裡拖曳增刪）
    ════════════════════════════════════════ */
-function _ltFetchVocab(grade, lesson) {
-  return db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', grade).get()
-    .then(function(snap) {
-      var defs = {}, fills = {};
-      snap.forEach(function(doc) {
-        var d = doc.data();
-        if (d.lesson !== lesson) return;
-        var word = (d.answer || '').trim();
-        if (!word) return;
-        if (d.type === '詞語解釋' && !defs[word]) defs[word] = true;
-        else if (d.type === '詞語填空' && !fills[word]) fills[word] = true;
-      });
-      _ltVocab = {};
-      Object.keys(fills).forEach(function(w) { _ltVocab[w] = true; });
-      Object.keys(defs).forEach(function(w) { _ltVocab[w] = true; });
-    }).catch(function() { _ltVocab = {}; });
+function _ltRecomputeVocabUnion() {
+  _ltVocab = {};
+  Object.keys(_ltVocabFromQuestions).forEach(function(w) { _ltVocab[w] = true; });
+  Object.keys(_ltVocabManual).forEach(function(w) { _ltVocab[w] = true; });
+}
+
+function _ltFetchVocab(grade, lesson, docId) {
+  var qQuestions = db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', grade).get();
+  var qManual = docId
+    ? db.collection('lessonTexts').doc(docId).collection('vocab').get()
+    : Promise.resolve({ forEach: function() {} });
+  return Promise.all([qQuestions, qManual]).then(function(results) {
+    var defs = {}, fills = {};
+    results[0].forEach(function(doc) {
+      var d = doc.data();
+      if (d.lesson !== lesson) return;
+      var word = (d.answer || '').trim();
+      if (!word) return;
+      if (d.type === '詞語解釋' && !defs[word]) defs[word] = true;
+      else if (d.type === '詞語填空' && !fills[word]) fills[word] = true;
+    });
+    _ltVocabFromQuestions = {};
+    Object.keys(fills).forEach(function(w) { _ltVocabFromQuestions[w] = true; });
+    Object.keys(defs).forEach(function(w) { _ltVocabFromQuestions[w] = true; });
+
+    _ltVocabManual = {};
+    results[1].forEach(function(doc) {
+      var w = (doc.data().word || '').trim();
+      if (w) _ltVocabManual[w] = true;
+    });
+
+    _ltRecomputeVocabUnion();
+  }).catch(function() { _ltVocabFromQuestions = {}; _ltVocabManual = {}; _ltVocab = {}; });
+}
+
+/* ════════════════════════════════════════
+   拖曳選字＋設定本課語詞（Pointer Events，滑鼠／觸控通用；限定同一行內）
+   ════════════════════════════════════════ */
+var LT_VOCAB_MAX_LEN = 6; // 選取範圍超過這個字數就視為選錯，不當成語詞候選
+
+function _ltAttachVocabPointerHandlers(el) {
+  if (!el || el.dataset.ptrBound) return;
+  el.dataset.ptrBound = '1';
+  el.addEventListener('pointerdown',   _ltOnVocabPointerDown);
+  el.addEventListener('pointermove',   _ltOnVocabPointerMove);
+  el.addEventListener('pointerup',     _ltOnVocabPointerUp);
+  el.addEventListener('pointercancel', function() { _ltDragging = false; });
+}
+
+function _ltCharSpanAt(x, y) {
+  var el = document.elementFromPoint(x, y);
+  return (el && el.classList && el.classList.contains('lt-char')) ? el : null;
+}
+
+function _ltOnVocabPointerDown(e) {
+  var span = _ltCharSpanAt(e.clientX, e.clientY);
+  if (!span) return;
+  _ltDragging    = true;
+  _ltDragLineIdx = parseInt(span.dataset.line, 10);
+  _ltDragStartCi = _ltDragEndCi = parseInt(span.dataset.ci, 10);
+}
+
+function _ltOnVocabPointerMove(e) {
+  if (!_ltDragging) return;
+  var span = _ltCharSpanAt(e.clientX, e.clientY);
+  if (span && parseInt(span.dataset.line, 10) === _ltDragLineIdx) {
+    _ltDragEndCi = parseInt(span.dataset.ci, 10);
+    _ltUpdateVocabDragHighlight();
+  }
+  if (_ltDragStartCi !== _ltDragEndCi) e.preventDefault(); // 真的拖曳了才蓋掉瀏覽器原生選字，單純點擊不受影響
+}
+
+function _ltOnVocabPointerUp(e) {
+  if (!_ltDragging) return;
+  _ltDragging = false;
+  document.querySelectorAll('.lt-char').forEach(function(s) { s.style.outline = ''; });
+  if (_ltDragStartCi === _ltDragEndCi) return; // 單純點擊，交給原本的多音字 onclick 處理
+  _ltFinalizeVocabSelection(e.clientX, e.clientY);
+}
+
+function _ltUpdateVocabDragHighlight() {
+  var lo = Math.min(_ltDragStartCi, _ltDragEndCi);
+  var hi = Math.max(_ltDragStartCi, _ltDragEndCi);
+  document.querySelectorAll('.lt-char').forEach(function(s) {
+    var sameLine = parseInt(s.dataset.line, 10) === _ltDragLineIdx;
+    var ci = parseInt(s.dataset.ci, 10);
+    s.style.outline = (sameLine && ci >= lo && ci <= hi) ? '2px solid var(--blue)' : '';
+  });
+}
+
+function _ltFinalizeVocabSelection(x, y) {
+  var lo = Math.min(_ltDragStartCi, _ltDragEndCi);
+  var hi = Math.max(_ltDragStartCi, _ltDragEndCi);
+  var ta = document.getElementById('lt-ta');
+  if (!ta) return;
+  var lines = _ltSplitLines(ta.value);
+  var line = lines[_ltDragLineIdx];
+  if (!line || !line.chars.length) return;
+  var text = line.chars.slice(lo, hi + 1).map(function(c) { return c.ch; }).join('');
+  if (!text) return;
+  if (text.length > LT_VOCAB_MAX_LEN) { showToast('選取範圍太長，語詞建議 2～' + LT_VOCAB_MAX_LEN + ' 字'); return; }
+  _ltShowVocabPopover(text, x, y);
+}
+
+function _ltEnsureVocabPopover() {
+  var pop = document.getElementById('lt-vocab-popover');
+  if (pop) return pop;
+  pop = document.createElement('div');
+  pop.id = 'lt-vocab-popover';
+  pop.style.cssText = 'position:fixed;z-index:9999;display:none;background:white;border:1.5px solid var(--border);' +
+    'border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:12px;min-width:160px;' +
+    'font-family:"Noto Sans TC",sans-serif';
+  document.body.appendChild(pop);
+  document.addEventListener('pointerdown', function(e) {
+    if (pop.style.display === 'none') return;
+    if (pop.contains(e.target)) return;
+    _ltCloseVocabPopover();
+  });
+  return pop;
+}
+
+function _ltCloseVocabPopover() {
+  var pop = document.getElementById('lt-vocab-popover');
+  if (pop) pop.style.display = 'none';
+  _ltPendingVocabWord = null;
+}
+
+function _ltShowVocabPopover(word, x, y) {
+  var pop = _ltEnsureVocabPopover();
+  _ltPendingVocabWord = word;
+  var already = !!_ltVocabManual[word];
+  pop.innerHTML =
+    '<div style="font-size:.9rem;font-weight:800;margin-bottom:10px;text-align:center">「' + escHtml(word) + '」</div>' +
+    (already
+      ? '<button type="button" onclick="_ltConfirmRemoveVocab()" style="padding:6px 14px;border:none;border-radius:8px;' +
+        'width:100%;background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.8rem">' +
+        '－ 從本課語詞移除</button>'
+      : '<button type="button" onclick="_ltConfirmAddVocab()" style="padding:6px 14px;border:none;border-radius:8px;' +
+        'width:100%;background:var(--blue);color:white;font-weight:800;cursor:pointer;font-family:inherit;font-size:.8rem">' +
+        '＋ 加入本課語詞</button>');
+  pop.style.display = '';
+  pop.style.top  = (y + 12) + 'px';
+  pop.style.left = Math.max(10, Math.min(x, window.innerWidth - 180)) + 'px';
+}
+
+function _ltConfirmAddVocab() {
+  var word = _ltPendingVocabWord;
+  _ltCloseVocabPopover();
+  _ltAddVocabWord(word);
+}
+
+function _ltConfirmRemoveVocab() {
+  var word = _ltPendingVocabWord;
+  _ltCloseVocabPopover();
+  _ltRemoveVocabWord(word);
+}
+
+function _ltAddVocabWord(word) {
+  if (!word || !_ltCurrent || !db) return;
+  db.collection('lessonTexts').doc(_ltCurrent.docId).collection('vocab').doc(word).set({
+    word: word, addedAt: new Date().toISOString()
+  }).then(function() {
+    _ltVocabManual[word] = true;
+    _ltRecomputeVocabUnion();
+    _ltRenderTextPreview();
+    showToast('✅ 已加入本課語詞：' + word);
+  }).catch(function(e) { showToast('❌ 加入失敗：' + e.message); });
+}
+
+function _ltRemoveVocabWord(word) {
+  if (!word || !_ltCurrent || !db) return;
+  db.collection('lessonTexts').doc(_ltCurrent.docId).collection('vocab').doc(word).delete().then(function() {
+    delete _ltVocabManual[word];
+    _ltRecomputeVocabUnion();
+    _ltRenderTextPreview();
+    showToast('已從本課語詞移除：' + word);
+  }).catch(function(e) { showToast('❌ 移除失敗：' + e.message); });
 }
 
 /* ════════════════════════════════════════
