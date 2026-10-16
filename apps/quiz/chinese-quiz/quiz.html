@@ -87,7 +87,7 @@ var FALLBACK = [
 ];
 
 /* ════════════ Constants ════════════ */
-var TYPE_ORDER   = ['詞語填空', '詞語解釋', '選擇題'];
+var TYPE_ORDER   = ['詞語填空', '詞語解釋', '選擇題', '句子重組'];
 var SECTION_NUMS = ['一', '二', '三', '四', '五'];
 var POOL_KEY     = { '詞語填空': 'fill', '詞語解釋': 'explain' };
 var DROP_TOL     = 44;  /* px expanded hit area around each blank */
@@ -111,6 +111,11 @@ var _countUpRAF     = null; /* rAF id for score count-up animation */
 var matchData        = [];   /* [{title,pairs:[{wordId,word,imageUrl}],imgOrder:[],wordOrder:[]}] */
 var matchConnections = {};   /* {si: {imgPos: wordPos}} */
 var _matchConnDrag   = null; /* currently unused — drag state lives in `dragging` */
+
+/* ── 句子重組：點詞卡依序放進空格（不用拖曳，特教生用 tap 比連續拖曳穩定） ── */
+var srAnswers   = {};   /* qIdx -> [已放入的片段在 q.options 裡的原始索引]，陣列順序＝目前排的順序 */
+var srBankUsed  = {};   /* qIdx -> {origIdx: true}，詞卡區裡已經用掉、不再顯示的片段 */
+var srBankOrder = {};   /* qIdx -> 打亂過的 origIdx 陣列，每次開始測驗固定一次 */
 
 /* ════════════ Utilities ════════════ */
 function escHtml(s) {
@@ -146,13 +151,20 @@ function confirmBack() {
   window.speechSynthesis && window.speechSynthesis.cancel();
   var hasInput = Object.keys(blanks).some(function(k){ return blanks[k]; }) ||
                  Object.keys(mcAnswers).length > 0 ||
-                 Object.keys(matchConnections).some(function(si){ return Object.keys(matchConnections[si] || {}).length > 0; });
+                 Object.keys(matchConnections).some(function(si){ return Object.keys(matchConnections[si] || {}).length > 0; }) ||
+                 Object.keys(srAnswers).some(function(k){ return (srAnswers[k] || []).length > 0; });
   if (!graded && hasInput && !confirm('作答尚未完成，確定要離開嗎？')) return;
   returnToHub();
 }
 
 function getAnswer(i) {
-  return quizData[i].type === '選擇題' ? mcAnswers[i] : blanks[i];
+  var q = quizData[i];
+  if (q.type === '選擇題') return mcAnswers[i];
+  if (q.type === '句子重組') {
+    var placed = srAnswers[i] || [];
+    return placed.length === (q.options || []).length ? placed : undefined;
+  }
+  return blanks[i];
 }
 
 /* ════════════════════════════════════════
@@ -397,10 +409,20 @@ function startQuiz(qs, settings, matchLoaded) {
   blanks           = {};
   mcAnswers        = {};
   matchConnections = {};
+  srAnswers        = {};
+  srBankUsed       = {};
+  srBankOrder      = {};
   graded           = false;
   pendingDrag      = null;
   currentSettings = settings || null;
   if (_countUpRAF) { cancelAnimationFrame(_countUpRAF); _countUpRAF = null; }
+
+  quizData.forEach(function(q, i) {
+    if (q.type !== '句子重組') return;
+    srAnswers[i]   = [];
+    srBankUsed[i]  = {};
+    srBankOrder[i] = shuffle((q.options || []).map(function(_, idx) { return idx; }));
+  });
 
   /* Update lesson info in sheet header */
   var lessonEl = document.getElementById('sheet-lesson');
@@ -654,7 +676,20 @@ function findMatchEndpointAt(x, y, si, side) {
 function renderQuestion(q, qIdx, num) {
   if (q.type === '選擇題')  return renderMC(q, qIdx, num);
   if (q.type === '詞語填空') return renderFill(q, qIdx, num);
+  if (q.type === '句子重組') return renderSentenceReorder(q, qIdx, num);
   return renderExplain(q, qIdx, num);
+}
+
+/* 句子重組：點詞卡依序放進空格，不用拖曳。渲染只搭骨架，實際內容由 renderSrPieces()
+   （跟 renderPools/renderBlanks 同一套呼叫時機，在 renderAll() 裡）填進去。 */
+function renderSentenceReorder(q, qIdx, num) {
+  return '<div class="q-row sr-row" id="qr-' + qIdx + '">' +
+    '<span class="q-num">' + num + '.</span>' +
+    '<div class="sr-wrap">' +
+      '<div class="sr-slots" id="sr-slots-' + qIdx + '"></div>' +
+      '<div class="sr-bank"  id="sr-bank-'  + qIdx + '"></div>' +
+    '</div>' +
+  '</div>';
 }
 
 /* Click anywhere on the question text → speaks the full sentence */
@@ -711,7 +746,68 @@ function renderAll() {
   if (graded) return;
   renderPools();
   renderBlanks();
+  renderSrPieces();
   renderMatchSections();
+}
+
+/* ════════════ 句子重組互動（tap-only，不用拖曳） ════════════ */
+function renderSrPieces() {
+  quizData.forEach(function(q, i) {
+    if (q.type !== '句子重組') return;
+    var slotsEl = document.getElementById('sr-slots-' + i);
+    var bankEl  = document.getElementById('sr-bank-'  + i);
+    if (!slotsEl || !bankEl) return;
+    var placed = srAnswers[i] || [];
+    var total  = (q.options || []).length;
+
+    var slotsHtml = '';
+    for (var pos = 0; pos < total; pos++) {
+      if (pos < placed.length) {
+        var isLast = pos === placed.length - 1;
+        slotsHtml += '<div class="sr-slot sr-slot-filled' + (isLast ? ' sr-slot-removable' : '') + '"' +
+          (isLast ? ' onclick="srRemoveLast(' + i + ')" title="點一下移除，重新排"' : '') + '>' +
+          escHtml(q.options[placed[pos]]) + '</div>';
+      } else {
+        slotsHtml += '<div class="sr-slot sr-slot-empty"></div>';
+      }
+    }
+    slotsEl.innerHTML = slotsHtml;
+
+    var order = srBankOrder[i] || [];
+    var used  = srBankUsed[i]  || {};
+    var bankHtml = order.filter(function(origIdx) { return !used[origIdx]; }).map(function(origIdx) {
+      return '<button class="sr-piece" onclick="srPlacePiece(' + i + ',' + origIdx + ')">' +
+        escHtml(q.options[origIdx]) + '</button>';
+    }).join('');
+    bankEl.innerHTML = bankHtml || '<span class="pool-empty">（詞卡已全部放入）</span>';
+  });
+}
+
+function srPlacePiece(qIdx, origIdx) {
+  if (graded) return;
+  var q = quizData[qIdx];
+  if (!q || !q.options) return;
+  if (!srAnswers[qIdx])  srAnswers[qIdx]  = [];
+  if (!srBankUsed[qIdx]) srBankUsed[qIdx] = {};
+  if (srBankUsed[qIdx][origIdx]) return;           /* 保險：理論上按鈕渲染時已經移除 */
+  if (srAnswers[qIdx].length >= q.options.length) return;
+  srAnswers[qIdx].push(origIdx);
+  srBankUsed[qIdx][origIdx] = true;
+  speakText(q.options[origIdx]);
+  renderSrPieces();
+  if (srAnswers[qIdx].length === q.options.length) {
+    var full = srAnswers[qIdx].map(function(oi) { return q.options[oi]; }).join('');
+    setTimeout(function() { speakText(full); }, 500); /* 排完整句自動唸一次當回饋，跟最後一塊的發音錯開 */
+  }
+}
+
+function srRemoveLast(qIdx) {
+  if (graded) return;
+  var placed = srAnswers[qIdx];
+  if (!placed || !placed.length) return;
+  var origIdx = placed.pop();
+  if (srBankUsed[qIdx]) delete srBankUsed[qIdx][origIdx];
+  renderSrPieces();
 }
 
 function renderPools() {
@@ -1022,7 +1118,15 @@ function doPlace(word, fromQIdx, toQIdx) {
 /* ════════════ Submit / Grade ════════════ */
 function submitQuiz() {
   if (graded) return;
-  var unanswered = quizData.filter(function(q, i){ return getAnswer(i) === undefined; }).length;
+  /* 句子重組的「答完了沒」跟一般題目的 getAnswer() 分開算（一個題目裡有好幾個片段），
+     unanswered 這裡只看一般題型；句子重組完全沒放任何片段才算未作答 */
+  var unanswered = quizData.filter(function(q, i){
+    return q.type !== '句子重組' && getAnswer(i) === undefined;
+  }).length;
+  var srUnanswered = 0;
+  quizData.forEach(function(q, i) {
+    if (q.type === '句子重組' && (srAnswers[i] || []).length === 0) srUnanswered++;
+  });
   var matchUnanswered = 0;
   matchData.forEach(function(msec, si) {
     var conns = matchConnections[si] || {};
@@ -1030,25 +1134,46 @@ function submitQuiz() {
       if (conns[imgPos] === undefined) matchUnanswered++;
     });
   });
-  var totalUnanswered = unanswered + matchUnanswered;
+  var totalUnanswered = unanswered + srUnanswered + matchUnanswered;
   if (totalUnanswered > 0 && !confirm('還有 ' + totalUnanswered + ' 題未作答，確定要送出嗎？')) return;
 
   graded = true;
   window.speechSynthesis && window.speechSynthesis.cancel();
   document.getElementById('btn-submit').disabled = true;
 
-  document.querySelectorAll('.pool-word').forEach(function(el){
+  document.querySelectorAll('.pool-word, .sr-piece').forEach(function(el){
     el.style.pointerEvents = 'none';
     el.style.cursor        = 'default';
     el.style.opacity       = '.4';
   });
 
-  /* Pre-calculate text question totals */
+  /* Pre-calculate text question totals（句子重組不在這裡算，底下用片段位置分開算，像連連看那樣給部分分數） */
   var correct = 0, wrongIndices = [];
   quizData.forEach(function(q, i) {
+    if (q.type === '句子重組') return;
     var ua      = getAnswer(i);
     var isRight = ua !== undefined && ua === q.answer;
     if (isRight) correct++; else wrongIndices.push(i);
+  });
+  var textTotal = quizData.filter(function(q) { return q.type !== '句子重組'; }).length;
+
+  /* Pre-calculate 句子重組 totals — 每個片段的位置都算一個計分單位，對幾個算幾個（跟連連看的配對同邏輯） */
+  var srCorrect = 0, srTotal = 0;
+  var wrongSrQuestions = [];
+  quizData.forEach(function(q, i) {
+    if (q.type !== '句子重組') return;
+    var placedIdx = srAnswers[i] || [];
+    var opts = q.options || [];
+    var rightCount = 0;
+    opts.forEach(function(_, pos) { if (placedIdx[pos] === pos) rightCount++; });
+    srTotal += opts.length;
+    srCorrect += rightCount;
+    if (rightCount < opts.length) {
+      wrongSrQuestions.push({
+        correctSentence: opts.join(''),
+        yourSentence: placedIdx.length ? placedIdx.map(function(oi){ return opts[oi]; }).join('') : '未作答'
+      });
+    }
   });
 
   /* Pre-calculate match totals and wrong pairs */
@@ -1077,6 +1202,7 @@ function submitQuiz() {
   /* Staggered per-question reveal: 120 ms between each */
   var STAGGER = 120;
   quizData.forEach(function(q, i) {
+    if (q.type === '句子重組') { setTimeout(function() { _applySrGradeVisual(i); }, i * STAGGER + 160); return; }
     var ua      = getAnswer(i);
     var isRight = ua !== undefined && ua === q.answer;
     setTimeout(function() { _applyGradeVisual(q, i, ua, isRight); }, i * STAGGER + 160);
@@ -1087,16 +1213,41 @@ function submitQuiz() {
 
   /* Show result after all animations complete */
   var totalDelay = (quizData.length + (matchData.length ? 1 : 0)) * STAGGER + 480;
-  var snapCorrect = correct, snapMatchCorrect = matchCorrect;
+  var snapCorrect = correct, snapMatchCorrect = matchCorrect, snapSrCorrect = srCorrect;
   var snapWrong = wrongIndices.slice();
-  var snapTotal  = quizData.length + matchTotal;
+  var snapTotal  = textTotal + matchTotal + srTotal;
   var snapWrongMatchSections = wrongMatchSections;
+  var snapWrongSrQuestions = wrongSrQuestions;
   setTimeout(function() {
     if (!graded) return;
-    var score = snapTotal ? Math.round((snapCorrect + snapMatchCorrect) / snapTotal * 100) : 100;
-    saveScore(score, snapCorrect + snapMatchCorrect, snapTotal);
-    showResult(snapCorrect, quizData.length, snapWrong, snapMatchCorrect, matchTotal, snapWrongMatchSections);
+    var allCorrect = snapCorrect + snapMatchCorrect + snapSrCorrect;
+    var score = snapTotal ? Math.round(allCorrect / snapTotal * 100) : 100;
+    saveScore(score, allCorrect, snapTotal);
+    showResult(snapCorrect, textTotal, snapWrong, snapMatchCorrect, matchTotal, snapWrongMatchSections,
+               snapSrCorrect, srTotal, snapWrongSrQuestions);
   }, totalDelay);
+}
+
+function _applySrGradeVisual(i) {
+  if (!graded) return;
+  var q = quizData[i];
+  if (!q) return;
+  var opts = q.options || [];
+  var placedIdx = srAnswers[i] || [];
+  var allRight = placedIdx.length === opts.length && opts.every(function(_, pos) { return placedIdx[pos] === pos; });
+  var row = document.getElementById('qr-' + i);
+  if (row) row.classList.add(allRight ? 'graded-correct' : 'graded-wrong');
+  var slotsEl = document.getElementById('sr-slots-' + i);
+  if (slotsEl) {
+    slotsEl.innerHTML = opts.map(function(_, pos) {
+      var placedOi = placedIdx[pos];
+      var isRight  = placedOi === pos;
+      var text     = placedOi !== undefined ? opts[placedOi] : '—';
+      return '<div class="sr-slot sr-slot-filled ' + (isRight ? 'graded-correct' : 'graded-wrong') + '">' + escHtml(text) + '</div>';
+    }).join('');
+  }
+  var bankEl = document.getElementById('sr-bank-' + i);
+  if (bankEl) bankEl.innerHTML = '';
 }
 
 function _applyGradeVisual(q, i, ua, isRight) {
@@ -1143,9 +1294,10 @@ function _countUp(el, target, duration) {
 }
 
 /* ════════════ Result screen ════════════ */
-function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wrongMatchSections) {
-  var allCorrect = correct + (matchCorrect || 0);
-  var allTotal   = total   + (matchTotal   || 0);
+function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wrongMatchSections,
+                     srCorrect, srTotal, wrongSrQuestions) {
+  var allCorrect = correct + (matchCorrect || 0) + (srCorrect || 0);
+  var allTotal   = total   + (matchTotal   || 0) + (srTotal   || 0);
   var score = allTotal ? Math.round(allCorrect / allTotal * 100) : 100;
   document.getElementById('quiz-screen').style.display = 'none';
   document.getElementById('result-screen').classList.add('show');
@@ -1157,12 +1309,29 @@ function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wron
     score >= 50 ? '繼續加油！💪' : '多多練習吧！📖';
   var subParts = ['共答對 ' + allCorrect + ' 題，答錯 ' + (allTotal - allCorrect) + ' 題'];
   if (matchTotal) subParts.push('詞圖配對 ' + (matchCorrect || 0) + '/' + matchTotal + ' 組');
+  if (srTotal)     subParts.push('句子重組 ' + (srCorrect   || 0) + '/' + srTotal   + ' 塊');
   document.getElementById('result-sub').textContent = subParts.join('　');
   var reviewHtml = '';
   if (wrongIndices.length) reviewHtml += buildReviewHtml(wrongIndices);
+  if (wrongSrQuestions && wrongSrQuestions.length) reviewHtml += buildSrReviewHtml(wrongSrQuestions);
   if (wrongMatchSections && wrongMatchSections.length) reviewHtml += buildMatchReviewHtml(wrongMatchSections);
   document.getElementById('review-container').innerHTML = reviewHtml;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildSrReviewHtml(wrongSrQuestions) {
+  return '<div class="review-section">' +
+    '<div class="review-header">句子重組</div>' +
+    wrongSrQuestions.map(function(item) {
+      return '<div class="review-item">' +
+        '<div class="review-answers">' +
+          '<div><span class="review-wrong-ans">你排的：' + escHtml(item.yourSentence) + '</span></div>' +
+          '<div><span class="review-correct-ans q-speakable" onclick="speakText(\'' + escJs(item.correctSentence) +
+            '\')" title="點擊聆聽">正確：' + escHtml(item.correctSentence) + '</span></div>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
+  '</div>';
 }
 
 function buildReviewHtml(wrongIndices) {

@@ -380,6 +380,34 @@
                 </div>
               </div>
             </div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title">🧩 新增句子重組題</div>
+              <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px;line-height:1.7">
+                給特教學生練習「把打散的句子排回正確順序」。系統會依照這一課已經設定好的「本課語詞」自動拆解句子，
+                詞語不會被拆開；拆完可以手動調整分界，確認沒問題再存檔。
+              </p>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+                <div style="flex:1;min-width:100px">
+                  <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">課次</label>
+                  <input type="text" id="sr-lesson" placeholder="如：五" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">
+                </div>
+                <div style="flex:2;min-width:160px">
+                  <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">課名（選填）</label>
+                  <input type="text" id="sr-lesson-name" placeholder="如：攀登生命的高峰" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit">
+                </div>
+              </div>
+              <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">句子</label>
+              <textarea id="sr-sentence" rows="2" placeholder="從課文裡挑一句，或自己打一句" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:8px;font-size:.95rem;font-family:inherit;margin-bottom:10px;box-sizing:border-box;resize:vertical"></textarea>
+              <button class="btn btn-secondary" onclick="_srSegmentSentence()" style="margin-bottom:14px">拆解句子</button>
+              <div id="sr-pieces-wrap" style="display:none;margin-bottom:14px">
+                <div style="font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:8px">
+                  點兩塊中間的分隔符號可以合併／拆開（詞語庫裡已有的詞自動保留整塊，不在詞語庫裡的字先各自獨立，覺得不該拆開可以手動合併）
+                </div>
+                <div id="sr-pieces" style="display:flex;flex-wrap:wrap;align-items:center;gap:0;margin-bottom:10px"></div>
+                <button class="btn btn-primary" onclick="_srSaveQuestion()">💾 儲存題目</button>
+              </div>
+              <div id="sr-status" style="font-size:.82rem;font-weight:700;color:var(--muted)"></div>
+            </div>
             <div class="card">
               <div class="card-title" style="display:flex;align-items:center;gap:8px">
                 📊 我的題庫

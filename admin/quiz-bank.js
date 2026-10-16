@@ -444,6 +444,7 @@ function loadQuizBankStats() {
         '<th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);font-size:.75rem;font-weight:800;color:var(--muted)">填空</th>' +
         '<th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);font-size:.75rem;font-weight:800;color:var(--muted)">解釋</th>' +
         '<th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);font-size:.75rem;font-weight:800;color:var(--muted)">選擇</th>' +
+        '<th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);font-size:.75rem;font-weight:800;color:var(--muted)">重組</th>' +
         '<th style="text-align:right;padding:6px 10px;border-bottom:2px solid var(--border);font-size:.75rem;font-weight:800;color:var(--muted)">小計</th>' +
         '<th style="padding:6px 10px;border-bottom:2px solid var(--border)"></th>' +
         '</tr>';
@@ -473,13 +474,14 @@ function loadQuizBankStats() {
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語填空'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['詞語解釋'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['選擇題']   || 0) + '</td>';
+        html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border)">' + (ld.types['句子重組'] || 0) + '</td>';
         html += '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid var(--border);font-weight:800">' + ld.total + '</td>';
         html += '<td style="padding:6px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap">' + delBtn + '</td>';
         html += '</tr>';
 
         /* Detail row（保留上次展開/收合狀態） */
         html += '<tr id="qb-detail-' + escHtml(dk) + '" style="display:' + (detailOpen ? '' : 'none') + '">';
-        html += '<td colspan="7" style="padding:0 10px 12px 28px;border-bottom:1px solid var(--border);background:#fafcff">';
+        html += '<td colspan="8" style="padding:0 10px 12px 28px;border-bottom:1px solid var(--border);background:#fafcff">';
         html += _qbRenderDetailTable(_qbDetailMap[dk] || []);
         html += '</td></tr>';
       });
@@ -523,7 +525,7 @@ function _qbToggleDetail(dk, btn) {
 function _qbRenderDetailTable(questions) {
   if (!questions.length) return '<p style="color:var(--muted);font-size:.78rem;padding:8px 0">（無題目）</p>';
 
-  var typeOrder = ['詞語填空', '詞語解釋', '選擇題'];
+  var typeOrder = ['詞語填空', '詞語解釋', '選擇題', '句子重組'];
   var sorted = questions.slice().sort(function(a, b) {
     return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
   });
@@ -652,4 +654,141 @@ function _deactivateSessionsForLesson(grade, lesson) {
     .catch(function(e) {
       console.warn('_deactivateSessionsForLesson error:', e);
     });
+}
+
+/* ════════════════════════════════════════
+   句子重組題——給特教學生練習的題型：把一句課文打散成片段，學生要排回正確順序。
+   詞語不能被拆開這個要求，靠「這一課已經設定好的本課語詞」當斷詞依據（最長匹配優先），
+   不在語詞庫裡的字各自獨立成一塊（寧可切太細，不會切錯詞）；老師可以手動調整分界再存檔。
+   資料跟其他題型共用同一個 questions collection，type:'句子重組'，
+   options 陣列存最終片段（陣列順序＝正確順序），question/answer 都存還原後的完整句子
+   （方便既有的題庫列表/exam-compose.js 等畫面直接顯示，不用額外改那些地方）。
+   ════════════════════════════════════════ */
+var _srAtoms      = [];    // 目前這句話拆出來的最小單位（詞語庫比對出的詞或單字）
+var _srBoundaries = [];    // 長度 = atoms.length-1，true=這裡是分界（兩塊分開）、false=合併成同一塊
+
+/* 抓這一課「本課語詞」的聯集（題庫衍生 + 課文編輯手動加的），邏輯跟 admin/lesson-text.js
+   的 _ltFetchVocab 一致，但這裡只要字的清單，不需要完整的 UI 狀態 */
+function _srLoadVocabWords(grade, lesson) {
+  var qQuestions = db.collection('questions').where('teacherUid', '==', currentTeacher.uid).where('grade', '==', grade).get();
+  var docId = 't_' + encodeURIComponent(currentTeacher.uid + '|' + grade + '|' + lesson);
+  var qManual = db.collection('lessonTexts').doc(docId).collection('vocab').get();
+  return Promise.all([qQuestions, qManual]).then(function(results) {
+    var words = {};
+    results[0].forEach(function(doc) {
+      var d = doc.data();
+      if (d.lesson !== lesson) return;
+      if (d.type !== '詞語解釋' && d.type !== '詞語填空') return;
+      var w = (d.answer || '').trim();
+      if (w) words[w] = true;
+    });
+    results[1].forEach(function(doc) {
+      var w = (doc.data().word || '').trim();
+      if (w) words[w] = true;
+    });
+    return Object.keys(words);
+  }).catch(function() { return []; });
+}
+
+/* 最長匹配優先的貪婪斷詞：從左到右掃，每個位置優先比對最長的語詞；沒匹配到的字單獨一塊 */
+function _srSegmentIntoAtoms(sentence, vocabWords) {
+  var sorted = vocabWords.filter(function(w) { return w.length >= 2; })
+    .sort(function(a, b) { return b.length - a.length; });
+  var atoms = [];
+  var i = 0;
+  while (i < sentence.length) {
+    var matched = null;
+    for (var j = 0; j < sorted.length; j++) {
+      var w = sorted[j];
+      if (sentence.slice(i, i + w.length) === w) { matched = w; break; }
+    }
+    if (matched) { atoms.push(matched); i += matched.length; }
+    else { atoms.push(sentence[i]); i += 1; }
+  }
+  return atoms;
+}
+
+function _srSegmentSentence() {
+  var grade    = (document.getElementById('qb-grade').value || '').trim();
+  var lesson   = (document.getElementById('sr-lesson').value || '').trim();
+  var sentence = (document.getElementById('sr-sentence').value || '').trim();
+  var statusEl = document.getElementById('sr-status');
+  if (!grade) { if (statusEl) statusEl.textContent = '請先在上方選版本與冊次'; return; }
+  if (!lesson) { if (statusEl) statusEl.textContent = '請先填課次'; return; }
+  if (!sentence) { if (statusEl) statusEl.textContent = '請先輸入句子'; return; }
+
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '拆解中…'; }
+  _srLoadVocabWords(grade, lesson).then(function(vocabWords) {
+    _srAtoms = _srSegmentIntoAtoms(sentence, vocabWords);
+    _srBoundaries = _srAtoms.map(function() { return true; }).slice(0, _srAtoms.length - 1);
+    document.getElementById('sr-pieces-wrap').style.display = '';
+    if (statusEl) {
+      statusEl.style.color = 'var(--muted)';
+      statusEl.textContent = vocabWords.length ? '' : '⚠️ 這一課還沒有設定本課語詞，所有字先各自獨立，記得手動合併該保留整塊的詞';
+    }
+    _srRenderPieces();
+  });
+}
+
+function _srRenderPieces() {
+  var el = document.getElementById('sr-pieces');
+  if (!el) return;
+  el.innerHTML = _srAtoms.map(function(atom, i) {
+    var html = '<span style="padding:7px 10px;background:var(--blue-lt);color:var(--blue-dk);border-radius:7px;' +
+      'font-weight:800;font-size:.95rem;font-family:inherit">' + escHtml(atom) + '</span>';
+    if (i < _srAtoms.length - 1) {
+      var active = _srBoundaries[i];
+      html += '<span onclick="_srToggleBoundary(' + i + ')" title="' + (active ? '點一下合併成同一塊' : '點一下拆開') + '" ' +
+        'style="width:22px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;' +
+        'color:var(--muted);font-weight:900;font-size:1.1rem;user-select:none">' + (active ? '｜' : '·') + '</span>';
+    }
+    return html;
+  }).join('');
+}
+
+function _srToggleBoundary(i) {
+  _srBoundaries[i] = !_srBoundaries[i];
+  _srRenderPieces();
+}
+
+function _srComputePieces() {
+  if (!_srAtoms.length) return [];
+  var pieces = [];
+  var current = _srAtoms[0];
+  for (var i = 1; i < _srAtoms.length; i++) {
+    if (_srBoundaries[i - 1]) { pieces.push(current); current = _srAtoms[i]; }
+    else { current += _srAtoms[i]; }
+  }
+  pieces.push(current);
+  return pieces;
+}
+
+function _srSaveQuestion() {
+  var grade      = (document.getElementById('qb-grade').value || '').trim();
+  var lesson     = (document.getElementById('sr-lesson').value || '').trim();
+  var lessonName = (document.getElementById('sr-lesson-name').value || '').trim();
+  var statusEl   = document.getElementById('sr-status');
+  var pieces = _srComputePieces();
+  if (pieces.length < 2) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '至少要有兩個片段才能出題，請再調整分界'; }
+    return;
+  }
+  if (!db || !currentTeacher) return;
+  var sentence = pieces.join('');
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '儲存中…'; }
+
+  db.collection('questions').add({
+    grade: grade, lesson: lesson, lessonName: lessonName, type: '句子重組',
+    question: sentence, answer: sentence, options: pieces,
+    teacherUid: currentTeacher.uid, createdAt: new Date().toISOString()
+  }).then(function() {
+    showToast('✅ 已新增句子重組題：' + sentence);
+    document.getElementById('sr-sentence').value = '';
+    document.getElementById('sr-pieces-wrap').style.display = 'none';
+    _srAtoms = []; _srBoundaries = [];
+    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已儲存'; }
+    loadQuizBankStats();
+  }).catch(function(e) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
+  });
 }

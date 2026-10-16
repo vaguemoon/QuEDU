@@ -206,6 +206,62 @@ body {
 .q-row.graded-correct { border-color: var(--correct); background: var(--correct-lt); animation: grade-pop .22s ease-out; }
 .q-row.graded-wrong   { border-color: var(--wrong);   background: var(--wrong-lt);   animation: grade-pop .22s ease-out; }
 
+/* ═══ 句子重組（tap 式，給特教生用，字塊夠大、不用拖曳） ═══ */
+.sr-row { flex-direction: column; align-items: stretch; gap: 10px; }
+.sr-wrap { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+.sr-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 52px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--rule-lt);
+  border: 1.5px dashed var(--rule);
+}
+.sr-slot {
+  min-width: 56px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.sr-slot-empty   { border: 2px dashed var(--rule); background: #fff; }
+.sr-slot-filled  { border: 2px solid var(--accent); background: #fff; color: var(--accent); }
+.sr-slot-removable { cursor: pointer; }
+.sr-slot-removable:active { transform: scale(.94); }
+.sr-slot.graded-correct { border-color: var(--correct); background: var(--correct-lt); color: var(--correct); }
+.sr-slot.graded-wrong   { border-color: var(--wrong);   background: var(--wrong-lt);   color: var(--wrong); }
+.sr-bank {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 48px;
+  align-items: center;
+}
+.sr-piece {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ink);
+  background: #fff;
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  box-shadow: 0 2px 4px var(--shadow);
+  transition: border-color .15s, box-shadow .15s, transform .1s;
+}
+.sr-piece:hover  { border-color: var(--accent); box-shadow: 0 3px 8px var(--shadow); }
+.sr-piece:active { transform: scale(.95); }
+
 .q-num {
   font-family: 'Noto Serif TC', serif;
   font-size: .88rem;
