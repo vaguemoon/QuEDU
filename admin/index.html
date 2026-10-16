@@ -629,7 +629,6 @@
         <div id="ec-panel-2" class="card" style="display:none">
           <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             📚 選題
-            <button onclick="_ecOpenSrModal()" class="btn btn-secondary" style="font-size:.78rem;padding:4px 10px">🧩 新增句子重組題</button>
             <span style="margin-left:auto;font-size:.82rem;font-weight:700;color:var(--blue)">已選 <span id="ec-selected-count">0</span> 題</span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 0;border-bottom:1.5px solid var(--border);margin-bottom:12px">
@@ -651,6 +650,9 @@
               <input id="ec-filter-search" type="text" placeholder="搜尋題目…" oninput="_ecFilterAndRender()"
                 style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;outline:none;box-sizing:border-box">
             </div>
+          </div>
+          <div id="ec-sr-create-row" style="display:none;margin-bottom:10px">
+            <button onclick="_ecOpenSrModal()" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">🧩 新增一題句子重組題</button>
           </div>
           <div id="ec-q-list"
             style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 12px;min-height:80px">

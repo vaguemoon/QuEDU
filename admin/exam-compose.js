@@ -349,10 +349,13 @@ function _ecBuildFilters() {
   /* 課次 / 類別（依目前年級篩選） */
   _ecUpdateCatFilter();
 
-  /* 題型（語文專用） */
+  /* 題型（語文專用）——固定題型（_EC_TYPE_ORDER）一律先列出來，不等實際有資料才出現，
+     這樣「句子重組」這種需要另外建立的題型，老師選了篩選才看得到「+ 新增」的入口 */
   if (typeEl) {
     if (_ecSubject === 'chinese') {
+      var prevType = typeEl.value;
       var types = {};
+      _EC_TYPE_ORDER.forEach(function(t) { types[t] = true; });
       _ecAllQ.forEach(function(q) { if (q.type) types[q.type] = true; });
       typeEl.innerHTML = '<option value="">全部題型</option>' +
         Object.keys(types).sort(function(a, b) {
@@ -362,6 +365,7 @@ function _ecBuildFilters() {
         }).map(function(t) {
           return '<option value="' + _ecEscA(t) + '">' + _ecEsc(t) + '</option>';
         }).join('');
+      typeEl.value = prevType;
       typeEl.style.display = '';
     } else {
       typeEl.style.display = 'none';
@@ -422,6 +426,11 @@ function _ecFilterAndRender() {
 
   var cntEl = document.getElementById('ec-selected-count');
   if (cntEl) cntEl.textContent = Object.keys(_ecSelected).length;
+
+  /* 句子重組這個題型沒有 Excel 批次匯入（需要照本課語詞即時拆解，沒辦法用表格打），篩到這個
+     題型時在清單上方放一個「+ 新增」入口——只在選到這個題型才出現，不是額外獨立的區塊 */
+  var srRow = document.getElementById('ec-sr-create-row');
+  if (srRow) srRow.style.display = (type === '句子重組') ? '' : 'none';
 
   var wrap = document.getElementById('ec-q-list');
   if (!wrap) return;
