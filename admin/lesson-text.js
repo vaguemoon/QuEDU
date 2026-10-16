@@ -5,7 +5,9 @@
  * 配套生字詞不用另外輸入，課文趣會自動抓這一課「詞語解釋／詞語填空」題型的答案欄當生字詞。
  * 依賴：shared.js（db、showToast、pickBestZhVoice）、classes.js（escHtml）、init.js（currentTeacher）、
  *       lesson-fulltext.js（_lftExt、_lftExtractText、LFT_SUPPORTED_EXTS）、
- *       assets/data/heteronym-readings.js（HETERONYM_READINGS）
+ *       assets/data/heteronym-readings.js（HETERONYM_READINGS）、
+ *       word-image.js（_wiCompressToDataUrl，插入圖片功能的「上傳新圖片」用；載入順序晚於
+ *       這支檔案沒關係，只在使用者真的點上傳時才會呼叫到）
  */
 'use strict';
 
@@ -22,7 +24,6 @@ var _ltGlobalHints    = null; // 跨課讀音建議：{ch: {readingIndex: 出現
 var _ltVocab          = {};   // 這一課配套生字詞（詞語解釋/詞語填空），用來在預覽裡標記
 var _ltFontReady      = false;
 var _ltWysiwyg        = false;
-var _ltAutosaveTimer  = null;
 var _ltVersions       = [];
 var _ltWordImages     = null; // 詞語圖庫快取 [{docId, word, imageUrl}]
 var LT_MAX_VERSIONS   = 10;
@@ -175,7 +176,6 @@ function _ltOpenLesson(docId) {
 }
 
 function _ltBackToList() {
-  if (_ltAutosaveTimer) { clearInterval(_ltAutosaveTimer); _ltAutosaveTimer = null; }
   _ltCurrent = null;
   document.getElementById('lt-editor-view').classList.add('hidden');
   document.getElementById('lt-list-view').classList.remove('hidden');
@@ -210,8 +210,6 @@ function _ltOpenEditor(info) {
 
   Promise.all([loadClasses, _ltFetchVocab(info.grade, info.lesson)]).then(function(results) {
     _ltRenderEditor(results[0]);
-    _ltCheckAutosaveDraft();
-    _ltStartAutosave();
   });
 }
 
@@ -236,14 +234,6 @@ function _ltRenderEditor(classes) {
       'style="width:100%;min-height:160px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;' +
       'font-family:\'Noto Sans TC\',sans-serif;font-size:.88rem;line-height:1.8;resize:vertical;box-sizing:border-box">' +
       _ltEscTA(info.fullText) + '</textarea>' +
-    '<div id="lt-draft-banner" class="hidden" style="margin-top:8px;padding:8px 12px;background:#fff8e1;' +
-      'border:1.5px solid #f0c040;border-radius:8px;font-size:.78rem;display:flex;align-items:center;gap:10px">' +
-      '<span>💾 發現自動儲存的草稿（跟目前已存檔內容不同）</span>' +
-      '<button onclick="_ltRestoreDraft()" style="padding:3px 10px;border:none;border-radius:6px;background:var(--blue);' +
-        'color:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:.74rem">還原草稿</button>' +
-      '<button onclick="_ltDismissDraft()" style="padding:3px 10px;border:1.5px solid var(--border);border-radius:6px;' +
-        'background:white;cursor:pointer;font-family:inherit;font-size:.74rem">略過</button>' +
-    '</div>' +
     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:8px 0 6px">' +
       '<button type="button" onclick="_ltInsertParaBreak()" style="padding:5px 14px;border:1.5px solid var(--blue);' +
         'border-radius:8px;background:var(--blue-lt);color:var(--blue-dk);font-size:.8rem;font-weight:800;cursor:pointer;' +
@@ -295,11 +285,6 @@ function _ltRenderEditor(classes) {
       '<button onclick="_ltSaveLessonShare()" style="padding:6px 18px;border:none;border-radius:8px;background:var(--green);' +
         'color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">更新分享班級</button>' +
       '</div>';
-    if (info.sharedClassIds.length) {
-      html += '<div id="lt-progress-wrap"><button onclick="_ltLoadShareStats()" style="padding:6px 14px;' +
-        'border:1.5px solid var(--border);border-radius:8px;background:white;font-size:.8rem;font-weight:700;' +
-        'cursor:pointer;font-family:inherit">📊 查看閱讀狀態</button><div id="lt-progress-body" style="margin-top:10px"></div></div>';
-    }
   }
 
   ev.innerHTML = html;
@@ -731,7 +716,6 @@ function _ltSaveLessonText() {
     info.fullText = text;
     info.pronFixes = pronFixes;
     if (_ltIsNew) { _ltList.push(info); _ltIsNew = false; }
-    _ltClearDraft();
     if (statusEl) {
       statusEl.style.color = 'var(--green)';
       statusEl.textContent = synced !== null ? '✅ 已儲存（已同步更新到已分享的班級）' : '✅ 已儲存';
@@ -766,7 +750,6 @@ function _ltSaveLessonShare() {
     if (_ltIsNew) { _ltList.push(info); _ltIsNew = false; }
     if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ 已更新'; }
     showToast('✅ 分享班級已更新');
-    _ltRenderEditor(_ltClassesCache); // 重畫才會顯示/更新「查看閱讀狀態」按鈕
   }).catch(function(e) {
     if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
     showToast('❌ 更新失敗：' + e.message);
@@ -841,55 +824,6 @@ function _ltRestoreVersion(versionId) {
 }
 
 /* ════════════════════════════════════════
-   自動草稿儲存（localStorage，防止不小心關分頁遺失編輯中的內容）
-   ════════════════════════════════════════ */
-function _ltDraftKey() {
-  return 'lt_draft_' + (_ltCurrent ? _ltCurrent.docId : 'new');
-}
-function _ltStartAutosave() {
-  if (_ltAutosaveTimer) clearInterval(_ltAutosaveTimer);
-  _ltAutosaveTimer = setInterval(function() {
-    var ta = document.getElementById('lt-ta');
-    if (!ta || !_ltCurrent) return;
-    if (ta.value === _ltCurrent.fullText) { _ltClearDraft(); return; } // 跟已存檔內容一樣就不用留草稿
-    try {
-      localStorage.setItem(_ltDraftKey(), JSON.stringify({ text: ta.value, pronFixes: _ltPendingPronFixes, savedAt: Date.now() }));
-    } catch (e) {}
-  }, 8000);
-}
-function _ltCheckAutosaveDraft() {
-  var raw;
-  try { raw = localStorage.getItem(_ltDraftKey()); } catch (e) { return; }
-  if (!raw) return;
-  var draft;
-  try { draft = JSON.parse(raw); } catch (e) { return; }
-  if (!draft || draft.text === _ltCurrent.fullText) { _ltClearDraft(); return; }
-  var banner = document.getElementById('lt-draft-banner');
-  if (banner) banner.classList.remove('hidden');
-}
-function _ltRestoreDraft() {
-  var raw;
-  try { raw = localStorage.getItem(_ltDraftKey()); } catch (e) { return; }
-  if (!raw) return;
-  var draft;
-  try { draft = JSON.parse(raw); } catch (e) { return; }
-  var ta = document.getElementById('lt-ta');
-  if (ta && draft) {
-    ta.value = draft.text || '';
-    _ltPendingPronFixes = draft.pronFixes || {};
-    _ltOnTextInput();
-  }
-  _ltDismissDraft();
-}
-function _ltDismissDraft() {
-  var banner = document.getElementById('lt-draft-banner');
-  if (banner) banner.classList.add('hidden');
-}
-function _ltClearDraft() {
-  try { localStorage.removeItem(_ltDraftKey()); } catch (e) {}
-}
-
-/* ════════════════════════════════════════
    真·所見即所得預覽：載入課文趣同一顆注音字型（BpmfZihiKai），切換後預覽直接顯示
    實際字形＋選好的破音字讀音，不用再靠底線標記去想像畫面長怎樣
    ════════════════════════════════════════ */
@@ -952,7 +886,20 @@ function _ltEnsureImageModal() {
     '<input id="lt-image-search" placeholder="搜尋詞語…" oninput="_ltFilterImageModal(this.value)" ' +
     'style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;' +
     'margin-bottom:10px;box-sizing:border-box">' +
-    '<div id="lt-image-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px"></div></div>';
+    '<div id="lt-image-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px"></div>' +
+    '<div style="border-top:1.5px solid var(--border);margin-top:12px;padding-top:12px">' +
+      '<div style="font-size:.8rem;font-weight:800;margin-bottom:6px">或從電腦上傳新圖片</div>' +
+      '<input type="file" id="lt-image-upload-file" accept="image/*" style="margin-bottom:6px;display:block">' +
+      '<input type="text" id="lt-image-upload-word" placeholder="圖片說明（選填，之後也會出現在詞語圖庫）" ' +
+        'style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;' +
+        'font-size:.85rem;margin-bottom:8px;box-sizing:border-box">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<button type="button" onclick="_ltUploadNewImage()" style="padding:6px 16px;border:none;border-radius:8px;' +
+          'background:var(--blue);color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">' +
+          '上傳並插入</button>' +
+        '<span id="lt-image-upload-status" style="font-size:.76rem;font-weight:700;color:var(--muted)"></span>' +
+      '</div>' +
+    '</div></div>';
   modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
   document.body.appendChild(modal);
   return modal;
@@ -991,6 +938,34 @@ function _ltInsertImage(docId) {
   _ltOnTextInput();
 }
 
+/* 從電腦上傳新圖片——不是只能從已經上傳過的詞語圖庫裡選。重用 word-image.js 的
+   _wiCompressToDataUrl()（跟詞語圖庫上傳同一套壓縮設定），存進同一個 wordImages collection，
+   這張圖之後在詞語圖庫也會看到；上傳完直接插入課文，不用使用者再點一次。 */
+function _ltUploadNewImage() {
+  var fileInput  = document.getElementById('lt-image-upload-file');
+  var wordInput  = document.getElementById('lt-image-upload-word');
+  var statusEl   = document.getElementById('lt-image-upload-status');
+  var file = fileInput && fileInput.files && fileInput.files[0];
+  if (!file) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '請先選擇圖片檔案'; }
+    return;
+  }
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '上傳中…'; }
+  _wiCompressToDataUrl(file, 800, 0.82, function(dataUrl) {
+    var word = (wordInput && wordInput.value.trim()) || ('課文插圖 ' + new Date().toLocaleDateString('zh-TW'));
+    db.collection('wordImages').add({
+      teacherUid: currentTeacher.uid, word: word, imageUrl: dataUrl, createdAt: new Date().toISOString()
+    }).then(function(ref) {
+      if (!_ltWordImages) _ltWordImages = [];
+      _ltWordImages.unshift({ docId: ref.id, word: word, imageUrl: dataUrl });
+      _ltInsertImage(ref.id); // 這裡面會關閉 modal、重畫預覽
+      showToast('✅ 圖片已上傳並插入');
+    }).catch(function(e) {
+      if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '上傳失敗：' + e.message; }
+    });
+  });
+}
+
 /* ════════════════════════════════════════
    列印／匯出
    ════════════════════════════════════════ */
@@ -1019,49 +994,4 @@ function _ltPrintLesson() {
   win.document.close();
   win.focus();
   setTimeout(function() { win.print(); }, 300);
-}
-
-/* ════════════════════════════════════════
-   分享狀態總覽：已分享的每個班級，各班學生讀完這篇課文的人數
-   ════════════════════════════════════════ */
-function _ltLoadShareStats() {
-  var info = _ltCurrent;
-  var body = document.getElementById('lt-progress-body');
-  if (!info || !body) return;
-  body.innerHTML = '<div class="loading-wrap" style="padding:8px 0"><div class="spinner"></div></div>';
-
-  var classIds = info.sharedClassIds || [];
-  Promise.all(classIds.map(function(cid) {
-    return db.collection('classes').doc(cid).get().then(function(clsDoc) {
-      var cls = clsDoc.exists ? clsDoc.data() : {};
-      var query = cls.classType === 'homeroom'
-        ? db.collection('students').where('classId', '==', cid)
-        : db.collection('students').where('classIds', 'array-contains', cid);
-      return query.get().then(function(snap) {
-        var students = [];
-        snap.forEach(function(doc) { if (!doc.id.startsWith('__preview__')) students.push(doc.id); });
-        return Promise.all(students.map(function(sid) {
-          return db.collection('students').doc(sid).collection('progress').doc('eTextbook').get().then(function(pDoc) {
-            if (!pDoc.exists) return false;
-            var entry = (pDoc.data().lessons || {})[info.docId];
-            return !!(entry && entry.completedReading);
-          }).catch(function() { return false; });
-        })).then(function(results) {
-          var done = results.filter(Boolean).length;
-          return { name: cls.name || cls.className || cid, total: students.length, done: done };
-        });
-      });
-    }).catch(function() { return { name: cid, total: 0, done: 0 }; });
-  })).then(function(stats) {
-    if (!stats.length) { body.innerHTML = '<div style="color:var(--muted);font-size:.82rem">尚未分享給任何班級。</div>'; return; }
-    body.innerHTML = stats.map(function(s) {
-      var pct = s.total ? Math.round(s.done / s.total * 100) : 0;
-      return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;font-size:.85rem">' +
-        '<span style="min-width:90px;font-weight:700">' + escHtml(s.name) + '</span>' +
-        '<div style="flex:1;background:var(--gray-lt);border-radius:6px;height:10px;overflow:hidden">' +
-          '<div style="width:' + pct + '%;height:100%;background:var(--green)"></div></div>' +
-        '<span style="min-width:70px;text-align:right;color:var(--muted)">' + s.done + ' / ' + s.total + ' 人</span>' +
-        '</div>';
-    }).join('');
-  }).catch(function(e) { body.innerHTML = '<div style="color:var(--red);font-size:.82rem">載入失敗：' + e.message + '</div>'; });
 }
