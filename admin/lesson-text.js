@@ -31,6 +31,9 @@ var _ltDragEndCi       = null;
 var _ltPendingVocabWord = null; // 目前彈窗指到、待確認加入/移除的詞
 var _ltImagePickerMode = 'insert'; // 圖片彈窗目前的用途：'insert'=插入課文內文｜'word'=設定某個語詞的圖片
 var _ltImagePickerWord  = null;    // mode='word' 時，目前指到哪個語詞
+var _ltPendingImageBlob = null;    // 上傳區目前選取／貼上／拖放到的圖片（按下「上傳」前的暫存）
+var _ltQuestionDocs    = {};       // word -> {'詞語解釋':{docId,question}, '詞語填空':{docId,question}}，題庫衍生題目快取
+var _ltWordEditTarget  = null;     // 語詞解釋/填空題編輯視窗目前指到哪個字
 var _ltFontReady      = false;
 var _ltWysiwyg        = false;
 var _ltVersions       = [];
@@ -59,7 +62,7 @@ function loadLessonTextTab() {
     _ltBuildGlobalHints();
     _ltRenderListView();
   }).catch(function(e) {
-    main.innerHTML = '<p style="color:var(--red);font-size:.85rem">載入失敗：' + e.message + '</p>';
+    main.innerHTML = '<p style="color:var(--red);font-size:.98rem">載入失敗：' + e.message + '</p>';
   });
 }
 
@@ -91,31 +94,31 @@ function _ltRenderListView() {
 
   var html =
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
-      '<div style="font-size:.85rem;color:var(--muted);font-weight:600">共 ' + _ltList.length + ' 篇課文</div>' +
+      '<div style="font-size:.98rem;color:var(--muted);font-weight:600">共 ' + _ltList.length + ' 篇課文</div>' +
       '<button onclick="_ltShowNewForm()" style="padding:7px 16px;border:none;border-radius:8px;background:var(--blue);' +
-        'color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">➕ 新增課文</button>' +
+        'color:white;font-size:.98rem;font-weight:800;cursor:pointer;font-family:inherit">➕ 新增課文</button>' +
     '</div>' +
     '<div id="lt-new-form" class="hidden" style="background:var(--blue-lt);border:1.5px solid var(--blue);border-radius:10px;' +
       'padding:14px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">' +
-      '<div><label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:3px">年級</label>' +
+      '<div><label style="display:block;font-size:.85rem;font-weight:700;color:var(--muted);margin-bottom:3px">年級</label>' +
         '<input id="lt-new-grade" list="lt-grade-options" placeholder="如：三上" style="width:90px;padding:6px 8px;' +
-          'border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:.85rem"></div>' +
+          'border:1.5px solid var(--border);border-radius:6px;font-family:inherit;font-size:.98rem"></div>' +
       '<datalist id="lt-grade-options">' + grades.map(function(g) { return '<option value="' + _ltEscAttr(g) + '">'; }).join('') + '</datalist>' +
-      '<div><label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:3px">課次</label>' +
+      '<div><label style="display:block;font-size:.85rem;font-weight:700;color:var(--muted);margin-bottom:3px">課次</label>' +
         '<input id="lt-new-lesson" placeholder="如：五" style="width:70px;padding:6px 8px;border:1.5px solid var(--border);' +
-          'border-radius:6px;font-family:inherit;font-size:.85rem"></div>' +
-      '<div><label style="display:block;font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:3px">課名（選填）</label>' +
+          'border-radius:6px;font-family:inherit;font-size:.98rem"></div>' +
+      '<div><label style="display:block;font-size:.85rem;font-weight:700;color:var(--muted);margin-bottom:3px">課名（選填）</label>' +
         '<input id="lt-new-name" placeholder="如：攀登生命的高峰" style="width:200px;padding:6px 8px;border:1.5px solid var(--border);' +
-          'border-radius:6px;font-family:inherit;font-size:.85rem"></div>' +
+          'border-radius:6px;font-family:inherit;font-size:.98rem"></div>' +
       '<button onclick="_ltCreateNew()" style="padding:7px 16px;border:none;border-radius:8px;background:var(--green);' +
-        'color:white;font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">建立</button>' +
+        'color:white;font-size:.98rem;font-weight:800;cursor:pointer;font-family:inherit">建立</button>' +
       '<button onclick="_ltHideNewForm()" style="padding:7px 16px;border:1.5px solid var(--border);border-radius:8px;' +
-        'background:white;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit">取消</button>' +
-      '<span id="lt-new-err" style="font-size:.78rem;color:var(--red);font-weight:700;width:100%"></span>' +
+        'background:white;font-size:.98rem;font-weight:700;cursor:pointer;font-family:inherit">取消</button>' +
+      '<span id="lt-new-err" style="font-size:.91rem;color:var(--red);font-weight:700;width:100%"></span>' +
     '</div>';
 
   if (!_ltList.length) {
-    html += '<div style="color:var(--muted);font-size:.88rem;padding:20px 0;text-align:center">還沒有任何課文，按上面「➕ 新增課文」開始寫第一篇。</div>';
+    html += '<div style="color:var(--muted);font-size:1.01rem;padding:20px 0;text-align:center">還沒有任何課文，按上面「➕ 新增課文」開始寫第一篇。</div>';
   } else {
     grades.forEach(function(grade) {
       var lessons = _ltList.filter(function(l) { return l.grade === grade; }).sort(function(a, b) {
@@ -123,7 +126,7 @@ function _ltRenderListView() {
         if (na !== null && nb !== null) return na - nb;
         return a.lesson.localeCompare(b.lesson, 'zh-TW');
       });
-      html += '<div style="font-weight:900;font-size:.95rem;margin:14px 0 8px">' + escHtml(grade) + '</div>';
+      html += '<div style="font-weight:900;font-size:1.08rem;margin:14px 0 8px">' + escHtml(grade) + '</div>';
       html += '<div style="display:flex;flex-direction:column;gap:6px">';
       lessons.forEach(function(l) {
         var wc = Array.from(String(l.fullText || '')).filter(function(c) { return /[一-鿿㐀-䶿]/.test(c); }).length;
@@ -134,8 +137,8 @@ function _ltRenderListView() {
           'onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
           '<span style="font-weight:800;min-width:70px">第 ' + escHtml(l.lesson) + ' 課</span>' +
           '<span style="color:var(--muted);flex:1">' + escHtml(l.lessonName || '（未命名）') + '</span>' +
-          '<span style="font-size:.76rem;color:var(--muted)">' + wc + ' 字</span>' +
-          '<span style="font-size:.76rem;color:' + (l.sharedClassIds.length ? 'var(--green-dk)' : 'var(--muted)') + '">' + shared + '</span>' +
+          '<span style="font-size:.89rem;color:var(--muted)">' + wc + ' 字</span>' +
+          '<span style="font-size:.89rem;color:' + (l.sharedClassIds.length ? 'var(--green-dk)' : 'var(--muted)') + '">' + shared + '</span>' +
           '</button>';
       });
       html += '</div>';
@@ -242,38 +245,38 @@ function _ltRenderEditor(classes) {
 
   var html =
     '<button onclick="_ltBackToList()" style="margin-bottom:12px;padding:5px 12px;border:1.5px solid var(--border);' +
-      'border-radius:8px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">← 返回課文清單</button>' +
-    '<div style="font-size:1.05rem;font-weight:900;margin-bottom:4px">' + escHtml(info.grade) + '　第 ' + escHtml(info.lesson) + ' 課' +
+      'border-radius:8px;background:white;font-size:.93rem;font-weight:700;cursor:pointer;font-family:inherit">← 返回課文清單</button>' +
+    '<div style="font-size:1.18rem;font-weight:900;margin-bottom:4px">' + escHtml(info.grade) + '　第 ' + escHtml(info.lesson) + ' 課' +
       (info.lessonName ? '　' + escHtml(info.lessonName) : '') + '</div>' +
-    '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:10px;line-height:1.6">' +
+    '<div style="font-size:.88rem;color:var(--muted);font-weight:600;margin-bottom:10px;line-height:1.6">' +
       '給「課文趣」App 上課時逐字朗讀＋圈詞用。本課語詞會自動抓這一課「詞語解釋」「詞語填空」題目的答案，' +
       '也可以直接在下面的分段預覽裡拖曳選字，加入或移除本課語詞——右邊的語詞清單會即時跟著變。' +
     '</div>' +
     '<div class="lt-editor-grid">' +
     '<div class="lt-editor-main">' +
-    '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:6px">' +
+    '<div style="font-size:.88rem;color:var(--muted);font-weight:600;margin-bottom:6px">' +
       '可上傳 .docx / .txt / .odt / .pdf 自動轉成文字（舊版 .doc 請先另存新檔為 .docx），也能直接手打或貼上。' +
     '</div>' +
     '<input type="file" accept=".docx,.doc,.txt,.odt,.pdf" onchange="_ltFullTextFileSelected(this)" style="margin-bottom:8px">' +
     '<textarea id="lt-ta" placeholder="課文全文…（段落之間空一行就會分段）" oninput="_ltOnTextInput()" ' +
       'style="width:100%;min-height:160px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;' +
-      'font-family:\'Noto Sans TC\',sans-serif;font-size:.88rem;line-height:1.8;resize:vertical;box-sizing:border-box">' +
+      'font-family:\'Noto Sans TC\',sans-serif;font-size:1.01rem;line-height:1.8;resize:vertical;box-sizing:border-box">' +
       _ltEscTA(info.fullText) + '</textarea>' +
     '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:8px 0 6px">' +
       '<button type="button" onclick="_ltInsertParaBreak()" style="padding:5px 14px;border:1.5px solid var(--blue);' +
-        'border-radius:8px;background:var(--blue-lt);color:var(--blue-dk);font-size:.8rem;font-weight:800;cursor:pointer;' +
+        'border-radius:8px;background:var(--blue-lt);color:var(--blue-dk);font-size:.93rem;font-weight:800;cursor:pointer;' +
         'font-family:inherit">⏎ 插入分段</button>' +
       '<button type="button" onclick="_ltOpenImagePicker()" style="padding:5px 14px;border:1.5px solid var(--border);' +
-        'border-radius:8px;background:white;color:inherit;font-size:.8rem;font-weight:800;cursor:pointer;' +
+        'border-radius:8px;background:white;color:inherit;font-size:.93rem;font-weight:800;cursor:pointer;' +
         'font-family:inherit">🖼️ 插入圖片</button>' +
-      '<label style="display:flex;align-items:center;gap:5px;font-size:.78rem;font-weight:700;color:var(--muted);cursor:pointer">' +
+      '<label style="display:flex;align-items:center;gap:5px;font-size:.91rem;font-weight:700;color:var(--muted);cursor:pointer">' +
         '<input type="checkbox" id="lt-wysiwyg-cb" onchange="_ltToggleWysiwyg(this.checked)"> 用課文趣實際字型預覽</label>' +
-      '<span style="font-size:.74rem;color:var(--muted)">把游標放在要分段的地方再按「插入分段」</span>' +
+      '<span style="font-size:.87rem;color:var(--muted)">把游標放在要分段的地方再按「插入分段」</span>' +
     '</div>' +
-    '<div id="lt-stats" style="font-size:.76rem;color:var(--muted);font-weight:700;margin-bottom:10px"></div>' +
+    '<div id="lt-stats" style="font-size:.89rem;color:var(--muted);font-weight:700;margin-bottom:10px"></div>' +
     '<div style="border-top:1.5px solid var(--border);margin:14px 0"></div>' +
-    '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📄 分段預覽（學生在課文趣實際看到的樣子）</div>' +
-    '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
+    '<div style="font-size:.93rem;font-weight:800;margin-bottom:4px">📄 分段預覽（學生在課文趣實際看到的樣子）</div>' +
+    '<div style="font-size:.88rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.6">' +
       '文字下面有虛線的字是多音字，點一下可以選這個字在這裡要唸的讀音（只影響這一次出現）；' +
       (Object.keys(_ltVocab).length ? '黃色網底是這一課配套生字詞；' : '') +
       '畫面上的注音會直接換成選的讀音。拖曳選取文字可以加入或移除本課語詞。' +
@@ -282,45 +285,45 @@ function _ltRenderEditor(classes) {
     '<div style="border-top:1.5px solid var(--border);margin:14px 0"></div>' +
     '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:8px 0 10px">' +
       '<button onclick="_ltToggleVersions()" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;' +
-        'background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🕐 版本歷史</button>' +
+        'background:white;font-size:.93rem;font-weight:700;cursor:pointer;font-family:inherit">🕐 版本歷史</button>' +
       '<button onclick="_ltPrintLesson()" style="padding:6px 14px;border:1.5px solid var(--border);border-radius:8px;' +
-        'background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🖨️ 列印</button>' +
-      '<span id="lt-status" style="font-size:.78rem;font-weight:700;color:var(--muted)"></span>' +
+        'background:white;font-size:.93rem;font-weight:700;cursor:pointer;font-family:inherit">🖨️ 列印</button>' +
+      '<span id="lt-status" style="font-size:.91rem;font-weight:700;color:var(--muted)"></span>' +
       '<button onclick="_ltSaveLessonText()" style="padding:6px 18px;border:none;border-radius:8px;background:var(--blue);' +
-        'color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">儲存課文全文</button>' +
+        'color:white;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit">儲存課文全文</button>' +
     '</div>' +
     '<div id="lt-versions-panel" class="hidden" style="background:var(--gray-lt);border:1.5px solid var(--border);' +
-      'border-radius:8px;padding:10px;margin-bottom:16px;font-size:.8rem"></div>' +
+      'border-radius:8px;padding:10px;margin-bottom:16px;font-size:.93rem"></div>' +
     '</div>' +
     '<div class="lt-vocab-col">' +
-      '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">🏷️ 本課語詞</div>' +
-      '<div style="font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.5">' +
+      '<div style="font-size:.93rem;font-weight:800;margin-bottom:4px">🏷️ 本課語詞</div>' +
+      '<div style="font-size:.85rem;color:var(--muted);font-weight:600;margin-bottom:8px;line-height:1.5">' +
         '點圖示可以搜圖／上傳；手動加入的語詞才能用 ✕ 移除，來自題庫的要到題庫改。' +
       '</div>' +
       '<div id="lt-vocab-panel"></div>' +
     '</div>' +
     '</div>' +
     '<div style="border-top:1.5px solid var(--border);margin:20px 0 16px"></div>' +
-    '<div style="font-size:.8rem;font-weight:800;margin-bottom:4px">📤 分享給班級（課文趣的學生才看得到）</div>' +
-    '<div style="font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:8px">' +
+    '<div style="font-size:.93rem;font-weight:800;margin-bottom:4px">📤 分享給班級（課文趣的學生才看得到）</div>' +
+    '<div style="font-size:.88rem;color:var(--muted);font-weight:600;margin-bottom:8px">' +
       '已經分享過的班級，之後按「儲存課文全文」內容就會自動同步給他們；這裡只有在要改變「分享給哪些班級」時才需要用。' +
     '</div>';
 
   if (!classes.length) {
-    html += '<div style="color:var(--muted);font-size:.82rem">尚未建立班級。</div>';
+    html += '<div style="color:var(--muted);font-size:.95rem">尚未建立班級。</div>';
   } else {
     html += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">';
     classes.forEach(function(cls) {
       var checked = info.sharedClassIds.indexOf(cls.id) !== -1;
-      html += '<label style="display:flex;align-items:center;gap:5px;font-size:.85rem;font-weight:700;cursor:pointer">' +
+      html += '<label style="display:flex;align-items:center;gap:5px;font-size:.98rem;font-weight:700;cursor:pointer">' +
         '<input type="checkbox" class="lt-class-cb" value="' + _ltEscAttr(cls.id) + '"' + (checked ? ' checked' : '') + '>' +
         escHtml(cls.name) + '</label>';
     });
     html += '</div>';
     html += '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-bottom:16px">' +
-      '<span id="lt-share-status" style="font-size:.78rem;font-weight:700;color:var(--muted)"></span>' +
+      '<span id="lt-share-status" style="font-size:.91rem;font-weight:700;color:var(--muted)"></span>' +
       '<button onclick="_ltSaveLessonShare()" style="padding:6px 18px;border:none;border-radius:8px;background:var(--green);' +
-        'color:white;font-size:.82rem;font-weight:800;cursor:pointer;font-family:inherit">更新分享班級</button>' +
+        'color:white;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit">更新分享班級</button>' +
       '</div>';
   }
 
@@ -385,7 +388,7 @@ function _ltRenderTextPreview() {
   _ltAttachVocabPointerHandlers(el);
   var lines = _ltSplitLines(ta.value);
   if (!lines.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:.78rem;padding:4px 0">尚未輸入內容，預覽會顯示在這裡</div>';
+    el.innerHTML = '<div style="color:var(--muted);font-size:.91rem;padding:4px 0">尚未輸入內容，預覽會顯示在這裡</div>';
     return;
   }
   var fixes = _ltPendingPronFixes || {};
@@ -407,9 +410,9 @@ function _ltRenderTextPreview() {
         return imgInfo
           ? '<div style="margin:6px 0"><img src="' + imgInfo.imageUrl + '" style="max-width:120px;max-height:120px;' +
             'border-radius:8px;border:1.5px solid var(--border)" alt="' + _ltEscAttr(imgInfo.word) + '"></div>'
-          : '<div style="color:var(--red);font-size:.78rem">（圖片遺失）</div>';
+          : '<div style="color:var(--red);font-size:.91rem">（圖片遺失）</div>';
       }
-      var inVocabWord = _ltVocabCharSet(lines, li);
+      var vocabSets = _ltVocabCharSet(lines, li);
       var charsHtml = line.chars.map(function(c, ci) {
         if (!c.interactive) return escHtml(c.ch);
         var readings = HETERONYM_READINGS[c.ch];
@@ -417,8 +420,9 @@ function _ltRenderTextPreview() {
         var fix = fixes[li + ':' + ci];
         var hasFix = fix && fix.ch === c.ch;
         if (_ltWysiwyg && hasFix && fix.readingIndex) vs = String.fromCodePoint(0xE01E0 + fix.readingIndex);
-        var inVocab = inVocabWord[ci];
-        var bg = inVocab ? 'background:#fff6d6;' : (hasFix ? 'background:var(--blue-lt);' : '');
+        var hasImg  = vocabSets.withImage[ci];
+        var inVocab = hasImg || vocabSets.plain[ci];
+        var bg = hasImg ? 'background:var(--green-lt);' : (inVocab ? 'background:#fff6d6;' : (hasFix ? 'background:var(--blue-lt);' : ''));
         if (!readings) {
           return '<span class="lt-char" data-line="' + li + '" data-ci="' + ci + '" style="' + bg +
             (inVocab ? 'border-radius:3px' : '') + ';' + fontStyle + '">' + escHtml(c.ch) + vs + '</span>';
@@ -432,12 +436,12 @@ function _ltRenderTextPreview() {
       return charsHtml + (k < lineIdxs.length - 1 ? '\n' : '');
     }).join('');
     return '<div style="position:relative;background:white;border:1.5px solid var(--border);border-radius:8px;' +
-      'padding:10px 40px 10px 44px;margin-bottom:10px;font-size:' + (_ltWysiwyg ? '1.3rem' : '.88rem') + ';line-height:1.9;white-space:pre-wrap">' +
-      '<span style="position:absolute;left:8px;top:9px;font-size:.68rem;font-weight:800;color:var(--blue-dk);' +
-      'background:var(--blue-lt);padding:2px 6px;border-radius:6px;white-space:nowrap">第' + (pi + 1) + '段</span>' +
+      'padding:18px 44px 12px 16px;margin:18px 0 10px;font-size:' + (_ltWysiwyg ? '1.43rem' : '.98rem') + ';line-height:1.9;white-space:pre-wrap">' +
+      '<span style="position:absolute;left:12px;top:-12px;font-size:.81rem;font-weight:800;color:var(--blue-dk);' +
+      'background:var(--blue-lt);border:1.5px solid var(--border);padding:2px 7px;border-radius:6px;white-space:nowrap">第' + (pi + 1) + '段</span>' +
       '<button type="button" onclick="_ltSpeakParagraph([' + lineIdxs.join(',') + '])" title="試聽這一段" ' +
-      'style="position:absolute;right:8px;top:7px;width:26px;height:26px;border:none;border-radius:50%;' +
-      'background:var(--blue-lt);color:var(--blue-dk);cursor:pointer;font-size:.85rem;line-height:1">🔊</button>' +
+      'style="position:absolute;right:8px;top:9px;width:28px;height:28px;border:none;border-radius:50%;' +
+      'background:var(--blue-lt);color:var(--blue-dk);cursor:pointer;font-size:.98rem;line-height:1">🔊</button>' +
       body +
     '</div>';
   }).join('');
@@ -445,19 +449,22 @@ function _ltRenderTextPreview() {
 
 /* 算某一行裡，哪些字元序（ci）落在配套生字詞範圍內，回傳 {ci: true} 方便查表標色 */
 function _ltVocabCharSet(lines, li) {
-  var set = {};
+  var plain = {}, withImage = {};
   var words = Object.keys(_ltVocab);
-  if (!words.length) return set;
+  if (!words.length) return { plain: plain, withImage: withImage };
   var text = lines[li] ? lines[li].text : '';
+  var gradeLesson = _ltCurrent ? (_ltCurrent.grade + '_' + _ltCurrent.lesson) : '';
   words.forEach(function(w) {
     if (!w) return;
+    var hasImg = (_ltWordImages || []).some(function(x) { return x.word === w && x.gradeLesson === gradeLesson; });
+    var set = hasImg ? withImage : plain;
     var idx = text.indexOf(w);
     while (idx !== -1) {
       for (var k = 0; k < w.length; k++) set[idx + k] = true;
       idx = text.indexOf(w, idx + 1);
     }
   });
-  return set;
+  return { plain: plain, withImage: withImage };
 }
 
 /* ════════════════════════════════════════
@@ -478,13 +485,14 @@ function _ltFetchVocab(grade, lesson, docId) {
     : Promise.resolve({ forEach: function() {} });
   return Promise.all([qQuestions, qManual]).then(function(results) {
     var defs = {}, fills = {};
+    _ltQuestionDocs = {};
     results[0].forEach(function(doc) {
       var d = doc.data();
       if (d.lesson !== lesson) return;
       var word = (d.answer || '').trim();
       if (!word) return;
-      if (d.type === '詞語解釋' && !defs[word]) defs[word] = true;
-      else if (d.type === '詞語填空' && !fills[word]) fills[word] = true;
+      if (d.type === '詞語解釋' && !defs[word]) { defs[word] = true; _ltCacheQuestionDoc(word, '詞語解釋', doc.id, d.question); }
+      else if (d.type === '詞語填空' && !fills[word]) { fills[word] = true; _ltCacheQuestionDoc(word, '詞語填空', doc.id, d.question); }
     });
     _ltVocabFromQuestions = {};
     Object.keys(fills).forEach(function(w) { _ltVocabFromQuestions[w] = true; });
@@ -497,7 +505,11 @@ function _ltFetchVocab(grade, lesson, docId) {
     });
 
     _ltRecomputeVocabUnion();
-  }).catch(function() { _ltVocabFromQuestions = {}; _ltVocabManual = {}; _ltVocab = {}; });
+  }).catch(function() { _ltVocabFromQuestions = {}; _ltVocabManual = {}; _ltVocab = {}; _ltQuestionDocs = {}; });
+}
+function _ltCacheQuestionDoc(word, type, docId, question) {
+  if (!_ltQuestionDocs[word]) _ltQuestionDocs[word] = {};
+  _ltQuestionDocs[word][type] = { docId: docId, question: question };
 }
 
 /* ════════════════════════════════════════
@@ -597,13 +609,13 @@ function _ltShowVocabPopover(word, x, y) {
   _ltPendingVocabWord = word;
   var already = !!_ltVocabManual[word];
   pop.innerHTML =
-    '<div style="font-size:.9rem;font-weight:800;margin-bottom:10px;text-align:center">「' + escHtml(word) + '」</div>' +
+    '<div style="font-size:1.03rem;font-weight:800;margin-bottom:10px;text-align:center">「' + escHtml(word) + '」</div>' +
     (already
       ? '<button type="button" onclick="_ltConfirmRemoveVocab()" style="padding:6px 14px;border:none;border-radius:8px;' +
-        'width:100%;background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.8rem">' +
+        'width:100%;background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.93rem">' +
         '－ 從本課語詞移除</button>'
       : '<button type="button" onclick="_ltConfirmAddVocab()" style="padding:6px 14px;border:none;border-radius:8px;' +
-        'width:100%;background:var(--blue);color:white;font-weight:800;cursor:pointer;font-family:inherit;font-size:.8rem">' +
+        'width:100%;background:var(--blue);color:white;font-weight:800;cursor:pointer;font-family:inherit;font-size:.93rem">' +
         '＋ 加入本課語詞</button>');
   pop.style.display = '';
   pop.style.top  = (y + 12) + 'px';
@@ -666,11 +678,11 @@ function _ltLoadWordImages() {
 function _ltRenderVocabPanel() {
   var panel = document.getElementById('lt-vocab-panel');
   if (!panel || !_ltCurrent) return;
-  if (!_ltWordImages) { _ltLoadWordImages().then(function() { _ltRenderVocabPanel(); }); }
+  if (!_ltWordImages) { _ltLoadWordImages().then(function() { _ltRenderVocabPanel(); _ltRenderTextPreview(); }); }
 
   var words = Object.keys(_ltVocab).sort();
   if (!words.length) {
-    panel.innerHTML = '<div style="color:var(--muted);font-size:.78rem;line-height:1.6">' +
+    panel.innerHTML = '<div style="color:var(--muted);font-size:.91rem;line-height:1.6">' +
       '還沒有語詞。可以在左邊的分段預覽拖曳選字加入，或是到題庫出「詞語解釋／詞語填空」題，答案會自動變成語詞。</div>';
     return;
   }
@@ -686,18 +698,114 @@ function _ltRenderVocabPanel() {
           'flex-shrink:0;cursor:pointer">'
         : '<button type="button" onclick="_ltOpenWordImagePicker(\'' + _ltEscJs(w) + '\')" title="搜圖／上傳" ' +
           'style="width:44px;height:44px;flex-shrink:0;border:1.5px dashed var(--border);border-radius:6px;' +
-          'background:var(--gray-lt);cursor:pointer;font-size:1rem;color:var(--muted)">🔍</button>') +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="font-weight:800;font-size:.9rem">' + escHtml(w) + '</div>' +
-        '<div style="font-size:.68rem;color:var(--muted);font-weight:700">' + (manual ? '手動加入' : '來自題庫') + '</div>' +
+          'background:var(--gray-lt);cursor:pointer;font-size:1.13rem;color:var(--muted)">🔍</button>') +
+      '<div style="flex:1;min-width:0;cursor:pointer" onclick="_ltOpenWordEditModal(\'' + _ltEscJs(w) + '\')" ' +
+        'title="編輯詞語解釋／填空題（跟題庫共用）">' +
+        '<div style="font-weight:800;font-size:1.03rem">' + escHtml(w) + ' <span style="font-size:.81rem">✏️</span></div>' +
+        '<div style="font-size:.81rem;color:var(--muted);font-weight:700">' + (manual ? '手動加入' : '來自題庫') + '</div>' +
       '</div>' +
       (manual
         ? '<button type="button" onclick="_ltRemoveVocabWord(\'' + _ltEscJs(w) + '\')" title="移除" ' +
-          'style="border:none;background:none;color:var(--red);cursor:pointer;font-size:1rem;flex-shrink:0;' +
+          'style="border:none;background:none;color:var(--red);cursor:pointer;font-size:1.13rem;flex-shrink:0;' +
           'font-family:inherit">✕</button>'
         : '') +
     '</div>';
   }).join('');
+}
+
+/* ════════════════════════════════════════
+   語詞解釋／填空題編輯視窗——跟題庫（questions collection）共用同一份資料，
+   這裡存的東西題庫那邊看得到、能出題；題庫出的題也會在這裡顯示（_ltQuestionDocs 快取）
+   ════════════════════════════════════════ */
+function _ltEnsureWordEditModal() {
+  var modal = document.getElementById('lt-wordedit-modal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'lt-wordedit-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:none;background:rgba(0,0,0,.4);' +
+    'align-items:center;justify-content:center';
+  modal.innerHTML = '<div style="background:white;border-radius:12px;padding:18px;max-width:440px;width:90%;' +
+    'max-height:80vh;overflow:auto">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+      '<div id="lt-wordedit-title" style="font-weight:900">語詞題庫內容</div>' +
+      '<button onclick="_ltCloseWordEditModal()" style="border:none;background:none;font-size:1.33rem;cursor:pointer">✕</button>' +
+    '</div>' +
+    '<div style="font-size:.85rem;color:var(--muted);font-weight:600;margin-bottom:12px;line-height:1.6">' +
+      '這裡編輯的內容跟「題庫」共用同一份資料，存檔後題庫那邊也會看到、能直接拿來出題；留空並存檔會刪掉對應的題目。' +
+    '</div>' +
+    '<label style="display:block;font-size:.89rem;font-weight:800;margin-bottom:4px">詞語解釋（題幹填解釋，答案就是這個詞）</label>' +
+    '<textarea id="lt-wordedit-def" rows="2" placeholder="例：形容表現非常出色，超越其他人" ' +
+      'style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;' +
+      'font-size:.98rem;margin-bottom:12px;box-sizing:border-box;resize:vertical"></textarea>' +
+    '<label style="display:block;font-size:.89rem;font-weight:800;margin-bottom:4px">詞語填空（用「（　）」標示空格）</label>' +
+    '<textarea id="lt-wordedit-fill" rows="2" placeholder="例：她（　）地完成了這項艱難的任務。" ' +
+      'style="width:100%;padding:7px 9px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;' +
+      'font-size:.98rem;margin-bottom:12px;box-sizing:border-box;resize:vertical"></textarea>' +
+    '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">' +
+      '<span id="lt-wordedit-status" style="font-size:.89rem;font-weight:700;color:var(--muted)"></span>' +
+      '<button type="button" onclick="_ltSaveWordEdit()" style="padding:6px 16px;border:none;border-radius:8px;' +
+        'background:var(--blue);color:white;font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit">儲存</button>' +
+    '</div>' +
+  '</div>';
+  modal.addEventListener('click', function(e) { if (e.target === modal) _ltCloseWordEditModal(); });
+  document.body.appendChild(modal);
+  return modal;
+}
+function _ltCloseWordEditModal() {
+  var modal = document.getElementById('lt-wordedit-modal');
+  if (modal) modal.style.display = 'none';
+  _ltWordEditTarget = null;
+}
+function _ltOpenWordEditModal(word) {
+  _ltWordEditTarget = word;
+  var modal = _ltEnsureWordEditModal();
+  document.getElementById('lt-wordedit-title').textContent = '「' + word + '」的題庫內容';
+  var qd = _ltQuestionDocs[word] || {};
+  document.getElementById('lt-wordedit-def').value  = (qd['詞語解釋'] && qd['詞語解釋'].question) || '';
+  document.getElementById('lt-wordedit-fill').value = (qd['詞語填空'] && qd['詞語填空'].question) || '';
+  var statusEl = document.getElementById('lt-wordedit-status');
+  if (statusEl) statusEl.textContent = '';
+  modal.style.display = 'flex';
+}
+function _ltSaveWordEdit() {
+  var word = _ltWordEditTarget;
+  var info = _ltCurrent;
+  if (!word || !info || !db) return;
+  var defVal   = document.getElementById('lt-wordedit-def').value.trim();
+  var fillVal  = document.getElementById('lt-wordedit-fill').value.trim();
+  var statusEl = document.getElementById('lt-wordedit-status');
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '儲存中…'; }
+
+  Promise.all([
+    _ltUpsertQuestion(word, '詞語解釋', defVal),
+    _ltUpsertQuestion(word, '詞語填空', fillVal)
+  ]).then(function() {
+    return _ltFetchVocab(info.grade, info.lesson, info.docId);
+  }).then(function() {
+    _ltRenderTextPreview();
+    _ltRenderVocabPanel();
+    _ltCloseWordEditModal();
+    showToast('✅ 已儲存「' + word + '」的題庫內容');
+  }).catch(function(e) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '❌ ' + e.message; }
+  });
+}
+/* 留空就刪掉對應的題目（如果原本有的話），有內容就 upsert——跟 _ltAssignWordImage 同樣的
+   「先查有沒有既有文件，有就更新同一份、沒有才新增」邏輯，用 word+type+grade+lesson 當身分 */
+function _ltUpsertQuestion(word, type, text) {
+  var info = _ltCurrent;
+  var existing = _ltQuestionDocs[word] && _ltQuestionDocs[word][type];
+  if (!text) {
+    if (existing) return db.collection('questions').doc(existing.docId).delete();
+    return Promise.resolve();
+  }
+  var docData = {
+    grade: info.grade, lesson: info.lesson, lessonName: info.lessonName || '',
+    type: type, question: text, answer: word, options: [],
+    teacherUid: currentTeacher.uid, createdAt: new Date().toISOString()
+  };
+  if (existing) return db.collection('questions').doc(existing.docId).set(docData);
+  return db.collection('questions').add(docData);
 }
 
 /* ════════════════════════════════════════
@@ -790,8 +898,8 @@ function _ltRenderHetPopoverContent() {
   var hint = (!existing) ? _ltHintForChar(pos.ch) : null;
 
   pop.innerHTML =
-    '<div style="font-size:.78rem;font-weight:800;margin-bottom:8px">「' + escHtml(pos.ch) + '」選正確讀音</div>' +
-    (hint ? '<div style="font-size:.72rem;color:var(--blue-dk);background:var(--blue-lt);border-radius:6px;' +
+    '<div style="font-size:.91rem;font-weight:800;margin-bottom:8px">「' + escHtml(pos.ch) + '」選正確讀音</div>' +
+    (hint ? '<div style="font-size:.85rem;color:var(--blue-dk);background:var(--blue-lt);border-radius:6px;' +
       'padding:5px 8px;margin-bottom:8px">💡 你在其他課文最常把這個字設成「' + escHtml(readings[hint.readingIndex] || '') +
       '」（' + hint.count + ' 次），<span style="text-decoration:underline;cursor:pointer" ' +
       'onclick="_ltPickHeteronymReading(' + hint.readingIndex + ')">套用同樣的讀音</span></div>' : '') +
@@ -799,22 +907,22 @@ function _ltRenderHetPopoverContent() {
     readings.map(function(r, idx) {
       var active = idx === curIndex;
       return '<button type="button" onclick="_ltPickHeteronymReading(' + idx + ')" ' +
-        'style="padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.95rem;font-weight:700;' +
+        'style="padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:1.08rem;font-weight:700;' +
         (active ? 'border:2px solid var(--blue);background:var(--blue-lt);color:var(--blue-dk)'
                 : 'border:1.5px solid var(--border);background:white;color:inherit') +
         '">' + escHtml(r) + '</button>';
     }).join('') +
     '</div>' +
-    '<label style="display:block;font-size:.74rem;color:var(--muted);font-weight:700;margin-bottom:4px">' +
+    '<label style="display:block;font-size:.87rem;color:var(--muted);font-weight:700;margin-bottom:4px">' +
       '朗讀同音字（選填，只影響朗讀發音，不影響畫面注音）</label>' +
     '<input type="text" id="lt-het-homophone" maxlength="4" value="' + _ltEscAttr(curHomophone) + '" placeholder="例：住" ' +
       'oninput="_ltSetHeteronymHomophone(this.value)" style="width:70px;padding:5px 6px;border:1.5px solid var(--border);' +
-      'border-radius:6px;font-family:inherit;font-size:.9rem;text-align:center;margin-bottom:10px;display:block">' +
+      'border-radius:6px;font-family:inherit;font-size:1.03rem;text-align:center;margin-bottom:10px;display:block">' +
     '<div style="display:flex;justify-content:space-between;gap:8px">' +
       '<button type="button" onclick="_ltClearHeteronymFix()" style="padding:5px 12px;border:none;border-radius:8px;' +
-        'background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.8rem">清除設定</button>' +
+        'background:var(--red-lt);color:var(--red);font-weight:800;cursor:pointer;font-family:inherit;font-size:.93rem">清除設定</button>' +
       '<button type="button" onclick="_ltCloseHetPopover()" style="padding:5px 12px;border:1.5px solid var(--border);' +
-        'border-radius:8px;background:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:.8rem">關閉</button>' +
+        'border-radius:8px;background:white;font-weight:700;cursor:pointer;font-family:inherit;font-size:.93rem">關閉</button>' +
     '</div>';
 }
 function _ltPickHeteronymReading(idx) {
@@ -1065,7 +1173,7 @@ function _ltLoadVersions() {
           '<span style="flex:1">' + escHtml(label) + '（' + wc + ' 字）</span>' +
           '<button onclick="_ltRestoreVersion(\'' + v.id + '\')" style="padding:3px 10px;border:1.5px solid var(--blue);' +
             'border-radius:6px;background:white;color:var(--blue-dk);font-weight:700;cursor:pointer;font-family:inherit;' +
-            'font-size:.76rem">還原這個版本</button>' +
+            'font-size:.89rem">還原這個版本</button>' +
           '</div>';
       }).join('');
     }).catch(function(e) { panel.innerHTML = '<div style="color:var(--red)">載入失敗：' + e.message + '</div>'; });
@@ -1137,6 +1245,9 @@ function _ltShowImageModal(prefillQuery) {
   if (wordInput) wordInput.value = prefillQuery || '';
   var uploadBtn = document.getElementById('lt-image-upload-btn');
   if (uploadBtn) uploadBtn.textContent = _ltImagePickerMode === 'word' ? '上傳並設定' : '上傳並插入';
+  _ltResetImageUploadArea();
+  var statusEl = document.getElementById('lt-image-upload-status');
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = ''; }
   _ltLoadWordImages().then(function() { _ltFilterImageModal(prefillQuery || ''); });
 }
 function _ltCloseImageModal() {
@@ -1154,33 +1265,112 @@ function _ltEnsureImageModal() {
     'overflow:auto;width:90%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
     '<div id="lt-image-modal-title" style="font-weight:900">選一張圖片插入課文</div>' +
     '<button onclick="_ltCloseImageModal()" ' +
-    'style="border:none;background:none;font-size:1.2rem;cursor:pointer">✕</button></div>' +
+    'style="border:none;background:none;font-size:1.33rem;cursor:pointer">✕</button></div>' +
     '<input id="lt-image-search" placeholder="搜尋詞語…" oninput="_ltFilterImageModal(this.value)" ' +
     'style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;' +
     'margin-bottom:10px;box-sizing:border-box">' +
     '<div id="lt-image-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px"></div>' +
     '<div style="border-top:1.5px solid var(--border);margin-top:12px;padding-top:12px">' +
-      '<div style="font-size:.8rem;font-weight:800;margin-bottom:6px">或從電腦上傳新圖片</div>' +
-      '<input type="file" id="lt-image-upload-file" accept="image/*" style="margin-bottom:6px;display:block">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<div style="font-size:.93rem;font-weight:800">或從電腦上傳新圖片</div>' +
+        '<button type="button" onclick="_ltOpenGoogleSearch()" style="padding:4px 10px;border:1.5px solid var(--border);' +
+          'border-radius:7px;background:white;font-size:.87rem;font-weight:800;cursor:pointer;font-family:inherit">' +
+          '🔍 用 Google 搜圖</button>' +
+      '</div>' +
+      '<div id="lt-image-upload-area" tabindex="0" ' +
+        'style="border:2px dashed var(--border);border-radius:10px;min-height:120px;display:flex;flex-direction:column;' +
+        'align-items:center;justify-content:center;gap:4px;cursor:pointer;outline:none;margin-bottom:8px;overflow:hidden;' +
+        'position:relative" ' +
+        'ondragover="event.preventDefault();this.style.borderColor=\'var(--blue)\'" ' +
+        'ondragleave="this.style.borderColor=\'\'" ' +
+        'ondrop="_ltHandleImageDrop(event)" ' +
+        'onclick="document.getElementById(\'lt-image-upload-file\').click()">' +
+        '<img id="lt-image-upload-preview" src="" alt="" style="display:none;max-width:100%;max-height:150px;' +
+          'border-radius:6px;object-fit:contain;pointer-events:none">' +
+        '<div id="lt-image-upload-hint" style="text-align:center;padding:10px;pointer-events:none">' +
+          '<div style="font-size:1.75rem">📋</div>' +
+          '<div style="font-size:.89rem;font-weight:800;color:var(--muted)">Ctrl+V 貼上，或拖放／點擊選擇圖片</div>' +
+        '</div>' +
+      '</div>' +
+      '<input type="file" id="lt-image-upload-file" accept="image/*" style="display:none" onchange="_ltImageFileSelected(this)">' +
       '<input type="text" id="lt-image-upload-word" placeholder="圖片說明（選填，之後也會出現在詞語圖庫）" ' +
         'style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;' +
-        'font-size:.85rem;margin-bottom:8px;box-sizing:border-box">' +
+        'font-size:.98rem;margin-bottom:8px;box-sizing:border-box">' +
       '<div style="display:flex;align-items:center;gap:10px">' +
-        '<button type="button" id="lt-image-upload-btn" onclick="_ltUploadNewImage()" style="padding:6px 16px;border:none;' +
-          'border-radius:8px;background:var(--blue);color:white;font-size:.82rem;font-weight:800;cursor:pointer;' +
-          'font-family:inherit">上傳並插入</button>' +
-        '<span id="lt-image-upload-status" style="font-size:.76rem;font-weight:700;color:var(--muted)"></span>' +
+        '<button type="button" id="lt-image-upload-btn" onclick="_ltUploadNewImage()" disabled style="padding:6px 16px;' +
+          'border:none;border-radius:8px;background:var(--blue);color:white;font-size:.95rem;font-weight:800;cursor:pointer;' +
+          'font-family:inherit;opacity:.5">上傳並插入</button>' +
+        '<span id="lt-image-upload-status" style="font-size:.89rem;font-weight:700;color:var(--muted)"></span>' +
       '</div>' +
     '</div></div>';
   modal.addEventListener('click', function(e) { if (e.target === modal) _ltCloseImageModal(); });
   document.body.appendChild(modal);
   return modal;
 }
+
+/* 開一個新分頁用 Google 圖片搜尋目前的詞語——使用者可以在那邊複製圖片，回來貼上（Ctrl+V）到下面的上傳區。
+   跟詞語圖庫 word-image.js 的「搜圖」按鈕同一個做法（直接開 tbm=isch 搜尋頁，不接任何圖片 API）。 */
+function _ltOpenGoogleSearch() {
+  var q = ((document.getElementById('lt-image-search') || {}).value || _ltImagePickerWord || '').trim();
+  if (!q) { showToast('請先輸入要搜尋的詞語'); return; }
+  window.open('https://www.google.com/search?q=' + encodeURIComponent(q) + '&tbm=isch', '_blank');
+}
+
+function _ltResetImageUploadArea() {
+  _ltPendingImageBlob = null;
+  var preview = document.getElementById('lt-image-upload-preview');
+  var hint    = document.getElementById('lt-image-upload-hint');
+  var btn     = document.getElementById('lt-image-upload-btn');
+  if (preview) { preview.style.display = 'none'; preview.src = ''; }
+  if (hint)    hint.style.display = '';
+  if (btn)     { btn.disabled = true; btn.style.opacity = '.5'; }
+}
+
+function _ltShowImageUploadPreview(blob) {
+  _ltPendingImageBlob = blob;
+  var url = URL.createObjectURL(blob);
+  var preview = document.getElementById('lt-image-upload-preview');
+  var hint    = document.getElementById('lt-image-upload-hint');
+  var btn     = document.getElementById('lt-image-upload-btn');
+  if (preview) {
+    preview.onload = function() { URL.revokeObjectURL(url); };
+    preview.src = url;
+    preview.style.display = 'block';
+  }
+  if (hint) hint.style.display = 'none';
+  if (btn)  { btn.disabled = false; btn.style.opacity = '1'; }
+}
+
+function _ltImageFileSelected(input) {
+  if (input.files && input.files[0]) _ltShowImageUploadPreview(input.files[0]);
+}
+
+function _ltHandleImageDrop(e) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = '';
+  var files = e.dataTransfer && e.dataTransfer.files;
+  if (files && files[0] && files[0].type.indexOf('image') !== -1) _ltShowImageUploadPreview(files[0]);
+}
+
+/* document 層級監聽貼上——跟 word-image.js 同一套做法，只在圖片彈窗開著的時候才處理 */
+document.addEventListener('paste', function(e) {
+  var modal = document.getElementById('lt-image-modal');
+  if (!modal || modal.style.display === 'none') return;
+  var items = (e.clipboardData || {}).items || [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      e.preventDefault();
+      var blob = items[i].getAsFile();
+      if (blob) _ltShowImageUploadPreview(blob);
+      return;
+    }
+  }
+});
 function _ltRenderImageModal(list) {
   var grid = document.getElementById('lt-image-grid');
   if (!grid) return;
   if (!list.length) {
-    grid.innerHTML = '<div style="color:var(--muted);font-size:.82rem;grid-column:1/-1">還沒有符合的圖片，可以用下面「上傳新圖片」新增。</div>';
+    grid.innerHTML = '<div style="color:var(--muted);font-size:.95rem;grid-column:1/-1">還沒有符合的圖片，可以用下面「上傳新圖片」新增。</div>';
     return;
   }
   grid.innerHTML = list.map(function(w) {
@@ -1188,7 +1378,7 @@ function _ltRenderImageModal(list) {
       'border-radius:8px;padding:4px;background:white;cursor:pointer;display:flex;flex-direction:column;' +
       'align-items:center;gap:3px;font-family:inherit">' +
       '<img src="' + w.imageUrl + '" style="width:60px;height:60px;object-fit:contain">' +
-      '<span style="font-size:.7rem">' + escHtml(w.word) + '</span></button>';
+      '<span style="font-size:.83rem">' + escHtml(w.word) + '</span></button>';
   }).join('');
 }
 function _ltFilterImageModal(q) {
@@ -1245,16 +1435,15 @@ function _ltAssignWordImage(docId) {
    mode='insert' 時維持原行為（上傳完直接插入課文）；mode='word' 時存成這個字這一課的圖卡
    （用 word+gradeLesson 跟 _ltAssignWordImage 同一套 upsert 邏輯，不會重複建立）。 */
 function _ltUploadNewImage() {
-  var fileInput  = document.getElementById('lt-image-upload-file');
   var wordInput  = document.getElementById('lt-image-upload-word');
   var statusEl   = document.getElementById('lt-image-upload-status');
-  var file = fileInput && fileInput.files && fileInput.files[0];
-  if (!file) {
-    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '請先選擇圖片檔案'; }
+  var blob = _ltPendingImageBlob;
+  if (!blob) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '請先選擇／貼上／拖放圖片'; }
     return;
   }
   if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '上傳中…'; }
-  _wiCompressToDataUrl(file, 800, 0.82, function(dataUrl) {
+  _wiCompressToDataUrl(blob, 800, 0.82, function(dataUrl) {
     if (_ltImagePickerMode === 'word') {
       var word = _ltImagePickerWord;
       var info = _ltCurrent;
