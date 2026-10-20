@@ -1112,7 +1112,13 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
       '@page{size:A4 portrait;margin:15mm}',
       'body{padding:0}',
       '.print-bar{display:none}',
-      '.sec-block{break-inside:avoid}',
+      /* 大題本身可能比一頁還高，不能整塊 break-inside:avoid——否則瀏覽器只能把整塊往下一頁推，
+         導致上一頁被擠成空白。改成只保護「單一題目」跟「大題標題」不被從中間切斷，
+         大題允許正常跨頁，跨到下一頁自然接著排。 */
+      '.sec-header{break-after:avoid}',
+      '.q-item{break-inside:avoid}',
+      '.match-item{break-inside:avoid}',
+      '.pool-box{break-inside:avoid}',
     '}'
   ].join('');
 
