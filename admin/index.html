@@ -805,6 +805,53 @@
           </div>
         </div>
 
+        <!-- 一般題目（詞語解釋／詞語填空／選擇題／數學）編輯 modal -->
+        <div id="qedit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center">
+          <div style="background:var(--card-bg,#fff);border-radius:14px;padding:24px;max-width:520px;width:92%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.22)">
+            <div id="qedit-modal-title" style="font-size:1rem;font-weight:800;margin-bottom:12px">✎ 編輯題目</div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+              <div>
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">年級</label>
+                <span id="qedit-grade-display" style="display:inline-block;padding:9px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-weight:800;color:var(--blue-dk);background:var(--blue-lt,#eef5fc)">—</span>
+              </div>
+              <div id="qedit-lesson-wrap" style="flex:1;min-width:100px">
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">課次</label>
+                <input type="text" id="qedit-lesson" placeholder="如：五" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;box-sizing:border-box">
+              </div>
+              <div id="qedit-lessonname-wrap" style="flex:2;min-width:160px">
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">課名（選填）</label>
+                <input type="text" id="qedit-lesson-name" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;box-sizing:border-box">
+              </div>
+              <div id="qedit-category-wrap" style="flex:1;min-width:100px;display:none">
+                <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">類別</label>
+                <input type="text" id="qedit-category" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit;box-sizing:border-box">
+              </div>
+            </div>
+            <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">題幹 <span id="qedit-question-hint" style="font-weight:400;color:var(--muted)"></span></label>
+            <textarea id="qedit-question" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem;font-family:inherit;margin-bottom:12px;box-sizing:border-box;resize:vertical"></textarea>
+
+            <div id="qedit-options-wrap" style="display:none;margin-bottom:12px">
+              <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">選項（點左邊圓點標記正確答案）</label>
+              <div id="qedit-options-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+              <button type="button" class="btn btn-secondary" onclick="_qeAddOption()" style="font-size:.8rem;padding:5px 12px">+ 新增選項</button>
+            </div>
+
+            <div id="qedit-answer-wrap" style="margin-bottom:12px">
+              <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">答案</label>
+              <input type="text" id="qedit-answer" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem;font-family:inherit;box-sizing:border-box">
+            </div>
+
+            <div id="qedit-status" style="font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:10px"></div>
+            <div style="display:flex;justify-content:space-between;gap:10px">
+              <button id="qedit-delete-btn" onclick="_qeDelete()" style="padding:7px 16px;border:1.5px solid var(--red);border-radius:8px;background:white;color:var(--red);font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">🗑 刪除這一題</button>
+              <div style="display:flex;gap:10px;margin-left:auto">
+                <button class="btn btn-secondary" onclick="_qeCloseModal()">取消</button>
+                <button class="btn btn-primary" onclick="_qeSave()">儲存變更</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Step 4: 輸出 -->
         <div id="ec-panel-4" class="card" style="display:none">
           <div class="card-title">📤 輸出</div>
