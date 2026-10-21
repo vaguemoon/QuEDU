@@ -1466,11 +1466,30 @@ function _ecRenderDictCreateRow(grade, lesson) {
         ' 第' + _ecEsc(lesson) + '課」的生字資料，請先到練字趣後台的「課程版本」維護這一課的生字。</div>';
       return;
     }
-    var existing = {}; // char -> 完整題目物件
+    /* 存檔現在改用固定 docId，新建立的不會再重複；但這個 lesson 底下可能還留著改版之前
+       用亂數 id 重複建出來的舊題目，掃一次順便抓出來，有的話在選字區上面放一個清掉的入口——
+       只有真的有重複才出現，不是永久固定的區塊 */
+    var byChar = {}; // char -> [題目...]
     _ecAllQ.forEach(function(q) {
-      if (q.type === '默寫生字' && q.grade === grade && q.lesson === lesson) existing[q.question] = q;
+      if (q.type === '默寫生字' && q.grade === grade && q.lesson === lesson) {
+        (byChar[q.question] = byChar[q.question] || []).push(q);
+      }
     });
-    row.innerHTML = '<div style="font-size:.78rem;color:var(--muted);font-weight:700;margin-bottom:6px">選這一課的生字來出題（右下角全選／全不選也會套用在這裡）：</div>' +
+    var dupeChars = Object.keys(byChar).filter(function(c) { return byChar[c].length > 1; });
+    var dupeBanner = dupeChars.length
+      ? '<div style="margin-bottom:10px;padding:8px 12px;border:1.5px solid #c9780c;border-radius:8px;background:#fdf3e3;' +
+          'display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+          '<span style="font-size:.82rem;color:#8a5a0a">⚠️ 這一課有 ' + dupeChars.length + ' 個字重複出題（' + dupeChars.join('、') + '）</span>' +
+          '<button type="button" onclick="_ecDedupeDictChars(\'' + _ecEscJs(grade) + '\',\'' + _ecEscJs(lesson) + '\')" ' +
+            'style="padding:5px 12px;border:1.5px solid #c9780c;border-radius:7px;background:white;color:#8a5a0a;' +
+            'font-weight:800;font-size:.8rem;cursor:pointer;font-family:inherit">清除重複，各留一題</button>' +
+        '</div>'
+      : '';
+
+    var existing = {}; // char -> 完整題目物件（重複的話留下面 _ecDedupeExistingPick 選出的那一個代表）
+    Object.keys(byChar).forEach(function(c) { existing[c] = _ecDedupeExistingPick(byChar[c], grade, lesson, c); });
+    row.innerHTML = dupeBanner +
+      '<div style="font-size:.78rem;color:var(--muted);font-weight:700;margin-bottom:6px">選這一課的生字來出題（右下角全選／全不選也會套用在這裡）：</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
       chars.map(function(c) {
         var q = existing[c];
@@ -1500,6 +1519,65 @@ function _ecRenderDictCreateRow(grade, lesson) {
       }).join('') +
       '</div>';
   });
+}
+
+/* 同一個字有好幾筆重複題目時，選字區的 chip 要代表哪一筆——優先選 id 已經符合新版固定
+   id 規則的那筆（代表改版後留下來的那份），沒有的話退而求其次選最新建立的那筆，單純是給
+   畫面一個穩定的代表，實際清除重複由 _ecDedupeDictChars 處理，這裡不動資料 */
+function _ecDedupeExistingPick(docs, grade, lesson, char) {
+  if (docs.length === 1) return docs[0];
+  var canonicalId = _dctMakeDocId(grade, lesson, char);
+  var canonical = docs.filter(function(d) { return d.id === canonicalId; })[0];
+  if (canonical) return canonical;
+  return docs.slice().sort(function(a, b) {
+    return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+  })[0];
+}
+
+/* 「清除重複，各留一題」——每個字留 _ecDedupeExistingPick 選出的那一筆，其餘從 Firestore
+   刪掉，同步清掉 _ecAllQ／_ecSelected。這是舊版用 Firestore 亂數 id 建檔時期留下的歷史包袱，
+   改成固定 id 之後不會再有新的重複，但已經建出來的舊重複不會自動消失，所以才需要這個手動
+   清理入口——只在真的偵測到重複時才出現，不是永久固定的按鈕 */
+function _ecDedupeDictChars(grade, lesson) {
+  if (!db) return;
+  var byChar = {};
+  _ecAllQ.forEach(function(q) {
+    if (q.type === '默寫生字' && q.grade === grade && q.lesson === lesson) {
+      (byChar[q.question] = byChar[q.question] || []).push(q);
+    }
+  });
+  var toDelete = [];
+  Object.keys(byChar).forEach(function(c) {
+    var docs = byChar[c];
+    if (docs.length <= 1) return;
+    var keep = _ecDedupeExistingPick(docs, grade, lesson, c);
+    docs.forEach(function(d) { if (d.id !== keep.id) toDelete.push(d.id); });
+  });
+  if (!toDelete.length) { showToast('沒有偵測到重複的題目'); return; }
+  if (!confirm('確定要清除 ' + toDelete.length + ' 筆重複的默寫生字嗎？每個字會保留一題，其餘刪除，此操作無法復原。')) return;
+
+  Promise.all(toDelete.map(function(id) { return db.collection('questions').doc(id).delete().catch(function() {}); }))
+    .then(function() {
+      var deletedSet = {};
+      toDelete.forEach(function(id) { deletedSet[id] = true; });
+      _ecAllQ = _ecAllQ.filter(function(q) { return !deletedSet[q.id]; });
+      toDelete.forEach(function(id) { delete _ecSelected[id]; });
+      showToast('✅ 已清除 ' + toDelete.length + ' 筆重複題目');
+      _ecBuildFilters();
+      _ecFilterAndRender();
+    });
+}
+
+/* 默寫生字新增（不管是單字一個一個點，還是「全選」批次建立）一律用這個算出來的固定 id 當
+   docId，不要用 Firestore 的 `.add()` 自動產生亂數 id。這是「同一個字＋同一課＋同一個老師」
+   建兩次會發生什麼事」的問題的根本解——之前抓重複建檔一路抓（連點兩次「全選」、個別字的
+   modal 搞不好也能雙擊兩次存兩次、甚至同一個老師開兩個分頁同時操作），每種情境都要各自補
+   一個時機判斷式的鎖，補不完，而且分頁之間完全沒辦法用同一支 js 檔案裡的變數互相擋。
+   改成固定 id 之後，不管從哪裡、按幾次、幾個分頁同時按，寫入的都是同一份文件，
+   第二次之後的寫入只是覆蓋同一筆、不會再多出一筆，從資料層徹底排除重複，不用再逐一堵邏輯漏洞。 */
+function _dctMakeDocId(grade, lesson, char) {
+  var uid = currentTeacher ? currentTeacher.uid : '';
+  return 'dict_' + encodeURIComponent(uid + '|' + grade + '|' + lesson + '|' + char);
 }
 
 /* 新增：點生字清單裡還沒出題的字 */
@@ -1743,10 +1821,11 @@ function _ecBulkCreateMissingDictChars(grade, lesson) {
           type: '默寫生字', question: c, answer: meaning, zhuyin: opts[0] ? opts[0].bopomofo : '', hintWord: hintWord,
           options: [], teacherUid: currentTeacher ? currentTeacher.uid : '', createdAt: new Date().toISOString()
         };
-        db.collection('questions').add(data).then(function(ref) {
-          var full = Object.assign({ id: ref.id }, data);
+        var docId = _dctMakeDocId(grade, lesson, c);
+        db.collection('questions').doc(docId).set(data).then(function() {
+          var full = Object.assign({ id: docId }, data);
           _ecAllQ.push(full);
-          _ecSelected[ref.id] = true;
+          _ecSelected[docId] = true;
           created++;
         }).catch(function() {}).then(function() {
           setTimeout(function() { next(i + 1); }, 150);
@@ -1782,13 +1861,12 @@ function _dctSaveQuestion() {
   };
 
   var isEdit = !!_dctDocId;
-  var p = isEdit
-    ? db.collection('questions').doc(_dctDocId).set(data)
-    : db.collection('questions').add(Object.assign({ createdAt: new Date().toISOString() }, data));
+  var docId  = isEdit ? _dctDocId : _dctMakeDocId(_ecGrade, _dctLesson, _dctChar);
+  var fullData = isEdit ? data : Object.assign({ createdAt: new Date().toISOString() }, data);
+  var p = db.collection('questions').doc(docId).set(fullData);
 
-  p.then(function(refOrNothing) {
-    var docId = isEdit ? _dctDocId : refOrNothing.id;
-    var full  = Object.assign({ id: docId }, data, isEdit ? {} : { createdAt: new Date().toISOString() });
+  p.then(function() {
+    var full = Object.assign({ id: docId }, fullData);
     var idx = -1;
     for (var k = 0; k < _ecAllQ.length; k++) { if (_ecAllQ[k].id === docId) { idx = k; break; } }
     if (idx !== -1) {
