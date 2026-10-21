@@ -453,6 +453,11 @@ function _ecFilterAndRender() {
     if (grade && q.grade   !== grade) return false;
     if (cat   && q[catKey] !== cat)   return false;
     if (type  && q.type    !== type)  return false;
+    /* 默寫生字的清單只顯示「目前有勾選進這份測驗」的題目——生字來源是上面的選字區，字出完題
+       之後本來就會自動勾選，取消勾選代表「這次不考這個字」，不該繼續佔著清單；要再考回來
+       到上面選字區把那個字點回來就好（見 _ecRenderDictCreateRow／_ecToggleDictCharSelect），
+       不是靠這裡的清單重新勾選——兩邊入口只留一個，不要做出兩套都能切換選取狀態的重複介面 */
+    if (q.type === '默寫生字' && !_ecSelected[q.id]) return false;
     if (search) {
       var t = String(q.question || q.word || '').toLowerCase();
       if (t.indexOf(search) < 0) return false;
@@ -523,6 +528,16 @@ function _ecToggleQ(id, checked) {
   else         delete _ecSelected[id];
   var el = document.getElementById('ec-selected-count');
   if (el) el.textContent = Object.keys(_ecSelected).length;
+
+  /* 默寫生字取消勾選要讓這一題整個從清單消失、選字區的 chip 退回「可以再點回來」的狀態
+     （見 _ecFilterAndRender／_ecRenderDictCreateRow），跟其他題型「取消勾選但題目還留在
+     清單裡方便重新勾選」的瀏覽式選題行為不一樣，所以這裡需要整個重畫；其他題型維持原本
+     輕量行為，不要每勾一下就整個重繪整張清單 */
+  if (!checked) {
+    var q = null;
+    for (var k = 0; k < _ecAllQ.length; k++) { if (_ecAllQ[k].id === id) { q = _ecAllQ[k]; break; } }
+    if (q && q.type === '默寫生字') _ecFilterAndRender();
+  }
 }
 
 /* 點清單裡一題既有題目：句子重組有現成的拆解編輯器，直接開那個編輯模式；
@@ -1446,15 +1461,26 @@ function _ecRenderDictCreateRow(grade, lesson) {
       '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
       chars.map(function(c) {
         var q = existing[c];
+        var selected = q && _ecSelected[q.id];
         /* 批次全選建的題目如果查不到注音或字義，欄位會留空，用 ⚠️ 標記提醒老師自己點進去補，
            不要跟真的填完整的 ✓ 混在一起分不出來 */
         var incomplete = q && (!q.zhuyin || !q.answer);
-        var color = incomplete ? '#c9780c' : (q ? 'var(--green,#2e7d32)' : 'var(--border)');
-        var bg    = incomplete ? '#fdf3e3' : (q ? '#eaf6ec' : 'white');
-        var mark  = q ? (incomplete ? ' ⚠️' : ' ✓') : '';
-        return '<button type="button" onclick="' + (q
-            ? '_ecOpenDictModalForEdit(\'' + _ecEscJs(q.id) + '\')'
-            : '_ecOpenDictModal(\'' + _ecEscJs(c) + '\',\'' + _ecEscJs(lesson) + '\',\'' + _ecEscJs(lessonName) + '\')') + '" ' +
+        var color, bg, mark, action;
+        if (!q) {
+          color = 'var(--border)'; bg = 'white'; mark = '';
+          action = '_ecOpenDictModal(\'' + _ecEscJs(c) + '\',\'' + _ecEscJs(lesson) + '\',\'' + _ecEscJs(lessonName) + '\')';
+        } else if (!selected) {
+          /* 已經出過題、但目前沒選進這份測驗（使用者在下面清單取消勾選過）——灰階顯示，
+             點一下直接選回來，不用重新開 modal、不會弄丟已經查好的注音/字義 */
+          color = 'var(--muted)'; bg = 'var(--gray-lt,#f5f5f5)'; mark = '';
+          action = '_ecToggleDictCharSelect(\'' + _ecEscJs(q.id) + '\')';
+        } else {
+          color = incomplete ? '#c9780c' : 'var(--green,#2e7d32)';
+          bg    = incomplete ? '#fdf3e3' : '#eaf6ec';
+          mark  = incomplete ? ' ⚠️' : ' ✓';
+          action = '_ecOpenDictModalForEdit(\'' + _ecEscJs(q.id) + '\')';
+        }
+        return '<button type="button" onclick="' + action + '" ' +
           'style="padding:6px 14px;border:1.5px solid ' + color + ';border-radius:8px;' +
           'background:' + bg + ';font-size:1rem;font-weight:800;cursor:pointer;font-family:inherit;color:' + color + '">' +
           _ecEsc(c) + mark + '</button>';
@@ -1514,6 +1540,15 @@ function _ecOpenDictModalForEdit(docId) {
   if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = ''; }
 
   modal.style.display = 'flex';
+}
+
+/* 選字區裡「已出題但目前沒選進這份測驗」的灰色 chip 點一下直接選回來——題目資料已經存在
+   （注音/字義都還在），不需要重新開 modal，純粹是把它加回 _ecSelected 再重畫 */
+function _ecToggleDictCharSelect(docId) {
+  _ecSelected[docId] = true;
+  var el = document.getElementById('ec-selected-count');
+  if (el) el.textContent = Object.keys(_ecSelected).length;
+  _ecFilterAndRender();
 }
 
 function _dctStripHtml(str) {
@@ -1580,9 +1615,19 @@ function _dctFetchZhuyin(char) {
    讀音，多音字老師事後可以點進去改）、借同一個字的「詞語解釋」答案當字義，字跟字之間錯開
    150ms 查詢避免一次塞爆萌典 API（跟練字趣 preloadCharInfoAll 同樣的節流手法）。
    查不到注音或借不到字義不會整個跳過不建，還是會建檔，只是那個欄位留空，靠 _ecRenderDictCreateRow
-   畫出來的「⚠️」標記提醒老師自己點進去補，不會因為某個字查詢失敗就整批卡住 */
+   畫出來的「⚠️」標記提醒老師自己點進去補，不會因為某個字查詢失敗就整批卡住。
+
+   這個過程要跑好幾秒（逐字查詢+節流），使用者等不及重複按「全選」的話，第二次呼叫一開始算
+   出來的 existing／queue 會是第一次呼叫還沒寫完時的舊快照，兩邊都會排進同一批字，造成
+   同一個字被建立兩次（真的在正式環境發生過：連續按兩次，跑到一半的那幾個字重複建檔）。
+   用一個簡單的執行中旗標擋掉重複呼叫，不是靠停用按鈕這種 UI 層的做法（UI 可能漏接事件），
+   直接在函式本體擋，不管從哪裡呼叫都安全 */
+var _dctBulkRunning = false;
+
 function _ecBulkCreateMissingDictChars(grade, lesson) {
   if (!db || !_ecVersion || !_ecVolume || !lesson) return;
+  if (_dctBulkRunning) { showToast('批次建立還在進行中，請稍候…'); return; }
+
   _ecFetchCurriculumChars(_ecVersion, _ecVolume, lesson, function(chars) {
     if (!chars || !chars.length) return;
     var lessonName = ((_ecAllLessonTexts || []).filter(function(x) { return x.grade === grade && x.lesson === lesson; })[0] || {}).lessonName || _ecLessonName || '';
@@ -1591,11 +1636,17 @@ function _ecBulkCreateMissingDictChars(grade, lesson) {
     var queue = chars.filter(function(c) { return !existing[c]; });
     if (!queue.length) return;
 
+    _dctBulkRunning = true;
+    var btn = document.getElementById('ec-select-all-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '建立中…'; }
+
     var created = 0;
     showToast('批次建立默寫生字中…（共 ' + queue.length + ' 字）');
 
     function next(i) {
       if (i >= queue.length) {
+        _dctBulkRunning = false;
+        if (btn) { btn.disabled = false; btn.textContent = '全選'; }
         showToast('✅ 已建立 ' + created + ' 題默寫生字（查不到注音/字義的已用 ⚠️ 標記，可點進去補）');
         _ecBuildFilters();
         _ecFilterAndRender();
