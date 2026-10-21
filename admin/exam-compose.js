@@ -34,7 +34,8 @@ var _dctChar    = '';      // 目前這一題的字
 var _dctLesson  = '';
 var _dctLessonName = '';
 var _dctCurrCache  = {};   // { '版本|冊次|課次': ['字1','字2',...] | null(查過但沒資料) }
-var _dctZhuyinOpts = [];   // 目前這個字從萌典查到的注音選項 [{bopomofo, def}]
+var _dctZhuyinOpts = [];   // 目前這個字從萌典查到的讀音 [{bopomofo, def}]
+var _dctHasSharedDef = false; // 目前這個字的字義是不是借自「詞語解釋」——是的話萌典查到結果不要蓋過去
 
 /* 中文數字排序表 */
 var _CN_MAP = {
@@ -564,6 +565,10 @@ function _ecSelectAll() {
     }
     return true;
   }).forEach(function(q) { _ecSelected[q.id] = true; });
+
+  /* 默寫生字的字不是「既有題目」，大部分根本還沒出題，單純勾選不夠——「全選」對這個題型
+     來說真正該做的是把這一課還沒出題的生字一次全部建好（逐字查注音、借字義）再勾起來 */
+  if (type === '默寫生字' && cat) _ecBulkCreateMissingDictChars(grade, cat);
 
   _ecFilterAndRender();
 }
@@ -1433,21 +1438,26 @@ function _ecRenderDictCreateRow(grade, lesson) {
         ' 第' + _ecEsc(lesson) + '課」的生字資料，請先到練字趣後台的「課程版本」維護這一課的生字。</div>';
       return;
     }
-    var existing = {}; // char -> docId
+    var existing = {}; // char -> 完整題目物件
     _ecAllQ.forEach(function(q) {
-      if (q.type === '默寫生字' && q.grade === grade && q.lesson === lesson) existing[q.question] = q.id;
+      if (q.type === '默寫生字' && q.grade === grade && q.lesson === lesson) existing[q.question] = q;
     });
-    row.innerHTML = '<div style="font-size:.78rem;color:var(--muted);font-weight:700;margin-bottom:6px">選這一課的生字來出題：</div>' +
+    row.innerHTML = '<div style="font-size:.78rem;color:var(--muted);font-weight:700;margin-bottom:6px">選這一課的生字來出題（右下角全選／全不選也會套用在這裡）：</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
       chars.map(function(c) {
-        var done = existing[c];
-        return '<button type="button" onclick="' + (done
-            ? '_ecOpenDictModalForEdit(\'' + _ecEscJs(done) + '\')'
+        var q = existing[c];
+        /* 批次全選建的題目如果查不到注音或字義，欄位會留空，用 ⚠️ 標記提醒老師自己點進去補，
+           不要跟真的填完整的 ✓ 混在一起分不出來 */
+        var incomplete = q && (!q.zhuyin || !q.answer);
+        var color = incomplete ? '#c9780c' : (q ? 'var(--green,#2e7d32)' : 'var(--border)');
+        var bg    = incomplete ? '#fdf3e3' : (q ? '#eaf6ec' : 'white');
+        var mark  = q ? (incomplete ? ' ⚠️' : ' ✓') : '';
+        return '<button type="button" onclick="' + (q
+            ? '_ecOpenDictModalForEdit(\'' + _ecEscJs(q.id) + '\')'
             : '_ecOpenDictModal(\'' + _ecEscJs(c) + '\',\'' + _ecEscJs(lesson) + '\',\'' + _ecEscJs(lessonName) + '\')') + '" ' +
-          'style="padding:6px 14px;border:1.5px solid ' + (done ? 'var(--green,#2e7d32)' : 'var(--border)') + ';border-radius:8px;' +
-          'background:' + (done ? '#eaf6ec' : 'white') + ';font-size:1rem;font-weight:800;cursor:pointer;font-family:inherit;' +
-          'color:' + (done ? 'var(--green,#2e7d32)' : 'var(--text)') + '">' +
-          _ecEsc(c) + (done ? ' ✓' : '') + '</button>';
+          'style="padding:6px 14px;border:1.5px solid ' + color + ';border-radius:8px;' +
+          'background:' + bg + ';font-size:1rem;font-weight:800;cursor:pointer;font-family:inherit;color:' + color + '">' +
+          _ecEsc(c) + mark + '</button>';
       }).join('') +
       '</div>';
   });
@@ -1467,14 +1477,16 @@ function _ecOpenDictModal(char, lesson, lessonName) {
   document.getElementById('dict-delete-btn').style.display = 'none';
   document.getElementById('dict-save-btn').textContent = '加入這份測驗';
 
-  /* 字義：優先借同一個字在這一課的「詞語解釋」答案，借不到才讓老師自己打 */
+  /* 字義：優先借同一個字在這一課的「詞語解釋」答案；借不到的話等等 _dctFetchZhuyin 查完萌典，
+     用萌典本身的解釋頂上去（練字趣的字義欄位就是同一個 API 來的），兩邊都沒有才讓老師自己打 */
   var sharedDef = _ecAllQ.filter(function(q) {
     return q.type === '詞語解釋' && q.grade === _ecGrade && q.lesson === lesson && q.question === char;
   })[0];
+  _dctHasSharedDef = !!sharedDef;
   document.getElementById('dict-meaning').value = sharedDef ? sharedDef.answer : '';
 
   var statusEl = document.getElementById('dict-status');
-  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = sharedDef ? '字義已帶入「詞語解釋」裡的答案，可以直接改' : ''; }
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = sharedDef ? '字義已帶入「詞語解釋」裡的答案，可以直接改' : '查詢萌典字典中…'; }
 
   modal.style.display = 'flex';
   _dctFetchZhuyin(char);
@@ -1504,37 +1516,114 @@ function _ecOpenDictModalForEdit(docId) {
   modal.style.display = 'flex';
 }
 
-/* 即時查萌典抓注音——跟練字趣 char-info.js 用同一個公開 API，純粹是幫老師省打字，
-   查不到或老師不滿意都可以直接改 #dict-zhuyin 這個輸入框，不依賴這次查詢成功 */
-function _dctFetchZhuyin(char) {
-  var optsEl = document.getElementById('dict-zhuyin-opts');
-  if (optsEl) optsEl.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">查詢注音中…</span>';
+function _dctStripHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/* 查萌典抓一個字的所有讀音＋對應解釋——跟練字趣 char-info.js 用同一個公開 API，解釋欄位
+   就是練字趣「字義」卡片顯示的同一筆資料（截圖裡「表現、表演。為英語show的音譯。」那個）。
+   純查詢邏輯跟「查完要不要畫 UI」分開：單一新增 modal 用這個結果畫可點選的讀音按鈕
+   （_dctFetchZhuyin），批次全選用這個結果直接挑第一個讀音自動建檔（_ecBulkCreateMissingDictChars）。
+   查不到就回傳空陣列，由呼叫端決定怎麼辦，不是只有一種用法 */
+function _dctLookupZhuyin(char, cb) {
   fetch('https://www.moedict.tw/' + encodeURIComponent(char) + '.json')
     .then(function(res) { if (!res.ok) throw new Error('not found'); return res.json(); })
     .then(function(data) {
-      if (_dctChar !== char) return; // modal 已經切換到別的字，這次結果不要套用
       var seen = {}; var opts = [];
       (data.heteronyms || []).forEach(function(h) {
         var bp = h.bopomofo || '';
         if (!bp || seen[bp]) return;
         seen[bp] = true;
-        opts.push(bp);
+        var def = (h.definitions && h.definitions[0]) ? _dctStripHtml(h.definitions[0].def) : '';
+        opts.push({ bopomofo: bp, def: def });
       });
-      _dctZhuyinOpts = opts;
-      if (!optsEl) return;
-      if (!opts.length) { optsEl.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">查無資料，請自行輸入</span>'; return; }
-      optsEl.innerHTML = opts.map(function(bp, i) {
-        return '<button type="button" onclick="document.getElementById(\'dict-zhuyin\').value=\'' + _ecEscJs(bp) + '\'" ' +
-          'style="padding:4px 12px;border:1.5px solid var(--blue);border-radius:7px;background:' + (i === 0 ? 'var(--blue)' : 'white') + ';' +
-          'color:' + (i === 0 ? 'white' : 'var(--blue)') + ';font-weight:800;font-size:.85rem;cursor:pointer;font-family:inherit;margin-right:6px">' +
-          _ecEsc(bp) + '</button>';
-      }).join('');
-      if (!document.getElementById('dict-zhuyin').value) document.getElementById('dict-zhuyin').value = opts[0];
+      cb(opts);
     })
-    .catch(function() {
-      if (_dctChar !== char) return;
-      if (optsEl) optsEl.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">查無資料，請自行輸入</span>';
-    });
+    .catch(function() { cb([]); });
+}
+
+/* 新增 modal 專用：查完畫成可點選的讀音按鈕，查不到或老師不滿意都可以直接改 #dict-zhuyin
+   這個輸入框，不依賴這次查詢成功。字義如果沒有借到「詞語解釋」的答案，這裡用第一個讀音
+   查到的萌典解釋頂上去（練字趣顯示的字義就是這筆資料），一樣只是預填，老師可以直接改 */
+function _dctFetchZhuyin(char) {
+  var optsEl = document.getElementById('dict-zhuyin-opts');
+  if (optsEl) optsEl.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">查詢注音中…</span>';
+  _dctLookupZhuyin(char, function(opts) {
+    if (_dctChar !== char) return; // modal 已經切換到別的字，這次結果不要套用
+    _dctZhuyinOpts = opts;
+    var statusEl  = document.getElementById('dict-status');
+    var meaningEl = document.getElementById('dict-meaning');
+
+    if (!_dctHasSharedDef && meaningEl && !meaningEl.value.trim() && opts.length && opts[0].def) {
+      meaningEl.value = opts[0].def;
+      if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.textContent = '注音和字義都已帶入萌典字典的解釋，可以直接改'; }
+    } else if (!_dctHasSharedDef && statusEl && statusEl.textContent === '查詢萌典字典中…') {
+      statusEl.textContent = '';
+    }
+
+    if (!optsEl) return;
+    if (!opts.length) { optsEl.innerHTML = '<span style="font-size:.78rem;color:var(--muted)">查無資料，請自行輸入</span>'; return; }
+    optsEl.innerHTML = opts.map(function(o, i) {
+      return '<button type="button" onclick="document.getElementById(\'dict-zhuyin\').value=\'' + _ecEscJs(o.bopomofo) + '\'" ' +
+        'style="padding:4px 12px;border:1.5px solid var(--blue);border-radius:7px;background:' + (i === 0 ? 'var(--blue)' : 'white') + ';' +
+        'color:' + (i === 0 ? 'white' : 'var(--blue)') + ';font-weight:800;font-size:.85rem;cursor:pointer;font-family:inherit;margin-right:6px">' +
+        _ecEsc(o.bopomofo) + '</button>';
+    }).join('');
+    if (!document.getElementById('dict-zhuyin').value) document.getElementById('dict-zhuyin').value = opts[0].bopomofo;
+  });
+}
+
+/* 「全選」套用到默寫生字：把這一課還沒出題的生字一次全部建好——逐字查萌典注音（挑第一個
+   讀音，多音字老師事後可以點進去改）、借同一個字的「詞語解釋」答案當字義，字跟字之間錯開
+   150ms 查詢避免一次塞爆萌典 API（跟練字趣 preloadCharInfoAll 同樣的節流手法）。
+   查不到注音或借不到字義不會整個跳過不建，還是會建檔，只是那個欄位留空，靠 _ecRenderDictCreateRow
+   畫出來的「⚠️」標記提醒老師自己點進去補，不會因為某個字查詢失敗就整批卡住 */
+function _ecBulkCreateMissingDictChars(grade, lesson) {
+  if (!db || !_ecVersion || !_ecVolume || !lesson) return;
+  _ecFetchCurriculumChars(_ecVersion, _ecVolume, lesson, function(chars) {
+    if (!chars || !chars.length) return;
+    var lessonName = ((_ecAllLessonTexts || []).filter(function(x) { return x.grade === grade && x.lesson === lesson; })[0] || {}).lessonName || _ecLessonName || '';
+    var existing = {};
+    _ecAllQ.forEach(function(q) { if (q.type === '默寫生字' && q.grade === grade && q.lesson === lesson) existing[q.question] = true; });
+    var queue = chars.filter(function(c) { return !existing[c]; });
+    if (!queue.length) return;
+
+    var created = 0;
+    showToast('批次建立默寫生字中…（共 ' + queue.length + ' 字）');
+
+    function next(i) {
+      if (i >= queue.length) {
+        showToast('✅ 已建立 ' + created + ' 題默寫生字（查不到注音/字義的已用 ⚠️ 標記，可點進去補）');
+        _ecBuildFilters();
+        _ecFilterAndRender();
+        return;
+      }
+      var c = queue[i];
+      var sharedDef = _ecAllQ.filter(function(q) {
+        return q.type === '詞語解釋' && q.grade === grade && q.lesson === lesson && q.question === c;
+      })[0];
+      _dctLookupZhuyin(c, function(opts) {
+        var meaning = sharedDef ? sharedDef.answer : ((opts[0] && opts[0].def) ? opts[0].def : '');
+        var data = {
+          grade: grade, lesson: lesson, lessonName: lessonName,
+          type: '默寫生字', question: c, answer: meaning, zhuyin: opts[0] ? opts[0].bopomofo : '',
+          options: [], teacherUid: currentTeacher ? currentTeacher.uid : '', createdAt: new Date().toISOString()
+        };
+        db.collection('questions').add(data).then(function(ref) {
+          var full = Object.assign({ id: ref.id }, data);
+          _ecAllQ.push(full);
+          _ecSelected[ref.id] = true;
+          created++;
+        }).catch(function() {}).then(function() {
+          setTimeout(function() { next(i + 1); }, 150);
+        });
+      });
+    }
+    next(0);
+  });
 }
 
 function _dctCloseModal() {
