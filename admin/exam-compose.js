@@ -501,7 +501,8 @@ function _ecFilterAndRender() {
     var text  = q.type === '句子重組' && q.options && q.options.length
       ? q.options.map(_ecEsc).join('<span style="color:var(--blue);font-weight:900">｜</span>')
       : q.type === '默寫生字'
-      ? _ecEsc(q.question) + '　<span style="color:var(--muted)">' + _ecEsc(q.zhuyin || '') + '　' + _ecEsc(q.answer || '') + '</span>'
+      ? _ecEsc(q.question) + '　<span style="color:var(--muted)">' + _ecEsc(q.zhuyin || '') +
+        (q.hintWord ? '　「' + _ecEsc(q.hintWord) + '」' : '　<span style="color:#c9780c">（還沒填語詞）</span>') + '</span>'
       : _ecEsc(q.question || q.word || '—');
     var badge = _ecSubject === 'chinese' && q.type
       ? ' <span style="font-size:.7rem;color:var(--muted)">[' + _ecEsc(q.type) + ']</span>'
@@ -994,20 +995,22 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     body += '<div class="sec-block">';
     body += '<div class="sec-header">' + _ecEsc(sec.title || '') + '</div>';
 
-    /* 默寫生字：不是逐題一行的 q-list，是看注音+字義、在田字格裡寫字的方格排版，
-       跟其他題型的版面完全不同，整段獨立處理、不走下面共用的 <ol class="q-list"> */
+    /* 默寫生字：不是逐題一行的 q-list，是看注音+語詞、在田字格裡寫字的方格排版，
+       跟其他題型的版面完全不同，整段獨立處理、不走下面共用的 <ol class="q-list">。
+       主要提示是「語詞挖空」（山谷→山（　）），不是字義——老師實際用過覺得看字義反而會
+       混淆學生，詞語才是最直接的提示，字義只留在 admin 編輯畫面給老師自己參考，不印出來。
+       舊資料（這次改版之前建立的）可能沒有 hintWord，印的時候退回顯示字義，不要讓舊題目
+       印出一張除了注音什麼提示都沒有的空白卡片 */
     if (key === '默寫生字') {
-      body += '<p class="dict-hint">看注音和意思，在格子裡寫出正確的國字。</p>';
+      body += '<p class="dict-hint">看注音和語詞，在格子裡寫出正確的國字。</p>';
       body += '<div class="dict-grid">';
       qs.forEach(function(q) {
-        /* 造詞提示是選填的——萌典查到的造詞不一定適合這一課的程度，老師可以留空不顯示 */
-        var blanked = q.hintWord ? q.hintWord.split(q.label).join('（　）') : '';
+        var prompt = q.hintWord ? q.hintWord.split(q.label).join('（　）') : (q.answer || '');
         body += '<div class="dict-card">' +
-          '<div class="dict-meaning">' + _ecEsc(q.answer || '') + '</div>' +
+          '<div class="dict-word">' + _ecEsc(prompt) + '</div>' +
           '<div class="dict-box-row"><div class="grid-box"></div>' +
             '<span class="dict-zhuyin-v">' + _ecEsc(q.zhuyin || '') + '</span>' +
           '</div>' +
-          (blanked ? '<div class="dict-hintword">例：' + _ecEsc(blanked) + '</div>' : '') +
           '</div>';
       });
       body += '</div></div>';
@@ -1182,8 +1185,9 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
        注音標示方式。另外格子縮小、整組 card 間距收緊，讓一頁能放下 4 排 x 3 欄＝12 個字。 */
     '.dict-hint{font-size:9.5pt;color:#3d3d5c;margin:0 0 10px}',
     '.dict-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}',
-    '.dict-card{display:flex;flex-direction:column;align-items:center;gap:3px}',
-    '.dict-meaning{font-size:8.3pt;color:#3d3d5c;line-height:1.4;padding:0 4px;text-align:center;min-height:2.3em}',
+    '.dict-card{display:flex;flex-direction:column;align-items:center;gap:4px}',
+    /* 語詞挖空是主要提示，字體要夠大夠粗——跟原本字義那行（小小一行灰字）地位完全不同 */
+    '.dict-word{font-size:13pt;font-weight:800;color:#1a1a2e;line-height:1.3;padding:0 4px;text-align:center;min-height:1.4em;letter-spacing:.03em}',
     '.dict-box-row{display:flex;align-items:stretch;gap:5px}',
     '.grid-box{position:relative;width:92px;height:92px;flex-shrink:0;',
               'border:1.5px solid #d4cfc0;border-radius:4px;background:#fff}',
@@ -1191,7 +1195,6 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     '.grid-box::after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #d4cfc0}',
     '.dict-zhuyin-v{writing-mode:vertical-rl;text-orientation:upright;font-size:10.5pt;',
                    'font-weight:800;color:#2563eb;letter-spacing:1px;display:flex;align-items:center}',
-    '.dict-hintword{font-size:9.5pt;font-weight:700;color:#1a1a2e;margin-top:1px}',
     /* 列印按鈕列 */
     '.print-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px}',
     '.print-btn{padding:9px 24px;font-size:11pt;cursor:pointer;font-weight:700;',
@@ -1494,9 +1497,10 @@ function _ecRenderDictCreateRow(grade, lesson) {
       chars.map(function(c) {
         var q = existing[c];
         var selected = q && _ecSelected[q.id];
-        /* 批次全選建的題目如果查不到注音或字義，欄位會留空，用 ⚠️ 標記提醒老師自己點進去補，
-           不要跟真的填完整的 ✓ 混在一起分不出來 */
-        var incomplete = q && (!q.zhuyin || !q.answer);
+        /* 批次全選建的題目如果查不到注音或語詞，欄位會留空，用 ⚠️ 標記提醒老師自己點進去補，
+           不要跟真的填完整的 ✓ 混在一起分不出來——語詞是現在列印版面的主要內容，缺了印出來
+           會變成只有注音、沒有題目可寫，比缺字義嚴重得多，所以用語詞（不是字義）判斷完整度 */
+        var incomplete = q && (!q.zhuyin || !q.hintWord);
         var color, bg, mark, action;
         if (!q) {
           color = 'var(--border)'; bg = 'white'; mark = '';
@@ -1759,11 +1763,13 @@ function _dctRenderHintOpts(words) {
   }).join('');
 }
 
-/* 「全選」套用到默寫生字：把這一課還沒出題的生字一次全部建好——逐字查萌典注音（挑第一個
-   讀音，多音字老師事後可以點進去改）、借同一個字的「詞語解釋」答案當字義，字跟字之間錯開
-   150ms 查詢避免一次塞爆萌典 API（跟練字趣 preloadCharInfoAll 同樣的節流手法）。
-   查不到注音或借不到字義不會整個跳過不建，還是會建檔，只是那個欄位留空，靠 _ecRenderDictCreateRow
-   畫出來的「⚠️」標記提醒老師自己點進去補，不會因為某個字查詢失敗就整批卡住。
+/* 「全選」套用到默寫生字：把這一課還沒出題的生字一次全部建好——逐字查萌典注音＋造詞（挑第一個
+   讀音跟第一個候選語詞，多音字/多個候選詞老師事後可以點進去改），順便借同一個字的「詞語解釋」
+   答案當字義備註，字跟字之間錯開 150ms 查詢避免一次塞爆萌典 API（跟練字趣 preloadCharInfoAll
+   同樣的節流手法）。查不到注音或語詞不會整個跳過不建，還是會建檔，只是那個欄位留空，靠
+   _ecRenderDictCreateRow 畫出來的「⚠️」標記提醒老師自己點進去補——語詞是列印版面的主要內容，
+   缺語詞比缺字義嚴重（印出來會變成沒有題目內容，只剩注音），所以完整度是看語詞不是看字義，
+   不會因為某個字查詢失敗就整批卡住。
 
    這個過程要跑好幾秒（逐字查詢+節流），使用者等不及重複按「全選」的話，第二次呼叫一開始算
    出來的 existing／queue 會是第一次呼叫還沒寫完時的舊快照，兩邊都會排進同一批字，造成
@@ -1804,7 +1810,7 @@ function _ecBulkCreateMissingDictChars(grade, lesson) {
     function next(i) {
       if (i >= queue.length) {
         finishRun();
-        showToast('✅ 已建立 ' + created + ' 題默寫生字（查不到注音/字義的已用 ⚠️ 標記，可點進去補）');
+        showToast('✅ 已建立 ' + created + ' 題默寫生字（查不到注音/語詞的已用 ⚠️ 標記，可點進去補）');
         _ecBuildFilters();
         _ecFilterAndRender();
         return;
@@ -1850,9 +1856,9 @@ function _dctSaveQuestion() {
   var zhuyin  = document.getElementById('dict-zhuyin').value.trim();
   var meaning = document.getElementById('dict-meaning').value.trim();
   var hintWord = document.getElementById('dict-hint').value.trim();
-  if (!zhuyin)  { fail('注音不能空白'); return; }
-  if (!meaning) { fail('字義不能空白'); return; }
-  if (hintWord && hintWord.indexOf(_dctChar) === -1) { fail('造詞提示裡要包含「' + _dctChar + '」這個字才能挖空，請修改或清空'); return; }
+  if (!zhuyin)   { fail('注音不能空白'); return; }
+  if (!hintWord) { fail('語詞不能空白（考卷上印的就是這個詞挖空，沒有詞就沒有題目內容）'); return; }
+  if (hintWord.indexOf(_dctChar) === -1) { fail('語詞裡要包含「' + _dctChar + '」這個字才能挖空，請修改'); return; }
 
   var data = {
     grade: _ecGrade, lesson: _dctLesson, lessonName: _dctLessonName,

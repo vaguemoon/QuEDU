@@ -866,13 +866,13 @@
             <input type="text" id="dict-zhuyin" placeholder="如：ㄒㄧㄡˋ" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:1rem;font-family:inherit;margin-bottom:6px;box-sizing:border-box">
             <div id="dict-zhuyin-opts" style="margin-bottom:14px;min-height:20px"></div>
 
-            <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">字義</label>
-            <textarea id="dict-meaning" rows="2" placeholder="這個字的意思" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.92rem;font-family:inherit;margin-bottom:10px;box-sizing:border-box;resize:vertical"></textarea>
-
-            <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">造詞提示（選填）</label>
-            <p style="font-size:.76rem;color:var(--muted);margin:0 0 6px">列印時會把這個詞裡的這個字挖空，印在寫字格下面當提示，例如「山谷」會印成「山（　）」</p>
+            <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">語詞</label>
+            <p style="font-size:.76rem;color:var(--muted);margin:0 0 6px">考卷上印的就是這個詞，這個字會被挖空當題目，例如「山谷」會印成「山（　）」——這是學生實際看到的提示，比單純的字義更直接</p>
             <input type="text" id="dict-hint" placeholder="如：山谷" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.92rem;font-family:inherit;margin-bottom:6px;box-sizing:border-box">
             <div id="dict-hint-opts" style="margin-bottom:14px;min-height:20px"></div>
+
+            <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">字義（選填，只供你參考，不會印在考卷上）</label>
+            <textarea id="dict-meaning" rows="2" placeholder="這個字的意思" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.92rem;font-family:inherit;margin-bottom:10px;box-sizing:border-box;resize:vertical"></textarea>
 
             <div id="dict-status" style="font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:10px"></div>
             <div style="display:flex;justify-content:space-between;gap:10px">
