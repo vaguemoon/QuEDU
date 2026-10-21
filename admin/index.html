@@ -654,6 +654,7 @@
           <div id="ec-sr-create-row" style="display:none;margin-bottom:10px">
             <button onclick="_ecOpenSrModal()" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">🧩 新增一題句子重組題</button>
           </div>
+          <div id="ec-dict-create-row" style="display:none;margin-bottom:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--gray-lt)"></div>
           <div id="ec-q-list"
             style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 12px;min-height:80px">
             <div class="loading-wrap"><div class="spinner"></div></div>
@@ -847,6 +848,33 @@
               <div style="display:flex;gap:10px;margin-left:auto">
                 <button class="btn btn-secondary" onclick="_qeCloseModal()">取消</button>
                 <button class="btn btn-primary" onclick="_qeSave()">儲存變更</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 默寫生字 modal -->
+        <div id="dict-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center">
+          <div style="background:var(--card-bg,#fff);border-radius:14px;padding:24px;max-width:460px;width:92%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.22)">
+            <div id="dict-modal-title" style="font-size:1rem;font-weight:800;margin-bottom:12px">✍️ 新增默寫生字</div>
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:12px;border:1.5px solid var(--border);border-radius:10px;background:var(--gray-lt)">
+              <div id="dict-char-display" style="font-size:2.4rem;font-weight:900;line-height:1;flex-shrink:0">字</div>
+              <div id="dict-lesson-display" style="font-size:.82rem;color:var(--muted);font-weight:700"></div>
+            </div>
+
+            <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">注音</label>
+            <input type="text" id="dict-zhuyin" placeholder="如：ㄒㄧㄡˋ" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:1rem;font-family:inherit;margin-bottom:6px;box-sizing:border-box">
+            <div id="dict-zhuyin-opts" style="margin-bottom:14px;min-height:20px"></div>
+
+            <label style="display:block;font-size:.78rem;font-weight:800;color:var(--muted);margin-bottom:6px">字義</label>
+            <textarea id="dict-meaning" rows="2" placeholder="這個字的意思" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.92rem;font-family:inherit;margin-bottom:10px;box-sizing:border-box;resize:vertical"></textarea>
+
+            <div id="dict-status" style="font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:10px"></div>
+            <div style="display:flex;justify-content:space-between;gap:10px">
+              <button id="dict-delete-btn" onclick="_dctDeleteQuestion()" style="display:none;padding:7px 16px;border:1.5px solid var(--red);border-radius:8px;background:white;color:var(--red);font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">🗑 刪除這一題</button>
+              <div style="display:flex;gap:10px;margin-left:auto">
+                <button class="btn btn-secondary" onclick="_dctCloseModal()">取消</button>
+                <button id="dict-save-btn" class="btn btn-primary" onclick="_dctSaveQuestion()">加入這份測驗</button>
               </div>
             </div>
           </div>
