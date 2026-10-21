@@ -1691,32 +1691,41 @@ function _dctRenderHintOpts(words) {
    出來的 existing／queue 會是第一次呼叫還沒寫完時的舊快照，兩邊都會排進同一批字，造成
    同一個字被建立兩次（真的在正式環境發生過：連續按兩次，跑到一半的那幾個字重複建檔）。
    用一個簡單的執行中旗標擋掉重複呼叫，不是靠停用按鈕這種 UI 層的做法（UI 可能漏接事件），
-   直接在函式本體擋，不管從哪裡呼叫都安全 */
+   直接在函式本體擋，不管從哪裡呼叫都安全。
+
+   踩過一次坑：旗標原本設在 _ecFetchCurriculumChars 的 callback 裡面才 `= true`，
+   但那個查詢本身就是非同步的（即使有快取，也是透過 Promise resolve，不是真的同步）——
+   兩次連續呼叫都會在旗標被設成 true 之前就先通過最上面那行的檢查，照樣各自排一批佇列，
+   等於完全沒擋到。旗標一定要在函式最開頭、呼叫任何非同步操作之前就同步設成 true，
+   中間完全不能有 await/then 的空隙，不然這個鎖形同虛設。 */
 var _dctBulkRunning = false;
 
 function _ecBulkCreateMissingDictChars(grade, lesson) {
   if (!db || !_ecVersion || !_ecVolume || !lesson) return;
   if (_dctBulkRunning) { showToast('批次建立還在進行中，請稍候…'); return; }
+  _dctBulkRunning = true; // 同步設定，不能等任何非同步結果回來才設
+  var btn = document.getElementById('ec-select-all-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '建立中…'; }
+
+  function finishRun() {
+    _dctBulkRunning = false;
+    if (btn) { btn.disabled = false; btn.textContent = '全選'; }
+  }
 
   _ecFetchCurriculumChars(_ecVersion, _ecVolume, lesson, function(chars) {
-    if (!chars || !chars.length) return;
+    if (!chars || !chars.length) { finishRun(); return; }
     var lessonName = ((_ecAllLessonTexts || []).filter(function(x) { return x.grade === grade && x.lesson === lesson; })[0] || {}).lessonName || _ecLessonName || '';
     var existing = {};
     _ecAllQ.forEach(function(q) { if (q.type === '默寫生字' && q.grade === grade && q.lesson === lesson) existing[q.question] = true; });
     var queue = chars.filter(function(c) { return !existing[c]; });
-    if (!queue.length) return;
-
-    _dctBulkRunning = true;
-    var btn = document.getElementById('ec-select-all-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '建立中…'; }
+    if (!queue.length) { finishRun(); return; }
 
     var created = 0;
     showToast('批次建立默寫生字中…（共 ' + queue.length + ' 字）');
 
     function next(i) {
       if (i >= queue.length) {
-        _dctBulkRunning = false;
-        if (btn) { btn.disabled = false; btn.textContent = '全選'; }
+        finishRun();
         showToast('✅ 已建立 ' + created + ' 題默寫生字（查不到注音/字義的已用 ⚠️ 標記，可點進去補）');
         _ecBuildFilters();
         _ecFilterAndRender();
