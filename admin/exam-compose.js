@@ -1002,10 +1002,11 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
       qs.forEach(function(q) {
         /* 造詞提示是選填的——萌典查到的造詞不一定適合這一課的程度，老師可以留空不顯示 */
         var blanked = q.hintWord ? q.hintWord.split(q.label).join('（　）') : '';
-        body += '<div class="dict-card"><div class="dict-prompt">' +
-          '<span class="dict-zhuyin">' + _ecEsc(q.zhuyin || '') + '</span>' +
+        body += '<div class="dict-card">' +
           '<div class="dict-meaning">' + _ecEsc(q.answer || '') + '</div>' +
-          '</div><div class="grid-box"></div>' +
+          '<div class="dict-box-row"><div class="grid-box"></div>' +
+            '<span class="dict-zhuyin-v">' + _ecEsc(q.zhuyin || '') + '</span>' +
+          '</div>' +
           (blanked ? '<div class="dict-hintword">例：' + _ecEsc(blanked) + '</div>' : '') +
           '</div>';
       });
@@ -1171,22 +1172,26 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     '.match-ep-r{margin-left:4px}',
     '.match-ep-l{margin-right:4px}',
     '.match-word{font-size:12pt;font-weight:700}',
-    /* 默寫生字 */
-    '.dict-hint{font-size:9.5pt;color:#3d3d5c;margin:0 0 12px}',
-    '.dict-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 14px}',
-    '.dict-card{display:flex;flex-direction:column;align-items:center;gap:7px}',
-    '.dict-prompt{width:100%;text-align:center}',
-    '.dict-zhuyin{display:inline-block;background:#2563eb;color:#fff;font-weight:800;',
-                 'font-size:12pt;padding:4px 14px;border-radius:7px;letter-spacing:.08em}',
-    '.dict-meaning{font-size:9.5pt;color:#3d3d5c;margin-top:5px;line-height:1.5;padding:0 4px}',
-    '.grid-box{position:relative;width:100%;max-width:120px;aspect-ratio:1/1;',
+    /* 默寫生字
+       版面改過一次：原本注音是格子上方一個藍底藥丸、格子用 max-width+aspect-ratio 撐大小、
+       十字線是偽元素的漸層背景畫出來的。這三個都在使用者實際用瀏覽器列印（不是預覽）時
+       出了狀況：aspect-ratio 在印表機轉換時沒有確實撐出格子高度、漸層背景色在「背景圖形」
+       沒勾選時整個被拿掉、注音藥丸的底色也一樣被拿掉。改成：格子用明確的 width+height（不依賴
+       aspect-ratio）、十字線改用 border 畫（border 不受背景列印設定影響，永遠印得出來）、
+       注音拿掉底色、改成直書（書寫模式 vertical-rl）放在格子右邊——這也是教育現場常見的
+       注音標示方式。另外格子縮小、整組 card 間距收緊，讓一頁能放下 4 排 x 3 欄＝12 個字。 */
+    '.dict-hint{font-size:9.5pt;color:#3d3d5c;margin:0 0 10px}',
+    '.dict-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}',
+    '.dict-card{display:flex;flex-direction:column;align-items:center;gap:3px}',
+    '.dict-meaning{font-size:8.3pt;color:#3d3d5c;line-height:1.4;padding:0 4px;text-align:center;min-height:2.3em}',
+    '.dict-box-row{display:flex;align-items:stretch;gap:5px}',
+    '.grid-box{position:relative;width:92px;height:92px;flex-shrink:0;',
               'border:1.5px solid #d4cfc0;border-radius:4px;background:#fff}',
-    '.grid-box::before,.grid-box::after{content:"";position:absolute;background:',
-      'repeating-linear-gradient(to right,#d4cfc0 0 4px,transparent 4px 8px)}',
-    '.grid-box::before{left:0;right:0;top:50%;height:1px;transform:translateY(-.5px)}',
-    '.grid-box::after{top:0;bottom:0;left:50%;width:1px;',
-      'background:repeating-linear-gradient(to bottom,#d4cfc0 0 4px,transparent 4px 8px)}',
-    '.dict-hintword{font-size:11pt;font-weight:700;color:#1a1a2e;margin-top:2px}',
+    '.grid-box::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #d4cfc0}',
+    '.grid-box::after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #d4cfc0}',
+    '.dict-zhuyin-v{writing-mode:vertical-rl;text-orientation:upright;font-size:10.5pt;',
+                   'font-weight:800;color:#2563eb;letter-spacing:1px;display:flex;align-items:center}',
+    '.dict-hintword{font-size:9.5pt;font-weight:700;color:#1a1a2e;margin-top:1px}',
     /* 列印按鈕列 */
     '.print-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px}',
     '.print-btn{padding:9px 24px;font-size:11pt;cursor:pointer;font-weight:700;',
@@ -1198,6 +1203,9 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
       '@page{size:A4 portrait;margin:15mm}',
       'body{padding:0}',
       '.print-bar{display:none}',
+      /* Chrome 的「背景圖形」預設是關的，有背景色/背景圖樣式的元素（配對題的圖片格、答案池）
+         沒開這個設定會被整個拿掉；強制打開不依賴使用者自己去列印對話框裡勾選 */
+      '*{print-color-adjust:exact;-webkit-print-color-adjust:exact}',
       /* 大題本身可能比一頁還高，不能整塊 break-inside:avoid——否則瀏覽器只能把整塊往下一頁推，
          導致上一頁被擠成空白。改成只保護「單一題目」跟「大題標題」不被從中間切斷，
          大題允許正常跨頁，跨到下一頁自然接著排。 */
