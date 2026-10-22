@@ -730,11 +730,26 @@ function _ecCollectSectionPoints() {
 
 /* Step 3/4 admin 畫面自己看的總分提示（不印到考卷上）——純粹讓老師核對各大題配分加起來
    跟題數乘出來的分數是不是符合預期，不是100也不會擋，只是變色提醒 */
+/* 句子重組一「題」底下其實是好幾塊打散的片段，線上作答本來就是每個片段位置各自計分
+   （不是整句對錯二選一，見 submitQuiz 的 srTotal/srCorrect），紙本配分改成比照同一個邏輯用
+   「格」（片段/空格）當單位，不是用「題」——不然一句切4塊跟切2塊的題目配分權重會不合理地
+   一樣。其他題型維持原本「每題」的算法，這裡回傳 {unit, count} 讓配分相關的地方（Step3
+   輸入框文字、admin 總分加總、列印的「（每X分，共Y分）」）都讀同一個來源，不要各自重算 */
+function _ecSectionUnitCount(sec) {
+  if (sec.key === '句子重組') {
+    var total = 0;
+    (sec.questions || []).forEach(function(q) { total += (q.options || []).length; });
+    return { unit: '格', count: total };
+  }
+  return { unit: '題', count: (sec.questions || []).length };
+}
+
 function _ecComputeTotalPoints() {
   var total = 0; var hasAny = false;
   _ecSections.forEach(function(sec) {
     var p = parseFloat(sec.points);
-    if (!isNaN(p) && p > 0) { total += p * (sec.questions || []).length; hasAny = true; }
+    var uc = _ecSectionUnitCount(sec);
+    if (!isNaN(p) && p > 0) { total += p * uc.count; hasAny = true; }
   });
   _ecMatchSections.forEach(function(msec) {
     var p = parseFloat(msec.points);
@@ -775,7 +790,8 @@ function _ecRenderLayout() {
            'cursor:pointer;font-size:.75rem;font-family:inherit';
 
   var textHtml = _ecSections.map(function(sec, si) {
-    var qCount    = (sec.questions || []).length;
+    var qCount      = (sec.questions || []).length;
+    var _ecUnitCount = _ecSectionUnitCount(sec);
     var collapsed = !!sec.collapsed;
     var arrow     = collapsed ? '▶' : '▼';
     var radius    = collapsed ? '10px' : '10px 10px 0 0';
@@ -785,11 +801,15 @@ function _ecRenderLayout() {
       'background:var(--blue-lt,#eff6ff);border-radius:' + radius + ';' +
       'border:1.5px solid var(--blue);cursor:pointer;user-select:none" ' +
       'onclick="_ecToggleSection(' + si + ')">' +
+        '<span class="ec-drag-handle" title="拖曳調整大題順序" ' +
+          'onpointerdown="_ecSectionDragStart(event,\'text\',' + si + ')" ' +
+          'style="touch-action:none;cursor:grab;font-size:1rem;color:var(--muted);padding:0 2px;flex-shrink:0">⠿</span>' +
         '<span style="font-size:.8rem;color:var(--blue);font-weight:900;min-width:14px">' + arrow + '</span>' +
         '<span style="font-size:.92rem;font-weight:900;color:var(--blue-dk,#1d4ed8);flex:1">' + _ecEsc(sec.title) + '</span>' +
-        '<span style="font-size:.75rem;color:var(--muted);font-weight:700;margin-right:4px">' + qCount + ' 題</span>' +
+        '<span style="font-size:.75rem;color:var(--muted);font-weight:700;margin-right:4px">' + qCount + ' 題' +
+          (sec.key === '句子重組' ? '（共' + _ecUnitCount.count + ' 格）' : '') + '</span>' +
         '<span onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:3px;font-size:.75rem;color:var(--blue-dk,#1d4ed8);font-weight:700;margin-right:4px">' +
-          '每題<input type="number" min="0" step="0.5" value="' + (sec.points != null ? _ecEscA(sec.points) : '') + '" ' +
+          '每' + _ecUnitCount.unit + '<input type="number" min="0" step="0.5" value="' + (sec.points != null ? _ecEscA(sec.points) : '') + '" ' +
             'placeholder="—" oninput="_ecSetSectionPoints(' + si + ',this.value)" ' +
             'style="width:44px;padding:2px 4px;border:1.5px solid var(--border);border-radius:5px;font-size:.78rem;font-family:inherit;text-align:center">分' +
         '</span>' +
@@ -812,7 +832,7 @@ function _ecRenderLayout() {
       body = '<div style="border:1.5px solid var(--blue);border-top:none;border-radius:0 0 10px 10px;padding:4px 10px">' + rows + '</div>';
     }
 
-    return '<div style="margin-bottom:10px">' + header + body + '</div>';
+    return '<div id="text-sec-card-' + si + '" data-sec-kind="text" data-sec-idx="' + si + '" style="margin-bottom:10px">' + header + body + '</div>';
   }).join('');
 
   var matchHtml = _ecMatchSections.map(function(msec, i) {
@@ -821,9 +841,12 @@ function _ecRenderLayout() {
     var srcDesc   = msec.source === 'curriculum'
       ? _ecEsc(msec.gradeLesson.replace('_', ' 第') + ' 課')
       : '自訂類別';
-    return '<div style="margin-bottom:10px">' +
+    return '<div id="match-sec-card-' + i + '" data-sec-kind="match" data-sec-idx="' + i + '" style="margin-bottom:10px">' +
       '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;' +
       'background:var(--orange-lt,#fff7ed);border-radius:10px;border:1.5px solid var(--orange,#f97316)">' +
+        '<span class="ec-drag-handle" title="拖曳調整大題順序" ' +
+          'onpointerdown="_ecSectionDragStart(event,\'match\',' + i + ')" ' +
+          'style="touch-action:none;cursor:grab;font-size:1rem;color:var(--muted);padding:0 2px;flex-shrink:0">⠿</span>' +
         '<span style="font-size:.92rem;font-weight:900;color:var(--orange-dk,#c2410c);flex:1">🖼 ' + fullTitle + '</span>' +
         '<span style="font-size:.75rem;color:var(--muted);margin-right:4px">' +
           msec.pairCount + ' 組 · ' + srcDesc + '</span>' +
@@ -840,6 +863,105 @@ function _ecRenderLayout() {
 
   wrap.innerHTML = textHtml + matchHtml;
   _ecRenderPointsSummary('ec-layout-points-summary');
+}
+
+/* 大題拖曳排序（Pointer Events，滑鼠／觸控通用，照 CLAUDE.md 規定不能只認滑鼠事件）。
+   文字大題跟配對大題分開各自群組內拖曳，兩群組之間不能互拖——配對大題本來就固定排在所有
+   文字大題後面（版面編號是這樣算的：_EC_CN[_ecSections.length+i]），要讓兩種大題能夠完全
+   自由混排會牽動大題編號/預覽/發布/列印好幾處邏輯，是更大的改動，先不做。
+
+   做法：按住拖曳把手時把那張卡片整個拉出文件流（position:fixed 跟著指標移動），原本的位置
+   留一個等高的虛線佔位格；拖曳過程只搬動「佔位格」在 DOM 裡的位置（純視覺、不動資料），
+   放開時才依照佔位格最終落在哪裡算出新索引、一次把 _ecSections／_ecMatchSections 陣列
+   重新排序＋整個重畫。中途不去動資料陣列或整個重畫，是因為重畫會把正在拖曳中的卡片本身
+   也一起重建掉，手指/滑鼠就會跟丟。 */
+var _ecDrag = null;
+
+function _ecSectionDragStart(e, kind, idx) {
+  if (e.button !== undefined && e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  var card = document.getElementById((kind === 'text' ? 'text' : 'match') + '-sec-card-' + idx);
+  if (!card) return;
+  var rect = card.getBoundingClientRect();
+
+  var placeholder = document.createElement('div');
+  placeholder.setAttribute('data-sec-kind', kind);
+  placeholder.setAttribute('data-sec-placeholder', '1');
+  placeholder.style.cssText = 'height:' + rect.height + 'px;margin-bottom:10px;border:2px dashed var(--blue);' +
+    'border-radius:10px;background:var(--blue-lt,#eff6ff);opacity:.6;box-sizing:border-box';
+  card.parentNode.insertBefore(placeholder, card);
+
+  card.style.position = 'fixed';
+  card.style.left     = rect.left + 'px';
+  card.style.top      = rect.top + 'px';
+  card.style.width    = rect.width + 'px';
+  card.style.zIndex   = '999';
+  card.style.boxShadow = '0 10px 28px rgba(0,0,0,.28)';
+  card.style.pointerEvents = 'none';
+
+  _ecDrag = {
+    kind: kind, fromIndex: idx, card: card, placeholder: placeholder,
+    offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top
+  };
+  document.addEventListener('pointermove', _ecSectionDragMove);
+  document.addEventListener('pointerup', _ecSectionDragEnd);
+}
+
+function _ecSectionDragMove(e) {
+  if (!_ecDrag) return;
+  var d = _ecDrag;
+  d.card.style.left = (e.clientX - d.offsetX) + 'px';
+  d.card.style.top  = (e.clientY - d.offsetY) + 'px';
+
+  /* 只比較同一群組（文字或配對）、還留在正常文件流裡的卡片（排除被拉出來的 card 本身，
+     它已經是 position:fixed；佔位格自己當然也不比較自己） */
+  var siblings = Array.prototype.slice.call(
+    document.querySelectorAll('#ec-layout-list > [data-sec-kind="' + d.kind + '"]:not([data-sec-placeholder])')
+  );
+  var pointerY = e.clientY;
+  var before = null;
+  for (var i = 0; i < siblings.length; i++) {
+    var r = siblings[i].getBoundingClientRect();
+    if (pointerY < r.top + r.height / 2) { before = siblings[i]; break; }
+  }
+  if (before) {
+    if (d.placeholder.nextSibling !== before) before.parentNode.insertBefore(d.placeholder, before);
+  } else {
+    var list = d.placeholder.parentNode;
+    if (list.lastElementChild !== d.placeholder) list.appendChild(d.placeholder);
+  }
+}
+
+function _ecSectionDragEnd() {
+  if (!_ecDrag) return;
+  var d = _ecDrag;
+  document.removeEventListener('pointermove', _ecSectionDragMove);
+  document.removeEventListener('pointerup', _ecSectionDragEnd);
+
+  /* 佔位格目前在 DOM 裡的位置，就是這張卡片最終要落在的位置——數一下同群組裡佔位格前面
+     還有幾張「原本陣列裡的」卡片（要扣掉被拖曳的卡片本身，它雖然還在 DOM 裡但已經是
+     position:fixed，不算在「正常排列的卡片」裡，用 :not([data-sec-placeholder]) 加上
+     排除拖曳中卡片的 id 來算） */
+  var siblings = Array.prototype.slice.call(
+    document.querySelectorAll('#ec-layout-list > [data-sec-kind="' + d.kind + '"]')
+  );
+  var toIndex = 0;
+  for (var i = 0; i < siblings.length; i++) {
+    if (siblings[i] === d.placeholder) break;
+    if (siblings[i] !== d.card) toIndex++;
+  }
+
+  var list = d.kind === 'text' ? _ecSections : _ecMatchSections;
+  if (toIndex !== d.fromIndex && d.fromIndex < list.length) {
+    var moved = list.splice(d.fromIndex, 1)[0];
+    toIndex = Math.max(0, Math.min(list.length, toIndex));
+    list.splice(toIndex, 0, moved);
+    if (d.kind === 'text') _ecRenumberSections();
+  }
+
+  _ecDrag = null;
+  _ecRenderLayout(); // 收尾：重畫會自然清掉 fixed 定位的卡片跟佔位格，換成正常排列的新順序
 }
 
 /* 配分輸入框改值：只更新資料＋重畫總分提示，不整個重畫 _ecRenderLayout()——不然每打一個字
@@ -910,9 +1032,10 @@ function _ecRenderPreview() {
   metaStr += ' · 共 ' + totalSec + ' 大題，' + (totalQ + matchTotal) + ' 題';
 
   var textSecHtml = _ecSections.map(function(sec) {
-    var p = parseFloat(sec.points);
+    var p  = parseFloat(sec.points);
+    var uc = _ecSectionUnitCount(sec);
     return '<span style="display:inline-block;margin-right:12px">▪ ' + _ecEsc(sec.title) +
-           '（' + (sec.questions || []).length + ' 題' + (!isNaN(p) && p > 0 ? '・每題' + p + '分' : '') + '）</span>';
+           '（' + (sec.questions || []).length + ' 題' + (!isNaN(p) && p > 0 ? '・每' + uc.unit + p + '分' : '') + '）</span>';
   }).join('');
   var matchSecHtml = _ecMatchSections.map(function(msec, i) {
     var secNum = _EC_CN[_ecSections.length + i] || String(_ecSections.length + i + 1);
@@ -1070,7 +1193,8 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     var qs     = sec.questions || [];
 
     body += '<div class="sec-block">';
-    body += '<div class="sec-header">' + _ecEsc(sec.title || '') + _ecPointsSuffix(sec.points, qs.length, '題') + '</div>';
+    var _ecUC = _ecSectionUnitCount(sec);
+    body += '<div class="sec-header">' + _ecEsc(sec.title || '') + _ecPointsSuffix(sec.points, _ecUC.count, _ecUC.unit) + '</div>';
 
     /* 默寫生字：不是逐題一行的 q-list，是看注音+語詞、在田字格裡寫字的方格排版，
        跟其他題型的版面完全不同，整段獨立處理、不走下面共用的 <ol class="q-list">。
