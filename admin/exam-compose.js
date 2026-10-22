@@ -1036,6 +1036,12 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
       body += '</div>';
     }
 
+    /* 句子重組的列印說明——跟答案池同一個位置（大題標題下面），只在這個題型出現一次，
+       不是每題重複講一樣的話 */
+    if (key === '句子重組') {
+      body += '<p class="dict-hint">下面每句的詞語已經打散、重新排列過了，請依照正確的句子順序，把代表的數字依序寫在空格裡。</p>';
+    }
+
     /* 題目列表 */
     body += '<ol class="q-list">';
     qs.forEach(function(q, j) {
@@ -1060,6 +1066,25 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
 
       } else if (subject === 'math') {
         body += _ecEsc(q.label) + '<span class="q-uline" style="width:5em"></span>＝<span class="q-uline" style="width:5em"></span>';
+
+      } else if (key === '句子重組') {
+        /* 原本這裡直接印 q.label（還原後的完整正確句子）——印出來等於直接把答案寫在考卷上，
+           學生完全不用排、沒有題目可做。改成跟學生平板上作答一樣的精神：把片段打散、重新
+           排列過再印出來（不是原本儲存的正確順序），每塊標一個圈圈數字，底下留幾個空格讓
+           學生依照正確句子順序把數字填進去——紙本沒有拖曳，用「寫數字」模擬同樣的排序動作 */
+        var pieces = (q.options || []).slice();
+        var shuffled = pieces.map(function(p, oi) { return { text: p, orig: oi }; });
+        for (var si = shuffled.length - 1; si > 0; si--) {
+          var sj = Math.floor(Math.random() * (si + 1));
+          var st = shuffled[si]; shuffled[si] = shuffled[sj]; shuffled[sj] = st;
+        }
+        body += '<div class="sr-print-pieces">';
+        shuffled.forEach(function(p, idx) {
+          body += '<span class="sr-piece-chip"><span class="sr-piece-num">' + _ecCircledNum(idx + 1) + '</span>' + _ecEsc(p.text) + '</span>';
+        });
+        body += '</div><div class="sr-print-answer">正確順序：';
+        pieces.forEach(function() { body += '<span class="sr-answer-blank"></span>'; });
+        body += '</div>';
 
       } else {
         body += _ecEsc(q.label);
@@ -1195,6 +1220,15 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     '.grid-box::after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #d4cfc0}',
     '.dict-zhuyin-v{writing-mode:vertical-rl;text-orientation:upright;font-size:10.5pt;',
                    'font-weight:800;color:#2563eb;letter-spacing:1px;display:flex;align-items:center}',
+    /* 句子重組（列印版） */
+    '.sr-print-pieces{width:100%;display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}',
+    '.sr-piece-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;',
+                   'border:1.5px solid #d4cfc0;border-radius:14px;background:#f7f5ef;font-size:11pt}',
+    '.sr-piece-num{font-weight:900;color:#2563eb}',
+    '.sr-print-answer{width:100%;margin-top:6px;font-size:11pt;font-weight:700;',
+                     'display:flex;align-items:center;gap:5px;flex-wrap:wrap}',
+    '.sr-answer-blank{display:inline-block;width:1.7em;height:1.3em;border:1.5px solid #1a1a2e;',
+                     'border-radius:4px;flex-shrink:0}',
     /* 列印按鈕列 */
     '.print-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px}',
     '.print-btn{padding:9px 24px;font-size:11pt;cursor:pointer;font-weight:700;',
@@ -1291,6 +1325,10 @@ function _ecExtractFillAnswer(label) {
    ════════════════════════════════ */
 function _ecEsc(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _ecEscA(s) { return String(s).replace(/"/g,'&quot;'); }
+
+/* 句子重組列印版面用的圈圈數字（①②③...），超過 20 塊（實務上不會發生）就退回純數字加括號 */
+var _EC_CIRCLED = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
+function _ecCircledNum(n) { return _EC_CIRCLED[n - 1] || ('(' + n + ')'); }
 function _ecEscJs(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 /* 將字串轉成帶 <ruby> 標記的 HTML（逐字查注音字典）*/
