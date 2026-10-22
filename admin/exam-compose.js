@@ -116,6 +116,7 @@ function _ecEditSession(sessionId) {
         if (qd.exists) _ecAllQ.push(Object.assign({ id: qd.id }, qd.data()));
       });
       _ecBuildSections();
+      _ecApplySectionPoints(d.sectionPoints);
       _ecAllQ = [];  /* 清空，讓步驟二重新載入完整題庫供追加選題 */
       _ecOpenWizard(1);
     }).catch(function(e) { showToast('載入題目失敗：' + e.message); });
@@ -147,19 +148,20 @@ function _ecPrintSession(sessionId) {
                               options: qdata.options || null, zhuyin: qdata.zhuyin || '', hintWord: qdata.hintWord || '' });
       });
 
+      var sectionPoints = d.sectionPoints || {};
       var sections = [];
       var idx      = 0;
       _EC_TYPE_ORDER.forEach(function(type) {
         if (grouped[type] && grouped[type].length) {
           sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
-                          key: type, questions: grouped[type] });
+                          key: type, questions: grouped[type], points: sectionPoints[type] });
           idx++;
         }
       });
       Object.keys(grouped).forEach(function(type) {
         if (_EC_TYPE_ORDER.indexOf(type) === -1 && grouped[type].length) {
           sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
-                          key: type, questions: grouped[type] });
+                          key: type, questions: grouped[type], points: sectionPoints[type] });
           idx++;
         }
       });
@@ -704,6 +706,53 @@ function _ecRenumberSections() {
   });
 }
 
+/* 配分：文字大題每次進入都是從題目清單現場重建（_ecBuildSections），不是從資料庫直接還原
+   物件，所以配分存檔用「題型」當 key（{詞語填空:5, 選擇題:4, ...}），載入已發布的測驗時
+   重建完大題結構後，這裡把存檔的配分一一套回對應題型的 sec.points 上。連連看大題不用這個
+   函式——它本來整包物件就會存檔/還原，配分直接是物件上的一個欄位，跟著一起回來 */
+function _ecApplySectionPoints(pointsMap) {
+  if (!pointsMap) return;
+  _ecSections.forEach(function(sec) {
+    if (pointsMap[sec.key] !== undefined && pointsMap[sec.key] !== null) sec.points = pointsMap[sec.key];
+  });
+}
+
+/* 把目前 _ecSections／_ecMatchSections 上的配分收集成存檔用的格式：
+   文字大題收成 {題型: 分數} 的對照表；連連看大題配分本來就是物件自己的欄位，不用額外處理，
+   呼叫端存 _ecMatchSections 的時候直接一起存進去就好 */
+function _ecCollectSectionPoints() {
+  var map = {};
+  _ecSections.forEach(function(sec) {
+    if (sec.points !== undefined && sec.points !== null && sec.points !== '') map[sec.key] = sec.points;
+  });
+  return map;
+}
+
+/* Step 3/4 admin 畫面自己看的總分提示（不印到考卷上）——純粹讓老師核對各大題配分加起來
+   跟題數乘出來的分數是不是符合預期，不是100也不會擋，只是變色提醒 */
+function _ecComputeTotalPoints() {
+  var total = 0; var hasAny = false;
+  _ecSections.forEach(function(sec) {
+    var p = parseFloat(sec.points);
+    if (!isNaN(p) && p > 0) { total += p * (sec.questions || []).length; hasAny = true; }
+  });
+  _ecMatchSections.forEach(function(msec) {
+    var p = parseFloat(msec.points);
+    if (!isNaN(p) && p > 0) { total += p * (msec.pairCount || 0); hasAny = true; }
+  });
+  return { total: total, hasAny: hasAny };
+}
+
+function _ecRenderPointsSummary(elId) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var r = _ecComputeTotalPoints();
+  if (!r.hasAny) { el.textContent = ''; el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.style.color = r.total === 100 ? 'var(--green,#2e7d32)' : '#c9780c';
+  el.textContent = '目前各大題加總：' + r.total + ' 分' + (r.total === 100 ? '' : '（建議湊整到 100）');
+}
+
 /* ════════════════════════════════
    Step 3：排版（大題 + 摺疊）
    ════════════════════════════════ */
@@ -739,6 +788,11 @@ function _ecRenderLayout() {
         '<span style="font-size:.8rem;color:var(--blue);font-weight:900;min-width:14px">' + arrow + '</span>' +
         '<span style="font-size:.92rem;font-weight:900;color:var(--blue-dk,#1d4ed8);flex:1">' + _ecEsc(sec.title) + '</span>' +
         '<span style="font-size:.75rem;color:var(--muted);font-weight:700;margin-right:4px">' + qCount + ' 題</span>' +
+        '<span onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:3px;font-size:.75rem;color:var(--blue-dk,#1d4ed8);font-weight:700;margin-right:4px">' +
+          '每題<input type="number" min="0" step="0.5" value="' + (sec.points != null ? _ecEscA(sec.points) : '') + '" ' +
+            'placeholder="—" oninput="_ecSetSectionPoints(' + si + ',this.value)" ' +
+            'style="width:44px;padding:2px 4px;border:1.5px solid var(--border);border-radius:5px;font-size:.78rem;font-family:inherit;text-align:center">分' +
+        '</span>' +
         '<button onclick="event.stopPropagation();_ecEditSectionTitle(' + si + ')" style="' + bs + ';color:var(--blue)">改標題</button>' +
       '</div>';
 
@@ -773,6 +827,11 @@ function _ecRenderLayout() {
         '<span style="font-size:.92rem;font-weight:900;color:var(--orange-dk,#c2410c);flex:1">🖼 ' + fullTitle + '</span>' +
         '<span style="font-size:.75rem;color:var(--muted);margin-right:4px">' +
           msec.pairCount + ' 組 · ' + srcDesc + '</span>' +
+        '<span style="display:flex;align-items:center;gap:3px;font-size:.75rem;color:var(--orange-dk,#c2410c);font-weight:700;margin-right:4px">' +
+          '每組<input type="number" min="0" step="0.5" value="' + (msec.points != null ? _ecEscA(msec.points) : '') + '" ' +
+            'placeholder="—" oninput="_ecSetMatchPoints(' + i + ',this.value)" ' +
+            'style="width:44px;padding:2px 4px;border:1.5px solid var(--border);border-radius:5px;font-size:.78rem;font-family:inherit;text-align:center">分' +
+        '</span>' +
         '<button onclick="_ecEditMatchSectionTitle(' + i + ')" style="' + bs + ';color:var(--orange,#f97316)">改標題</button>' +
         '<button onclick="_ecRemoveMatchSection(' + i + ')" style="' + bs + ';color:var(--red);border-color:#fecaca">✕</button>' +
       '</div>' +
@@ -780,6 +839,19 @@ function _ecRenderLayout() {
   }).join('');
 
   wrap.innerHTML = textHtml + matchHtml;
+  _ecRenderPointsSummary('ec-layout-points-summary');
+}
+
+/* 配分輸入框改值：只更新資料＋重畫總分提示，不整個重畫 _ecRenderLayout()——不然每打一個字
+   整張清單（含輸入框本身）都會重建，輸入框會失焦、每個字都要重新點一次才能繼續打 */
+function _ecSetSectionPoints(si, val) {
+  if (_ecSections[si]) _ecSections[si].points = val === '' ? '' : val;
+  _ecRenderPointsSummary('ec-layout-points-summary');
+}
+
+function _ecSetMatchPoints(i, val) {
+  if (_ecMatchSections[i]) _ecMatchSections[i].points = val === '' ? '' : val;
+  _ecRenderPointsSummary('ec-layout-points-summary');
 }
 
 function _ecToggleSection(si) {
@@ -838,13 +910,15 @@ function _ecRenderPreview() {
   metaStr += ' · 共 ' + totalSec + ' 大題，' + (totalQ + matchTotal) + ' 題';
 
   var textSecHtml = _ecSections.map(function(sec) {
+    var p = parseFloat(sec.points);
     return '<span style="display:inline-block;margin-right:12px">▪ ' + _ecEsc(sec.title) +
-           '（' + (sec.questions || []).length + ' 題）</span>';
+           '（' + (sec.questions || []).length + ' 題' + (!isNaN(p) && p > 0 ? '・每題' + p + '分' : '') + '）</span>';
   }).join('');
   var matchSecHtml = _ecMatchSections.map(function(msec, i) {
     var secNum = _EC_CN[_ecSections.length + i] || String(_ecSections.length + i + 1);
+    var mp = parseFloat(msec.points);
     return '<span style="display:inline-block;margin-right:12px">🖼 ' + secNum + '、' +
-           _ecEsc(msec.title) + '（' + msec.pairCount + ' 組）</span>';
+           _ecEsc(msec.title) + '（' + msec.pairCount + ' 組' + (!isNaN(mp) && mp > 0 ? '・每組' + mp + '分' : '') + '）</span>';
   }).join('');
 
   el.innerHTML =
@@ -852,6 +926,7 @@ function _ecRenderPreview() {
     '<div style="font-size:.82rem;color:var(--muted);margin-top:4px">' + metaStr + '</div>' +
     (totalSec ? '<div style="margin-top:8px;font-size:.8rem;color:var(--muted);line-height:1.8">' +
       textSecHtml + matchSecHtml + '</div>' : '');
+  _ecRenderPointsSummary('ec-preview-points-summary');
 }
 
 /* ── 發布／更新線上測驗 ── */
@@ -876,9 +951,11 @@ function _ecPublishOnline() {
     return {
       title: msec.title, source: msec.source,
       gradeLesson: msec.gradeLesson || '', categoryId: msec.categoryId || '',
-      pairCount: msec.pairCount, wordIds: msec.wordIds || [], words: msec.words || []
+      pairCount: msec.pairCount, wordIds: msec.wordIds || [], words: msec.words || [],
+      points: msec.points || ''
     };
   });
+  var sectionPoints = _ecCollectSectionPoints();
 
   var isUpdate = !!_ecSessionId;
   var confirmMsg = isUpdate
@@ -904,8 +981,8 @@ function _ecPublishOnline() {
         matchSections: matchSectionsData, updatedAt: new Date().toISOString() },
       lessonFields
     );
-    if (_ecSubject === 'math') updateData.totalQuestions = totalQ;
-    else                       updateData.counts = { total: totalQ, match: matchTotal };
+    if (_ecSubject === 'math') { updateData.totalQuestions = totalQ; }
+    else { updateData.counts = { total: totalQ, match: matchTotal }; updateData.sectionPoints = sectionPoints; }
     p = db.collection(coll).doc(_ecSessionId).update(updateData)
           .then(function() { return { id: _ecSessionId, isUpdate: true }; });
   } else {
@@ -916,7 +993,7 @@ function _ecPublishOnline() {
           active: true, createdAt: new Date().toISOString() }, lessonFields)
       : Object.assign({ type: 'exam', name: _ecName, code: code, teacherUid: currentTeacher.uid,
           grade: _ecGrade, questionIds: questionIds, matchSections: matchSectionsData,
-          counts: { total: totalQ, match: matchTotal },
+          counts: { total: totalQ, match: matchTotal }, sectionPoints: sectionPoints,
           active: true, createdAt: new Date().toISOString() }, lessonFields);
     p = db.collection(coll).add(newData)
           .then(function(ref) { return { id: ref.id, code: code, isUpdate: false }; });
@@ -993,7 +1070,7 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     var qs     = sec.questions || [];
 
     body += '<div class="sec-block">';
-    body += '<div class="sec-header">' + _ecEsc(sec.title || '') + '</div>';
+    body += '<div class="sec-header">' + _ecEsc(sec.title || '') + _ecPointsSuffix(sec.points, qs.length, '題') + '</div>';
 
     /* 默寫生字：不是逐題一行的 q-list，是看注音+語詞、在田字格裡寫字的方格排版，
        跟其他題型的版面完全不同，整段獨立處理、不走下面共用的 <ol class="q-list">。
@@ -1110,7 +1187,7 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     }
 
     body += '<div class="sec-block">';
-    body += '<div class="sec-header">' + _ecEsc(secTitle) + '</div>';
+    body += '<div class="sec-header">' + _ecEsc(secTitle) + _ecPointsSuffix(ms.points, ms.pairCount, '組') + '</div>';
     body += '<p class="match-hint">請以直線連接左方圖片與右方對應詞語</p>';
     body += '<div class="match-wrap">';
 
@@ -1325,6 +1402,15 @@ function _ecExtractFillAnswer(label) {
    ════════════════════════════════ */
 function _ecEsc(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _ecEscA(s) { return String(s).replace(/"/g,'&quot;'); }
+
+/* 配分：大題標題後面的「（每題4分，共20分）」／「（每組2分，共20分）」這段字——沒填分數
+   或這個大題剛好是空的（0 題/0 組）就不印，不要印出「（每題0分，共0分）」這種沒意義的字 */
+function _ecPointsSuffix(points, count, unit) {
+  var p = parseFloat(points);
+  if (isNaN(p) || p <= 0 || !count) return '';
+  var total = Math.round(p * count * 100) / 100;
+  return '（每' + unit + p + '分，共' + total + '分）';
+}
 
 /* 句子重組列印版面用的圈圈數字（①②③...），超過 20 塊（實務上不會發生）就退回純數字加括號 */
 var _EC_CIRCLED = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳'];
