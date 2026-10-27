@@ -282,6 +282,66 @@ body {
 .sr-piece:hover  { border-color: var(--accent); box-shadow: 0 3px 8px var(--shadow); }
 .sr-piece:active { cursor: grabbing; transform: scale(.95); }
 
+/* ═══ 默寫生字（HanziWriter 手寫判斷，借用練字趣 apps/learn/lang/chinese 同一套邏輯） ═══ */
+.dict-row { flex-direction: column; align-items: center; gap: 10px; }
+.dict-head { display: flex; align-items: center; gap: 10px; width: 100%; }
+.dict-prompt { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
+.dict-zhuyin-badge {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 7px;
+  padding: 3px 12px;
+  letter-spacing: .06em;
+}
+.dict-word-hint {
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.dict-voice-btn {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: .82rem;
+  font-weight: 800;
+  color: var(--accent);
+  background: rgba(45,111,168,.08);
+  border: 1.5px solid var(--accent);
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.dict-voice-btn:active { transform: scale(.96); }
+.dict-writer-box {
+  width: 220px;
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+  line-height: 0;
+  cursor: crosshair;
+  border: 3px solid var(--rule);
+  border-radius: 14px;
+  background: #fff;
+  background-image:
+    linear-gradient(to right, var(--rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rule) 1px, transparent 1px);
+  background-size: 100% 50%, 50% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: border-color .15s;
+}
+.dict-writer-box svg { display: block; border-radius: 11px; }
+.dict-writer-box.dict-graded-right { border-color: var(--correct); }
+.dict-writer-box.dict-graded-wrong { border-color: var(--wrong); }
+.dict-status { font-size: .85rem; font-weight: 700; color: var(--ink-soft, #555); }
+@keyframes dict-flash-green { 0% { box-shadow: 0 0 0 0 rgba(46,125,50,.45);} 100% { box-shadow: 0 0 0 10px rgba(46,125,50,0);} }
+@keyframes dict-flash-red   { 0% { box-shadow: 0 0 0 0 rgba(198,40,40,.45);} 100% { box-shadow: 0 0 0 10px rgba(198,40,40,0);} }
+.dict-flash-green { animation: dict-flash-green .5s ease-out; }
+.dict-flash-red   { animation: dict-flash-red   .5s ease-out; }
+
 .q-num {
   font-family: 'Noto Serif TC', serif;
   font-size: .88rem;

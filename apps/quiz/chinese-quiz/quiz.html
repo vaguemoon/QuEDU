@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="chinese-quiz.css">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- 默寫生字用——跟 apps/learn/lang/chinese（練字趣）同一個版本，筆順資料走它內建的預設遠端來源 -->
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body>
 
@@ -87,8 +89,8 @@ var FALLBACK = [
 ];
 
 /* ════════════ Constants ════════════ */
-var TYPE_ORDER   = ['詞語填空', '詞語解釋', '選擇題', '句子重組'];
-var SECTION_NUMS = ['一', '二', '三', '四', '五'];
+var TYPE_ORDER   = ['詞語填空', '詞語解釋', '選擇題', '句子重組', '默寫生字'];
+var SECTION_NUMS = ['一', '二', '三', '四', '五', '六'];
 var POOL_KEY     = { '詞語填空': 'fill', '詞語解釋': 'explain' };
 var DROP_TOL     = 44;  /* px expanded hit area around each blank */
 var DRAG_THOLD   = 8;   /* px movement needed to start drag vs tap */
@@ -116,6 +118,18 @@ var _matchConnDrag   = null; /* currently unused — drag state lives in `draggi
 var srAnswers   = {};   /* qIdx -> [已放入的片段在 q.options 裡的原始索引]，陣列順序＝目前排的順序 */
 var srBankUsed  = {};   /* qIdx -> {origIdx: true}，詞卡區裡已經用掉、不再顯示的片段 */
 var srBankOrder = {};   /* qIdx -> 打亂過的 origIdx 陣列，每次開始測驗固定一次 */
+
+/* ── 默寫生字：借用練字趣（apps/learn/lang/chinese/js/exam.js）同一套 HanziWriter 逐筆畫判斷
+   邏輯，差別是練字趣一次只考一個字（單一 examQWriter），這裡一頁可能同時有好幾題默寫生字，
+   每題各自一個獨立的 HanziWriter 實例，全部用 qIdx 當 key 區分，照抄連連看「一頁多個獨立
+   SVG 元件，各自用 si 當 key」的既有模式（matchConnections[si] 那套） ── */
+var dictWriters        = {}; /* qIdx -> HanziWriter 實例 */
+var dictMistakes       = {}; /* qIdx -> 累計錯誤筆畫數（>3 不算通過，照抄練字趣的門檻） */
+var dictStrokeMistakes = {}; /* qIdx -> 連續錯誤筆畫數（連錯3筆自動顯示輪廓提示，對了就歸零） */
+var dictHintMode       = {}; /* qIdx -> 是否已經顯示過輪廓提示 */
+var dictDone           = {}; /* qIdx -> 是否已經完成這一題（防止 onComplete 重複觸發） */
+var dictSize            = 220; /* 寫字格固定邊長（px），不像練字趣整頁只有一個格子可以用 vw 算，
+                                   這裡一頁可能很多題，固定一個適合手指/手寫筆操作的尺寸 */
 
 /* ════════════ Utilities ════════════ */
 function escHtml(s) {
@@ -413,6 +427,11 @@ function startQuiz(qs, settings, matchLoaded) {
   srAnswers        = {};
   srBankUsed       = {};
   srBankOrder      = {};
+  dictWriters        = {};
+  dictMistakes       = {};
+  dictStrokeMistakes = {};
+  dictHintMode       = {};
+  dictDone           = {};
   graded           = false;
   pendingDrag      = null;
   currentSettings = settings || null;
@@ -453,6 +472,8 @@ function startQuiz(qs, settings, matchLoaded) {
 
   renderSections();
   renderAll();
+  initDictWriters(); /* 只跑這一次——不要放進 renderAll()，renderAll 會被其他題型的拖曳互動
+                         反覆呼叫，放進去的話每次都會把寫到一半的 HanziWriter 砍掉重建 */
 }
 
 /* ════════════ Rendering — sections ════════════ */
@@ -678,7 +699,28 @@ function renderQuestion(q, qIdx, num) {
   if (q.type === '選擇題')  return renderMC(q, qIdx, num);
   if (q.type === '詞語填空') return renderFill(q, qIdx, num);
   if (q.type === '句子重組') return renderSentenceReorder(q, qIdx, num);
+  if (q.type === '默寫生字') return renderDictation(q, qIdx, num);
   return renderExplain(q, qIdx, num);
+}
+
+/* 默寫生字：渲染只搭骨架（注音/語詞提示＋一個空的寫字格容器），跟句子重組同一個道理——
+   HanziWriter 需要容器已經在真實 DOM 裡、量得到實際寬度才能建立，實際建立的動作要等
+   innerHTML 真的插入頁面之後才能做（在 initDictWriters() 裡，startQuiz() 呼叫一次） */
+function renderDictation(q, qIdx, num) {
+  var blanked = q.hintWord ? q.hintWord.split(q.question).join('（　）') : '';
+  return '<div class="q-row dict-row" id="qr-' + qIdx + '">' +
+    '<div class="dict-head">' +
+      '<span class="q-num">' + num + '.</span>' +
+      '<span class="dict-prompt">' +
+        (q.zhuyin ? '<span class="dict-zhuyin-badge">' + escHtml(q.zhuyin) + '</span>' : '') +
+        (blanked ? '<span class="dict-word-hint">' + escHtml(blanked) + '</span>' : '') +
+      '</span>' +
+      '<button type="button" class="dict-voice-btn" onclick="speakText(\'' + escJs(q.question) + '\')" ' +
+        'title="聽聽看這個字怎麼唸">🔊 聽字音</button>' +
+    '</div>' +
+    '<div class="dict-writer-box" id="dict-writer-' + qIdx + '"></div>' +
+    '<div class="dict-status" id="dict-status-' + qIdx + '">請照筆順把字寫在格子裡</div>' +
+  '</div>';
 }
 
 /* 句子重組：詞卡池拖曳到格子裡（沿用既有的拖曳機制，跟填空/解釋同一套 pointer 事件），
@@ -706,6 +748,101 @@ function srSpeakAssembled(qIdx) {
   var text = placed.map(function(oi) { return oi !== undefined ? q.options[oi] : ''; }).join('');
   if (!text) { showToast('還沒排任何字喔'); return; }
   speakText(text);
+}
+
+/* ════════════ 默寫生字：HanziWriter 逐字初始化／判斷 ════════════
+   跟練字趣 exam.js 同一套邏輯（makeWriterOpts/showExamQuestion/startExamQQuiz 的翻版），
+   差別只在這裡一頁可能同時有好幾個字要考，所以每個實例、每個計數器都要用 qIdx 當 key，
+   不能像練字趣那樣整頁只有一個 examQWriter 共用。 */
+
+function _dictWriterOpts(sz, overrides) {
+  return Object.assign({
+    width: sz, height: sz, padding: Math.round(sz * 0.07),
+    strokeColor: '#2d6fa8', outlineColor: '#c8dff5',
+    drawingColor: '#2d6fa8', drawingWidth: Math.max(4, Math.round(sz * 0.013)),
+    highlightColor: '#ffd54f', showCharacter: false, showOutline: true, leniency: 1.2
+  }, overrides || {});
+}
+
+/* startQuiz() 呼叫一次（不是放進 renderAll()）——quizData 裡每一題默寫生字各自建一個
+   HanziWriter 實例，容器用 dict-writer-<qIdx> 的 id 找，已經建過的不重建（dictWriters[i] 存在
+   就跳過），避免 renderAll() 之後哪天不小心被重複呼叫到時把寫一半的字砍掉重建 */
+function initDictWriters() {
+  quizData.forEach(function(q, i) {
+    if (q.type !== '默寫生字' || dictWriters[i]) return;
+    var container = document.getElementById('dict-writer-' + i);
+    if (!container) return;
+    requestAnimationFrame(function() {
+      var sz = container.getBoundingClientRect().width || dictSize;
+      dictWriters[i] = HanziWriter.create('dict-writer-' + i, q.question, _dictWriterOpts(sz, {
+        onLoadCharDataSuccess: function() { startDictQuiz(i, q.question, sz); },
+        onLoadCharDataError: function() {
+          var s = document.getElementById('dict-status-' + i);
+          if (s) s.textContent = '筆順資料載入失敗，請確認網路連線後重新整理';
+        }
+      }));
+    });
+  });
+}
+
+function flashDictBox(qIdx, color) {
+  var el = document.getElementById('dict-writer-' + qIdx);
+  if (!el) return;
+  el.classList.remove('dict-flash-green', 'dict-flash-red');
+  void el.offsetWidth; /* 強制 reflow，讓同一個顏色可以連續閃第二次 */
+  el.classList.add(color === 'green' ? 'dict-flash-green' : 'dict-flash-red');
+}
+
+/* 照抄 exam.js 的門檻：連錯3筆（不是累計，對一筆就歸零）自動顯示輪廓；累計錯到6筆，
+   整個重建一個「看著輪廓描字」模式的新實例（leniency 放寬、提示更早出現），這題直接算
+   沒通過（跟 exam.js 的 EXAM_FAIL_MISTAKES=99 同樣精神，描完就收，不會真的卡住寫不完） */
+function startDictQuiz(qIdx, char, sz) {
+  var w = dictWriters[qIdx];
+  if (!w) return;
+  dictMistakes[qIdx] = 0; dictStrokeMistakes[qIdx] = 0; dictHintMode[qIdx] = false;
+  w.quiz({
+    onMistake: function() {
+      dictMistakes[qIdx]++; dictStrokeMistakes[qIdx]++;
+      flashDictBox(qIdx, 'red');
+      if (dictStrokeMistakes[qIdx] >= 3 && !dictHintMode[qIdx]) {
+        dictHintMode[qIdx] = true;
+        try { w.showOutline(); } catch (e) {}
+      }
+      if (dictMistakes[qIdx] >= 6 && !dictDone[qIdx]) {
+        var target = document.getElementById('dict-writer-' + qIdx);
+        if (target) { while (target.firstChild) target.removeChild(target.firstChild); }
+        var s = document.getElementById('dict-status-' + qIdx);
+        if (s) s.textContent = '看著輪廓把字描完吧！';
+        dictWriters[qIdx] = HanziWriter.create('dict-writer-' + qIdx, char, _dictWriterOpts(sz, {
+          padding: Math.round(sz * 0.08), showCharacter: true, leniency: 1.5,
+          onLoadCharDataSuccess: function() {
+            dictWriters[qIdx].quiz({
+              showHintAfterMisses: 1, markStrokeCorrectAfterMisses: 3, leniency: 1.5,
+              onMistake: function() {},
+              onCorrectStroke: function() { flashDictBox(qIdx, 'green'); },
+              onComplete: function() { finishDictQuiz(qIdx, true); }
+            });
+          }
+        }));
+      }
+    },
+    onCorrectStroke: function() {
+      dictStrokeMistakes[qIdx] = 0;
+      flashDictBox(qIdx, 'green');
+    },
+    onComplete: function() { finishDictQuiz(qIdx, false); }
+  });
+}
+
+/* HanziWriter 的 onComplete 偶爾會重複觸發（練字趣 practice.js 也特地擋過這個），
+   用 dictDone 擋第二次；forcedTrace=true 代表是用「描字」模式完成的，算沒通過
+   （比照 exam.js：這種情況最後記錄的 mistakes 是保證超過門檻的數字，不是真的筆畫數） */
+function finishDictQuiz(qIdx, forcedTrace) {
+  if (dictDone[qIdx]) return;
+  dictDone[qIdx] = true;
+  if (forcedTrace) dictMistakes[qIdx] = 99;
+  var s = document.getElementById('dict-status-' + qIdx);
+  if (s) s.textContent = forcedTrace ? '已完成（描字）' : (dictMistakes[qIdx] <= 3 ? '✓ 寫對了！' : '完成，可以再練習這個字');
 }
 
 /* Click anywhere on the question text → speaks the full sentence */
@@ -1204,11 +1341,15 @@ function submitQuiz() {
   /* 句子重組的「答完了沒」跟一般題目的 getAnswer() 分開算（一個題目裡有好幾個片段），
      unanswered 這裡只看一般題型；句子重組完全沒放任何片段才算未作答 */
   var unanswered = quizData.filter(function(q, i){
-    return q.type !== '句子重組' && getAnswer(i) === undefined;
+    return q.type !== '句子重組' && q.type !== '默寫生字' && getAnswer(i) === undefined;
   }).length;
   var srUnanswered = 0;
   quizData.forEach(function(q, i) {
     if (q.type === '句子重組' && !(srAnswers[i] || []).some(function(v){ return v !== undefined; })) srUnanswered++;
+  });
+  var dictUnanswered = 0;
+  quizData.forEach(function(q, i) {
+    if (q.type === '默寫生字' && dictMistakes[i] === undefined) dictUnanswered++; /* 連一筆都還沒寫過 */
   });
   var matchUnanswered = 0;
   matchData.forEach(function(msec, si) {
@@ -1217,7 +1358,7 @@ function submitQuiz() {
       if (conns[imgPos] === undefined) matchUnanswered++;
     });
   });
-  var totalUnanswered = unanswered + srUnanswered + matchUnanswered;
+  var totalUnanswered = unanswered + srUnanswered + dictUnanswered + matchUnanswered;
   if (totalUnanswered > 0 && !confirm('還有 ' + totalUnanswered + ' 題未作答，確定要送出嗎？')) return;
 
   graded = true;
@@ -1230,15 +1371,16 @@ function submitQuiz() {
     el.style.opacity       = '.4';
   });
 
-  /* Pre-calculate text question totals（句子重組不在這裡算，底下用片段位置分開算，像連連看那樣給部分分數） */
+  /* Pre-calculate text question totals（句子重組、默寫生字都不在這裡算，各自用自己的邏輯
+     分開算，底下兩段） */
   var correct = 0, wrongIndices = [];
   quizData.forEach(function(q, i) {
-    if (q.type === '句子重組') return;
+    if (q.type === '句子重組' || q.type === '默寫生字') return;
     var ua      = getAnswer(i);
     var isRight = ua !== undefined && ua === q.answer;
     if (isRight) correct++; else wrongIndices.push(i);
   });
-  var textTotal = quizData.filter(function(q) { return q.type !== '句子重組'; }).length;
+  var textTotal = quizData.filter(function(q) { return q.type !== '句子重組' && q.type !== '默寫生字'; }).length;
 
   /* Pre-calculate 句子重組 totals — 每個片段的位置都算一個計分單位，對幾個算幾個（跟連連看的配對同邏輯） */
   var srCorrect = 0, srTotal = 0;
@@ -1258,6 +1400,20 @@ function submitQuiz() {
         yourSentence: hasAny ? placedIdx.map(function(oi){ return oi !== undefined ? opts[oi] : '＿'; }).join('') : '未作答'
       });
     }
+  });
+
+  /* Pre-calculate 默寫生字 totals——一題一個字、二元算對錯（跟一般文字題同邏輯，不是像
+     句子重組那樣拆更細的單位），通過門檻照抄練字趣 exam.js：mistakes<=3 算對，描字模式
+     完成（finishDictQuiz 把 mistakes 設成 99）或整個沒寫過都算錯 */
+  var dictCorrect = 0, dictTotal = 0, wrongDictQuestions = [];
+  quizData.forEach(function(q, i) {
+    if (q.type !== '默寫生字') return;
+    dictTotal++;
+    try { if (dictWriters[i] && !dictDone[i]) dictWriters[i].cancelQuiz(); } catch (e) {}
+    var mistakes = dictMistakes[i];
+    var passed = mistakes !== undefined && mistakes <= 3;
+    if (passed) { dictCorrect++; }
+    else { wrongDictQuestions.push({ char: q.question, zhuyin: q.zhuyin || '' }); }
   });
 
   /* Pre-calculate match totals and wrong pairs */
@@ -1287,6 +1443,7 @@ function submitQuiz() {
   var STAGGER = 120;
   quizData.forEach(function(q, i) {
     if (q.type === '句子重組') { setTimeout(function() { _applySrGradeVisual(i); }, i * STAGGER + 160); return; }
+    if (q.type === '默寫生字') { setTimeout(function() { _applyDictGradeVisual(i); }, i * STAGGER + 160); return; }
     var ua      = getAnswer(i);
     var isRight = ua !== undefined && ua === q.answer;
     setTimeout(function() { _applyGradeVisual(q, i, ua, isRight); }, i * STAGGER + 160);
@@ -1297,19 +1454,30 @@ function submitQuiz() {
 
   /* Show result after all animations complete */
   var totalDelay = (quizData.length + (matchData.length ? 1 : 0)) * STAGGER + 480;
-  var snapCorrect = correct, snapMatchCorrect = matchCorrect, snapSrCorrect = srCorrect;
+  var snapCorrect = correct, snapMatchCorrect = matchCorrect, snapSrCorrect = srCorrect, snapDictCorrect = dictCorrect;
   var snapWrong = wrongIndices.slice();
-  var snapTotal  = textTotal + matchTotal + srTotal;
+  var snapTotal  = textTotal + matchTotal + srTotal + dictTotal;
   var snapWrongMatchSections = wrongMatchSections;
   var snapWrongSrQuestions = wrongSrQuestions;
+  var snapWrongDictQuestions = wrongDictQuestions;
   setTimeout(function() {
     if (!graded) return;
-    var allCorrect = snapCorrect + snapMatchCorrect + snapSrCorrect;
+    var allCorrect = snapCorrect + snapMatchCorrect + snapSrCorrect + snapDictCorrect;
     var score = snapTotal ? Math.round(allCorrect / snapTotal * 100) : 100;
     saveScore(score, allCorrect, snapTotal);
     showResult(snapCorrect, textTotal, snapWrong, snapMatchCorrect, matchTotal, snapWrongMatchSections,
-               snapSrCorrect, srTotal, snapWrongSrQuestions);
+               snapSrCorrect, srTotal, snapWrongSrQuestions, snapDictCorrect, dictTotal, snapWrongDictQuestions);
   }, totalDelay);
+}
+
+/* 默寫生字交卷時的揭曉視覺——寫字格邊框變綠/紅，狀態文字更新成最終結果 */
+function _applyDictGradeVisual(i) {
+  var box    = document.getElementById('dict-writer-' + i);
+  var status = document.getElementById('dict-status-' + i);
+  var mistakes = dictMistakes[i];
+  var passed = mistakes !== undefined && mistakes <= 3;
+  if (box) box.classList.add(passed ? 'dict-graded-right' : 'dict-graded-wrong');
+  if (status) status.textContent = passed ? '✓ 寫對了！' : (mistakes === undefined ? '未作答' : '再多練習這個字');
 }
 
 function _applySrGradeVisual(i) {
@@ -1379,9 +1547,9 @@ function _countUp(el, target, duration) {
 
 /* ════════════ Result screen ════════════ */
 function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wrongMatchSections,
-                     srCorrect, srTotal, wrongSrQuestions) {
-  var allCorrect = correct + (matchCorrect || 0) + (srCorrect || 0);
-  var allTotal   = total   + (matchTotal   || 0) + (srTotal   || 0);
+                     srCorrect, srTotal, wrongSrQuestions, dictCorrect, dictTotal, wrongDictQuestions) {
+  var allCorrect = correct + (matchCorrect || 0) + (srCorrect || 0) + (dictCorrect || 0);
+  var allTotal   = total   + (matchTotal   || 0) + (srTotal   || 0) + (dictTotal   || 0);
   var score = allTotal ? Math.round(allCorrect / allTotal * 100) : 100;
   document.getElementById('quiz-screen').style.display = 'none';
   document.getElementById('result-screen').classList.add('show');
@@ -1394,13 +1562,30 @@ function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wron
   var subParts = ['共答對 ' + allCorrect + ' 題，答錯 ' + (allTotal - allCorrect) + ' 題'];
   if (matchTotal) subParts.push('詞圖配對 ' + (matchCorrect || 0) + '/' + matchTotal + ' 組');
   if (srTotal)     subParts.push('句子重組 ' + (srCorrect   || 0) + '/' + srTotal   + ' 塊');
+  if (dictTotal)   subParts.push('默寫生字 ' + (dictCorrect || 0) + '/' + dictTotal + ' 字');
   document.getElementById('result-sub').textContent = subParts.join('　');
   var reviewHtml = '';
   if (wrongIndices.length) reviewHtml += buildReviewHtml(wrongIndices);
   if (wrongSrQuestions && wrongSrQuestions.length) reviewHtml += buildSrReviewHtml(wrongSrQuestions);
+  if (wrongDictQuestions && wrongDictQuestions.length) reviewHtml += buildDictReviewHtml(wrongDictQuestions);
   if (wrongMatchSections && wrongMatchSections.length) reviewHtml += buildMatchReviewHtml(wrongMatchSections);
   document.getElementById('review-container').innerHTML = reviewHtml;
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function buildDictReviewHtml(wrongDictQuestions) {
+  return '<div class="review-section">' +
+    '<div class="review-header">默寫生字</div>' +
+    wrongDictQuestions.map(function(item) {
+      return '<div class="review-item">' +
+        '<div class="review-answers">' +
+          '<div><span class="review-correct-ans q-speakable" onclick="speakText(\'' + escJs(item.char) +
+            '\')" title="點擊聆聽">' + escHtml(item.char) +
+            (item.zhuyin ? '　' + escHtml(item.zhuyin) : '') + '　再多練習這個字</span></div>' +
+        '</div>' +
+      '</div>';
+    }).join('') +
+  '</div>';
 }
 
 function buildSrReviewHtml(wrongSrQuestions) {

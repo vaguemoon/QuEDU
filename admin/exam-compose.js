@@ -1056,13 +1056,10 @@ function _ecRenderPreview() {
 function _ecPublishOnline() {
   var totalQ      = 0;
   var questionIds = [];
-  var dictSkipped = 0;
-  /* 默寫生字目前只有列印版面，chinese-quiz 網頁測驗還沒有寫字作答的介面——不排除的話會
-     掉進 renderQuestion() 的預設 fallback（當成「詞語解釋」讓學生打字），答案格式對不起來，
-     學生會看到一題完全答不出來的怪題目。線上測驗先跳過這個題型，只收其他能線上作答的題。 */
+  /* 默寫生字以前因為 chinese-quiz 沒有寫字作答介面而被排除在線上測驗之外；現在 quiz.html
+     已經用 HanziWriter 做了逐字判斷，不用再特別排除，照一般題型處理就好。 */
   _ecSections.forEach(function(sec) {
     (sec.questions || []).forEach(function(q) {
-      if (q.type === '默寫生字') { dictSkipped++; return; }
       questionIds.push(q.id); totalQ++;
     });
   });
@@ -1084,9 +1081,6 @@ function _ecPublishOnline() {
   var confirmMsg = isUpdate
     ? '確定要儲存對「' + _ecName + '」的修改？'
     : '確定要將「' + _ecName + '」發布為線上測驗？';
-  if (dictSkipped) {
-    confirmMsg += '\n\n（默寫生字目前只能列印，' + dictSkipped + ' 題默寫生字不會出現在線上測驗裡，學生只會在網頁上看到其他題型）';
-  }
   if (!confirm(confirmMsg)) return;
 
   var btn = document.getElementById('ec-btn-publish');
