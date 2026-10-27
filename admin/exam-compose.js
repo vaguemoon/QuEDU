@@ -117,6 +117,7 @@ function _ecEditSession(sessionId) {
       });
       _ecBuildSections();
       _ecApplySectionPoints(d.sectionPoints);
+      _ecApplyBreakData(d.sectionPageBreaks, d.breakBeforeQuestionIds);
       _ecAllQ = [];  /* 清空，讓步驟二重新載入完整題庫供追加選題 */
       _ecOpenWizard(1);
     }).catch(function(e) { showToast('載入題目失敗：' + e.message); });
@@ -136,6 +137,8 @@ function _ecPrintSession(sessionId) {
     Promise.all(questionIds.map(function(qId) {
       return db.collection(coll).doc(qId).get();
     })).then(function(qdocs) {
+      var breakIdSet = {};
+      (d.breakBeforeQuestionIds || []).forEach(function(id) { breakIdSet[id] = true; });
       var grouped = {};
       qdocs.forEach(function(qd) {
         if (!qd.exists) return;
@@ -145,23 +148,27 @@ function _ecPrintSession(sessionId) {
         if (!grouped[type]) grouped[type] = [];
         grouped[type].push({ id: qd.id, label: label, type: type,
                               answer: qdata.answer || qdata.word || '',
-                              options: qdata.options || null, zhuyin: qdata.zhuyin || '', hintWord: qdata.hintWord || '' });
+                              options: qdata.options || null, zhuyin: qdata.zhuyin || '', hintWord: qdata.hintWord || '',
+                              breakBefore: !!breakIdSet[qd.id] });
       });
 
       var sectionPoints = d.sectionPoints || {};
+      var sectionPageBreaks = d.sectionPageBreaks || {};
       var sections = [];
       var idx      = 0;
       _EC_TYPE_ORDER.forEach(function(type) {
         if (grouped[type] && grouped[type].length) {
           sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
-                          key: type, questions: grouped[type], points: sectionPoints[type] });
+                          key: type, questions: grouped[type], points: sectionPoints[type],
+                          pageBreakBefore: !!sectionPageBreaks[type] });
           idx++;
         }
       });
       Object.keys(grouped).forEach(function(type) {
         if (_EC_TYPE_ORDER.indexOf(type) === -1 && grouped[type].length) {
           sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
-                          key: type, questions: grouped[type], points: sectionPoints[type] });
+                          key: type, questions: grouped[type], points: sectionPoints[type],
+                          pageBreakBefore: !!sectionPageBreaks[type] });
           idx++;
         }
       });
@@ -728,6 +735,31 @@ function _ecCollectSectionPoints() {
   return map;
 }
 
+/* 手動分頁點（Step3「📄 分頁」切換鈕）的存檔/還原，跟配分同樣的理由、同樣的做法：
+   大題本身用題型當 key 存一張 {題型:true} 的表；單一題目用題目自己的 Firestore docId
+   存一個陣列——不能用「第幾個大題的第幾題」這種位置當 key，因為題目在大題裡的順序本來就
+   沒有被持久化（_ecMoveQ 調整過的順序同樣不會存檔，是既有的限制，不是這次新增的），
+   只有 docId 是不管重建幾次都不會變的穩定識別。連連看大題一樣不用這兩個函式，
+   pageBreakBefore 直接是它自己物件上的欄位，整包存檔/還原。 */
+function _ecCollectBreakData() {
+  var sectionPageBreaks = {};
+  _ecSections.forEach(function(sec) { if (sec.pageBreakBefore) sectionPageBreaks[sec.key] = true; });
+  var breakBeforeQuestionIds = [];
+  _ecSections.forEach(function(sec) {
+    (sec.questions || []).forEach(function(q) { if (q.breakBefore) breakBeforeQuestionIds.push(q.id); });
+  });
+  return { sectionPageBreaks: sectionPageBreaks, breakBeforeQuestionIds: breakBeforeQuestionIds };
+}
+
+function _ecApplyBreakData(sectionPageBreaks, breakBeforeQuestionIds) {
+  var idSet = {};
+  (breakBeforeQuestionIds || []).forEach(function(id) { idSet[id] = true; });
+  _ecSections.forEach(function(sec) {
+    if (sectionPageBreaks && sectionPageBreaks[sec.key]) sec.pageBreakBefore = true;
+    (sec.questions || []).forEach(function(q) { if (idSet[q.id]) q.breakBefore = true; });
+  });
+}
+
 /* Step 3/4 admin 畫面自己看的總分提示（不印到考卷上）——純粹讓老師核對各大題配分加起來
    跟題數乘出來的分數是不是符合預期，不是100也不會擋，只是變色提醒 */
 /* 句子重組一「題」底下其實是好幾塊打散的片段，線上作答本來就是每個片段位置各自計分
@@ -813,17 +845,21 @@ function _ecRenderLayout() {
             'placeholder="—" oninput="_ecSetSectionPoints(' + si + ',this.value)" ' +
             'style="width:44px;padding:2px 4px;border:1.5px solid var(--border);border-radius:5px;font-size:.78rem;font-family:inherit;text-align:center">分' +
         '</span>' +
+        (si === 0 ? '' : _ecBreakToggleBtn('_ecToggleSectionBreak(' + si + ')', !!sec.pageBreakBefore, '此大題從新的一頁開始列印')) +
         '<button onclick="event.stopPropagation();_ecEditSectionTitle(' + si + ')" style="' + bs + ';color:var(--blue)">改標題</button>' +
       '</div>';
 
     var body = '';
     if (!collapsed) {
       var rows = (sec.questions || []).map(function(q, qi) {
+        var isVeryFirst = si === 0 && qi === 0;
         return '<div style="display:flex;align-items:center;gap:8px;padding:7px 6px;' +
-               (qi < qCount - 1 ? 'border-bottom:1px solid var(--border)' : '') + '">' +
+               (qi < qCount - 1 ? 'border-bottom:1px solid var(--border)' : '') +
+               (q.breakBefore && !isVeryFirst ? ';border-top:2px dashed var(--blue)' : '') + '">' +
           '<span style="color:var(--muted);font-size:.8rem;font-weight:700;min-width:24px">' + (qi + 1) + '</span>' +
           '<span style="font-size:.85rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
             _ecEsc(q.label || q.id) + '</span>' +
+          (isVeryFirst ? '' : _ecBreakToggleBtn('_ecToggleQBreak(' + si + ',' + qi + ')', !!q.breakBefore, '從這一題開始換到新的一頁')) +
           '<button onclick="_ecMoveQ(' + si + ',' + qi + ',-1)" style="' + bs + ';color:var(--muted)">▲</button>' +
           '<button onclick="_ecMoveQ(' + si + ',' + qi + ',1)"  style="' + bs + ';color:var(--muted)">▼</button>' +
           '<button onclick="_ecRemoveQ(' + si + ',' + qi + ')"  style="' + bs + ';color:var(--red);border-color:#fecaca">✕</button>' +
@@ -855,6 +891,7 @@ function _ecRenderLayout() {
             'placeholder="—" oninput="_ecSetMatchPoints(' + i + ',this.value)" ' +
             'style="width:44px;padding:2px 4px;border:1.5px solid var(--border);border-radius:5px;font-size:.78rem;font-family:inherit;text-align:center">分' +
         '</span>' +
+        (_ecSections.length === 0 && i === 0 ? '' : _ecBreakToggleBtn('_ecToggleMatchBreak(' + i + ')', !!msec.pageBreakBefore, '此大題從新的一頁開始列印')) +
         '<button onclick="_ecEditMatchSectionTitle(' + i + ')" style="' + bs + ';color:var(--orange,#f97316)">改標題</button>' +
         '<button onclick="_ecRemoveMatchSection(' + i + ')" style="' + bs + ';color:var(--red);border-color:#fecaca">✕</button>' +
       '</div>' +
@@ -976,6 +1013,19 @@ function _ecSetMatchPoints(i, val) {
   _ecRenderPointsSummary('ec-layout-points-summary');
 }
 
+/* 手動分頁點的切換——都是整個重畫（不像配分輸入框打字那樣要顧慮失焦，這裡本來就是單純
+   點一下按鈕的開關，重畫沒有副作用） */
+function _ecToggleSectionBreak(si) {
+  if (_ecSections[si]) { _ecSections[si].pageBreakBefore = !_ecSections[si].pageBreakBefore; _ecRenderLayout(); }
+}
+function _ecToggleMatchBreak(i) {
+  if (_ecMatchSections[i]) { _ecMatchSections[i].pageBreakBefore = !_ecMatchSections[i].pageBreakBefore; _ecRenderLayout(); }
+}
+function _ecToggleQBreak(si, qi) {
+  var q = _ecSections[si] && _ecSections[si].questions[qi];
+  if (q) { q.breakBefore = !q.breakBefore; _ecRenderLayout(); }
+}
+
 function _ecToggleSection(si) {
   if (_ecSections[si]) {
     _ecSections[si].collapsed = !_ecSections[si].collapsed;
@@ -1072,10 +1122,11 @@ function _ecPublishOnline() {
       title: msec.title, source: msec.source,
       gradeLesson: msec.gradeLesson || '', categoryId: msec.categoryId || '',
       pairCount: msec.pairCount, wordIds: msec.wordIds || [], words: msec.words || [],
-      points: msec.points || ''
+      points: msec.points || '', pageBreakBefore: !!msec.pageBreakBefore
     };
   });
   var sectionPoints = _ecCollectSectionPoints();
+  var breakData = _ecCollectBreakData();
 
   var isUpdate = !!_ecSessionId;
   var confirmMsg = isUpdate
@@ -1098,6 +1149,8 @@ function _ecPublishOnline() {
         matchSections: matchSectionsData, updatedAt: new Date().toISOString() },
       lessonFields
     );
+    updateData.sectionPageBreaks = breakData.sectionPageBreaks;
+    updateData.breakBeforeQuestionIds = breakData.breakBeforeQuestionIds;
     if (_ecSubject === 'math') { updateData.totalQuestions = totalQ; }
     else { updateData.counts = { total: totalQ, match: matchTotal }; updateData.sectionPoints = sectionPoints; }
     p = db.collection(coll).doc(_ecSessionId).update(updateData)
@@ -1107,10 +1160,12 @@ function _ecPublishOnline() {
     var newData = _ecSubject === 'math'
       ? Object.assign({ teacherUid: currentTeacher.uid, quizType: 'exam', name: _ecName, code: code,
           grade: _ecGrade, questionIds: questionIds, totalQuestions: totalQ,
+          sectionPageBreaks: breakData.sectionPageBreaks, breakBeforeQuestionIds: breakData.breakBeforeQuestionIds,
           active: true, createdAt: new Date().toISOString() }, lessonFields)
       : Object.assign({ type: 'exam', name: _ecName, code: code, teacherUid: currentTeacher.uid,
           grade: _ecGrade, questionIds: questionIds, matchSections: matchSectionsData,
           counts: { total: totalQ, match: matchTotal }, sectionPoints: sectionPoints,
+          sectionPageBreaks: breakData.sectionPageBreaks, breakBeforeQuestionIds: breakData.breakBeforeQuestionIds,
           active: true, createdAt: new Date().toISOString() }, lessonFields);
     p = db.collection(coll).add(newData)
           .then(function(ref) { return { id: ref.id, code: code, isUpdate: false }; });
@@ -1186,7 +1241,11 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     var isMC   = key === '選擇題';
     var qs     = sec.questions || [];
 
-    body += '<div class="sec-block">';
+    /* 手動分頁點：老師在 Step3 排版自己標過「這個大題從新的一頁開始」才會加，sn===0（這是
+       印出來的第一個大題）的話不管有沒有標都不加——強制在最前面分頁只會白白空出一張全白的
+       第一頁，沒有意義，索性忽略那個情境而不是依賴 UI 擋住（防呆兩邊都做，UI 那邊也同樣不
+       給第一個大題顯示這個切換鈕） */
+    body += '<div class="sec-block"' + (sec.pageBreakBefore && sn > 0 ? ' style="break-before:page"' : '') + '>';
     var _ecUC = _ecSectionUnitCount(sec);
     body += '<div class="sec-header">' + _ecEsc(sec.title || '') + _ecPointsSuffix(sec.points, _ecUC.count, _ecUC.unit) + '</div>';
 
@@ -1240,7 +1299,8 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     /* 題目列表 */
     body += '<ol class="q-list">';
     qs.forEach(function(q, j) {
-      body += '<li class="q-item"><span class="q-num">' + (j + 1) + '.</span><span class="q-body">';
+      var qBreak = q.breakBefore && !(sn === 0 && j === 0); /* 同樣的道理，印出來的第一題不加 */
+      body += '<li class="q-item"' + (qBreak ? ' style="break-before:page"' : '') + '><span class="q-num">' + (j + 1) + '.</span><span class="q-body">';
 
       if (key === '詞語解釋') {
         var ans    = q.answer || '';
@@ -1304,7 +1364,7 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
       var rt = rightWords[ri]; rightWords[ri] = rightWords[rj]; rightWords[rj] = rt;
     }
 
-    body += '<div class="sec-block">';
+    body += '<div class="sec-block"' + (ms.pageBreakBefore && sn > 0 ? ' style="break-before:page"' : '') + '>';
     body += '<div class="sec-header">' + _ecEsc(secTitle) + _ecPointsSuffix(ms.points, ms.pairCount, '組') + '</div>';
     body += '<p class="match-hint">請以直線連接左方圖片與右方對應詞語</p>';
     body += '<div class="match-wrap">';
@@ -1520,6 +1580,19 @@ function _ecExtractFillAnswer(label) {
    ════════════════════════════════ */
 function _ecEsc(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _ecEscA(s) { return String(s).replace(/"/g,'&quot;'); }
+
+/* 手動分頁點的小切換鈕——用在大題標題列跟單一題目列。瀏覽器的列印分頁是自動算的，
+   `.q-item{break-inside:avoid}` 只能保證單一題目不被從中間切斷，沒辦法像 Word 一樣讓老師
+   自己挑要在哪裡換頁；這顆按鈕讓老師照瀏覽器列印預覽實際看到的分頁位置，自己決定要不要
+   在某一題/某個大題前面強制插入換頁，不用的話完全不影響原本「瀏覽器自動擠版面」的行為。
+   開著的時候按鈕變實心藍色，關掉是空心灰色，點一下用 event.stopPropagation() 擋掉外層
+   onclick（大題標題列本身有「點了展開/摺疊」的 onclick，按鈕點下去不該順便觸發那個）。 */
+function _ecBreakToggleBtn(onclickCall, active, title) {
+  return '<button type="button" onclick="event.stopPropagation();' + onclickCall + '" title="' + _ecEscA(title) + '" ' +
+    'style="padding:3px 8px;border:1.5px solid ' + (active ? 'var(--blue)' : 'var(--border)') + ';border-radius:6px;' +
+    'background:' + (active ? 'var(--blue)' : 'white') + ';color:' + (active ? 'white' : 'var(--muted)') + ';' +
+    'cursor:pointer;font-size:.72rem;font-weight:800;font-family:inherit;flex-shrink:0;margin-right:4px">📄 分頁</button>';
+}
 
 /* 配分：大題標題後面的「（每題4分，共20分）」／「（每組2分，共20分）」這段字——沒填分數
    或這個大題剛好是空的（0 題/0 組）就不印，不要印出「（每題0分，共0分）」這種沒意義的字 */
