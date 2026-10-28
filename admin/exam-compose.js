@@ -644,8 +644,20 @@ function _ecBuildSections() {
 
   if (_ecSections.length) {
     /* 增量更新：保留現有排序，移除取消勾選的題目，加入新選的 */
+    /* 已在大題裡的題目也要用 _ecAllQ 的最新內容覆蓋一次——Step 2 用 ✎ 改過題目（例如默寫生字
+       換了語詞）後，_ecAllQ 是新的，但大題裡留的是當初建立時複製的舊物件，不刷新的話試卷/列印
+       會印出改之前的內容。只覆蓋題目內容欄位，breakBefore 等排版設定保留 */
     _ecSections.forEach(function(sec) {
       sec.questions = sec.questions.filter(function(q) { return !!_ecSelected[q.id]; });
+      sec.questions.forEach(function(qobj) {
+        var q = qLookup[qobj.id];
+        if (!q) return;
+        qobj.label    = q.question || q.word || '';
+        qobj.answer   = q.answer || q.word || '';
+        qobj.options  = q.options || null;
+        qobj.zhuyin   = q.zhuyin || '';
+        qobj.hintWord = q.hintWord || '';
+      });
     });
     _ecSections = _ecSections.filter(function(sec) { return sec.questions.length > 0; });
 
