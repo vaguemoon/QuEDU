@@ -116,6 +116,7 @@ function _ecEditSession(sessionId) {
         if (qd.exists) _ecAllQ.push(Object.assign({ id: qd.id }, qd.data()));
       });
       _ecBuildSections();
+      _ecApplySectionOrder(d.sectionOrder);
       _ecApplySectionPoints(d.sectionPoints);
       _ecApplyBreakData(d.sectionPageBreaks, d.breakBeforeQuestionIds);
       _ecAllQ = [];  /* 清空，讓步驟二重新載入完整題庫供追加選題 */
@@ -156,7 +157,10 @@ function _ecPrintSession(sessionId) {
       var sectionPageBreaks = d.sectionPageBreaks || {};
       var sections = [];
       var idx      = 0;
-      _EC_TYPE_ORDER.forEach(function(type) {
+      /* 大題順序：先照存檔的 sectionOrder（Step 3 拖曳過的順序），再補預設題型順序，最後其他題型 */
+      var typeSeq = (d.sectionOrder || []).slice();
+      _EC_TYPE_ORDER.forEach(function(type) { if (typeSeq.indexOf(type) === -1) typeSeq.push(type); });
+      typeSeq.forEach(function(type) {
         if (grouped[type] && grouped[type].length) {
           sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
                           key: type, questions: grouped[type], points: sectionPoints[type],
@@ -165,7 +169,7 @@ function _ecPrintSession(sessionId) {
         }
       });
       Object.keys(grouped).forEach(function(type) {
-        if (_EC_TYPE_ORDER.indexOf(type) === -1 && grouped[type].length) {
+        if (typeSeq.indexOf(type) === -1 && grouped[type].length) {
           sections.push({ title: (_EC_CN[idx] || String(idx + 1)) + '、' + type,
                           key: type, questions: grouped[type], points: sectionPoints[type],
                           pageBreakBefore: !!sectionPageBreaks[type] });
@@ -713,6 +717,19 @@ function _ecRenumberSections() {
   });
 }
 
+/* 大題順序：_ecBuildSections 全新建立時一律照 _EC_TYPE_ORDER 排，Step 3 拖曳調整過的順序
+   要另外存成 sectionOrder（題型 key 陣列），載入已發布的測驗時在重建完之後照它重排。
+   存檔裡沒列到的大題（舊測驗、或之後追加的新題型）維持原本相對順序接在後面 */
+function _ecApplySectionOrder(order) {
+  if (!order || !order.length) return;
+  _ecSections.sort(function(a, b) {
+    var ia = order.indexOf(a.key); if (ia < 0) ia = 999;
+    var ib = order.indexOf(b.key); if (ib < 0) ib = 999;
+    return ia - ib;
+  });
+  _ecRenumberSections();
+}
+
 /* 配分：文字大題每次進入都是從題目清單現場重建（_ecBuildSections），不是從資料庫直接還原
    物件，所以配分存檔用「題型」當 key（{詞語填空:5, 選擇題:4, ...}），載入已發布的測驗時
    重建完大題結構後，這裡把存檔的配分一一套回對應題型的 sec.points 上。連連看大題不用這個
@@ -1127,6 +1144,7 @@ function _ecPublishOnline() {
   });
   var sectionPoints = _ecCollectSectionPoints();
   var breakData = _ecCollectBreakData();
+  var sectionOrder = _ecSections.map(function(sec) { return sec.key; });
 
   var isUpdate = !!_ecSessionId;
   var confirmMsg = isUpdate
@@ -1149,6 +1167,7 @@ function _ecPublishOnline() {
         matchSections: matchSectionsData, updatedAt: new Date().toISOString() },
       lessonFields
     );
+    updateData.sectionOrder = sectionOrder;
     updateData.sectionPageBreaks = breakData.sectionPageBreaks;
     updateData.breakBeforeQuestionIds = breakData.breakBeforeQuestionIds;
     if (_ecSubject === 'math') { updateData.totalQuestions = totalQ; }
@@ -1159,12 +1178,12 @@ function _ecPublishOnline() {
     var code    = _ecGenCode();
     var newData = _ecSubject === 'math'
       ? Object.assign({ teacherUid: currentTeacher.uid, quizType: 'exam', name: _ecName, code: code,
-          grade: _ecGrade, questionIds: questionIds, totalQuestions: totalQ,
+          grade: _ecGrade, questionIds: questionIds, totalQuestions: totalQ, sectionOrder: sectionOrder,
           sectionPageBreaks: breakData.sectionPageBreaks, breakBeforeQuestionIds: breakData.breakBeforeQuestionIds,
           active: true, createdAt: new Date().toISOString() }, lessonFields)
       : Object.assign({ type: 'exam', name: _ecName, code: code, teacherUid: currentTeacher.uid,
           grade: _ecGrade, questionIds: questionIds, matchSections: matchSectionsData,
-          counts: { total: totalQ, match: matchTotal }, sectionPoints: sectionPoints,
+          counts: { total: totalQ, match: matchTotal }, sectionPoints: sectionPoints, sectionOrder: sectionOrder,
           sectionPageBreaks: breakData.sectionPageBreaks, breakBeforeQuestionIds: breakData.breakBeforeQuestionIds,
           active: true, createdAt: new Date().toISOString() }, lessonFields);
     p = db.collection(coll).add(newData)

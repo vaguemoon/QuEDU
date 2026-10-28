@@ -477,11 +477,20 @@ function startQuiz(qs, settings, matchLoaded) {
 }
 
 /* ════════════ Rendering — sections ════════════ */
+/* 大題順序：老師在出卷精靈 Step 3 拖曳調整過的順序會存成 session 的 sectionOrder，
+   照它排；沒有存（舊測驗、隨機抽題）或沒列到的題型，接在後面照 TYPE_ORDER 預設順序 */
+function _sectionTypeOrder() {
+  var saved = (currentSettings && currentSettings.sectionOrder) || [];
+  var order = saved.filter(function(t) { return TYPE_ORDER.indexOf(t) >= 0; });
+  TYPE_ORDER.forEach(function(t) { if (order.indexOf(t) < 0) order.push(t); });
+  return order;
+}
+
 function renderSections() {
   var html = '';
   var sn   = 0;
 
-  TYPE_ORDER.forEach(function(type) {
+  _sectionTypeOrder().forEach(function(type) {
     var qs = quizData.filter(function(q){ return q.type === type; });
     if (!qs.length) return;
     var pk = POOL_KEY[type];
@@ -512,7 +521,7 @@ function renderSections() {
 
 /* ════════════ Match section rendering ════════════ */
 function _textSectionCount() {
-  return TYPE_ORDER.filter(function(t) {
+  return _sectionTypeOrder().filter(function(t) {
     return quizData.some(function(q) { return q.type === t; });
   }).length;
 }
