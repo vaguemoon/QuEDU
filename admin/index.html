@@ -501,6 +501,7 @@
         <div class="app-tabs-mini" style="margin-bottom:16px">
           <button class="app-tab-mini active" data-type="quiz" onclick="switchQzSessionType('quiz',this)">📝 語文</button>
           <button class="app-tab-mini"        data-type="math" onclick="switchQzSessionType('math',this)">🔢 數學</button>
+          <button class="app-tab-mini"        data-type="english" onclick="switchQzSessionType('english',this)">🌐 英文</button>
         </div>
 
         <!-- 語文測驗 session 列表 -->
@@ -548,6 +549,20 @@
             </div>
           </div>
         </div><!-- /qz-sessions-math -->
+
+        <!-- 英文測驗 session 列表 -->
+        <div id="qz-sessions-english" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+            <div class="card-title" style="margin:0">🌐 英文測驗</div>
+            <button class="btn-save-lesson" style="margin-left:auto;padding:8px 16px;font-size:.82rem" onclick="showEqCreateModal()">＋ 新增測驗</button>
+            <button class="btn btn-secondary" style="padding:6px 14px;font-size:.78rem" onclick="loadEnglishQuizSessions()">重新整理</button>
+          </div>
+          <div class="card">
+            <div id="eq-list-wrap">
+              <div class="loading-wrap"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div><!-- /qz-sessions-english -->
 
       </div><!-- /qz-sessions-view -->
 
@@ -2022,6 +2037,7 @@
 <script src="lesson-text.js"></script>
 <script src="quiz-sessions.js"></script>
 <script src="math-quiz.js"></script>
+<script src="english-quiz.js"></script>
 <script src="word-image.js"></script>
 <script src="radical-groups.js"></script>
 <script src="char-decomp.js"></script>
@@ -2208,6 +2224,39 @@ window.addEventListener('message', function(e) {
 </div>
 
 <!-- ══ 數學測驗：結果 Modal ══ -->
+<!-- 新增英文測驗 Modal -->
+<div id="eq-create-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:white;border-radius:20px;padding:28px 24px;max-width:1000px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2);margin:auto">
+    <div style="font-size:1.15rem;font-weight:900;margin-bottom:20px">🌐 新增英文測驗</div>
+
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="flex:2;min-width:240px">
+        <label style="font-size:.85rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">測驗名稱</label>
+        <input id="eq-name" type="text" placeholder="例如：五年級 Unit 6 單字小考" maxlength="30"
+          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:1rem;font-family:inherit;outline:none">
+      </div>
+      <div style="flex:1;min-width:160px">
+        <label style="font-size:.85rem;font-weight:800;color:var(--muted);display:block;margin-bottom:5px">年級</label>
+        <select id="eq-grade" onchange="_eqLoadGrade()"
+          style="width:100%;border:2px solid var(--border);border-radius:8px;padding:9px 12px;font-size:1rem;font-family:inherit;outline:none;background:white"></select>
+      </div>
+    </div>
+
+    <div style="font-size:.85rem;font-weight:800;color:var(--muted);margin-bottom:6px">範圍（勾選單元）</div>
+    <div id="eq-units" style="margin-bottom:16px"></div>
+
+    <div style="font-size:.85rem;font-weight:800;color:var(--muted);margin-bottom:6px">大題與題目（預設全選，取消勾選就不考）</div>
+    <div id="eq-sections"></div>
+
+    <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap">
+      <span style="font-size:.95rem;font-weight:800">共 <span id="eq-total-display" style="color:var(--blue-dk)">0</span> 題</span>
+      <span id="eq-create-error" style="color:var(--red);font-size:.88rem;font-weight:700"></span>
+      <button class="btn btn-secondary" style="margin-left:auto;padding:9px 20px" onclick="hideEqCreateModal()">取消</button>
+      <button id="btn-create-eq" class="btn-save-lesson" style="padding:9px 24px" onclick="createEnglishQuizSession()">建立測驗</button>
+    </div>
+  </div>
+</div>
+
 <div id="mq-results-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
   <div style="background:white;border-radius:20px;max-width:620px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.2);margin:auto">
     <div style="padding:24px 24px 0;display:flex;align-items:center;gap:10px">

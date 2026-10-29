@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>英文測驗</title>
+<link rel="stylesheet" href="english-quiz.css?v=20261029">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- Quiz screen -->
+<div class="quiz-screen" id="quiz-screen">
+  <div class="quiz-topbar">
+    <button class="btn-quiz-back" onclick="confirmBack()">← 返回</button>
+    <div class="quiz-topbar-title" id="topbar-title">英文測驗</div>
+    <div class="quiz-topbar-counter" id="topbar-counter"></div>
+  </div>
+
+  <div class="quiz-content" id="quiz-content">
+    <div class="quiz-loading">載入中…</div>
+  </div>
+
+  <div class="quiz-nav-area">
+    <div class="progress-dots" id="progress-dots"></div>
+    <div class="quiz-nav">
+      <button class="btn-nav btn-nav-prev" id="btn-prev" onclick="goPrev()" disabled>← 上一題</button>
+      <button class="btn-nav btn-nav-next" id="btn-next" onclick="goNext()">下一題 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result screen -->
+<div class="result-screen" id="result-screen">
+  <div class="result-top">
+    <div class="result-score-circle">
+      <div class="result-score-num" id="result-score-num">—</div>
+      <div class="result-score-unit">分</div>
+    </div>
+    <div class="result-title" id="result-title">測驗完成！</div>
+    <div class="result-sub"   id="result-sub"></div>
+  </div>
+
+  <div id="result-list"></div>
+
+  <div class="result-btns">
+    <button class="btn-return-hub" onclick="returnToHub()">← 返回主頁</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* ════════════ Firebase ════════════ */
+var FB_CONFIG = {
+  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
+  authDomain:        'tainping-hanzi-app.firebaseapp.com',
+  projectId:         'tainping-hanzi-app',
+  storageBucket:     'tainping-hanzi-app.firebasestorage.app',
+  messagingSenderId: '158917910126',
+  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
+};
+var db = null;
+try {
+  if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+  db = firebase.firestore();
+} catch(e) { db = null; }
+
+var SEC_LABEL = { pic: '看圖選字', listen: '聽音選字' };
+var SEC_CN    = ['一', '二', '三', '四'];
+
+/* ════════════ State ════════════
+   questions: [{ sec, secNum, id, word, kind, imageUrl, options:[word...] }]
+   answers:   questions 同索引，學生選的字（沒選是 null）
+   作答中不顯示對錯、可以來回改，交卷才一次批改（跟英文趣的練習模式不同——這是測驗） */
+var settings   = null;
+var questions  = [];
+var answers    = [];
+var currentIdx = 0;
+var submitted  = false;
+var quizStartTime = null;
+
+window.addEventListener('load', function() {
+  try { settings = JSON.parse(sessionStorage.getItem('english_quiz_settings') || 'null'); } catch(e) {}
+  if (!settings || !(settings.sections || []).length) { window.location.href = 'index.html'; return; }
+  document.getElementById('topbar-title').textContent = settings.sessionName || '英文測驗';
+  buildQuestions().then(function() {
+    if (!questions.length) {
+      document.getElementById('quiz-content').innerHTML = '<div class="quiz-loading">這份測驗沒有題目，請聯繫老師</div>';
+      return;
+    }
+    answers = questions.map(function() { return null; });
+    quizStartTime = Date.now();
+    renderQuestion(0);
+  });
+});
+
+/* ════════════ 出題 ════════════
+   每個大題內題目順序打亂；選項是正確答案＋3 個干擾項，干擾項從同一種 kind（生字／常用語）
+   的字庫裡抽——生字的選項都是單字、常用語的選項都是整句，不會混在一起一眼看出答案 */
+function buildQuestions() {
+  var secs = settings.sections || [];
+  var picIds = [];
+  secs.forEach(function(sec) {
+    if (sec.type === 'pic') (sec.items || []).forEach(function(it) { picIds.push(it.id); });
+  });
+
+  /* 看圖選字才需要圖片，圖片在 englishImages 每張一份，照 id 逐一讀 */
+  var imgP = (db && picIds.length)
+    ? Promise.all(picIds.map(function(id) {
+        return db.collection('englishImages').doc(id).get().catch(function() { return null; });
+      }))
+    : Promise.resolve([]);
+
+  return imgP.then(function(docs) {
+    var imgMap = {};
+    docs.forEach(function(d) { if (d && d.exists) imgMap[d.id] = d.data().imageUrl || ''; });
+
+    var pool = settings.pool || {};
+    secs.forEach(function(sec, si) {
+      shuffle((sec.items || []).slice()).forEach(function(it) {
+        if (sec.type === 'pic' && !imgMap[it.id]) return; /* 圖片已被刪除：這題沒辦法考，略過 */
+        var kindPool = (pool[it.kind] || []).filter(function(w) { return w !== it.word; });
+        kindPool = uniq(kindPool);
+        questions.push({
+          sec: sec.type, secNum: si, id: it.id, word: it.word, kind: it.kind,
+          imageUrl: imgMap[it.id] || '',
+          options: shuffle([it.word].concat(shuffle(kindPool).slice(0, 3)))
+        });
+      });
+    });
+  });
+}
+
+/* ════════════ Render ════════════ */
+function renderQuestion(idx) {
+  currentIdx = idx;
+  var q = questions[idx];
+  var secText = (SEC_CN[q.secNum] || (q.secNum + 1)) + '、' + (SEC_LABEL[q.sec] || '');
+  var isSentence = q.kind === 'expressions';
+
+  var prompt;
+  if (q.sec === 'pic') {
+    prompt = '<div class="eq-img-wrap"><img src="' + escAttr(q.imageUrl) + '" alt=""></div>' +
+      '<div class="eq-question">' + (isSentence ? '這張圖片對應的英文句子是？' : '這張圖片的英文單字是？') + '</div>';
+  } else {
+    prompt = '<button class="eq-speak-big" type="button" onclick="speak(questions[currentIdx].word)" title="再聽一次">🔊</button>' +
+      '<div class="eq-question">' + (isSentence ? '聽到的英文句子是哪一個？' : '聽到的英文單字是哪一個？') + '</div>';
+  }
+
+  var optsHtml = q.options.map(function(opt, i) {
+    return '<button type="button" class="eq-opt' + (answers[idx] === opt ? ' selected' : '') + '" ' +
+      'onclick="choose(' + i + ')">' + escHtml(opt) + '</button>';
+  }).join('');
+
+  document.getElementById('quiz-content').innerHTML =
+    '<div class="eq-sec-label">' + escHtml(secText) + '</div>' +
+    prompt +
+    '<div class="eq-opts' + (isSentence ? ' eq-opts-sentence' : '') + '">' + optsHtml + '</div>';
+
+  document.getElementById('topbar-counter').textContent = (idx + 1) + ' / ' + questions.length;
+  renderDots();
+  updateNav();
+  if (q.sec === 'listen') setTimeout(function() { if (currentIdx === idx && !submitted) speak(q.word); }, 350);
+}
+
+function choose(i) {
+  if (submitted) return;
+  answers[currentIdx] = questions[currentIdx].options[i];
+  document.querySelectorAll('#quiz-content .eq-opt').forEach(function(btn, bi) {
+    btn.classList.toggle('selected', bi === i);
+  });
+  renderDots();
+}
+
+function renderDots() {
+  document.getElementById('progress-dots').innerHTML = questions.map(function(_, i) {
+    var cls = 'dot' + (answers[i] !== null ? ' answered' : '') + (i === currentIdx ? ' current' : '');
+    return '<span class="' + cls + '" onclick="renderQuestion(' + i + ')"></span>';
+  }).join('');
+}
+
+function updateNav() {
+  document.getElementById('btn-prev').disabled = currentIdx === 0;
+  var next = document.getElementById('btn-next');
+  var last = currentIdx === questions.length - 1;
+  next.textContent = last ? '交　卷' : '下一題 →';
+  next.className   = 'btn-nav ' + (last ? 'btn-nav-submit' : 'btn-nav-next');
+}
+
+function goPrev() { if (currentIdx > 0) renderQuestion(currentIdx - 1); }
+function goNext() {
+  if (currentIdx < questions.length - 1) { renderQuestion(currentIdx + 1); return; }
+  submitQuiz();
+}
+
+/* ════════════ 交卷 ════════════ */
+function submitQuiz() {
+  if (submitted) return;
+  var unanswered = answers.filter(function(a) { return a === null; }).length;
+  if (unanswered && !confirm('還有 ' + unanswered + ' 題沒有作答，確定要交卷嗎？')) return;
+  if (!unanswered && !confirm('確定要交卷嗎？交卷後就不能再修改答案。')) return;
+  submitted = true;
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  var items = questions.map(function(q, i) {
+    return { q: q, answer: answers[i], correct: answers[i] === q.word };
+  });
+  var correct = items.filter(function(it) { return it.correct; }).length;
+  var score   = Math.round(correct / items.length * 100);
+  var data = { score: score, correct: correct, total: items.length, items: items };
+  showResultScreen(data);
+  saveResult(data);
+}
+
+function showResultScreen(data) {
+  document.getElementById('quiz-screen').style.display = 'none';
+  document.getElementById('result-screen').classList.add('show');
+  document.getElementById('result-score-num').textContent = data.score;
+  document.getElementById('result-title').textContent     = data.score >= 60 ? '🎉 測驗完成！' : '📝 測驗完成！';
+  document.getElementById('result-sub').textContent       = '答對 ' + data.correct + ' / ' + data.total + ' 題';
+
+  /* 依大題分組列出，每題顯示圖片（看圖）或 🔊（聽音）、正確答案、答錯時學生選的 */
+  var html = '';
+  (settings.sections || []).forEach(function(sec, si) {
+    var its = data.items.filter(function(it) { return it.q.secNum === si; });
+    if (!its.length) return;
+    var ok = its.filter(function(it) { return it.correct; }).length;
+    html += '<div class="result-sec-title">' + (SEC_CN[si] || (si + 1)) + '、' + escHtml(SEC_LABEL[sec.type] || '') +
+      '　答對 ' + ok + ' / ' + its.length + '</div><div class="result-list">';
+    its.forEach(function(it) {
+      var thumb = it.q.sec === 'pic'
+        ? '<img class="result-thumb" src="' + escAttr(it.q.imageUrl) + '" alt="">'
+        : '<button type="button" class="result-thumb-speak" data-word="' + escAttr(it.q.word) + '" onclick="speak(this.dataset.word)">🔊</button>';
+      html += '<div class="result-item ' + (it.correct ? 'correct' : 'wrong') + '">' + thumb +
+        '<div class="result-body"><div class="result-word">' + escHtml(it.q.word) + '</div>' +
+        (it.correct ? '' : '<div class="result-yours">你選：' + escHtml(it.answer === null ? '未作答' : it.answer) + '</div>') +
+        '</div><span class="result-icon">' + (it.correct ? '✓' : '✗') + '</span></div>';
+    });
+    html += '</div>';
+  });
+  document.getElementById('result-list').innerHTML = html;
+}
+
+/* ════════════ Save Result ════════════ */
+function saveResult(data) {
+  if (!db) return;
+  var student = null;
+  try { student = JSON.parse(sessionStorage.getItem('hub_student')); } catch(e) {}
+  var studentId   = (student && student.id) || 'unknown';
+  var studentName = (student && (student.nickname || student.name)) || '匿名';
+  var now = new Date().toISOString();
+
+  db.collection('englishQuizResults').add({
+    sessionId:   settings.sessionId,
+    teacherUid:  settings.teacherUid,
+    studentId:   studentId,
+    studentName: studentName,
+    score:       data.score,
+    correct:     data.correct,
+    total:       data.total,
+    durationSeconds: quizStartTime ? Math.round((Date.now() - quizStartTime) / 1000) : null,
+    questions: data.items.map(function(it) {
+      return { sec: it.q.sec, word: it.q.word, kind: it.q.kind, answer: it.answer, correct: it.correct };
+    }),
+    submittedAt: now
+  }).catch(function() {});
+
+  db.collection('students').doc(studentId).collection('activities').add({
+    app: 'english-quiz', score: data.score, correct: data.correct, total: data.total,
+    sessionId: settings.sessionId, timestamp: now
+  }).catch(function() {});
+}
+
+/* ════════════ Back / Hub ════════════ */
+function confirmBack() {
+  if (submitted || !answers.some(function(a) { return a !== null; })) { returnToHub(); return; }
+  if (confirm('確定要返回？作答進度將不會儲存。')) returnToHub();
+}
+function returnToHub() {
+  window.parent.postMessage({ type: 'english-quiz-back-to-hub' }, '*');
+  window.location.href = 'index.html';
+}
+
+/* ════════════ TTS（同英文趣：Web Speech API，en-US）════════════ */
+function speak(text) {
+  if (!window.speechSynthesis || !text) return;
+  window.speechSynthesis.cancel();
+  var utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'en-US';
+  utt.rate = 0.9;
+  window.speechSynthesis.speak(utt);
+}
+
+/* ════════════ Helpers ════════════ */
+function shuffle(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function uniq(arr) {
+  var seen = {};
+  return arr.filter(function(w) { if (seen[w]) return false; seen[w] = true; return true; });
+}
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escAttr(s) { return escHtml(s); }
+</script>
+</body>
+</html>

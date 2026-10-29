@@ -273,7 +273,7 @@ function _initQuizZoneTab() {
 
 /* ── 測驗區：科目切換（語文 / 數學）── */
 function switchQzSessionType(type, btn) {
-  ['quiz', 'math'].forEach(function(t) {
+  ['quiz', 'math', 'english'].forEach(function(t) {
     var el = document.getElementById('qz-sessions-' + t);
     if (el) el.style.display = t === type ? '' : 'none';
   });
@@ -283,4 +283,5 @@ function switchQzSessionType(type, btn) {
   if (btn) btn.classList.add('active');
   if (type === 'quiz') loadQuizSessions();
   if (type === 'math') loadMathQuizSessions();
+  if (type === 'english') loadEnglishQuizSessions();
 }

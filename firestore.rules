@@ -148,6 +148,24 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 英文測驗 —— 學生（無 Auth）可讀，教師可寫
+    match /englishQuizSessions/{doc} {
+      allow read:  if true;
+      allow write: if request.auth != null;
+    }
+
+    // 英文測驗作答結果 —— 學生（無 Auth）可讀（測驗清單要顯示自己考過的分數）、create 需有基本欄位，
+    // 禁止事後修改；擁有者教師可刪除
+    match /englishQuizResults/{doc} {
+      allow read:   if true;
+      allow create: if request.resource.data.keys().hasAll(['sessionId', 'score', 'studentId'])
+                    && request.resource.data.score is int
+                    && request.resource.data.score >= 0
+                    && request.resource.data.score <= 100;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
+    }
+
     // 詞語圖庫 —— 學生（無 Auth）可讀，教師（已登入）可寫
     match /wordImages/{doc} {
       allow read:  if true;

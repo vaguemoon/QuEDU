@@ -312,6 +312,33 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'english-quiz', file: 'apps/quiz/english-quiz/index.html',
+    icon: '🔤', name: '英文測驗', desc: '看圖選字・聽音選字',
+    type: 'quiz', studentMode: true,
+    theme: 'theme-blue', badge: '英文測驗', badgeClass: 'blue',
+    getLevel: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'english-quiz')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return '英文測驗';
+          return '最近 ' + snap.docs[0].data().score + ' 分';
+        })
+        .catch(function() { return '英文測驗'; });
+    },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('activities')
+        .where('app', '==', 'english-quiz')
+        .get()
+        .then(function(snap) {
+          if (snap.empty) return null;
+          return { sub: '已完成 ' + snap.size + ' 次測驗', score: snap.size + ' 次' };
+        });
+    }
+  },
+  {
     id: 'motor', file: 'apps/learn/special/motor/index.html',
     icon: '🧩', name: '知動趣', desc: '連連看・線條練習',
     type: 'learn', category: 'special',
@@ -329,7 +356,7 @@ var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-qui
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
   'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub',
-  'e-textbook-back-to-hub','motor-back-to-hub'];
+  'e-textbook-back-to-hub','motor-back-to-hub','english-quiz-back-to-hub'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
   'geometry-logout','english-logout','radical-logout','zhuyin-logout','e-textbook-logout','motor-logout'];
 
