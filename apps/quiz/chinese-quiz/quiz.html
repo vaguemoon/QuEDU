@@ -128,8 +128,8 @@ var dictMistakes       = {}; /* qIdx -> 累計錯誤筆畫數（>3 不算通過�
 var dictStrokeMistakes = {}; /* qIdx -> 連續錯誤筆畫數（連錯3筆自動顯示輪廓提示，對了就歸零） */
 var dictHintMode       = {}; /* qIdx -> 是否已經顯示過輪廓提示 */
 var dictDone           = {}; /* qIdx -> 是否已經完成這一題（防止 onComplete 重複觸發） */
-var dictSize            = 220; /* 寫字格固定邊長（px），不像練字趣整頁只有一個格子可以用 vw 算，
-                                   這裡一頁可能很多題，固定一個適合手指/手寫筆操作的尺寸 */
+var dictSize            = 220; /* 量不到容器寬度時的備用邊長（px）；實際大小由 CSS 的 --dict-grid
+                                   決定（跟練字趣測驗模式同一套規則），建立時讀容器實際寬度 */
 
 /* ════════════ Utilities ════════════ */
 function escHtml(s) {
