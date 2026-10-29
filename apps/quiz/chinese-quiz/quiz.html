@@ -810,7 +810,9 @@ function flashDictBox(qIdx, color) {
   el.classList.add(color === 'green' ? 'dict-flash-green' : 'dict-flash-red');
 }
 
-/* 照抄 exam.js 的門檻：連錯3筆（不是累計，對一筆就歸零）自動顯示輪廓；累計錯到6筆，
+/* 同一筆連錯3次的提示交給 HanziWriter 內建的 showHintAfterMisses（預設3）——只用黃色標出
+   「下一筆」，不能呼叫 showOutline()：那會把整個字的輪廓攤開，等於直接給答案（exam.js 呼叫
+   showOutline 沒事是因為它的 outlineColor 是透明的，這裡是淺藍色）。累計錯到6筆，
    整個重建一個「看著輪廓描字」模式的新實例（leniency 放寬、提示更早出現），這題直接算
    沒通過（跟 exam.js 的 EXAM_FAIL_MISTAKES=99 同樣精神，描完就收，不會真的卡住寫不完） */
 function startDictQuiz(qIdx, char, sz) {
@@ -821,10 +823,6 @@ function startDictQuiz(qIdx, char, sz) {
     onMistake: function() {
       dictMistakes[qIdx]++; dictStrokeMistakes[qIdx]++;
       flashDictBox(qIdx, 'red');
-      if (dictStrokeMistakes[qIdx] >= 3 && !dictHintMode[qIdx]) {
-        dictHintMode[qIdx] = true;
-        try { w.showOutline(); } catch (e) {}
-      }
       if (dictMistakes[qIdx] >= 6 && !dictDone[qIdx]) {
         var target = document.getElementById('dict-writer-' + qIdx);
         if (target) { while (target.firstChild) target.removeChild(target.firstChild); }
