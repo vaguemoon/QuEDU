@@ -14,17 +14,19 @@
   --wrong-lt:   #ffebee;
   --accent:     #2d6fa8;
   --shadow:     rgba(26, 26, 46, 0.08);
-  /* 默寫生字寫字格：跟練字趣測驗模式（chinese.css 的 --grid）同一套尺寸規則，
-     原本固定 220px 學生反映太小。教師端列印作答卷是另一套版面，不受這裡影響 */
-  --dict-grid:  min(82vw, calc(100vh - 320px), 380px);
+  /* 默寫生字寫字格：最大尺寸跟練字趣測驗模式（chinese.css 的 --grid）一樣（原本固定 220px
+     學生反映太小），但不照抄它的 vh 限制——練字趣整頁只有一個格子、要連按鈕一起塞進一個畫面，
+     這裡是可以往下捲的長考卷，視窗矮的時候 vh 會把格子壓回 220px 左右。
+     教師端列印作答卷是另一套版面，不受這裡影響 */
+  --dict-grid:  min(82vw, 380px);
 }
 /* 平板橫向 */
 @media (orientation: landscape) and (max-width: 1023px) {
-  :root { --dict-grid: min(52vh, 340px); }
+  :root { --dict-grid: 340px; }
 }
 /* 桌機大螢幕 */
 @media (min-width: 1024px) {
-  :root { --dict-grid: min(58vh, 440px); }
+  :root { --dict-grid: 440px; }
 }
 
 body {
