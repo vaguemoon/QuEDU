@@ -903,11 +903,19 @@ function _qsPrintResult(resultId) {
   var win = window.open('', '_blank');
   if (!win) { showToast('請允許瀏覽器彈出視窗後再試'); return; }
   win.document.write('<p style="font-family:sans-serif;padding:24px">載入作答卷中…</p>');
+  /* 失敗時不關視窗、直接把原因寫在視窗裡——關掉的話老師只看到視窗閃一下就消失，
+     後台的 toast 被新視窗擋住根本看不到，不知道是哪裡出問題 */
+  function showErr(msg) {
+    win.document.open();
+    win.document.write('<div style="font-family:sans-serif;padding:32px;font-size:18px;line-height:1.8">' +
+      '<b style="color:#dc2626">無法列印作答卷</b><br>' + msg + '</div>');
+    win.document.close();
+  }
 
   db.collection('quizResultDetails').doc(resultId).get().then(function(doc) {
     if (!doc.exists) {
-      win.close();
-      showToast('這次作答沒有作答明細（作答卷功能上線前交卷的只有分數），無法列印');
+      showErr('這次作答沒有作答明細。作答卷功能上線（並部署 Firestore 規則）之前交的卷只有分數，' +
+        '沒辦法印出每一題的作答；請讓學生在之後重新作答一次再列印。');
       return;
     }
     var r = doc.data();
@@ -959,8 +967,10 @@ function _qsPrintResult(resultId) {
     win.document.write(html);
     win.document.close();
   }).catch(function(e) {
-    win.close();
-    showToast('載入作答卷失敗：' + e.message);
+    showErr(e && e.code === 'permission-denied'
+      ? '沒有讀取權限（permission-denied）。通常是 Firestore 規則還沒部署：請在專案資料夾執行<br>' +
+        '<code>firebase deploy --only firestore:rules --project tainping-hanzi-app</code>'
+      : '載入失敗：' + _qsEsc((e && e.message) || String(e)));
   });
 }
 
