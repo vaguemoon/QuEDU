@@ -338,9 +338,12 @@ function loadQuestions() {
       qdocs.forEach(function(doc) {
         if (!doc.exists) return;
         var d = doc.data();
-        if (d.type && d.question && d.answer) {
-          questions.push({ type: d.type, question: d.question, answer: d.answer,
-                           options: d.options || [], grade: d.grade, lesson: d.lesson });
+        /* 默寫生字的 answer 是字義，老師可能沒填，不能拿來當「題目完整」的條件；
+           zhuyin／hintWord 是默寫生字的作答提示（注音＋語詞挖空），沒帶過來學生就看不到提示 */
+        if (d.type && d.question && (d.answer || d.type === '默寫生字')) {
+          questions.push({ id: doc.id, type: d.type, question: d.question, answer: d.answer || '',
+                           options: d.options || [], grade: d.grade, lesson: d.lesson,
+                           zhuyin: d.zhuyin || '', hintWord: d.hintWord || '' });
         }
       });
       if (!questions.length && !matchLoaded.length) {
@@ -783,7 +786,11 @@ function initDictWriters() {
     if (!container) return;
     requestAnimationFrame(function() {
       var sz = container.getBoundingClientRect().width || dictSize;
+      /* showOutline:false——這是考試，一開始絕不能露出字的輪廓（共用預設是練習用的 true，
+         直接沿用等於把答案印在格子裡）；連錯 3 筆才由 startDictQuiz 呼叫 showOutline() 給提示，
+         跟練字趣 exam.js 同一個做法 */
       dictWriters[i] = HanziWriter.create('dict-writer-' + i, q.question, _dictWriterOpts(sz, {
+        showOutline: false,
         onLoadCharDataSuccess: function() { startDictQuiz(i, q.question, sz); },
         onLoadCharDataError: function() {
           var s = document.getElementById('dict-status-' + i);
