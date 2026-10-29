@@ -1250,15 +1250,19 @@ function _ecDoPrint(name, sections, subject, matchSections) {
   }
 }
 
-function _ecOpenPrintWindow(name, sections, subject, matchSections, imgMap) {
+function _ecOpenPrintWindow(name, sections, subject, matchSections, imgMap, graded) {
   var win = window.open('', '_blank');
   if (!win) { showToast('請允許瀏覽器彈出視窗後再試'); return; }
-  win.document.write(_ecBuildPrintHtml(name, sections, subject, matchSections, imgMap));
+  win.document.write(_ecBuildPrintHtml(name, sections, subject, matchSections, imgMap, graded));
   win.document.close();
 }
 
-/* 產生完整列印 HTML */
-function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
+/* 產生完整列印 HTML
+   graded（選填）：印「學生作答卷」——教師端測驗列表用 quizResultDetails 組出來的
+   { studentName, scoreText, dateText }；這時每個題目物件上會多帶作答結果欄位
+   （ua 學生答案、ok 對錯，句子重組另有 placed/right），連連看大題帶 pairs。版面跟空白
+   試卷同一套，只是空格裡填上學生的答案、加紅筆 ○／✕ 跟訂正 */
+function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap, graded) {
   var CN = ['一','二','三','四','五','六','七','八','九','十'];
   var DRAG_TYPES = ['詞語填空', '詞語解釋'];
 
@@ -1278,7 +1282,13 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
        給第一個大題顯示這個切換鈕） */
     body += '<div class="sec-block"' + (sec.pageBreakBefore && sn > 0 ? ' style="break-before:page"' : '') + '>';
     var _ecUC = _ecSectionUnitCount(sec);
-    body += '<div class="sec-header">' + _ecEsc(sec.title || '') + _ecPointsSuffix(sec.points, _ecUC.count, _ecUC.unit) + '</div>';
+    var secGot = '';
+    if (graded) {
+      var gotUnits = 0;
+      qs.forEach(function(q) { gotUnits += key === '句子重組' ? (q.right || 0) : (q.ok ? 1 : 0); });
+      secGot = _ecGSecGot(sec.points, gotUnits, _ecUC.count);
+    }
+    body += '<div class="sec-header">' + _ecEsc(sec.title || '') + _ecPointsSuffix(sec.points, _ecUC.count, _ecUC.unit) + secGot + '</div>';
 
     /* 默寫生字：不是逐題一行的 q-list，是看注音+語詞、在田字格裡寫字的方格排版，
        跟其他題型的版面完全不同，整段獨立處理、不走下面共用的 <ol class="q-list">。
@@ -1287,13 +1297,15 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
        舊資料（這次改版之前建立的）可能沒有 hintWord，印的時候退回顯示字義，不要讓舊題目
        印出一張除了注音什麼提示都沒有的空白卡片 */
     if (key === '默寫生字') {
-      body += '<p class="dict-hint">看注音和語詞，在格子裡寫出正確的國字。</p>';
+      if (!graded) body += '<p class="dict-hint">看注音和語詞，在格子裡寫出正確的國字。</p>';
       body += '<div class="dict-grid">';
       qs.forEach(function(q) {
         var prompt = q.hintWord ? q.hintWord.split(q.label).join('（　）') : (q.answer || '');
+        /* 作答卷：線上默寫不保留學生的筆跡，格子裡印正確的字、語詞前面標 ○／✕ */
         body += '<div class="dict-card">' +
-          '<div class="dict-word">' + _ecEsc(prompt) + '</div>' +
-          '<div class="dict-box-row"><div class="grid-box"></div>' +
+          '<div class="dict-word">' + (graded ? _ecGMark(q.ok) : '') + _ecEsc(prompt) + '</div>' +
+          '<div class="dict-box-row"><div class="grid-box">' +
+            (graded ? '<span class="g-dict-char">' + _ecEsc(q.label) + '</span>' : '') + '</div>' +
             '<span class="dict-zhuyin-v">' + _ecEsc(q.zhuyin || '') + '</span>' +
           '</div>' +
           '</div>';
@@ -1323,7 +1335,7 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
 
     /* 句子重組的列印說明——跟答案池同一個位置（大題標題下面），只在這個題型出現一次，
        不是每題重複講一樣的話 */
-    if (key === '句子重組') {
+    if (key === '句子重組' && !graded) {
       body += '<p class="dict-hint">下面每句的詞語已經打散、重新排列過了，請依照正確的句子順序，把代表的數字依序寫在空格裡。</p>';
     }
 
@@ -1331,9 +1343,13 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     body += '<ol class="q-list">';
     qs.forEach(function(q, j) {
       var qBreak = q.breakBefore && !(sn === 0 && j === 0); /* 同樣的道理，印出來的第一題不加 */
-      body += '<li class="q-item"' + (qBreak ? ' style="break-before:page"' : '') + '><span class="q-num">' + (j + 1) + '.</span><span class="q-body">';
+      body += '<li class="q-item"' + (qBreak ? ' style="break-before:page"' : '') + '><span class="q-num">' + (j + 1) + '.</span>' +
+        (graded ? _ecGMark(q.ok) : '') + '<span class="q-body">';
 
-      if (key === '詞語解釋') {
+      if (graded) {
+        body += _ecGradedQBody(key, q);
+
+      } else if (key === '詞語解釋') {
         var ans    = q.answer || '';
         var blankW = Math.max(ans.length * 1.6, 3).toFixed(1) + 'em';
         body += _ecEsc(q.label) +
@@ -1385,6 +1401,27 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
   /* ─── 配對大題 ─── */
   matchSections.forEach(function(ms) {
     var secTitle = (CN[sn] || String(sn + 1)) + '、' + (ms.title || '連連看');
+
+    /* 作答卷：紙上畫不出學生當時連的線，改成一組一列「圖片 → 學生連的詞語」逐組批改 */
+    if (graded) {
+      var pairs = ms.pairs || [];
+      var got = pairs.filter(function(pr) { return pr.ok; }).length;
+      body += '<div class="sec-block"><div class="sec-header">' + _ecEsc(secTitle) +
+        _ecPointsSuffix(ms.points, pairs.length, '組') + _ecGSecGot(ms.points, got, pairs.length) + '</div>';
+      body += '<div class="g-match-grid">';
+      pairs.forEach(function(pr) {
+        body += '<div class="g-match-row">' + _ecGMark(pr.ok) +
+          (pr.imageUrl ? '<img class="g-match-img" src="' + _ecEscA(pr.imageUrl) + '" alt="">'
+                       : '<span class="g-match-img">' + _ecEsc(pr.word) + '</span>') +
+          '<span class="g-match-arrow">→</span>' +
+          '<span class="g-match-word">' + (pr.connected ? _ecEsc(pr.connected) : '<span class="g-blank-ua">未作答</span>') + '</span>' +
+          (pr.ok ? '' : '<span class="g-fix">' + _ecEsc(pr.word) + '</span>') +
+          '</div>';
+      });
+      body += '</div></div>';
+      sn++;
+      return;
+    }
     var wids   = ms.wordIds || [];
     var wwords = ms.words   || [];
 
@@ -1515,6 +1552,25 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
                      'display:flex;align-items:center;gap:5px;flex-wrap:wrap}',
     '.sr-answer-blank{display:inline-block;width:1.7em;height:1.3em;border:1.5px solid #1a1a2e;',
                      'border-radius:4px;flex-shrink:0}',
+    /* 學生作答卷（graded）：批改記號、訂正一律用紅色文字——文字顏色不受「背景圖形」列印設定影響 */
+    '.g-mark{color:#dc2626;font-weight:900;font-size:14pt;flex-shrink:0;min-width:1.3em;font-family:"Noto Sans TC",sans-serif}',
+    '.g-ua{display:inline-block;border-bottom:1.5px solid #1a1a2e;min-width:3em;padding:0 .3em;',
+          'font-weight:700;color:#1d4ed8;text-align:center;margin:0 2px}',
+    '.g-blank-ua{color:#9ca3af;font-weight:400}',
+    '.g-fix{color:#dc2626;font-weight:800;margin-left:.6em}',
+    '.g-fix::before{content:"訂正：";font-size:.85em}',
+    '.g-sec-got{float:right;color:#dc2626;font-weight:900}',
+    '.mc-opt.g-chosen{font-weight:800;color:#1d4ed8}',
+    '.mc-opt.g-correct{color:#dc2626;font-weight:800}',
+    '.sr-piece-chip.g-wrong{border-color:#dc2626;color:#dc2626}',
+    '.g-dict-char{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;',
+                 'font-size:44pt;line-height:1;color:#1a1a2e;font-family:"Noto Sans TC",sans-serif;z-index:1}',
+    '.g-match-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 24px}',
+    '.g-match-row{display:flex;align-items:center;gap:8px;break-inside:avoid;line-height:1.6}',
+    '.g-match-img{width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid #d4cfc0;',
+                 'display:flex;align-items:center;justify-content:center;font-size:10pt;flex-shrink:0}',
+    '.g-match-arrow{color:#9ca3af}',
+    '.g-match-word{font-weight:700;color:#1d4ed8}',
     /* 列印按鈕列 */
     '.print-bar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px}',
     '.print-btn{padding:9px 24px;font-size:11pt;cursor:pointer;font-weight:700;',
@@ -1541,8 +1597,14 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
   ].join('');
 
   /* ─── 頁首 ─── */
-  var header =
-    '<div class="sheet-title">' + _ecEsc(name) + '</div>' +
+  var header = graded
+    ? '<div class="sheet-title">' + _ecEsc(name) + '</div>' +
+      '<div class="sheet-meta">' +
+        '<span class="sheet-meta-item">姓名：<b>' + _ecEsc(graded.studentName || '') + '</b></span>' +
+        '<span class="sheet-meta-item">作答時間：' + _ecEsc(graded.dateText || '') + '</span>' +
+        '<span class="sheet-meta-item">得分：<b style="color:#dc2626;font-size:15pt">' + _ecEsc(graded.scoreText || '') + '</b></span>' +
+      '</div>'
+    : '<div class="sheet-title">' + _ecEsc(name) + '</div>' +
     '<div class="sheet-meta">' +
       '<span class="sheet-meta-item">班級：<span class="sheet-meta-line"></span></span>' +
       '<span class="sheet-meta-item">姓名：<span class="sheet-meta-line"></span></span>' +
@@ -1578,6 +1640,53 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap) {
     '</div>' +
     toggleJs +
     '</body></html>';
+}
+
+/* ── 學生作答卷用的小工具 ── */
+function _ecGMark(ok) { return '<span class="g-mark">' + (ok ? '○' : '✕') + '</span>'; }
+
+/* 大題標題右邊的得分：有配分印「得 X 分」，沒配分印「對 X／Y」 */
+function _ecGSecGot(points, got, count) {
+  var p = parseFloat(points);
+  return '<span class="g-sec-got">' + (!isNaN(p) && p > 0
+    ? '得 ' + (Math.round(p * got * 100) / 100) + ' 分'
+    : '對 ' + got + '／' + count) + '</span>';
+}
+
+/* 單題內容：空格裡填學生的答案，答錯的後面寫訂正 */
+function _ecGradedQBody(key, q) {
+  var ua  = q.ua;
+  var uaH = '<span class="g-ua">' + (ua ? _ecEsc(ua) : '<span class="g-blank-ua">未作答</span>') + '</span>';
+  var fix = q.ok ? '' : '<span class="g-fix">' + _ecEsc(q.answer || '') + '</span>';
+
+  if (key === '詞語填空') {
+    return (q.label || '').split(/[（(][^）)]*[）)]/).map(function(p) { return _ecEsc(p); }).join(uaH) + fix;
+  }
+  if (key === '選擇題') {
+    var h = '<span class="q-text">' + _ecEsc(q.label) + (ua ? '' : '　<span class="g-blank-ua">（未作答）</span>') + '</span><div class="mc-opts">';
+    (q.options || []).forEach(function(opt) {
+      var chosen = ua === opt, correct = opt === q.answer;
+      h += '<div class="mc-opt' + (chosen ? ' g-chosen' : '') + (!q.ok && correct ? ' g-correct' : '') + '">' +
+        (chosen ? '●' : '○') + ' ' + _ecEsc(opt) + (!q.ok && correct ? '　← 正確答案' : '') + '</div>';
+    });
+    return h + '</div>';
+  }
+  if (key === '句子重組') {
+    /* 照學生排出來的順序印，放錯位置的片段標紅；部分計分，後面寫對了幾格 */
+    var opts = q.options || [], placed = q.placed || [];
+    var any = placed.some(function(oi) { return oi !== null && oi !== undefined; });
+    var s = '<div class="sr-print-pieces">';
+    if (!any) s += '<span class="g-blank-ua">未作答</span>';
+    else opts.forEach(function(_, pos) {
+      var oi = placed[pos];
+      var txt = (oi !== null && oi !== undefined) ? opts[oi] : '＿';
+      s += '<span class="sr-piece-chip' + (oi === pos ? '' : ' g-wrong') + '">' + _ecEsc(txt) + '</span>';
+    });
+    return s + '</div><div class="sr-print-answer">對 ' + (q.right || 0) + '／' + opts.length + ' 格' +
+      (q.ok ? '' : '<span class="g-fix">' + _ecEsc(opts.join('')) + '</span>') + '</div>';
+  }
+  /* 詞語解釋及其他：題幹後面接學生答案 */
+  return _ecEsc(q.label) + uaH + fix;
 }
 
 /* 將 詞語填空 題目的（答案）替換成底線空格 */

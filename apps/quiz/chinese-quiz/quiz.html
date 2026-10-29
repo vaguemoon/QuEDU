@@ -324,6 +324,7 @@ function loadQuestions() {
             var indices = pairs.map(function(_, i) { return i; });
             return {
               title:     msec.title,
+              points:    msec.points || '',
               pairs:     pairs,
               imgOrder:  shuffle(indices.slice()),
               wordOrder: shuffle(indices.slice())
@@ -417,7 +418,7 @@ function _normMCQuestion(q) {
   if (!isOld) return q;
   var clean  = opts.map(function(o) { return o.replace(/^[A-C][.．、]\s*/, '').trim(); });
   var ansIdx = ans.toUpperCase().charCodeAt(0) - 65;
-  return { type: q.type, question: q.question, answer: clean[ansIdx] || ans,
+  return { id: q.id, type: q.type, question: q.question, answer: clean[ansIdx] || ans,
            options: clean, grade: q.grade, lesson: q.lesson };
 }
 
@@ -1673,6 +1674,54 @@ function buildMatchReviewHtml(wrongMatchSections) {
   }).join('');
 }
 
+/* ════════════ 作答明細（教師端列印用）════════════
+   題目內容整份快照下來，不只存 questionId——老師之後改了題庫，印出來的仍然要是學生當時
+   看到的題目。Firestore 不接受 undefined，沒作答一律存 null */
+function _buildResultDetails() {
+  var order = _sectionTypeOrder().filter(function(t) {
+    return quizData.some(function(q) { return q.type === t; });
+  });
+  var questions = quizData.map(function(q, i) {
+    var item = { id: q.id || '', type: q.type, question: q.question, answer: q.answer || '',
+                 options: q.options || [], zhuyin: q.zhuyin || '', hintWord: q.hintWord || '' };
+    if (q.type === '句子重組') {
+      var placed = srAnswers[i] || [];
+      item.placed = (q.options || []).map(function(_, pos) {
+        return placed[pos] === undefined ? null : placed[pos];
+      });
+      item.right = item.placed.filter(function(oi, pos) { return oi === pos; }).length;
+      item.ok = item.right === (q.options || []).length;
+    } else if (q.type === '默寫生字') {
+      var m = dictMistakes[i];
+      item.ok = m !== undefined && m <= 3;
+    } else {
+      var ua = getAnswer(i);
+      item.ua = ua === undefined ? null : ua;
+      item.ok = ua !== undefined && ua === q.answer;
+    }
+    return item;
+  });
+  var match = matchData.map(function(msec, si) {
+    var conns = matchConnections[si] || {};
+    return {
+      title:  msec.title || '',
+      points: msec.points || '',
+      pairs:  (msec.imgOrder || []).map(function(pairIdx, imgPos) {
+        var wordPos = conns[imgPos];
+        var connected = wordPos !== undefined ? msec.pairs[msec.wordOrder[wordPos]].word : null;
+        return { word: msec.pairs[pairIdx].word, imageUrl: msec.pairs[pairIdx].imageUrl || '',
+                 connected: connected, ok: wordPos !== undefined && msec.wordOrder[wordPos] === pairIdx };
+      })
+    };
+  });
+  return {
+    sectionOrder:  order,
+    sectionPoints: (currentSettings && currentSettings.sectionPoints) || {},
+    questions:     questions,
+    match:         match
+  };
+}
+
 /* ════════════ Save to Firestore ════════════ */
 function saveScore(score, correct, total) {
   if (!db || !student) return;
@@ -1688,7 +1737,20 @@ function saveScore(score, correct, total) {
 
   /* 新增：跨學生可查詢的測驗結果（教師看最高分、學生看歷史） */
   if (currentSession && currentSession.sessionId) {
-    db.collection('quizResults').add({
+    /* 先產生 docId，作答明細用同一個 id 存到 quizResultDetails（只有出題老師讀得到），
+       教師端才能把這次作答整份印出來給家長看。明細另外放一個集合、不塞進 quizResults：
+       quizResults 是公開可讀的，而且測驗列表一次會讀老師所有的成績，明細放進去會很肥 */
+    var resultRef = db.collection('quizResults').doc();
+    db.collection('quizResultDetails').doc(resultRef.id).set({
+      sessionId:   currentSession.sessionId,
+      teacherUid:  currentSession.teacherUid,
+      studentId:   student.id,
+      studentName: student.name || student.nickname || '',
+      score:       score,
+      timestamp:   now,
+      details:     _buildResultDetails()
+    }).catch(function(){});
+    resultRef.set({
       sessionId:   currentSession.sessionId,
       sessionCode: currentSession.sessionCode,
       sessionName: currentSession.sessionName,

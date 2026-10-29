@@ -121,6 +121,16 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
     }
 
+    // 語文測驗作答明細（docId 與 quizResults 同一筆）—— 學生（無 Auth）交卷時建立，
+    // 內容是學生每題的作答，只有出題老師能讀（教師端列印作答卷給家長看）；禁止事後修改
+    match /quizResultDetails/{doc} {
+      allow read:   if request.auth != null && resource.data.teacherUid == request.auth.uid;
+      allow create: if request.resource.data.keys().hasAll(['sessionId', 'teacherUid', 'studentId', 'details'])
+                    && request.resource.data.details is map;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
+    }
+
     // 四則運算測驗代碼 —— 學生（無 Auth）可讀，教師可寫
     match /mathQuizSessions/{doc} {
       allow read:  if true;

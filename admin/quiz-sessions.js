@@ -75,9 +75,11 @@ function loadQuizSessions() {
       if (d.score > scoreMap[sid].max) scoreMap[sid].max = d.score;
       var stId   = d.studentId || ('_' + scoreMap[sid].count);
       var stName = d.studentName || d.studentNickname || '匿名';
-      if (!scoreMap[sid].students[stId] || d.score > scoreMap[sid].students[stId].max) {
-        scoreMap[sid].students[stId] = { name: stName, max: d.score };
-      }
+      if (!scoreMap[sid].students[stId]) scoreMap[sid].students[stId] = { name: stName, max: d.score, attempts: [] };
+      var stRec = scoreMap[sid].students[stId];
+      if (d.score > stRec.max) stRec.max = d.score;
+      /* 每次作答都留著（列印作答卷可以選要印哪一次），docId 同時也是 quizResultDetails 的 docId */
+      stRec.attempts.push({ id: doc.id, score: d.score, timestamp: d.timestamp || '' });
     });
 
     if (snap.size === 0) {
@@ -637,6 +639,20 @@ async function _qsDeleteSessionFull(id) {
     }
   }
 
+  /* 作答明細（quizResultDetails）一起刪，同樣允許失敗；規則只允許出題老師刪，
+     查詢條件要帶 teacherUid 才不會被規則整批拒絕 */
+  try {
+    var detSnap = await db.collection('quizResultDetails')
+      .where('teacherUid', '==', currentTeacher.uid).where('sessionId', '==', id).get();
+    for (var di = 0; di < detSnap.docs.length; di += 400) {
+      var db2 = db.batch();
+      detSnap.docs.slice(di, di + 400).forEach(function(doc) { db2.delete(doc.ref); });
+      await db2.commit();
+    }
+  } catch(e) {
+    console.warn('_qsDeleteSessionFull: quizResultDetails 刪除失敗（忽略）', e);
+  }
+
   /* 刪 sharedQuizSessions subcollection + 主 session 文件 */
   var refs = [];
   sharedClassIds.forEach(function(classId) {
@@ -821,11 +837,29 @@ function _qsRenderDetail() {
       stuList.length + ' 人作答 · 最高 ' + stats.max + ' 分</div>';
     html += '<div style="border:1.5px solid var(--border);border-radius:10px;overflow:hidden">';
     stuList.forEach(function(st, i) {
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;' +
-        'background:' + (i % 2 === 0 ? 'white' : 'var(--gray-lt)') + '">' +
-        '<span style="font-weight:700;font-size:.84rem">' + _qsEsc(st.name) + '</span>' +
-        '<span style="font-weight:900;color:var(--green);font-size:.84rem">' + st.max + ' 分</span>' +
+      var bg = i % 2 === 0 ? 'white' : 'var(--gray-lt)';
+      var attempts = (st.attempts || []).slice().sort(function(a, b) { return a.timestamp.localeCompare(b.timestamp); });
+      var multi = attempts.length > 1;
+      html += '<div style="padding:7px 12px;background:' + bg + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px">' +
+          '<span style="font-weight:700;font-size:.84rem;min-width:0;flex:1">' + _qsEsc(st.name) + '</span>' +
+          '<span style="font-weight:900;color:var(--green);font-size:.84rem">' + st.max + ' 分</span>' +
+          /* 預設印第一次作答；作答多次的話旁邊多一顆「共N次」可以展開選別次 */
+          (attempts.length ? _qsPrintBtn(attempts[0].id, '🖨️ 列印') : '') +
+          (multi ? '<button type="button" onclick="_qsToggleAttempts(this)" style="' + _QS_SMALL_BTN + '">共' + attempts.length + '次 ▾</button>' : '') +
         '</div>';
+      if (multi) {
+        html += '<div class="qs-attempts" style="display:none;margin-top:6px;border-top:1px dashed var(--border);padding-top:4px">';
+        attempts.forEach(function(a, ai) {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:3px 0;font-size:.8rem">' +
+            '<span style="color:var(--muted);font-weight:700;flex:1">第' + (ai + 1) + '次　' + _qsEsc(_qsFmtTime(a.timestamp)) + '</span>' +
+            '<span style="font-weight:800">' + a.score + ' 分</span>' +
+            _qsPrintBtn(a.id, '列印') +
+            '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
     });
     html += '</div>';
   } else {
@@ -833,6 +867,101 @@ function _qsRenderDetail() {
   }
 
   panel.innerHTML = html;
+}
+
+
+/* ════════════════════════════════════════
+   列印學生作答卷（給家長看的紙本）
+   作答明細在 quizResultDetails（docId 跟 quizResults 同一筆，只有出題老師讀得到），
+   版面借用出卷精靈的列印（_ecBuildPrintHtml 的 graded 模式），跟空白試卷同一套排版
+   ════════════════════════════════════════ */
+var _QS_SMALL_BTN = 'padding:3px 9px;border:1.5px solid var(--border);border-radius:6px;background:white;' +
+  'cursor:pointer;font-size:.76rem;font-weight:800;font-family:inherit;color:var(--blue-dk);flex-shrink:0';
+
+function _qsPrintBtn(resultId, label) {
+  return '<button type="button" onclick="_qsPrintResult(\'' + _qsEscJs(resultId) + '\')" style="' + _QS_SMALL_BTN + '">' + label + '</button>';
+}
+
+function _qsToggleAttempts(btn) {
+  var list = btn.parentNode.parentNode.querySelector('.qs-attempts');
+  if (!list) return;
+  var open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  btn.textContent = btn.textContent.replace(open ? '▴' : '▾', open ? '▾' : '▴');
+}
+
+function _qsFmtTime(iso) {
+  var t = new Date(iso);
+  if (isNaN(t.getTime())) return '';
+  function z(n) { return (n < 10 ? '0' : '') + n; }
+  return t.getFullYear() + '/' + z(t.getMonth() + 1) + '/' + z(t.getDate()) + ' ' + z(t.getHours()) + ':' + z(t.getMinutes());
+}
+
+function _qsPrintResult(resultId) {
+  if (!db || !currentTeacher) return;
+  /* 視窗要在點擊當下就開，等 Firestore 讀完才開會被瀏覽器當成彈出廣告擋掉 */
+  var win = window.open('', '_blank');
+  if (!win) { showToast('請允許瀏覽器彈出視窗後再試'); return; }
+  win.document.write('<p style="font-family:sans-serif;padding:24px">載入作答卷中…</p>');
+
+  db.collection('quizResultDetails').doc(resultId).get().then(function(doc) {
+    if (!doc.exists) {
+      win.close();
+      showToast('這次作答沒有作答明細（作答卷功能上線前交卷的只有分數），無法列印');
+      return;
+    }
+    var r = doc.data();
+    var det = r.details || {};
+    var sess = _qsAllSessions.find(function(x) { return x.id === r.sessionId; });
+    var name = (sess && sess.data.name) || '測驗';
+    var CN = ['一','二','三','四','五','六','七','八','九','十'];
+    var secPts = det.sectionPoints || {};
+    var allQ = det.questions || [];
+
+    var sections = (det.sectionOrder || []).map(function(type, i) {
+      return {
+        title: (CN[i] || String(i + 1)) + '、' + type, key: type, points: secPts[type],
+        questions: allQ.filter(function(q) { return q.type === type; }).map(function(q) {
+          return { id: q.id, label: q.question, answer: q.answer, options: q.options || [],
+                   zhuyin: q.zhuyin, hintWord: q.hintWord, ua: q.ua, ok: !!q.ok,
+                   placed: q.placed, right: q.right };
+        })
+      };
+    }).filter(function(sec) { return sec.questions.length; });
+    var matchSections = (det.match || []).map(function(m) {
+      return { title: m.title, points: m.points, pairs: m.pairs || [], pairCount: (m.pairs || []).length };
+    });
+
+    /* 得分：每個大題都有配分才換算成配分制，否則用學生端算的百分制分數 */
+    var allPts = sections.length + matchSections.length > 0;
+    var total = 0, got = 0;
+    sections.forEach(function(sec) {
+      var p = parseFloat(sec.points);
+      if (isNaN(p) || p <= 0) { allPts = false; return; }
+      sec.questions.forEach(function(q) {
+        var units = sec.key === '句子重組' ? (q.options || []).length : 1;
+        total += p * units;
+        got   += p * (sec.key === '句子重組' ? (q.right || 0) : (q.ok ? 1 : 0));
+      });
+    });
+    matchSections.forEach(function(m) {
+      var p = parseFloat(m.points);
+      if (isNaN(p) || p <= 0) { allPts = false; return; }
+      total += p * m.pairs.length;
+      got   += p * m.pairs.filter(function(pr) { return pr.ok; }).length;
+    });
+    got = Math.round(got * 100) / 100; total = Math.round(total * 100) / 100;
+    var scoreText = allPts ? (total === 100 ? got + ' 分' : got + '／' + total + ' 分') : r.score + ' 分';
+
+    var html = _ecBuildPrintHtml(name, sections, 'chinese', matchSections, {},
+      { studentName: r.studentName || '', scoreText: scoreText, dateText: _qsFmtTime(r.timestamp) });
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  }).catch(function(e) {
+    win.close();
+    showToast('載入作答卷失敗：' + e.message);
+  });
 }
 
 
