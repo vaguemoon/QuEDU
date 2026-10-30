@@ -638,7 +638,16 @@ function _ecValidateStep2() {
 /* ════════════════════════════════
    大題分組邏輯
    ════════════════════════════════ */
+/* 新試卷預設沿用這位老師上一次發布的大題順序（存在這台電腦的 localStorage，依科目分開），
+   老師習慣固定把某個題型放第一大題，不用每份都重拖 */
+function _ecPrefOrderKey() {
+  return 'ec_section_order_' + ((currentTeacher && currentTeacher.uid) || '') + '_' + _ecSubject;
+}
+
 function _ecBuildSections() {
+  if (!_ecSecKeyOrder.length && !_ecSessionId) {
+    try { _ecSecKeyOrder = JSON.parse(localStorage.getItem(_ecPrefOrderKey()) || '[]') || []; } catch (e) {}
+  }
   _ecBuildSectionsRaw();
   /* 回 Step 2 把某個題型全部取消勾選、再勾回來，那個大題會先被拿掉再當成新大題接到最後面，
      Step 3 拖好的順序就跑掉了（2-3複習 的默寫生字就是這樣掉到最後）。所以老師排過的順序
@@ -1176,6 +1185,7 @@ function _ecPublishOnline() {
   var sectionPoints = _ecCollectSectionPoints();
   var breakData = _ecCollectBreakData();
   var sectionOrder = _ecSections.map(function(sec) { return sec.key; });
+  try { localStorage.setItem(_ecPrefOrderKey(), JSON.stringify(_ecSecKeyOrder.length ? _ecSecKeyOrder : sectionOrder)); } catch (e) {}
 
   var isUpdate = !!_ecSessionId;
   var confirmMsg = isUpdate
