@@ -15,6 +15,7 @@ var _ecVersion    = '';        // 版本，e.g. "康軒"
 var _ecVolume     = '';        // 冊次，e.g. "三上"
 var _ecLesson     = '';        // 課次號碼，e.g. "七"；空字串=全冊/跨課次
 var _ecLessonName = '';        // 課次名稱，e.g. "走進博物館"
+var _ecSecKeyOrder = [];        // 老師排過的大題題型順序（含暫時被取消勾選、不在 _ecSections 裡的題型）
 var _ecSections   = [];        // [{ title, key, collapsed, questions:[{id,label}] }]
 var _ecAllQ       = [];        // 從 Firestore 讀入（含 id）
 var _ecAllQSub    = '';        // _ecAllQ 對應的 subject（快取判斷用）
@@ -76,6 +77,7 @@ function _ecNewDraft() {
   _ecLesson     = '';
   _ecLessonName = '';
   _ecSections      = [];
+  _ecSecKeyOrder   = [];
   _ecSelected      = {};
   _ecAllQ          = [];
   _ecMatchSections = [];
@@ -98,6 +100,7 @@ function _ecEditSession(sessionId) {
     _ecLessonName = d.lessonName || '';
     _ecSelected      = {};
     _ecSections      = [];
+    _ecSecKeyOrder   = [];
     _ecAllQ          = [];
     _ecMatchSections = (d.matchSections || []).slice();
 
@@ -636,6 +639,18 @@ function _ecValidateStep2() {
    大題分組邏輯
    ════════════════════════════════ */
 function _ecBuildSections() {
+  _ecBuildSectionsRaw();
+  /* 回 Step 2 把某個題型全部取消勾選、再勾回來，那個大題會先被拿掉再當成新大題接到最後面，
+     Step 3 拖好的順序就跑掉了（2-3複習 的默寫生字就是這樣掉到最後）。所以老師排過的順序
+     另外記在 _ecSecKeyOrder，每次重建完都照它排回去，沒記到的題型接在後面 */
+  if (_ecSecKeyOrder.length) _ecApplySectionOrder(_ecSecKeyOrder);
+  /* 暫時不在的題型保留在原位置（不能挪到最後，不然勾回來還是會掉到最後），新出現的題型接在後面 */
+  _ecSections.forEach(function(sec) {
+    if (_ecSecKeyOrder.indexOf(sec.key) < 0) _ecSecKeyOrder.push(sec.key);
+  });
+}
+
+function _ecBuildSectionsRaw() {
   var groupKey = _ecSubject === 'math' ? 'category' : 'type';
 
   /* 建立 id → 題目 lookup */
@@ -734,6 +749,7 @@ function _ecRenumberSections() {
    存檔裡沒列到的大題（舊測驗、或之後追加的新題型）維持原本相對順序接在後面 */
 function _ecApplySectionOrder(order) {
   if (!order || !order.length) return;
+  _ecSecKeyOrder = order.slice();
   _ecSections.sort(function(a, b) {
     var ia = order.indexOf(a.key); if (ia < 0) ia = 999;
     var ib = order.indexOf(b.key); if (ib < 0) ib = 999;
@@ -1023,7 +1039,10 @@ function _ecSectionDragEnd() {
     var moved = list.splice(d.fromIndex, 1)[0];
     toIndex = Math.max(0, Math.min(list.length, toIndex));
     list.splice(toIndex, 0, moved);
-    if (d.kind === 'text') _ecRenumberSections();
+    if (d.kind === 'text') {
+      _ecRenumberSections();
+      _ecSecKeyOrder = _ecSections.map(function(sec) { return sec.key; });
+    }
   }
 
   _ecDrag = null;
