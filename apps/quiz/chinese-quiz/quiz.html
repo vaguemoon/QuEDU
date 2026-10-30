@@ -1365,7 +1365,7 @@ function submitQuiz() {
   });
   var dictUnanswered = 0;
   quizData.forEach(function(q, i) {
-    if (q.type === '默寫生字' && dictMistakes[i] === undefined) dictUnanswered++; /* 連一筆都還沒寫過 */
+    if (q.type === '默寫生字' && !dictDone[i]) dictUnanswered++; /* 還沒把整個字寫完 */
   });
   var matchUnanswered = 0;
   matchData.forEach(function(msec, si) {
@@ -1426,8 +1426,7 @@ function submitQuiz() {
     if (q.type !== '默寫生字') return;
     dictTotal++;
     try { if (dictWriters[i] && !dictDone[i]) dictWriters[i].cancelQuiz(); } catch (e) {}
-    var mistakes = dictMistakes[i];
-    var passed = mistakes !== undefined && mistakes <= 3;
+    var passed = _dictPassed(i);
     if (passed) { dictCorrect++; }
     else { wrongDictQuestions.push({ char: q.question, zhuyin: q.zhuyin || '' }); }
   });
@@ -1487,13 +1486,18 @@ function submitQuiz() {
 }
 
 /* 默寫生字交卷時的揭曉視覺——寫字格邊框變綠/紅，狀態文字更新成最終結果 */
+/* 默寫生字算對：一定要把整個字寫完（dictDone）而且錯不超過3筆。不能只看 dictMistakes——
+   字的資料一載入 startDictQuiz 就把它設成 0，完全沒動筆的格子也是「錯0筆」，會被當成答對 */
+function _dictPassed(i) {
+  return !!dictDone[i] && dictMistakes[i] <= 3;
+}
+
 function _applyDictGradeVisual(i) {
   var box    = document.getElementById('dict-writer-' + i);
   var status = document.getElementById('dict-status-' + i);
-  var mistakes = dictMistakes[i];
-  var passed = mistakes !== undefined && mistakes <= 3;
+  var passed = _dictPassed(i);
   if (box) box.classList.add(passed ? 'dict-graded-right' : 'dict-graded-wrong');
-  if (status) status.textContent = passed ? '✓ 寫對了！' : (mistakes === undefined ? '未作答' : '再多練習這個字');
+  if (status) status.textContent = passed ? '✓ 寫對了！' : (!dictDone[i] ? '未寫完' : '再多練習這個字');
 }
 
 function _applySrGradeVisual(i) {
@@ -1580,10 +1584,19 @@ function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wron
   if (srTotal)     subParts.push('句子重組 ' + (srCorrect   || 0) + '/' + srTotal   + ' 塊');
   if (dictTotal)   subParts.push('默寫生字 ' + (dictCorrect || 0) + '/' + dictTotal + ' 字');
   document.getElementById('result-sub').textContent = subParts.join('　');
+  /* 錯題解析照老師排的大題順序（_sectionTypeOrder），跟作答頁一致；一般文字題也按題型分開列，
+     不然 詞語填空→句子重組→選擇題 這種順序會被併成一塊。連連看本來就排在文字大題後面 */
   var reviewHtml = '';
-  if (wrongIndices.length) reviewHtml += buildReviewHtml(wrongIndices);
-  if (wrongSrQuestions && wrongSrQuestions.length) reviewHtml += buildSrReviewHtml(wrongSrQuestions);
-  if (wrongDictQuestions && wrongDictQuestions.length) reviewHtml += buildDictReviewHtml(wrongDictQuestions);
+  _sectionTypeOrder().forEach(function(type) {
+    if (type === '句子重組') {
+      if (wrongSrQuestions && wrongSrQuestions.length) reviewHtml += buildSrReviewHtml(wrongSrQuestions);
+    } else if (type === '默寫生字') {
+      if (wrongDictQuestions && wrongDictQuestions.length) reviewHtml += buildDictReviewHtml(wrongDictQuestions);
+    } else {
+      var idxs = wrongIndices.filter(function(i) { return quizData[i].type === type; });
+      if (idxs.length) reviewHtml += buildReviewHtml(idxs, type);
+    }
+  });
   if (wrongMatchSections && wrongMatchSections.length) reviewHtml += buildMatchReviewHtml(wrongMatchSections);
   document.getElementById('review-container').innerHTML = reviewHtml;
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1619,9 +1632,9 @@ function buildSrReviewHtml(wrongSrQuestions) {
   '</div>';
 }
 
-function buildReviewHtml(wrongIndices) {
+function buildReviewHtml(wrongIndices, header) {
   return '<div class="review-section">' +
-    '<div class="review-header">錯誤題目解析</div>' +
+    '<div class="review-header">' + escHtml(header || '錯誤題目解析') + '</div>' +
     wrongIndices.map(function(i) {
       var q      = quizData[i];
       var ua     = getAnswer(i);
@@ -1691,8 +1704,7 @@ function _buildResultDetails() {
       item.right = item.placed.filter(function(oi, pos) { return oi === pos; }).length;
       item.ok = item.right === (q.options || []).length;
     } else if (q.type === '默寫生字') {
-      var m = dictMistakes[i];
-      item.ok = m !== undefined && m <= 3;
+      item.ok = _dictPassed(i);
     } else {
       var ua = getAnswer(i);
       item.ua = ua === undefined ? null : ua;
