@@ -1332,7 +1332,8 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap, grade
         var prompt = q.hintWord ? q.hintWord.split(q.label).join('（　）') : (q.answer || '');
         /* 作答卷：線上默寫不保留學生的筆跡，格子裡印正確的字、語詞前面標 ○／✕ */
         body += '<div class="dict-card">' +
-          '<div class="dict-word">' + (graded ? _ecGMark(q.ok) : '') + _ecEsc(prompt) + '</div>' +
+          '<div class="dict-word">' + (graded ? _ecGMark(q.ok) : '') +
+            _ecEsc(prompt).split('（　）').join('<span class="dict-blank">（　）</span>') + '</div>' +
           '<div class="dict-box-row"><div class="grid-box">' +
             (graded ? '<span class="g-dict-char">' + _ecEsc(q.label) + '</span>' : '') + '</div>' +
             '<span class="dict-zhuyin-v">' + _ecEsc(q.zhuyin || '') + '</span>' +
@@ -1559,18 +1560,21 @@ function _ecBuildPrintHtml(name, sections, subject, matchSections, imgMap, grade
        沒勾選時整個被拿掉、注音藥丸的底色也一樣被拿掉。改成：格子用明確的 width+height（不依賴
        aspect-ratio）、十字線改用 border 畫（border 不受背景列印設定影響，永遠印得出來）、
        注音拿掉底色、改成直書（書寫模式 vertical-rl）放在格子右邊——這也是教育現場常見的
-       注音標示方式。另外格子縮小、整組 card 間距收緊，讓一頁能放下 4 排 x 3 欄＝12 個字。 */
+       注音標示方式。另外格子縮小、整組 card 間距收緊，讓一頁放得下更多字。之後老師反映影印時左右間隔太大，改成一排 5 題；語詞較長時會
+       折成兩行，card 靠下對齊，同一排的格子才不會高低不齊。 */
     '.dict-hint{font-size:9.5pt;color:#3d3d5c;margin:0 0 10px}',
-    '.dict-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 16px}',
-    '.dict-card{display:flex;flex-direction:column;align-items:center;gap:4px}',
+    '.dict-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 6px}',
+    '.dict-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px}',
     /* 語詞挖空是主要提示，字體要夠大夠粗——跟原本字義那行（小小一行灰字）地位完全不同 */
     '.dict-word{font-size:13pt;font-weight:800;color:#1a1a2e;line-height:1.3;padding:0 4px;text-align:center;min-height:1.4em;letter-spacing:.03em}',
+    /* 全形括號＋全形空格佔 3 個字寬，一排 5 題時很容易折行，只把括號收窄、字體大小不動 */
+    '.dict-blank{letter-spacing:-.28em;margin-right:.28em;white-space:nowrap}',
     '.dict-box-row{display:flex;align-items:stretch;gap:5px}',
     '.grid-box{position:relative;width:92px;height:92px;flex-shrink:0;',
               'border:1.5px solid #d4cfc0;border-radius:4px;background:#fff}',
     '.grid-box::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #d4cfc0}',
     '.grid-box::after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #d4cfc0}',
-    '.dict-zhuyin-v{writing-mode:vertical-rl;text-orientation:upright;font-size:10.5pt;',
+    '.dict-zhuyin-v{writing-mode:vertical-rl;text-orientation:upright;font-size:10.5pt;line-height:1.2;',
                    'font-weight:800;color:#2563eb;letter-spacing:1px;display:flex;align-items:center}',
     /* 句子重組（列印版） */
     '.sr-print-pieces{width:100%;display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}',
