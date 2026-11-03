@@ -282,6 +282,7 @@
               <button class="back-btn" style="margin:0;padding:0" onclick="backToClasses()">← 返回班級</button>
               <span id="roster-quiz-class-name" style="margin-left:10px;font-weight:900"></span>
               <button onclick="loadRosterQuizManagement()" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;background:white;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 重新整理</button>
+              <button id="roster-quiz-batch-btn" onclick="_rqUnshareSelected()" style="display:none;margin-left:8px;padding:5px 12px;border:1.5px solid var(--red);border-radius:7px;background:white;color:var(--red);font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit"></button>
             </div>
             <div id="roster-quiz-wrap">
               <div class="loading-wrap"><div class="spinner"></div></div>

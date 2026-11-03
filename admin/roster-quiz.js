@@ -11,6 +11,7 @@
 'use strict';
 
 var _rqItems = []; // [{type:'quiz'|'reader', id, name, meta, teacherName, sharedAt, exists, active}]
+var _rqSelected = {}; // 'type:id' -> true，批次移除勾選的項目；每次重新載入清單就清空
 
 function loadRosterQuizManagement() {
   var classId = currentRosterClassId;
@@ -24,6 +25,8 @@ function loadRosterQuizManagement() {
   }
 
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
+  _rqSelected = {};
+  _rqSyncBatchUI();
 
   Promise.all([_rqLoadQuizItems(classId), _rqLoadReaderItems(classId)])
     .then(function(results) {
@@ -137,6 +140,12 @@ function _rqRenderList(wrap) {
     var sharedAtStr = s.sharedAt ? new Date(s.sharedAt.seconds * 1000).toLocaleDateString('zh-TW') : '—';
 
     return '<tr>' +
+      '<td style="width:44px;padding:0">' +
+        '<label style="display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer">' +
+          '<input type="checkbox" class="rq-check" data-key="' + _rqEscAttr(_rqKey(s)) + '" onchange="_rqToggleSelect(this)" ' +
+            'style="width:20px;height:20px;cursor:pointer;margin:0">' +
+        '</label>' +
+      '</td>' +
       '<td><strong>' + escHtml(s.name) + '</strong>' + tags + '</td>' +
       '<td style="color:var(--muted);font-size:.82rem">' + typeLabel + '</td>' +
       '<td style="color:var(--muted);font-size:.82rem">' + escHtml(s.teacherName) + '</td>' +
@@ -151,7 +160,14 @@ function _rqRenderList(wrap) {
 
   wrap.innerHTML =
     '<table class="student-table">' +
-      '<thead><tr><th>名稱</th><th>類型</th><th>建立老師</th><th>分享時間</th><th></th></tr></thead>' +
+      '<thead><tr>' +
+        '<th style="width:44px;padding:0;text-align:center">' +
+          '<label style="display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer" title="全選">' +
+            '<input type="checkbox" id="rq-check-all" onchange="_rqToggleAll(this.checked)" ' +
+              'style="width:20px;height:20px;cursor:pointer;margin:0">' +
+          '</label>' +
+        '</th>' +
+        '<th>名稱</th><th>類型</th><th>建立老師</th><th>分享時間</th><th></th></tr></thead>' +
       '<tbody>' + rows + '</tbody>' +
     '</table>';
 }
@@ -169,6 +185,69 @@ function _rqUnshare(type, id, name) {
       loadRosterQuizManagement();
     })
     .catch(function(e) { showToast('❌ 移除失敗：' + e.message); });
+}
+
+/* ══ 批次移除 ══ */
+function _rqKey(item) {
+  return item.type + ':' + item.id;
+}
+
+function _rqToggleSelect(cb) {
+  var key = cb.getAttribute('data-key');
+  if (cb.checked) _rqSelected[key] = true;
+  else delete _rqSelected[key];
+  _rqSyncBatchUI();
+}
+
+function _rqToggleAll(checked) {
+  _rqSelected = {};
+  if (checked) _rqItems.forEach(function(s) { _rqSelected[_rqKey(s)] = true; });
+  document.querySelectorAll('.rq-check').forEach(function(cb) { cb.checked = checked; });
+  _rqSyncBatchUI();
+}
+
+/* 勾選時只更新按鈕跟全選框，不重畫表格 */
+function _rqSyncBatchUI() {
+  var count = Object.keys(_rqSelected).length;
+  var btn = document.getElementById('roster-quiz-batch-btn');
+  if (btn) {
+    btn.style.display = count ? '' : 'none';
+    btn.disabled = false;
+    btn.textContent = '🗑 移除選取（' + count + '）';
+  }
+  var all = document.getElementById('rq-check-all');
+  if (all) {
+    all.checked = count > 0 && count === _rqItems.length;
+    all.indeterminate = count > 0 && count < _rqItems.length;
+  }
+}
+
+function _rqUnshareSelected() {
+  var classId = currentRosterClassId;
+  var items = _rqItems.filter(function(s) { return _rqSelected[_rqKey(s)]; });
+  if (!classId || !items.length) return;
+  if (!confirm('確定要移除選取的 ' + items.length + ' 份內容對這個班級的分享嗎？學生將不會再看到它們。')) return;
+
+  var btn = document.getElementById('roster-quiz-batch-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '移除中…'; }
+
+  var batches = [], batch = db.batch();
+  items.forEach(function(s, i) {
+    var coll = s.type === 'quiz' ? 'sharedQuizSessions' : 'sharedReaderDocs';
+    batch.delete(db.collection('classes').doc(classId).collection(coll).doc(s.id));
+    if ((i + 1) % 499 === 0) { batches.push(batch); batch = db.batch(); }
+  });
+  batches.push(batch);
+
+  Promise.all(batches.map(function(b) { return b.commit(); }))
+    .then(function() {
+      showToast('✅ 已移除 ' + items.length + ' 份分享');
+      loadRosterQuizManagement();
+    })
+    .catch(function(e) {
+      showToast('❌ 移除失敗：' + e.message);
+      loadRosterQuizManagement();
+    });
 }
 
 function _rqEscAttr(s) {
