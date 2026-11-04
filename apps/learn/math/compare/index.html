@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>比大小趣｜上學趣</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+<link rel="stylesheet" href="compare.css">
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goHome()">← 換題型</button>
+  <div id="topbar-title">⚖️ <span>比大小趣</span></div>
+  <div id="topbar-right">
+    <div id="topbar-student">
+      <span id="topbar-avatar">🐣</span>
+      <span id="topbar-name">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: HOME ══════════════════ -->
+<div id="page-home" class="page active">
+  <div class="home-wrap">
+    <div class="home-title">⚖️ 比大小趣</div>
+    <div class="home-sub">不用計算，判斷算出來的答案比原來的數大、小，還是一樣</div>
+
+    <div class="pick-label">1. 選運算</div>
+    <div class="pick-grid" id="op-grid"></div>
+
+    <div class="pick-label">2. 選數字</div>
+    <div class="pick-grid" id="num-grid"></div>
+
+    <button class="btn-start" onclick="startRound()">開始練習 ▶</button>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: GAME ══════════════════ -->
+<div id="page-game" class="page">
+  <div class="game-wrap">
+    <div class="game-hud">
+      <span id="hud-mode" class="hud-mode"></span>
+      <span id="hud-progress" class="hud-progress"></span>
+      <span class="hud-score">答對 <b id="hud-correct">0</b></span>
+    </div>
+
+    <div class="q-card">
+      <div class="q-hint">不用計算，在□裡填入 &gt;、= 或 &lt;</div>
+      <div class="q-expr" id="q-expr"></div>
+    </div>
+
+    <div class="ans-row" id="ans-row">
+      <button class="ans-btn" onclick="answer('>')">&gt;</button>
+      <button class="ans-btn" onclick="answer('=')">=</button>
+      <button class="ans-btn" onclick="answer('<')">&lt;</button>
+    </div>
+
+    <!-- 答對／答錯說明 -->
+    <div class="explain hidden" id="explain">
+      <div class="explain-head" id="explain-head"></div>
+      <div class="explain-rule" id="explain-rule"></div>
+      <div class="explain-line" id="explain-line"></div>
+      <div class="explain-final" id="explain-final"></div>
+      <button class="btn-next" id="btn-next" onclick="nextQuestion()">下一題 ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: RESULT ══════════════════ -->
+<div id="page-result" class="page">
+  <div class="result-wrap">
+    <div class="result-icon" id="result-icon">🎉</div>
+    <div class="result-title" id="result-title">本輪完成！</div>
+    <div class="result-score"><b id="result-correct">0</b> / <span id="result-total">10</span> 題答對</div>
+    <div class="result-btns">
+      <button class="btn-result" onclick="startRound()">再練一次</button>
+      <button class="btn-result btn-result-home" onclick="goHome()">換題型</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="../../../../shared/shared.js"></script>
+<script src="compare.js"></script>
+</body>
+</html>

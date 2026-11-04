@@ -102,6 +102,21 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'compare', file: 'apps/learn/math/compare/index.html',
+    icon: '⚖️', name: '比大小趣', desc: '不用計算，比較大小',
+    type: 'learn', category: 'math',
+    theme: 'theme-blue', badge: '比大小趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('比大小趣'); },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('compare').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var c = doc.data().totalCorrect || 0;
+          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
+        });
+    }
+  },
+  {
     id: 'exam-reader', file: 'apps/quiz/word-to-reader/index.html',
     icon: '🎧', name: '考卷報讀', desc: '老師分享的有聲考卷',
     type: 'quiz', studentMode: true,
@@ -356,7 +371,7 @@ var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-qui
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
   'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub',
-  'e-textbook-back-to-hub','motor-back-to-hub','english-quiz-back-to-hub'];
+  'e-textbook-back-to-hub','motor-back-to-hub','english-quiz-back-to-hub','compare-back-to-hub'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
   'geometry-logout','english-logout','radical-logout','zhuyin-logout','e-textbook-logout','motor-logout'];
 
