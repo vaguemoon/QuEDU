@@ -103,10 +103,10 @@ var SUBJECTS = [
   },
   {
     id: 'compare', file: 'apps/learn/math/compare/index.html',
-    icon: '⚖️', name: '比大小趣', desc: '不用計算，比較大小',
+    icon: '⚖️', name: '比較趣', desc: '不用計算，比較大小',
     type: 'learn', category: 'math',
-    theme: 'theme-blue', badge: '比大小趣', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('比大小趣'); },
+    theme: 'theme-blue', badge: '比較趣', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('比較趣'); },
     activity: function(sid) {
       return db.collection('students').doc(sid).collection('progress').doc('compare').get()
         .then(function(doc) {
