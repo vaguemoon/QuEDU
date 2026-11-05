@@ -13,8 +13,8 @@ var PAGE_CONFIG = {
   'zy-exam':              { title: '',                         back: true  },
   'zy-exam-round-result': { title: '',                         back: true  },
   'zy-exam-result':       { title: '',                         back: true  },
-  'zy-write-menu':        { title: '',                         back: true  }, // 標題依區域動態設定，見 _zyRefreshTitleFor()
-  'zy-write':             { title: '',                         back: true  },
+  'zy-write':             { title: '',                         back: true  }, // 仿寫練習（標題同 zy-menu 依區域＋方向）
+  'zy-write-exam':        { title: '',                         back: true  }, // 仿寫測驗
   'settings':           { title: '⚙️ <span>設定</span>',     back: true  }
 };
 var currentPage = 'zy-section-select';

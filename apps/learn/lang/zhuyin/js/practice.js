@@ -19,6 +19,7 @@ var zpActiveSymbols   = [];
 var zpPendingBtn      = null; // 看字選音：已試聽、等待「確認答案」的選項按鈕
 
 function startZyPractice(selectedItems) {
+  if (zyDirection === 'write') { startZwPractice(selectedItems); return; }
   zpActiveSymbols = (selectedItems && selectedItems.length)
     ? zyActiveSymbols().filter(function(s) { return selectedItems.indexOf(s) !== -1; })
     : zyActiveSymbols().slice();

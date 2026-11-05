@@ -73,18 +73,13 @@
         <span class="zy-mode-name">看字選音</span>
         <span class="zy-mode-desc">看到符號，聽選項找出正確發音</span>
       </button>
-      <button class="zy-mode-card" onclick="enterZyWriteMenu()">
+      <button class="zy-mode-card" onclick="enterZyDirection('write')">
         <span class="zy-mode-icon">✍️</span>
         <span class="zy-mode-name">仿寫練習</span>
         <span class="zy-mode-desc">看筆順動畫，跟著一筆一筆寫</span>
       </button>
     </div>
   </div>
-</div>
-
-<!-- ── 仿寫練習：選符號 ── -->
-<div id="page-zy-write-menu" class="page">
-  <div class="menu-body" id="zy-write-menu-body"></div>
 </div>
 
 <!-- ── 仿寫練習 ── -->
@@ -111,6 +106,28 @@
       </div>
     </div>
     <div class="zw-msg" id="zw-msg"></div>
+  </div>
+</div>
+
+<!-- ── 仿寫測驗：聽讀音、不看範例、不顯示淺色字，自己寫出來 ── -->
+<div id="page-zy-write-exam" class="page">
+  <div class="q-progress-bar-wrap"><div class="q-progress-fill" id="zwe-progress-fill"></div></div>
+  <div class="zw-wrap">
+    <div class="q-header">
+      <span class="q-num" id="zwe-q-num">第 1 題 / 共 ? 題</span>
+      <span class="q-round" id="zwe-round-label">Round 1</span>
+    </div>
+    <div class="play-btn-wrap">
+      <button class="play-btn" onclick="zwePlayVoice()">
+        <span class="play-btn-icon">🔊</span><span>再聽一次</span>
+      </button>
+    </div>
+    <div class="zw-boxes" id="zwe-boxes"></div>
+    <div class="zw-msg" id="zwe-msg"></div>
+    <div class="zw-ctrl zw-ctrl-center">
+      <button class="zw-btn zw-btn-light" onclick="zweSkip()">⏭ 不會寫，跳過</button>
+      <button class="zw-btn zw-btn-light" onclick="backToZyMenu()">📋 離開測驗</button>
+    </div>
   </div>
 </div>
 

@@ -436,3 +436,6 @@
 .zw-btn-light { background: var(--blue-lt); color: var(--blue-dk); border: 2px solid var(--border); }
 .zw-msg { min-height: 1.6em; margin-top: 10px; text-align: center; font-size: 1.2rem; font-weight: 900; }
 .zw-msg-ok { color: var(--green); }
+.zw-msg-bad { color: var(--red); }
+.zw-ctrl-center { justify-content: center; }
+#page-zy-write-exam .zw-boxes { margin-top: 14px; }

@@ -29,11 +29,12 @@ function _zyRefreshTitleFor(name) {
     if (titleEl) titleEl.innerHTML = _zySectionIcon() + ' <span>' + _zySectionLabel() + '</span>';
   } else if (name === 'grid') {
     if (titleEl) titleEl.innerHTML = '🗂️ <span>' + _zySectionLabel() + '・符號瀏覽</span>';
-  } else if (name === 'zy-write-menu' || name === 'zy-write') {
-    if (titleEl) titleEl.innerHTML = '✍️ <span>' + _zySectionLabel() + '・仿寫練習</span>';
   } else if (name === 'zy-menu' || name === 'zy-practice' || name === 'zy-exam' ||
-             name === 'zy-exam-round-result' || name === 'zy-exam-result') {
+             name === 'zy-exam-round-result' || name === 'zy-exam-result' ||
+             name === 'zy-write' || name === 'zy-write-exam') {
     if (zyDirection) _zySetDirectionTitle();
+    /* 仿寫從練習頁按「← 返回」回到選單時，剛寫完的符號狀態要反映出來 */
+    if (name === 'zy-menu' && zyDirection === 'write') renderZyMenu();
   }
 }
 
@@ -89,8 +90,8 @@ function enterZyDirection(direction) {
 }
 
 function _zySetDirectionTitle() {
-  var modeLabel  = zyDirection === 'listen' ? '聽音選字' : '看字選音';
-  var modeIcon   = zyDirection === 'listen' ? '🎧' : '👀';
+  var modeLabel  = zyDirection === 'listen' ? '聽音選字' : zyDirection === 'write' ? '仿寫練習' : '看字選音';
+  var modeIcon   = zyDirection === 'listen' ? '🎧' : zyDirection === 'write' ? '✍️' : '👀';
   var titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.innerHTML = modeIcon + ' <span>' + _zySectionLabel() + '・' + modeLabel + '</span>';
   var typeEls = [document.getElementById('prac-q-type'), document.getElementById('exam-q-type')];
@@ -141,6 +142,8 @@ function _zyMenuItemBtn(symbol) {
 function onZyMenuItemClick(btn, symbol) {
   if (zyMenuSelectMode) {
     zyToggleSelectItem(symbol, btn);
+  } else if (zyDirection === 'write') {
+    startZwPractice(null, symbol);
   } else {
     zySpeakSymbol(symbol);
   }

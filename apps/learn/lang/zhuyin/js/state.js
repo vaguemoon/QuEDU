@@ -51,15 +51,15 @@ function loadZhuyinCombinedData() {
 
 /* ── 練習／測驗：方向與精熟狀態 ──
    聽音選字／看字選音、單音／結合韻，四個組合各自獨立累計精熟度，互不影響 */
-var zyDirection = null; // 'listen' | 'read'
+var zyDirection = null; // 'listen' | 'read' | 'write'（仿寫）
 var zySymbolStatus = {
-  single:   { listenStatus: {}, readStatus: {} },
-  combined: { listenStatus: {}, readStatus: {} }
+  single:   { listenStatus: {}, readStatus: {}, writeStatus: {} },
+  combined: { listenStatus: {}, readStatus: {}, writeStatus: {} }
 }; // { 符號: 'new'|'practiced'|'mastered' }
 
 function zyActiveStatusMap(direction) {
   var sec = zySymbolStatus[zySection];
-  return direction === 'listen' ? sec.listenStatus : sec.readStatus;
+  return direction === 'listen' ? sec.listenStatus : direction === 'write' ? sec.writeStatus : sec.readStatus;
 }
 
 function saveZySymbolStatus() {
@@ -71,6 +71,8 @@ function saveZySymbolStatus() {
       readStatus:           zySymbolStatus.single.readStatus,
       combinedListenStatus: zySymbolStatus.combined.listenStatus,
       combinedReadStatus:   zySymbolStatus.combined.readStatus,
+      writeStatus:          zySymbolStatus.single.writeStatus,
+      combinedWriteStatus:  zySymbolStatus.combined.writeStatus,
       lastStudied:          new Date().toISOString()
     }, { merge: true })
     .catch(function(e) { console.warn('saveZySymbolStatus error:', e); });

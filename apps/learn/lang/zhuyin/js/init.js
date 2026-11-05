@@ -62,6 +62,8 @@ function _zyAutoLogin() {
       zySymbolStatus.single.readStatus     = pData.readStatus           || {};
       zySymbolStatus.combined.listenStatus = pData.combinedListenStatus || {};
       zySymbolStatus.combined.readStatus   = pData.combinedReadStatus   || {};
+      zySymbolStatus.single.writeStatus    = pData.writeStatus          || {};
+      zySymbolStatus.combined.writeStatus  = pData.combinedWriteStatus  || {};
       _zyApplyTopbar();
     }).catch(function(e) { console.warn('autoLogin error:', e); });
   } catch (e) {}

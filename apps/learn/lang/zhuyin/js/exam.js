@@ -14,6 +14,7 @@ var zeIdx              = 0;
 var zePendingBtn       = null; // 看字選音：已試聽、等待「確認答案」的選項按鈕
 
 function startZyExam() {
+  if (zyDirection === 'write') { startZwExam(); return; }
   var allSymbols = zyActiveSymbols();
   zeRound1 = shuffle(allSymbols.map(function(s) {
     return { answer: s, options: buildZyOptions(s, allSymbols, []) };
@@ -191,9 +192,14 @@ function startZeNextRound() {
     zeCurrentCorrect   = 0;
     zeCurrentFailed    = [];
     zeIdx              = 0;
-    showPage('zy-exam');
-    _zySetDirectionTitle();
-    renderZeQuestion();
+    if (zyDirection === 'write') {
+      showPage('zy-write-exam');
+      renderZwExamQuestion();
+    } else {
+      showPage('zy-exam');
+      _zySetDirectionTitle();
+      renderZeQuestion();
+    }
   } else {
     finishZeExam();
   }
