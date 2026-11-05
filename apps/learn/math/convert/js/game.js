@@ -603,7 +603,7 @@ function renderNumReadChart(n) {
   el.innerHTML =
     '<div class="nr-title">📋 數位表</div>' +
     '<div class="nr-scroll"><div class="nr-grid" style="grid-template-columns:repeat(' + L + ',auto)">' + head + body + '</div></div>' +
-    '<div class="nr-tip">從左邊讀起，四位一節（億、萬、個）；中間有 0 只讀一個「零」，最後面的 0 不讀。</div>' +
+    '<div class="nr-tip">從左邊讀起，四位一節（億、萬、個）；中間有 0 只讀一個「零」，每一節最後面的 0 不讀。</div>' +
     '<div class="nr-ans">' + n + ' 讀作 <b>' + numToCn(n) + '</b></div>';
   el.classList.remove('hidden');
 }

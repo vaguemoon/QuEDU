@@ -583,7 +583,9 @@ var CN_UNIT  = ['', '十', '百', '千'];
 var CN_GROUP = ['', '萬', '億', '兆'];
 
 /* 課本讀法：四位一節（個／萬／億），節內照「千百十」讀；
-   中間不管連續幾個 0 只讀一個「零」，末尾的 0 不讀；最前面的「一十」讀成「十」 */
+   中間不管連續幾個 0 只讀一個「零」，末尾的 0 不讀；最前面的「一十」讀成「十」。
+   每一節最後面的 0 不讀：805413 讀「八十萬五千四百一十三」（萬那節的 0 在節尾，下一節從千位開始就不加零）；
+   下一節開頭是 0（100005 → 十萬零五）或整節都是 0（200003000 → 二億零三千）才要讀零 */
 function numToCn(n) {
   if (n === 0) return '零';
   var s = String(n), L = s.length, out = '', started = false, pendingZero = false;
@@ -597,7 +599,10 @@ function numToCn(n) {
       out += CN_UNIT[u];
       started = true;
     }
-    if (u === 0 && g > 0 && +s.slice(Math.max(0, i - 3), i + 1) > 0) out += CN_GROUP[g];
+    if (u === 0 && g > 0 && +s.slice(Math.max(0, i - 3), i + 1) > 0) {
+      out += CN_GROUP[g];
+      pendingZero = false; // 這一節節尾的 0 不讀，也不帶到下一節
+    }
   }
   return out;
 }
