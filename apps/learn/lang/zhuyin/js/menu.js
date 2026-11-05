@@ -29,6 +29,8 @@ function _zyRefreshTitleFor(name) {
     if (titleEl) titleEl.innerHTML = _zySectionIcon() + ' <span>' + _zySectionLabel() + '</span>';
   } else if (name === 'grid') {
     if (titleEl) titleEl.innerHTML = '🗂️ <span>' + _zySectionLabel() + '・符號瀏覽</span>';
+  } else if (name === 'zy-write-menu' || name === 'zy-write') {
+    if (titleEl) titleEl.innerHTML = '✍️ <span>' + _zySectionLabel() + '・仿寫練習</span>';
   } else if (name === 'zy-menu' || name === 'zy-practice' || name === 'zy-exam' ||
              name === 'zy-exam-round-result' || name === 'zy-exam-result') {
     if (zyDirection) _zySetDirectionTitle();

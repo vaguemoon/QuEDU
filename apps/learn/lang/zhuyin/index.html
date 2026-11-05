@@ -8,6 +8,7 @@
 <link rel="manifest" href="/QuEDU/manifest.json">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 <link rel="stylesheet" href="../../../../shared/shared.css">
 <script>
 (function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
@@ -72,7 +73,44 @@
         <span class="zy-mode-name">看字選音</span>
         <span class="zy-mode-desc">看到符號，聽選項找出正確發音</span>
       </button>
+      <button class="zy-mode-card" onclick="enterZyWriteMenu()">
+        <span class="zy-mode-icon">✍️</span>
+        <span class="zy-mode-name">仿寫練習</span>
+        <span class="zy-mode-desc">看筆順動畫，跟著一筆一筆寫</span>
+      </button>
     </div>
+  </div>
+</div>
+
+<!-- ── 仿寫練習：選符號 ── -->
+<div id="page-zy-write-menu" class="page">
+  <div class="menu-body" id="zy-write-menu-body"></div>
+</div>
+
+<!-- ── 仿寫練習 ── -->
+<div id="page-zy-write" class="page">
+  <div class="zw-wrap">
+    <div class="zw-head">
+      <button class="zw-nav" id="zw-prev" onclick="zwStep(-1)">◀ 上一個</button>
+      <button class="zw-symbol" id="zw-symbol" onclick="zySpeakSymbol(this.textContent)" title="再聽一次"></button>
+      <button class="zw-nav" id="zw-next" onclick="zwStep(1)">下一個 ▶</button>
+    </div>
+    <div class="zw-cols">
+      <div class="zw-col">
+        <div class="zw-col-title">👀 看筆順</div>
+        <div class="zw-boxes" id="zw-ref"></div>
+        <div class="zw-ctrl"><button class="zw-btn" onclick="zwPlayRef()">▶ 再播一次</button></div>
+      </div>
+      <div class="zw-col">
+        <div class="zw-col-title">✍️ 跟著寫</div>
+        <div class="zw-boxes" id="zw-quiz"></div>
+        <div class="zw-ctrl">
+          <button class="zw-btn zw-btn-light" id="zw-outline-btn" onclick="zwToggleOutline()"></button>
+          <button class="zw-btn zw-btn-light" onclick="zwRestart()">🔄 重寫</button>
+        </div>
+      </div>
+    </div>
+    <div class="zw-msg" id="zw-msg"></div>
   </div>
 </div>
 
@@ -199,6 +237,8 @@
 <script src="js/menu.js"></script>
 <script src="js/practice.js"></script>
 <script src="js/exam.js"></script>
+<script src="js/strokes.js"></script>
+<script src="js/write.js"></script>
 <script src="js/init.js"></script>
 </body>
 </html>

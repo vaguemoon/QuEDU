@@ -13,7 +13,9 @@ var PAGE_CONFIG = {
   'zy-exam':              { title: '',                         back: true  },
   'zy-exam-round-result': { title: '',                         back: true  },
   'zy-exam-result':       { title: '',                         back: true  },
-  'settings':             { title: '⚙️ <span>設定</span>',     back: true  }
+  'zy-write-menu':        { title: '',                         back: true  }, // 標題依區域動態設定，見 _zyRefreshTitleFor()
+  'zy-write':             { title: '',                         back: true  },
+  'settings':           { title: '⚙️ <span>設定</span>',     back: true  }
 };
 var currentPage = 'zy-section-select';
 
