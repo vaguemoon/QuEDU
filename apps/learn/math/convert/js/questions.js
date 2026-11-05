@@ -568,6 +568,78 @@ function _makeFractionQuestions(subtype) {
 }
 
 // ════════════════════════════════════════
+//  數的讀寫：阿拉伯數字 ↔ 國字讀法
+// ════════════════════════════════════════
+
+/* 範圍：位數區間＋非首位出現 0 的機率（0 要讀「零」是這單元的重點，刻意多出） */
+var NUMREAD_LEVELS = {
+  k: { minLen: 3, maxLen: 3,  zeroP: .3  },
+  w: { minLen: 4, maxLen: 4,  zeroP: .35 },
+  y: { minLen: 5, maxLen: 8,  zeroP: .4  },
+  z: { minLen: 9, maxLen: 12, zeroP: .45 }
+};
+var CN_DIGIT = '零一二三四五六七八九';
+var CN_UNIT  = ['', '十', '百', '千'];
+var CN_GROUP = ['', '萬', '億', '兆'];
+
+/* 課本讀法：四位一節（個／萬／億），節內照「千百十」讀；
+   中間不管連續幾個 0 只讀一個「零」，末尾的 0 不讀；最前面的「一十」讀成「十」 */
+function numToCn(n) {
+  if (n === 0) return '零';
+  var s = String(n), L = s.length, out = '', started = false, pendingZero = false;
+  for (var i = 0; i < L; i++) {
+    var d = +s[i], pos = L - 1 - i, u = pos % 4, g = Math.floor(pos / 4);
+    if (d === 0) {
+      if (started) pendingZero = true;
+    } else {
+      if (pendingZero) { out += '零'; pendingZero = false; }
+      if (!(d === 1 && u === 1 && !started)) out += CN_DIGIT[d];
+      out += CN_UNIT[u];
+      started = true;
+    }
+    if (u === 0 && g > 0 && +s.slice(Math.max(0, i - 3), i + 1) > 0) out += CN_GROUP[g];
+  }
+  return out;
+}
+
+/* 判分前統一寫法：「兩百／兩千／兩萬…」＝「二」；開頭或「零」後面的「一十」＝「十」 */
+function cnNormalize(str) {
+  return String(str).replace(/兩(?=[百千萬億兆])/g, '二').replace(/(^|零)一十/g, '$1十');
+}
+
+function _randNumForLevel(lv) {
+  var L = lv.minLen + Math.floor(Math.random() * (lv.maxLen - lv.minLen + 1));
+  var d = [1 + Math.floor(Math.random() * 9)];
+  for (var i = 1; i < L; i++) d.push(Math.random() < lv.zeroP ? 0 : 1 + Math.floor(Math.random() * 9));
+  /* 億／兆範圍：有時整節都是 0（如 3 0000 0052），練「整節是 0 也只讀一個零」 */
+  if (L >= 9 && Math.random() < .3) {
+    var start = L - 8 + Math.floor(Math.random() * 4); // 萬那一節裡某一位開始
+    for (var j = start; j < Math.min(L - 1, start + 4); j++) d[j] = 0;
+  }
+  return parseInt(d.join(''), 10);
+}
+
+function _makeNumReadQuestions(subtype, level) {
+  var lv = NUMREAD_LEVELS[level] || NUMREAD_LEVELS.k;
+  var seen = {}, qs = [];
+  for (var t = 0; t < 400 && qs.length < 30; t++) {
+    var n = _randNumForLevel(lv);
+    if (seen[n]) continue;
+    seen[n] = true;
+    var dir = subtype === 'mixed' ? (Math.random() < .5 ? 'read' : 'write') : subtype;
+    var cn = numToCn(n);
+    if (dir === 'read') {
+      qs.push({ prompt: n + ' 讀作 ？', answerCount: 1, answer: [cn], answerFormat: 'cn',
+                maxLen: 30, nrValue: n, correctText: cn });
+    } else {
+      qs.push({ prompt: cn + ' 寫作 ？', answerCount: 1, answer: [n],
+                maxLen: String(n).length + 2, nrValue: n, correctText: String(n) });
+    }
+  }
+  return qs;
+}
+
+// ════════════════════════════════════════
 //  主入口
 // ════════════════════════════════════════
 
@@ -579,6 +651,7 @@ function generateQuestionPool(category, subtype, difficulty) {
   else if (category === 'time')    all = _makeTimeQuestions(subtype, difficulty);
   else if (category === 'money')   all = _makeMoneyQuestions(subtype, difficulty);
   else if (category === 'percent') all = _makePercentQuestions(subtype);
+  else if (category === 'numread') all = _makeNumReadQuestions(subtype, difficulty);
   else if (category === 'decimal') {
     if (subtype === 'frac-p2w' || subtype === 'frac-w2p' || subtype === 'frac-mixed') {
       all = _makeFractionQuestions(subtype);

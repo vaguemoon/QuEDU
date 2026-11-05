@@ -87,6 +87,13 @@
           <div class="cat-card-sub">小數・分數・生活情境</div>
         </div>
       </button>
+      <button class="cat-card cat-card-numread" onclick="openCategory('numread')">
+        <div class="cat-card-icon">🔢</div>
+        <div class="cat-card-info">
+          <div class="cat-card-title">數的讀寫</div>
+          <div class="cat-card-sub">數字・國字讀法</div>
+        </div>
+      </button>
       <button class="cat-card cat-card-percent" onclick="openCategory('percent')">
         <div class="cat-card-icon">📊</div>
         <div class="cat-card-info">
@@ -128,6 +135,7 @@
 
       <!-- 嵌入式題目（答案格內嵌於題目句中） -->
       <div id="game-question-area" class="q-area"></div>
+      <div id="nr-chart" class="nr-chart hidden"></div>
 
       <!-- 虛擬鍵盤 -->
       <div class="fill-pad" id="game-fill-pad">
@@ -150,6 +158,37 @@
           <button class="fill-btn fill-del" onclick="fillBackspace()">⌫</button>
           <button class="fill-btn fill-dot hidden" id="fill-dot-key" onclick="fillAppend('.')">.</button>
           <button class="fill-btn" onclick="fillAppend('0')">0</button>
+          <button class="fill-btn fill-ok" onclick="onGameSubmit()">✓</button>
+        </div>
+      </div>
+
+      <!-- 國字按鍵盤（數的讀寫・讀作題） -->
+      <div class="fill-pad cn-pad hidden" id="game-cn-pad">
+        <div class="fill-pad-row">
+          <button class="fill-btn" onclick="fillAppend('一')">一</button>
+          <button class="fill-btn" onclick="fillAppend('二')">二</button>
+          <button class="fill-btn" onclick="fillAppend('三')">三</button>
+          <button class="fill-btn" onclick="fillAppend('四')">四</button>
+          <button class="fill-btn" onclick="fillAppend('五')">五</button>
+        </div>
+        <div class="fill-pad-row">
+          <button class="fill-btn" onclick="fillAppend('六')">六</button>
+          <button class="fill-btn" onclick="fillAppend('七')">七</button>
+          <button class="fill-btn" onclick="fillAppend('八')">八</button>
+          <button class="fill-btn" onclick="fillAppend('九')">九</button>
+          <button class="fill-btn cn-zero" onclick="fillAppend('零')">零</button>
+        </div>
+        <div class="fill-pad-row">
+          <button class="fill-btn cn-unit" onclick="fillAppend('十')">十</button>
+          <button class="fill-btn cn-unit" onclick="fillAppend('百')">百</button>
+          <button class="fill-btn cn-unit" onclick="fillAppend('千')">千</button>
+          <button class="fill-btn cn-unit" onclick="fillAppend('萬')">萬</button>
+          <button class="fill-btn cn-unit" onclick="fillAppend('億')">億</button>
+        </div>
+        <div class="fill-pad-row">
+          <button class="fill-btn cn-unit" onclick="fillAppend('兆')">兆</button>
+          <button class="fill-btn" onclick="fillAppend('兩')">兩</button>
+          <button class="fill-btn fill-del" onclick="fillBackspace()">⌫</button>
           <button class="fill-btn fill-ok" onclick="onGameSubmit()">✓</button>
         </div>
       </div>

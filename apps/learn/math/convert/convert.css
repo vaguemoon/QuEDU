@@ -104,6 +104,7 @@
 .cat-card-time   { border-color: var(--green); }
 .cat-card-money   { border-color: #e6b800; }
 .cat-card-percent { border-color: #8e44ad; }
+.cat-card-numread { border-color: #c0392b; }
 
 /* ══════════════════════════════════════
    選擇頁
@@ -985,3 +986,27 @@
 .ts-pop-label {
   font-size: .88rem; font-weight: 900; color: var(--text); white-space: nowrap;
 }
+
+/* ══════════════════════════════════════
+   數的讀寫
+   ══════════════════════════════════════ */
+:root { --nr-zero: #e84444; --nr-edge: #2d6fa8; --nr-unit-bg: #eef5fc; }
+.q-area .fill-box.fill-box-cn { min-width: 160px; font-size: 1.7rem; letter-spacing: 1px; white-space: normal; word-break: break-all; text-align: left; }
+.cn-pad .fill-btn { font-family: 'Noto Sans TC', sans-serif; }
+.cn-pad .cn-unit { background: var(--nr-unit-bg); color: var(--blue-dk); }
+.cn-pad .cn-zero { color: var(--nr-zero); }
+.nr-chart {
+  width: 100%; padding: 14px 16px; background: white; border: 2.5px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.nr-title { font-size: 1rem; font-weight: 900; color: var(--blue-dk); margin-bottom: 8px; }
+.nr-scroll { overflow-x: auto; }
+.nr-grid { display: inline-grid; border-left: 2px solid var(--border); border-top: 2px solid var(--border); }
+.nr-grid > div { min-width: 44px; padding: 4px 6px; text-align: center; border-right: 2px solid var(--border); border-bottom: 2px solid var(--border); }
+.nr-grid > .nr-edge { border-right: 3px solid var(--nr-edge); }
+.nr-h { font-size: .85rem; font-weight: 800; color: var(--muted); background: var(--nr-unit-bg); white-space: nowrap; }
+.nr-d { font-family: 'Courier New', monospace; font-size: 1.7rem; font-weight: 900; color: var(--text); }
+.nr-d.nr-zero { color: var(--nr-zero); }
+.nr-tip { margin-top: 8px; font-size: .95rem; font-weight: 700; color: var(--muted); line-height: 1.5; }
+.nr-ans { margin-top: 6px; font-size: 1.15rem; font-weight: 800; color: var(--text); }
+.nr-ans b { color: var(--green-dk, #1e8449); }

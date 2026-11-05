@@ -59,6 +59,21 @@ var CAT_CONFIG = {
       { id: 'mixed',       label: '🎲 混合'     }
     ]
   },
+  numread: {
+    icon: '🔢', name: '數的讀寫',
+    subtypes: [
+      { id: 'read',  label: '數字→國字（讀作）' },
+      { id: 'write', label: '國字→數字（寫作）' },
+      { id: 'mixed', label: '🎲 混合' }
+    ],
+    /* 不用初階／進階，改用位數範圍（跟二～四年級課本進度對應） */
+    levels: [
+      { id: 'k', label: '千以內（三位數）' },
+      { id: 'w', label: '萬以內（四位數）' },
+      { id: 'y', label: '億以內（五～八位數）' },
+      { id: 'z', label: '兆以內（九～十二位數）' }
+    ]
+  },
   decimal: {
     icon: '🥛', name: '部分與整體', noDifficulty: true,
     subtypes: [
@@ -86,7 +101,7 @@ function openCategory(cat) {
   sfxTap();
   currentCategory  = cat;
   selectSubtype    = CAT_CONFIG[cat].subtypes[0].id;
-  selectDifficulty = 'easy';
+  selectDifficulty = CAT_CONFIG[cat].levels ? CAT_CONFIG[cat].levels[0].id : 'easy';
   selectTimeItems  = { 'day-hour': false, 'hour-min': false, 'min-sec': false };
   renderSelectPage();
   showPage('select');
@@ -139,12 +154,12 @@ function renderSelectPage() {
 
   if (!cfg.noDifficulty) {
     html += '<div class="select-section">';
-    html += '<div class="select-label">難度</div>';
+    html += '<div class="select-label">' + (cfg.levels ? '範圍' : '難度') + '</div>';
     html += '<div class="type-btn-group">';
-    [
+    (cfg.levels || [
       { id: 'easy', label: '初階' },
       { id: 'hard', label: '進階' }
-    ].forEach(function(d) {
+    ]).forEach(function(d) {
       html += '<button id="diff-' + d.id + '" class="type-btn' + (d.id === selectDifficulty ? ' active' : '') +
         '" onclick="setDifficulty(\'' + d.id + '\')">' + d.label + '</button>';
     });
@@ -288,7 +303,11 @@ function renderQuestion() {
 
   var html = '';
 
-  if (q.answerFormat === 'fraction') {
+  if (q.answerFormat === 'cn') {
+    var cnParts = q.prompt.split('？');
+    html = '<span class="q-segment">' + cnParts[0] + '</span>' +
+           '<div class="fill-box fill-box-cn" id="game-fill-box">＿</div>';
+  } else if (q.answerFormat === 'fraction') {
     // 分數輸入：垂直堆疊分子/分母，尾端可帶單位標籤
     html = '<span class="q-segment">' + q.prompt + ' = </span>' +
            '<div class="frac-input-wrap">' +
@@ -348,6 +367,13 @@ function renderQuestion() {
 
   var dotKey = document.getElementById('fill-dot-key');
   if (dotKey) dotKey.classList.toggle('hidden', q.answerFormat !== 'decimal');
+  /* 讀作題換成國字按鍵盤 */
+  var isCn = q.answerFormat === 'cn';
+  var numPad = document.getElementById('game-fill-pad'), cnPad = document.getElementById('game-cn-pad');
+  if (numPad) numPad.classList.toggle('hidden', isCn);
+  if (cnPad)  cnPad.classList.toggle('hidden', !isCn);
+  var nrChart = document.getElementById('nr-chart');
+  if (nrChart) { nrChart.classList.add('hidden'); nrChart.innerHTML = ''; }
 
   var isMoney   = currentCategory === 'money';
   var isTime    = currentCategory === 'time';
@@ -411,7 +437,7 @@ function fillAppend(d) {
     fillInputArr[activeFillIdx] += String(d);
     updateMultiDisplay();
   } else {
-    if (fillInputStr.length >= 6) return;
+    if (fillInputStr.length >= ((gameQ && gameQ.maxLen) || 6)) return;
     if (d === '.' && fillInputStr.indexOf('.') >= 0) return;
     fillInputStr += String(d);
     updateSingleDisplay();
@@ -454,7 +480,9 @@ function onGameSubmit() {
     }
   } else {
     if (!fillInputStr) return;
-    if (gameQ.answerFormat === 'decimal') {
+    if (gameQ.answerFormat === 'cn') {
+      onGameResult(cnNormalize(fillInputStr) === cnNormalize(gameQ.answer[0]));
+    } else if (gameQ.answerFormat === 'decimal') {
       var fVal = parseFloat(fillInputStr);
       onGameResult(!isNaN(fVal) && Math.abs(fVal - gameQ.answer[0]) < 1e-9);
     } else {
@@ -466,7 +494,7 @@ function onGameSubmit() {
 
 function handleFillKeydown(e) {
   if (currentPage !== 'game') return;
-  if (e.key >= '0' && e.key <= '9') { fillAppend(e.key); return; }
+  if (e.key >= '0' && e.key <= '9') { if (gameQ && gameQ.answerFormat === 'cn') return; fillAppend(e.key); return; }
   if (e.key === '.' && gameQ && gameQ.answerFormat === 'decimal') { fillAppend('.'); return; }
   if (e.key === 'Backspace') { fillBackspace(); return; }
   if (e.key === 'Enter') { onGameSubmit(); }
@@ -493,10 +521,17 @@ function onGameResult(isCorrect) {
     gameStreak = 0;
     sfxWrong();
     _showCorrectAnswer();
+    if (currentCategory === 'numread') renderNumReadChart(gameQ.nrValue);
     updateGameStats();
     disableGameInput();
     var nextBtn = document.getElementById('game-next-btn');
-    if (nextBtn) nextBtn.classList.remove('hidden');
+    if (nextBtn) {
+      nextBtn.classList.remove('hidden');
+      /* 數的讀寫答錯會多出數位表，把下一題按鈕擠到畫面外，捲過去 */
+      if (currentCategory === 'numread') {
+        setTimeout(function() { try { nextBtn.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }, 50);
+      }
+    }
   }
 }
 
@@ -542,13 +577,35 @@ function doNextQuestion() {
 }
 
 function enableGameInput() {
-  var pad = document.getElementById('game-fill-pad');
-  if (pad) pad.querySelectorAll('button').forEach(function(btn) { btn.disabled = false; });
+  document.querySelectorAll('#game-fill-pad button, #game-cn-pad button').forEach(function(btn) { btn.disabled = false; });
 }
 
 function disableGameInput() {
-  var pad = document.getElementById('game-fill-pad');
-  if (pad) pad.querySelectorAll('button').forEach(function(btn) { btn.disabled = true; });
+  document.querySelectorAll('#game-fill-pad button, #game-cn-pad button').forEach(function(btn) { btn.disabled = true; });
+}
+
+// ════════════════════════════════════════
+//  數的讀寫：答錯時的數位表
+// ════════════════════════════════════════
+
+var _NR_PLACE = ['個', '十', '百', '千', '萬', '十萬', '百萬', '千萬', '億', '十億', '百億', '千億'];
+
+function renderNumReadChart(n) {
+  var el = document.getElementById('nr-chart');
+  if (!el || n == null) return;
+  var s = String(n), L = s.length, head = '', body = '';
+  for (var i = 0; i < L; i++) {
+    var pos = L - 1 - i, d = s[i];
+    var groupEdge = pos % 4 === 0 && pos > 0 ? ' nr-edge' : '';
+    head += '<div class="nr-h' + groupEdge + '">' + _NR_PLACE[pos] + '</div>';
+    body += '<div class="nr-d' + (d === '0' ? ' nr-zero' : '') + groupEdge + '">' + d + '</div>';
+  }
+  el.innerHTML =
+    '<div class="nr-title">📋 數位表</div>' +
+    '<div class="nr-scroll"><div class="nr-grid" style="grid-template-columns:repeat(' + L + ',auto)">' + head + body + '</div></div>' +
+    '<div class="nr-tip">從左邊讀起，四位一節（億、萬、個）；中間有 0 只讀一個「零」，最後面的 0 不讀。</div>' +
+    '<div class="nr-ans">' + n + ' 讀作 <b>' + numToCn(n) + '</b></div>';
+  el.classList.remove('hidden');
 }
 
 // ════════════════════════════════════════
@@ -667,8 +724,10 @@ function showResult() {
   sfxGrandCelebrate();
 
   totalRounds++;
+  /* 新加的題域（如數的讀寫）舊學生的紀錄裡沒有這個 key，第一次玩時補上 */
+  if (!categoryStats[currentCategory]) categoryStats[currentCategory] = { rounds: 0, stars: 0 };
   var catStat = categoryStats[currentCategory];
-  if (catStat) { catStat.rounds++; catStat.stars += stars; }
+  catStat.rounds++; catStat.stars += stars;
   saveProgress();
   if (typeof checkAchievements === 'function') checkAchievements();
 
