@@ -159,8 +159,12 @@ var zweMistakes = 0;
 var zweToken    = 0;
 var ZWE_PASS_MISTAKES = 3;
 
-function startZwExam() {
-  zeRound1 = shuffle(zyActiveSymbols()).map(function(s) { return { answer: s }; });
+function startZwExam(selectedItems) {
+  var targets = (selectedItems && selectedItems.length)
+    ? zyActiveSymbols().filter(function(s) { return selectedItems.indexOf(s) !== -1; })
+    : zyActiveSymbols();
+  zeLastSelection = (selectedItems && selectedItems.length) ? selectedItems.slice() : null;
+  zeRound1 = shuffle(targets).map(function(s) { return { answer: s }; });
   zeCurrentRound     = 1;
   zeCurrentQuestions = zeRound1.slice();
   zeCurrentCorrect   = 0;

@@ -1,6 +1,6 @@
 /**
  * exam.js — 測驗模式（聽音選字／看字選音 共用，無限輪次，直到全部答對）
- * 一律涵蓋全部 37 個符號，不受練習頁自選範圍影響（跟認字趣的測驗模式一致）。
+ * 範圍：底部列「測驗 → 全部」考這一區全部符號，「測驗 → 選擇部分」只考勾選的。
  */
 'use strict';
 
@@ -11,12 +11,17 @@ var zeCurrentCorrect   = 0;
 var zeCurrentFailed    = [];
 var zeRoundHistory     = [];
 var zeIdx              = 0;
-var zePendingBtn       = null; // 看字選音：已試聽、等待「確認答案」的選項按鈕
+var zePendingBtn       = null;
+var zeLastSelection    = null; // 這次測驗的範圍（null＝全部），結果頁「重新測驗」沿用 // 看字選音：已試聽、等待「確認答案」的選項按鈕
 
-function startZyExam() {
-  if (zyDirection === 'write') { startZwExam(); return; }
+function startZyExam(selectedItems) {
+  if (zyDirection === 'write') { startZwExam(selectedItems); return; }
   var allSymbols = zyActiveSymbols();
-  zeRound1 = shuffle(allSymbols.map(function(s) {
+  var targets = (selectedItems && selectedItems.length)
+    ? allSymbols.filter(function(s) { return selectedItems.indexOf(s) !== -1; })
+    : allSymbols;
+  zeLastSelection = (selectedItems && selectedItems.length) ? selectedItems.slice() : null;
+  zeRound1 = shuffle(targets.map(function(s) {
     return { answer: s, options: buildZyOptions(s, allSymbols, []) };
   }));
   if (!zeRound1.length) { showToast('沒有可測驗的符號'); return; }

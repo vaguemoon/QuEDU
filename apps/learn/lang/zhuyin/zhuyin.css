@@ -207,6 +207,7 @@
   background: linear-gradient(135deg, var(--blue), var(--blue-dk));
   color: white; box-shadow: 0 4px 16px rgba(74,144,217,.35);
 }
+.btn-start-select:disabled { opacity: .45; cursor: default; box-shadow: none; }
 .btn-cancel-select {
   background: var(--bg); color: var(--muted);
   border: 2px solid var(--border);

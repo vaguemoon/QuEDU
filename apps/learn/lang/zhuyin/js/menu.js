@@ -81,6 +81,7 @@ function enterZyGrid() {
 
 var zyMenuSelectMode = false;
 var zySelectedItems  = new Set();
+var zyMenuAction     = 'practice'; // 底部列先按「練習」或「測驗」，再選全部／部分
 
 function enterZyDirection(direction) {
   zyDirection = direction;
@@ -173,7 +174,27 @@ function zyUpdateSelectCount() {
   var btn = document.getElementById('zy-btn-start-select');
   if (!btn) return;
   var n = zySelectedItems.size;
-  btn.textContent = n ? '開始練習（' + n + ' 個）' : '開始練習（全部）';
+  btn.disabled = !n;
+  btn.textContent = '開始' + _zyActionLabel() + (n ? '（' + n + ' 個）' : '');
+}
+
+function _zyActionLabel() { return zyMenuAction === 'exam' ? '測驗' : '練習'; }
+
+/* 底部列第一層：練習／測驗 → 第二層：全部／選擇部分 */
+function zyChooseAction(action) {
+  zyMenuAction = action;
+  var bar = document.getElementById('zy-menu-action-bar');
+  if (!bar) return;
+  var icon = action === 'exam' ? '📝' : '🎯';
+  bar.innerHTML =
+    '<button class="btn-action ' + (action === 'exam' ? 'btn-exam' : 'btn-practice') + '" onclick="zyStartAll()">' +
+      icon + ' 全部' + _zyActionLabel() + '</button>' +
+    '<button class="btn-action btn-select-mode" onclick="zyEnterSelectMode()">✏️ 選擇部分</button>' +
+    '<button class="btn-action btn-cancel-select" onclick="renderZyNormalActionBar()">✕ 取消</button>';
+}
+
+function zyStartAll() {
+  if (zyMenuAction === 'exam') startZyExam(); else startZyPractice();
 }
 
 function zyEnterSelectMode() {
@@ -199,18 +220,18 @@ function zyExitSelectMode() {
 }
 
 function zyStartSelectPractice() {
-  var selected = zySelectedItems.size ? Array.from(zySelectedItems) : null;
+  if (!zySelectedItems.size) return;
+  var selected = Array.from(zySelectedItems);
   zyExitSelectMode();
-  startZyPractice(selected);
+  if (zyMenuAction === 'exam') startZyExam(selected); else startZyPractice(selected);
 }
 
 function renderZyNormalActionBar() {
   var bar = document.getElementById('zy-menu-action-bar');
   if (!bar) return;
   bar.innerHTML =
-    '<button class="btn-action btn-practice" onclick="startZyPractice()">🎯 全部練習</button>' +
-    '<button class="btn-action btn-select-mode" onclick="zyEnterSelectMode()">✏️ 自選練習</button>' +
-    '<button class="btn-action btn-exam" onclick="startZyExam()">📝 測驗模式</button>';
+    '<button class="btn-action btn-practice" onclick="zyChooseAction(\'practice\')">🎯 練習</button>' +
+    '<button class="btn-action btn-exam" onclick="zyChooseAction(\'exam\')">📝 測驗</button>';
 }
 
 function renderZySelectActionBar() {
@@ -218,7 +239,7 @@ function renderZySelectActionBar() {
   if (!bar) return;
   bar.innerHTML =
     '<button class="btn-action btn-select-all" onclick="zySelectAll()">☑ 全選</button>' +
-    '<button class="btn-action btn-start-select" id="zy-btn-start-select" onclick="zyStartSelectPractice()">開始練習（全部）</button>' +
+    '<button class="btn-action btn-start-select" id="zy-btn-start-select" onclick="zyStartSelectPractice()" disabled>開始' + _zyActionLabel() + '</button>' +
     '<button class="btn-action btn-cancel-select" onclick="zyExitSelectMode()">✕ 取消</button>';
 }
 
