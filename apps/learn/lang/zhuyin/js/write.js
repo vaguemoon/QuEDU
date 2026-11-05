@@ -17,7 +17,7 @@ try { zwOutline = localStorage.getItem('zw-outline') !== 'off'; } catch (e) {}
 
 function _zwWriterOpts(sz, extra) {
   return Object.assign({
-    width: sz, height: sz, padding: Math.round(sz * 0.08),
+    width: sz, height: sz, padding: Math.round(sz * 0.05),
     charDataLoader: zyCharDataLoader,
     strokeColor: '#2d6fa8', outlineColor: '#c8dff5', highlightColor: '#ffd54f',
     drawingColor: '#2d6fa8', drawingWidth: Math.max(6, Math.round(sz * 0.03)),
