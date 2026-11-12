@@ -507,7 +507,8 @@ function tenFrames(a, b, minus, crossFromTen) {
       var crossed = crossFromTen ? (i >= 10 - minus && i < 10) : (i >= a - minus);
       if (crossed) cls = 'tf-x';
     }
-    cells.push(cls ? '<div class="tf-dot ' + cls + '"></div>' : '<div></div>');
+    /* 每一格都畫格線，空格才數得出來 */
+    cells.push('<div class="tf-cell">' + (cls ? '<div class="tf-dot ' + cls + '"></div>' : '') + '</div>');
   }
   var h = '<div class="tf-row">';
   for (var f = 0; f < frames; f++) h += '<div class="tf">' + cells.slice(f * 10, f * 10 + 10).join('') + '</div>';
