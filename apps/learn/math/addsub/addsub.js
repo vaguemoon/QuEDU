@@ -456,7 +456,7 @@ function explainHtml(q, reveal) {
   var core = coreOf(q), lines = [];
   if (cfg.level === 'ten' && q.ops[0] === '+') {
     var known = q.terms[q.unknown === 0 ? 1 : 0];
-    lines.push(numSpan(known) + ' 和多少合起來是 ' + numSpan(10) + '？數一數空格有幾個。');
+    lines.push(numSpan(known) + ' 和多少合起來是 ' + numSpan(10) + '？點一點空格，數一數有幾個。');
     lines.push(tenFrames(known, reveal ? 10 - known : 0, 0, false));
     return lines.join('<br>');
   }
@@ -508,12 +508,23 @@ function tenFrames(a, b, minus, crossFromTen) {
       if (crossed) cls = 'tf-x';
     }
     /* 每一格都畫格線，空格才數得出來 */
-    cells.push('<div class="tf-cell">' + (cls ? '<div class="tf-dot ' + cls + '"></div>' : '') + '</div>');
+    cells.push(cls ? '<div class="tf-cell"><div class="tf-dot ' + cls + '"></div></div>'
+                   : '<div class="tf-cell tf-empty"></div>');
   }
   var h = '<div class="tf-row">';
   for (var f = 0; f < frames; f++) h += '<div class="tf">' + cells.slice(f * 10, f * 10 + 10).join('') + '</div>';
   return h + '</div>';
 }
+
+/* 點數空格：點一下空格出現另一種顏色的圓，再點一下拿掉（滑鼠、觸控都用 Pointer Events） */
+document.addEventListener('pointerdown', function(e) {
+  var cell = e.target.closest && e.target.closest('.tf-empty');
+  if (!cell) return;
+  e.preventDefault();
+  var dot = cell.querySelector('.tf-tap');
+  if (dot) cell.removeChild(dot);
+  else cell.insertAdjacentHTML('beforeend', '<div class="tf-dot tf-tap"></div>');
+});
 
 /* 二位數以上：直式逐位說明＋小直式（進位／借位用紅字標在上方） */
 function columnHint(c, reveal) {

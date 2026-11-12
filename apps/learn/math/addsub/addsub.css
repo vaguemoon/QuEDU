@@ -3,6 +3,8 @@
   --as-a:      #4a90d9;   /* 第一個數的圓點 */
   --as-b:      #ff8c42;   /* 第二個數的圓點 */
   --as-cross:  #b8c4d0;   /* 減掉的圓點 */
+  --as-tap:    #ff8c42;   /* 學生點空格補上的圓點（跟公布答案時補上的橘點同色） */
+  --as-tap-lt: #fff1e6;
   --as-carry:  #e84444;   /* 進位／借位標記 */
   --as-ok:     #27ae60;
   --as-ok-lt:  #e9f9ef;
@@ -185,6 +187,10 @@ button { touch-action: manipulation; }
 .tf-cell:nth-child(5n) { border-right: none; }
 .tf-cell:nth-child(n+6) { border-bottom: none; }
 .tf-dot { width: 30px; height: 30px; border-radius: 50%; position: relative; }
+.tf-empty { cursor: pointer; touch-action: manipulation; }
+.tf-empty:hover { background: var(--as-tap-lt); }
+.tf-tap { background: var(--as-tap); animation: tf-pop .15s ease-out; }
+@keyframes tf-pop { from { transform: scale(.4); } to { transform: scale(1); } }
 .tf-a { background: var(--as-a); }
 .tf-b { background: var(--as-b); }
 .tf-x { background: var(--as-cross); }
