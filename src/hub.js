@@ -36,6 +36,21 @@ var SUBJECTS = [
     }
   },
   {
+    id: 'numsense', file: 'apps/learn/math/numsense/index.html',
+    icon: '🔢', name: '基礎數感', desc: '數字寫法・位值・數的順序',
+    type: 'learn', category: 'math',
+    theme: 'theme-teal', badge: '基礎數感', badgeClass: 'green',
+    getLevel: function() { return Promise.resolve('基礎數感'); },
+    activity: function(sid) {
+      return db.collection('students').doc(sid).collection('progress').doc('numsense').get()
+        .then(function(doc) {
+          if (!doc.exists) return null;
+          var c = doc.data().totalCorrect || 0;
+          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
+        });
+    }
+  },
+  {
     id: 'convert', file: 'apps/learn/math/convert/index.html',
     icon: '↔', name: '換算趣', desc: '各種單位換算',
     type: 'learn', category: 'math',
@@ -386,7 +401,8 @@ var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-qui
   'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
   'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
   'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub',
-  'e-textbook-back-to-hub','motor-back-to-hub','english-quiz-back-to-hub','compare-back-to-hub','addsub-back-to-hub'];
+  'e-textbook-back-to-hub','motor-back-to-hub','english-quiz-back-to-hub','compare-back-to-hub','addsub-back-to-hub',
+  'numsense-back-to-hub'];
 var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
   'geometry-logout','english-logout','radical-logout','zhuyin-logout','e-textbook-logout','motor-logout'];
 

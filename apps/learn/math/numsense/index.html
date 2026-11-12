@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#4a90d9">
+<title>基礎數感｜上學趣</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="../../../../shared/shared.css">
+<script>
+(function(){var M={blue:'#eef5fc,#4a90d9,#2d6fa8,#e8f4fd',green:'#edfbf4,#27ae60,#1e8449,#d5f5e3',
+  purple:'#f3f0fc,#8e44ad,#6c3483,#e8daef',orange:'#fff8f0,#e67e22,#ca6f1e,#fdebd0',
+  teal:'#f0fafa,#16a085,#0e6655,#d1f2eb',pink:'#fff0f8,#d63384,#a0255e,#fce4ec'};
+  try{var v=(M[localStorage.getItem('theme')]||M.blue).split(','),r=document.documentElement.style;
+  ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
+</script>
+<link rel="stylesheet" href="numsense.css">
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<div id="page-topbar">
+  <button class="btn-back-hub" onclick="backToHub()">← 主頁</button>
+  <button class="btn-back hidden" id="topbar-back" onclick="goHome()">← 換題目</button>
+  <div id="topbar-title">🔢 <span>基礎數感</span></div>
+  <div id="topbar-right">
+    <div id="topbar-student">
+      <span id="topbar-avatar">🐣</span>
+      <span id="topbar-name">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: HOME ══════════════════ -->
+<div id="page-home" class="page active">
+  <div class="home-wrap">
+    <div class="pick-label">1. 選項目</div>
+    <div class="pick-grid" id="item-grid"></div>
+
+    <div class="pick-label">2. 選程度 <span class="pick-legend"><i class="lg lg-practiced"></i>練習過 <i class="lg lg-mastered"></i>測驗通過</span></div>
+    <div class="pick-grid" id="level-grid"></div>
+  </div>
+  <div class="home-action-bar">
+    <button class="btn-action btn-practice" onclick="startRound('practice')">🎯 練習</button>
+    <button class="btn-action btn-exam" onclick="startRound('exam')">📝 測驗</button>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: GAME ══════════════════ -->
+<div id="page-game" class="page">
+  <div class="game-wrap">
+    <div class="game-hud">
+      <span id="hud-mode" class="hud-mode"></span>
+      <span id="hud-round" class="hud-round hidden"></span>
+      <span id="hud-progress" class="hud-progress"></span>
+      <span class="hud-score">答對 <b id="hud-correct">0</b></span>
+    </div>
+
+    <div class="game-body">
+      <div class="game-main">
+        <div class="q-card">
+          <div class="q-hint" id="q-hint"></div>
+          <div class="q-area" id="q-area"></div>
+        </div>
+        <div class="feedback hidden" id="feedback">
+          <div class="fb-head" id="fb-head"></div>
+          <div class="fb-body" id="fb-body"></div>
+          <button class="btn-next hidden" id="btn-next" onclick="nextQuestion()">下一題 ▶</button>
+        </div>
+      </div>
+
+      <div class="keypad" id="keypad">
+        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+        <button class="key key-del" data-k="del">⌫</button><button class="key" data-k="0">0</button><button class="key key-ok" data-k="ok">✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: RESULT ══════════════════ -->
+<div id="page-result" class="page">
+  <div class="result-wrap">
+    <div class="result-icon" id="result-icon">🎉</div>
+    <div class="result-title" id="result-title">完成！</div>
+    <div class="result-score" id="result-score"></div>
+    <div class="result-sub" id="result-sub"></div>
+    <div class="result-btns">
+      <button class="btn-result" id="btn-again">再一次</button>
+      <button class="btn-result btn-result-home" onclick="goHome()">換題目</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="../../../../shared/shared.js"></script>
+<script src="numsense.js"></script>
+</body>
+</html>
