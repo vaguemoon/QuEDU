@@ -7,11 +7,31 @@
  *   除：B > 1 → 商變小；B = 1 → 不變；B < 1 → 商變大
  * 出題時先決定 B 落在哪一類（gt／eq／lt，相對於 0 或 1），再依數字種類（整數／小數／分數）
  * 產生 A、B。數一律用「分子／分母」整數存，比大小、判斷是不是 1 都不會有浮點誤差。
+ *
+ * 另一個項目「估一估」：876 比較接近 800 還是 900？（四捨五入、概數的前置練習）
+ *   數一律用整數 v 加上倍率 s 存（3.7 存成 v=37, s=10），不會有浮點誤差；
+ *   剛好在正中間的數（25、850、3.5）不出題——到底算接近哪邊是四捨五入的規定，不是估算。
  * 依賴：shared.js（db、initFirebase、sfxCorrect、sfxWrong、sfxCelebrate）
  */
 'use strict';
 
 var ROUND_SIZE = 10;
+
+var MODES = [
+  { id: 'op',  icon: '⚖️', name: '不用算比大小', ex: '0.72 × 1.5 □ 0.72',
+    sub: '不用計算，判斷算出來的答案比原來的數大、小，還是一樣' },
+  { id: 'est', icon: '🎯', name: '估一估：比較接近誰', ex: '876 → 800 或 900？',
+    sub: '不用精確算，看看這個數比較接近哪一個整十、整百、整千…' }
+];
+/* digits：出題的位數，第一個占七成；多一位的（347 接近 340 還是 350）是四捨五入到某一位的準備 */
+var EST_LEVELS = [
+  { id: 'ten', icon: '🔟', name: '接近幾十', ex: '23 → 20 或 30', unit: 10,    digits: [2, 3] },
+  { id: 'hun', icon: '💯', name: '接近幾百', ex: '876 → 800 或 900', unit: 100,   digits: [3, 4] },
+  { id: 'tho', icon: '🧱', name: '接近幾千', ex: '3462 → 3000 或 4000', unit: 1000,  digits: [4, 5] },
+  { id: 'wan', icon: '🏙️', name: '接近幾萬', ex: '46800 → 40000 或 50000', unit: 10000, digits: [5, 6] },
+  { id: 'one', icon: '🔸', name: '接近哪個整數', ex: '3.7 → 3 或 4', unit: 1, dec: true },
+  { id: 'mix', icon: '🔀', name: '綜合', ex: '各種範圍混合' }
+];
 
 var OPS = [
   { id: 'add', icon: '➕', name: '加法', ex: '46 + 28 □ 46' },
@@ -28,7 +48,7 @@ var NUMS = [
 ];
 var OP_SIGN = { add: '+', sub: '−', mul: '×', div: '÷' };
 
-var cfg = { op: 'div', num: 'dec' };
+var cfg = { mode: 'op', op: 'div', num: 'dec', est: 'hun' };
 var round = null; // { qs:[], idx, correct, answered }
 
 /* ══ 數字 ══ */
@@ -182,6 +202,75 @@ function numberLineSvg(q) {
   return s + '</svg>';
 }
 
+/* ══ 估一估 ══ */
+function estFmt(v, s) {
+  if (s === 1) return String(v);
+  return String(parseFloat((v / s).toFixed(String(s).length - 1)));  /* 3.50 → 3.5、4.00 → 4 */
+}
+
+function makeEstQuestion() {
+  var lvId = cfg.est === 'mix' ? pick(['ten', 'hun', 'tho', 'wan', 'one']) : cfg.est;
+  var lv = EST_LEVELS.find(function(l) { return l.id === lvId; });
+  var v, s, unitS;
+  for (var t = 0; t < 100; t++) {
+    if (lv.dec) {
+      s = Math.random() < 0.7 ? 10 : 100;
+      v = ri(1, 50 * s - 1);
+      if (s === 100 && v % 10 === 0) continue;          /* 不要 3.70 這種寫法 */
+    } else {
+      s = 1;
+      var d = Math.random() < 0.7 ? lv.digits[0] : lv.digits[1];
+      v = ri(Math.pow(10, d - 1), Math.pow(10, d) - 1);
+    }
+    unitS = lv.unit * s;
+    var r = v % unitS;
+    if (r !== 0 && r * 2 !== unitS) break;              /* 剛好整十（沒得選）或正中間（四捨五入的規定）不出 */
+  }
+  var lo = v - v % unitS, hi = lo + unitS;
+  return { kind: 'est', lv: lv, v: v, s: s, lo: lo, hi: hi, mid: lo + unitS / 2,
+           ans: estFmt(v * 2 < lo + hi ? lo : hi, s) };
+}
+
+function estExplain(q) {
+  var x = estFmt(q.v, q.s), mid = estFmt(q.mid, q.s), big = q.v > q.mid;
+  return '中間點是 ' + mid + '，' + x + ' 比 ' + mid + (big ? ' 大' : ' 小') +
+         '，所以比較接近 ' + q.ans + '。';
+}
+function estFinal(q) {
+  var x = estFmt(q.v, q.s);
+  return x + ' 離 ' + estFmt(q.lo, q.s) + ' 差 ' + estFmt(q.v - q.lo, q.s) +
+         '，離 ' + estFmt(q.hi, q.s) + ' 差 ' + estFmt(q.hi - q.v, q.s) + '，離 ' + q.ans + ' 比較近。';
+}
+
+/* 數線：兩端、中間點、這個數的位置，下面用括號標出離兩端各差多少，近的那段用綠色 */
+function estLineSvg(q) {
+  var W = 600, L = 50, R = 550, Y = 58;
+  var span = q.hi - q.lo;
+  function x(v) { return L + (R - L) * (v - q.lo) / span; }
+  var xv = x(q.v), nearLo = q.v < q.mid;
+  var s = '<svg viewBox="0 0 ' + W + ' 150" class="nl-svg" role="img" aria-label="數線">' +
+    '<line x1="' + (L - 16) + '" y1="' + Y + '" x2="' + (R + 16) + '" y2="' + Y + '" stroke="var(--text)" stroke-width="2.5"/>';
+  for (var i = 0; i <= 10; i++) {
+    var tx = L + (R - L) * i / 10, h = (i === 0 || i === 10) ? 12 : 6;
+    s += '<line x1="' + tx + '" y1="' + (Y - h) + '" x2="' + tx + '" y2="' + (Y + h) + '" stroke="var(--text)" stroke-width="' + (h > 6 ? 3 : 1.5) + '"/>';
+  }
+  s += '<line x1="' + x(q.mid) + '" y1="' + (Y - 16) + '" x2="' + x(q.mid) + '" y2="' + (Y + 14) + '" stroke="var(--cmp-ref)" stroke-width="3" stroke-dasharray="5 4"/>' +
+       '<text x="' + L + '" y="' + (Y + 34) + '" text-anchor="middle" class="nl-num">' + estFmt(q.lo, q.s) + '</text>' +
+       '<text x="' + R + '" y="' + (Y + 34) + '" text-anchor="middle" class="nl-num">' + estFmt(q.hi, q.s) + '</text>' +
+       '<text x="' + x(q.mid) + '" y="' + (Y + 34) + '" text-anchor="middle" class="nl-num nl-mid">' + estFmt(q.mid, q.s) + '</text>';
+  /* 離兩端的距離 */
+  function seg(a, b, near, label) {
+    var c = near ? 'var(--cmp-ok)' : 'var(--muted)', yy = Y + 52;
+    var tx = Math.min(R - 40, Math.max(L + 40, (a + b) / 2));
+    return '<path d="M' + a + ' ' + (yy - 8) + ' V' + yy + ' H' + b + ' V' + (yy - 8) + '" fill="none" stroke="' + c + '" stroke-width="' + (near ? 4 : 2.5) + '"/>' +
+           '<text x="' + tx + '" y="' + (yy + 26) + '" text-anchor="middle" class="nl-dist" fill="' + c + '">差 ' + label + '</text>';
+  }
+  s += seg(L, xv, nearLo, estFmt(q.v - q.lo, q.s)) + seg(xv, R, !nearLo, estFmt(q.hi - q.v, q.s));
+  s += '<circle cx="' + xv + '" cy="' + Y + '" r="9" fill="var(--cmp-gt)"/>' +
+       '<text x="' + Math.min(R, Math.max(L, xv)) + '" y="' + (Y - 28) + '" text-anchor="middle" class="nl-num nl-b" fill="var(--cmp-gt)">' + estFmt(q.v, q.s) + '</text>';
+  return s + '</svg>';
+}
+
 /* ══ 畫面 ══ */
 function showPage(name) {
   document.querySelectorAll('.page').forEach(function(el) { el.classList.remove('active'); });
@@ -196,27 +285,44 @@ function renderPickers() {
       '<span class="pick-name">' + item.name + '</span>' +
       '<span class="pick-ex">' + escHtml(item.ex) + '</span></button>';
   }
+  document.getElementById('mode-grid').innerHTML = MODES.map(function(o) { return card(o, cfg.mode, 'setMode'); }).join('');
+  document.getElementById('home-sub').textContent = MODES.find(function(m) { return m.id === cfg.mode; }).sub;
+  document.getElementById('home-op').classList.toggle('hidden', cfg.mode !== 'op');
+  document.getElementById('home-est').classList.toggle('hidden', cfg.mode !== 'est');
   document.getElementById('op-grid').innerHTML  = OPS.map(function(o) { return card(o, cfg.op, 'setOp'); }).join('');
   document.getElementById('num-grid').innerHTML = NUMS.map(function(o) { return card(o, cfg.num, 'setNum'); }).join('');
+  document.getElementById('est-grid').innerHTML = EST_LEVELS.map(function(o) { return card(o, cfg.est, 'setEst'); }).join('');
 }
+function setMode(id) { cfg.mode = id; renderPickers(); }
 function setOp(id)  { cfg.op = id;  renderPickers(); }
 function setNum(id) { cfg.num = id; renderPickers(); }
+function setEst(id) { cfg.est = id; renderPickers(); }
 
 function goHome() { round = null; showPage('home'); }
 
 function startRound() {
   var qs = [];
-  for (var i = 0; i < ROUND_SIZE; i++) qs.push(makeQuestion());
+  var est = cfg.mode === 'est';
+  for (var i = 0; i < ROUND_SIZE; i++) qs.push(est ? makeEstQuestion() : makeQuestion());
   round = { qs: qs, idx: 0, correct: 0, answered: false };
-  var opName  = OPS.find(function(o) { return o.id === cfg.op; }).name;
-  var numName = NUMS.find(function(o) { return o.id === cfg.num; }).name;
-  document.getElementById('hud-mode').textContent = opName + '・' + numName;
+  if (est) {
+    document.getElementById('hud-mode').textContent = '估一估・' + EST_LEVELS.find(function(l) { return l.id === cfg.est; }).name;
+  } else {
+    var opName  = OPS.find(function(o) { return o.id === cfg.op; }).name;
+    var numName = NUMS.find(function(o) { return o.id === cfg.num; }).name;
+    document.getElementById('hud-mode').textContent = opName + '・' + numName;
+  }
   showPage('game');
   renderQuestion();
 }
 
 function exprHtml(q, filled) {
-  var box = '<span class="ans-box' + (filled ? ' filled' : '') + '" id="ans-box">' + (filled ? escHtml(filled) : '') + '</span>';
+  var box = '<span class="ans-box' + (filled ? ' filled' : '') + (q.kind === 'est' ? ' ans-box-wide' : '') + '" id="ans-box">' +
+            (filled ? escHtml(filled) : '') + '</span>';
+  if (q.kind === 'est') {
+    return '<span class="num">' + estFmt(q.v, q.s) + '</span>' +
+      '<span class="est-word">比較接近</span>' + box + '<span class="est-word">？</span>';
+  }
   return '<span class="num">' + q.A.html + '</span>' +
     '<span class="op">' + OP_SIGN[q.op] + '</span>' +
     '<span class="num">' + q.B.html + '</span>' + box +
@@ -230,7 +336,13 @@ function renderQuestion() {
   document.getElementById('hud-correct').textContent = round.correct;
   document.getElementById('q-expr').innerHTML = exprHtml(q, '');
   document.getElementById('explain').classList.add('hidden');
-  document.querySelectorAll('.ans-btn').forEach(function(b) { b.disabled = false; b.classList.remove('picked', 'right', 'wrong'); });
+  var opts = q.kind === 'est' ? [estFmt(q.lo, q.s), estFmt(q.hi, q.s)] : ['>', '=', '<'];
+  document.getElementById('q-hint').textContent = q.kind === 'est'
+    ? '不用精確計算，選出比較接近的數' : '不用計算，在□裡填入 >、= 或 <';
+  document.getElementById('ans-row').innerHTML = opts.map(function(o) {
+    return '<button class="ans-btn' + (q.kind === 'est' ? ' ans-btn-num' : '') + '" data-v="' + escHtml(o) + '" onclick="answer(this.dataset.v)">' +
+      escHtml(o) + '</button>';
+  }).join('');
 }
 
 function answer(sym) {
@@ -243,8 +355,8 @@ function answer(sym) {
   document.getElementById('ans-box').classList.add('right'); /* 格子裡一律填正確答案，用綠色 */
   document.querySelectorAll('.ans-btn').forEach(function(b) {
     b.disabled = true;
-    if (b.textContent === q.ans) b.classList.add('right');
-    else if (b.textContent === sym) b.classList.add('wrong');
+    if (b.dataset.v === q.ans) b.classList.add('right');
+    else if (b.dataset.v === sym) b.classList.add('wrong');
   });
   try { ok ? sfxCorrect() : sfxWrong(); } catch (e) {}
 
@@ -253,10 +365,16 @@ function answer(sym) {
   ex.classList.remove('hidden');
   ex.classList.toggle('is-wrong', !ok);
   document.getElementById('explain-head').textContent = ok ? '⭕ 答對了！' : '再想一想：正確答案是「' + q.ans + '」';
-  document.getElementById('explain-rule').textContent = explain(q);
-  document.getElementById('explain-line').innerHTML = ok ? '' : numberLineSvg(q);
-  document.getElementById('explain-final').innerHTML = ok ? '' :
-    '所以 <span class="final-expr">' + exprHtml(q, q.ans).replace(' id="ans-box"', '') + '</span>';
+  if (q.kind === 'est') {
+    document.getElementById('explain-rule').textContent = estExplain(q);
+    document.getElementById('explain-line').innerHTML = ok ? '' : estLineSvg(q);
+    document.getElementById('explain-final').textContent = ok ? '' : estFinal(q);
+  } else {
+    document.getElementById('explain-rule').textContent = explain(q);
+    document.getElementById('explain-line').innerHTML = ok ? '' : numberLineSvg(q);
+    document.getElementById('explain-final').innerHTML = ok ? '' :
+      '所以 <span class="final-expr">' + exprHtml(q, q.ans).replace(' id="ans-box"', '') + '</span>';
+  }
   document.getElementById('btn-next').textContent = round.idx + 1 >= round.qs.length ? '看結果 ▶' : '下一題 ▶';
   document.getElementById('btn-next').focus();
 }
@@ -284,7 +402,7 @@ var currentStudent = null;
 function saveProgress(correct, total) {
   if (!db || !currentStudent) return;
   var inc = firebase.firestore.FieldValue.increment;
-  var key = cfg.op + '_' + cfg.num;
+  var key = cfg.mode === 'est' ? 'est_' + cfg.est : cfg.op + '_' + cfg.num;
   var data = { totalCorrect: inc(correct), totalAnswered: inc(total), totalRounds: inc(1), lastStudied: new Date().toISOString() };
   data['modeStats.' + key + '.correct']  = inc(correct);
   data['modeStats.' + key + '.answered'] = inc(total);
@@ -301,10 +419,14 @@ function backToHub() {
   try { window.parent.postMessage({ type: 'compare-back-to-hub' }, '*'); } catch (e) {}
 }
 
-/* 鍵盤：> = < 直接作答，Enter／空白鍵下一題 */
+/* 鍵盤：> = < 直接作答（估一估用 ← → 選左右），Enter／空白鍵下一題 */
 document.addEventListener('keydown', function(e) {
   if (!round || !document.getElementById('page-game').classList.contains('active')) return;
-  if (!round.answered && (e.key === '>' || e.key === '<' || e.key === '=')) { e.preventDefault(); answer(e.key); }
+  var q = round.qs[round.idx];
+  if (!round.answered && q.kind === 'est' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault(); answer(estFmt(e.key === 'ArrowLeft' ? q.lo : q.hi, q.s));
+  }
+  else if (!round.answered && q.kind !== 'est' && (e.key === '>' || e.key === '<' || e.key === '=')) { e.preventDefault(); answer(e.key); }
   else if (round.answered && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); nextQuestion(); }
 });
 

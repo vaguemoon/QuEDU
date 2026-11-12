@@ -148,7 +148,22 @@ button { touch-action: manipulation; }
 }
 .btn-result-home { background: var(--grad-btn); color: var(--white); border: none; }
 
+/* ── 項目（不用算比大小／估一估） ── */
+.mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 18px 0 10px; }
+.mode-grid .pick-card { padding: 18px 22px; }
+.mode-grid .pick-icon { font-size: 2.2rem; }
+.mode-grid .pick-name { font-size: 1.4rem; }
+
+/* ── 估一估 ── */
+.est-word { font-family: 'Noto Sans TC', sans-serif; font-size: .62em; font-weight: 900; color: var(--blue-dk); }
+.ans-box.ans-box-wide { width: auto; min-width: 2.6em; padding: 0 .2em; }
+.ans-btn.ans-btn-num { width: auto; min-width: 180px; padding: 0 26px; font-size: 2.8rem; }
+.nl-mid { fill: var(--cmp-ref); font-size: 17px; }
+.nl-dist { font-family: var(--num-font); font-size: 19px; font-weight: 700; }
+
 @media (max-width: 767px) {
+  .mode-grid { grid-template-columns: 1fr; }
+  .ans-btn.ans-btn-num { min-width: 130px; font-size: 2rem; }
   .home-wrap, .game-wrap { padding-left: 16px; padding-right: 16px; }
   .q-expr { font-size: 2.2rem; gap: 8px; }
   .ans-btn { width: 92px; height: 80px; font-size: 2.6rem; }

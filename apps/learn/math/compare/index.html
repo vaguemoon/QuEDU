@@ -36,13 +36,23 @@
 <div id="page-home" class="page active">
   <div class="home-wrap">
     <div class="home-title">⚖️ 比較趣</div>
-    <div class="home-sub">不用計算，判斷算出來的答案比原來的數大、小，還是一樣</div>
 
-    <div class="pick-label">1. 選運算</div>
-    <div class="pick-grid" id="op-grid"></div>
+    <!-- 兩個項目：不用算比大小／估一估，選了以後下面換成各自的設定 -->
+    <div class="mode-grid" id="mode-grid"></div>
+    <div class="home-sub" id="home-sub"></div>
 
-    <div class="pick-label">2. 選數字</div>
-    <div class="pick-grid" id="num-grid"></div>
+    <div id="home-op">
+      <div class="pick-label">1. 選運算</div>
+      <div class="pick-grid" id="op-grid"></div>
+
+      <div class="pick-label">2. 選數字</div>
+      <div class="pick-grid" id="num-grid"></div>
+    </div>
+
+    <div id="home-est" class="hidden">
+      <div class="pick-label">選範圍</div>
+      <div class="pick-grid" id="est-grid"></div>
+    </div>
 
     <button class="btn-start" onclick="startRound()">開始練習 ▶</button>
   </div>
@@ -58,15 +68,12 @@
     </div>
 
     <div class="q-card">
-      <div class="q-hint">不用計算，在□裡填入 &gt;、= 或 &lt;</div>
+      <div class="q-hint" id="q-hint"></div>
       <div class="q-expr" id="q-expr"></div>
     </div>
 
-    <div class="ans-row" id="ans-row">
-      <button class="ans-btn" onclick="answer('>')">&gt;</button>
-      <button class="ans-btn" onclick="answer('=')">=</button>
-      <button class="ans-btn" onclick="answer('<')">&lt;</button>
-    </div>
+    <!-- 作答按鈕依項目產生：比大小是 > = <，估一估是兩個整十／整百…的數 -->
+    <div class="ans-row" id="ans-row"></div>
 
     <!-- 答對／答錯說明 -->
     <div class="explain hidden" id="explain">

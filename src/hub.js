@@ -118,7 +118,7 @@ var SUBJECTS = [
   },
   {
     id: 'compare', file: 'apps/learn/math/compare/index.html',
-    icon: '⚖️', name: '比較趣', desc: '不用計算，比較大小',
+    icon: '⚖️', name: '比較趣', desc: '不用計算比大小・估一估',
     type: 'learn', category: 'math',
     theme: 'theme-blue', badge: '比較趣', badgeClass: 'green',
     getLevel: function() { return Promise.resolve('比較趣'); },
