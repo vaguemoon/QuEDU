@@ -21,17 +21,35 @@ var MODES = [
   { id: 'op',  icon: '⚖️', name: '不用算比大小', ex: '0.72 × 1.5 □ 0.72',
     sub: '不用計算，判斷算出來的答案比原來的數大、小，還是一樣' },
   { id: 'est', icon: '🎯', name: '估一估：比較接近誰', ex: '876 → 800 或 900？',
-    sub: '不用精確算，看看這個數比較接近哪一個整十、整百、整千…' }
+    sub: '不用精確算，看看整數、小數、分數比較接近哪一個數' }
 ];
-/* digits：出題的位數，只出跟範圍對應的位數（接近幾百就只出三位數，不出 9606 這種） */
-var EST_LEVELS = [
-  { id: 'ten', icon: '🔟', name: '接近幾十', ex: '23 → 20 或 30', unit: 10,    digits: 2 },
-  { id: 'hun', icon: '💯', name: '接近幾百', ex: '876 → 800 或 900', unit: 100,   digits: 3 },
-  { id: 'tho', icon: '🧱', name: '接近幾千', ex: '3462 → 3000 或 4000', unit: 1000,  digits: 4 },
-  { id: 'wan', icon: '🏙️', name: '接近幾萬', ex: '46800 → 40000 或 50000', unit: 10000, digits: 5 },
-  { id: 'one', icon: '🔸', name: '接近哪個整數', ex: '3.7 → 3 或 4', unit: 1, dec: true },
-  { id: 'mix', icon: '🔀', name: '綜合', ex: '各種範圍混合' }
+/* 估一估：先選數字（整數／小數／分數），再選程度。
+   整數 digits：只出跟範圍對應的位數（接近幾百就只出三位數，不出 9606 這種） */
+var EST_CATS = [
+  { id: 'int',  icon: '🔢', name: '整數', ex: '876 → 800 或 900' },
+  { id: 'dec',  icon: '🔸', name: '小數', ex: '3.47 → 3.4 或 3.5' },
+  { id: 'frac', icon: '🍕', name: '分數', ex: '2又3/4 → 2 或 3' }
 ];
+var EST_LEVELS = {
+  int: [
+    { id: 'ten', icon: '🔟', name: '接近幾十', ex: '23 → 20 或 30', unit: 10,    digits: 2 },
+    { id: 'hun', icon: '💯', name: '接近幾百', ex: '876 → 800 或 900', unit: 100,   digits: 3 },
+    { id: 'tho', icon: '🧱', name: '接近幾千', ex: '3462 → 3000 或 4000', unit: 1000,  digits: 4 },
+    { id: 'wan', icon: '🏙️', name: '接近幾萬', ex: '46800 → 40000 或 50000', unit: 10000, digits: 5 }
+  ],
+  dec: [
+    { id: 'd1',  icon: '1️⃣', name: '一位小數→整數', ex: '3.7 → 3 或 4' },
+    { id: 'd2',  icon: '2️⃣', name: '二位小數→整數', ex: '14.23 → 14 或 15' },
+    { id: 'd2t', icon: '🔍', name: '二位小數→一位小數', ex: '3.47 → 3.4 或 3.5' }
+  ],
+  frac: [
+    { id: 'fp', icon: '🍰', name: '真分數：接近 0 還是 1', ex: '3/5 → 0 或 1' },
+    { id: 'fm', icon: '🍕', name: '帶分數：接近哪個整數', ex: '2又3/4 → 2 或 3' }
+  ]
+};
+['int', 'dec', 'frac'].forEach(function(c) {
+  EST_LEVELS[c].push({ id: 'mix', icon: '🔀', name: '綜合', ex: '上面幾種混合' });
+});
 
 var OPS = [
   { id: 'add', icon: '➕', name: '加法', ex: '46 + 28 □ 46' },
@@ -48,7 +66,7 @@ var NUMS = [
 ];
 var OP_SIGN = { add: '+', sub: '−', mul: '×', div: '÷' };
 
-var cfg = { mode: 'op', op: 'div', num: 'dec', est: 'hun' };
+var cfg = { mode: 'op', op: 'div', num: 'dec', estCat: 'int', est: 'hun' };
 var round = null; // { qs:[], idx, correct, answered }
 
 /* ══ 數字 ══ */
@@ -203,71 +221,116 @@ function numberLineSvg(q) {
 }
 
 /* ══ 估一估 ══ */
-function estFmt(v, s) {
-  if (s === 1) return String(v);
-  return String(parseFloat((v / s).toFixed(String(s).length - 1)));  /* 3.50 → 3.5、4.00 → 4 */
+/* 題目裡的數一律存成「分子 v ／ 分母 s」整數：整數 s=1、小數 s=10/100、分數 s=分母。
+   lo/hi 是兩個選項（同樣以 s 為分母），所以三種數字共用同一套出題／說明／數線。
+   estVal(q, num, den) 把 num/den 依題目的數字種類寫成 {text, html}，中間點用 den=2s 傳進來 */
+function estVal(q, num, den) {
+  var g = gcd(num, den); num /= g; den /= g;
+  if (den === 1) return { text: String(num), html: String(num), w: num };
+  if (q.cat === 'dec') {
+    var t = String(parseFloat((num / den).toFixed(4)));            /* 3.50 → 3.5 */
+    return { text: t, html: t };
+  }
+  var w = Math.floor(num / den), r = num % den;
+  return { text: (w ? w + '又' : '') + r + '/' + den,
+           html: w ? '<span class="mixed">' + w + fracHtml(r, den) + '</span>' : fracHtml(r, den),
+           w: w, r: r, d: den };
 }
+function estText(q, num) { return estVal(q, num, q.s).text; }
+
+function estLevel(cat, id) { return EST_LEVELS[cat].find(function(l) { return l.id === id; }); }
 
 function makeEstQuestion() {
-  var lvId = cfg.est === 'mix' ? pick(['ten', 'hun', 'tho', 'wan', 'one']) : cfg.est;
-  var lv = EST_LEVELS.find(function(l) { return l.id === lvId; });
+  var cat = cfg.estCat;
+  var lvId = cfg.est === 'mix'
+    ? pick(EST_LEVELS[cat].filter(function(l) { return l.id !== 'mix'; })).id : cfg.est;
+  var lv = estLevel(cat, lvId);
   var v, s, unitS;
-  for (var t = 0; t < 100; t++) {
-    if (lv.dec) {
-      s = Math.random() < 0.7 ? 10 : 100;
-      v = ri(1, 50 * s - 1);
-      if (s === 100 && v % 10 === 0) continue;          /* 不要 3.70 這種寫法 */
+  for (var t = 0; t < 200; t++) {
+    if (lvId === 'd1')       { s = 10;  unitS = 10;  v = ri(1, 499); }
+    else if (lvId === 'd2')  { s = 100; unitS = 100; v = ri(1, 4999); if (v % 10 === 0) continue; } /* 不要 3.70 */
+    else if (lvId === 'd2t') { s = 100; unitS = 10;  v = ri(1, 1999); }
+    else if (cat === 'frac') {
+      s = unitS = ri(3, 12);
+      var r0 = ri(1, s - 1);
+      if (gcd(r0, s) !== 1) continue;                                   /* 只出最簡分數 */
+      v = (lvId === 'fm' ? ri(1, 9) * s : 0) + r0;
     } else {
-      s = 1;
-      var d = lv.digits;
-      v = ri(Math.pow(10, d - 1), Math.pow(10, d) - 1);
+      s = 1; unitS = lv.unit;
+      v = ri(Math.pow(10, lv.digits - 1), Math.pow(10, lv.digits) - 1);
     }
-    unitS = lv.unit * s;
     var r = v % unitS;
     if (r !== 0 && r * 2 !== unitS) break;              /* 剛好整十（沒得選）或正中間（四捨五入的規定）不出 */
   }
   var lo = v - v % unitS, hi = lo + unitS;
-  return { kind: 'est', lv: lv, v: v, s: s, lo: lo, hi: hi, mid: lo + unitS / 2,
-           ans: estFmt(v * 2 < lo + hi ? lo : hi, s) };
+  var q = { kind: 'est', cat: cat, lv: lv, v: v, s: s, lo: lo, hi: hi };
+  q.ans = estText(q, v * 2 < lo + hi ? lo : hi);
+  return q;
 }
+
+/* 中間點：(lo+hi)/2，分母用 2s 才會是整數 */
+function estMid(q) { return estVal(q, q.lo + q.hi, 2 * q.s); }
 
 function estExplain(q) {
-  var x = estFmt(q.v, q.s), mid = estFmt(q.mid, q.s), big = q.v > q.mid;
+  var x = estVal(q, q.v, q.s).html, mid = estMid(q).html, big = q.v * 2 > q.lo + q.hi;
   return '中間點是 ' + mid + '，' + x + ' 比 ' + mid + (big ? ' 大' : ' 小') +
-         '，所以比較接近 ' + q.ans + '。';
+         '，所以比較接近 ' + escHtml(q.ans) + '。';
 }
 function estFinal(q) {
-  var x = estFmt(q.v, q.s);
-  return x + ' 離 ' + estFmt(q.lo, q.s) + ' 差 ' + estFmt(q.v - q.lo, q.s) +
-         '，離 ' + estFmt(q.hi, q.s) + ' 差 ' + estFmt(q.hi - q.v, q.s) + '，離 ' + q.ans + ' 比較近。';
+  function h(n) { return estVal(q, n, q.s).html; }
+  return h(q.v) + ' 離 ' + h(q.lo) + ' 差 ' + h(q.v - q.lo) +
+         '，離 ' + h(q.hi) + ' 差 ' + h(q.hi - q.v) + '，離 ' + escHtml(q.ans) + ' 比較近。';
 }
 
-/* 數線：兩端、中間點、這個數的位置，下面用括號標出離兩端各差多少，近的那段用綠色 */
+/* SVG 裡寫一個數：分數畫成上下疊的直式（整數部分寫在左邊） */
+function svgVal(val, x, y, cls, fill) {
+  var f = fill ? ' fill="' + fill + '"' : '';
+  if (val.d === undefined) {
+    return '<text x="' + x + '" y="' + y + '" text-anchor="middle" class="' + cls + '"' + f + '>' + escHtml(val.text) + '</text>';
+  }
+  var out = '', fx = x;
+  if (val.w) {
+    out += '<text x="' + (x - 2) + '" y="' + y + '" text-anchor="end" class="' + cls + '"' + f + '>' + val.w + '</text>';
+    fx = x + 12;
+  }
+  var lineC = fill || 'var(--text)';
+  return out +
+    '<text x="' + fx + '" y="' + (y - 12) + '" text-anchor="middle" class="' + cls + ' nl-frac"' + f + '>' + val.r + '</text>' +
+    '<line x1="' + (fx - 11) + '" y1="' + (y - 6) + '" x2="' + (fx + 11) + '" y2="' + (y - 6) + '" stroke="' + lineC + '" stroke-width="2"/>' +
+    '<text x="' + fx + '" y="' + (y + 10) + '" text-anchor="middle" class="' + cls + ' nl-frac"' + f + '>' + val.d + '</text>';
+}
+
+/* 數線：兩端、中間點、這個數的位置，下面用括號標出離兩端各差多少，近的那段用綠色。
+   刻度：分數照分母切，小數／整數切十等份 */
 function estLineSvg(q) {
-  var W = 600, L = 50, R = 550, Y = 58;
-  var span = q.hi - q.lo;
+  var W = 600, L = 50, R = 550, Y = 66;
+  var span = q.hi - q.lo, isFrac = q.cat === 'frac';
   function x(v) { return L + (R - L) * (v - q.lo) / span; }
-  var xv = x(q.v), nearLo = q.v < q.mid;
-  var s = '<svg viewBox="0 0 ' + W + ' 150" class="nl-svg" role="img" aria-label="數線">' +
+  var xv = x(q.v), xm = (L + R) / 2, nearLo = q.v * 2 < q.lo + q.hi;
+  var ticks = isFrac ? q.s : 10;
+  var s = '<svg viewBox="0 0 ' + W + ' 170" class="nl-svg" role="img" aria-label="數線">' +
     '<line x1="' + (L - 16) + '" y1="' + Y + '" x2="' + (R + 16) + '" y2="' + Y + '" stroke="var(--text)" stroke-width="2.5"/>';
-  for (var i = 0; i <= 10; i++) {
-    var tx = L + (R - L) * i / 10, h = (i === 0 || i === 10) ? 12 : 6;
+  for (var i = 0; i <= ticks; i++) {
+    var tx = L + (R - L) * i / ticks, h = (i === 0 || i === ticks) ? 12 : 6;
     s += '<line x1="' + tx + '" y1="' + (Y - h) + '" x2="' + tx + '" y2="' + (Y + h) + '" stroke="var(--text)" stroke-width="' + (h > 6 ? 3 : 1.5) + '"/>';
   }
-  s += '<line x1="' + x(q.mid) + '" y1="' + (Y - 16) + '" x2="' + x(q.mid) + '" y2="' + (Y + 14) + '" stroke="var(--cmp-ref)" stroke-width="3" stroke-dasharray="5 4"/>' +
-       '<text x="' + L + '" y="' + (Y + 34) + '" text-anchor="middle" class="nl-num">' + estFmt(q.lo, q.s) + '</text>' +
-       '<text x="' + R + '" y="' + (Y + 34) + '" text-anchor="middle" class="nl-num">' + estFmt(q.hi, q.s) + '</text>' +
-       '<text x="' + x(q.mid) + '" y="' + (Y + 34) + '" text-anchor="middle" class="nl-num nl-mid">' + estFmt(q.mid, q.s) + '</text>';
+  s += '<line x1="' + xm + '" y1="' + (Y - 16) + '" x2="' + xm + '" y2="' + (Y + 14) + '" stroke="var(--cmp-ref)" stroke-width="3" stroke-dasharray="5 4"/>' +
+       svgVal(estVal(q, q.lo, q.s), L, Y + 38, 'nl-num') +
+       svgVal(estVal(q, q.hi, q.s), R, Y + 38, 'nl-num') +
+       svgVal(estMid(q), xm, Y + 38, 'nl-num nl-mid', 'var(--cmp-ref)');
   /* 離兩端的距離 */
-  function seg(a, b, near, label) {
-    var c = near ? 'var(--cmp-ok)' : 'var(--muted)', yy = Y + 52;
+  function seg(a, b, near, val) {
+    var c = near ? 'var(--cmp-ok)' : 'var(--muted)', yy = Y + 58;
     var tx = Math.min(R - 40, Math.max(L + 40, (a + b) / 2));
-    return '<path d="M' + a + ' ' + (yy - 8) + ' V' + yy + ' H' + b + ' V' + (yy - 8) + '" fill="none" stroke="' + c + '" stroke-width="' + (near ? 4 : 2.5) + '"/>' +
-           '<text x="' + tx + '" y="' + (yy + 26) + '" text-anchor="middle" class="nl-dist" fill="' + c + '">差 ' + label + '</text>';
+    var path = '<path d="M' + a + ' ' + (yy - 8) + ' V' + yy + ' H' + b + ' V' + (yy - 8) + '" fill="none" stroke="' + c + '" stroke-width="' + (near ? 4 : 2.5) + '"/>';
+    if (val.d === undefined) return path + svgVal({ text: '差 ' + val.text }, tx, yy + 28, 'nl-dist', c);
+    return path +
+           '<text x="' + (tx - 6) + '" y="' + (yy + 30) + '" text-anchor="end" class="nl-dist" fill="' + c + '">差</text>' +
+           svgVal(val, tx + (val.w ? 22 : 10), yy + 30, 'nl-dist', c);
   }
-  s += seg(L, xv, nearLo, estFmt(q.v - q.lo, q.s)) + seg(xv, R, !nearLo, estFmt(q.hi - q.v, q.s));
+  s += seg(L, xv, nearLo, estVal(q, q.v - q.lo, q.s)) + seg(xv, R, !nearLo, estVal(q, q.hi - q.v, q.s));
   s += '<circle cx="' + xv + '" cy="' + Y + '" r="9" fill="var(--cmp-gt)"/>' +
-       '<text x="' + Math.min(R, Math.max(L, xv)) + '" y="' + (Y - 28) + '" text-anchor="middle" class="nl-num nl-b" fill="var(--cmp-gt)">' + estFmt(q.v, q.s) + '</text>';
+       svgVal(estVal(q, q.v, q.s), Math.min(R, Math.max(L, xv)), Y - (isFrac ? 26 : 28), 'nl-num nl-b', 'var(--cmp-gt)');
   return s + '</svg>';
 }
 
@@ -291,12 +354,15 @@ function renderPickers() {
   document.getElementById('home-est').classList.toggle('hidden', cfg.mode !== 'est');
   document.getElementById('op-grid').innerHTML  = OPS.map(function(o) { return card(o, cfg.op, 'setOp'); }).join('');
   document.getElementById('num-grid').innerHTML = NUMS.map(function(o) { return card(o, cfg.num, 'setNum'); }).join('');
-  document.getElementById('est-grid').innerHTML = EST_LEVELS.map(function(o) { return card(o, cfg.est, 'setEst'); }).join('');
+  document.getElementById('estcat-grid').innerHTML = EST_CATS.map(function(o) { return card(o, cfg.estCat, 'setEstCat'); }).join('');
+  document.getElementById('est-grid').innerHTML = EST_LEVELS[cfg.estCat].map(function(o) { return card(o, cfg.est, 'setEst'); }).join('');
 }
 function setMode(id) { cfg.mode = id; renderPickers(); }
 function setOp(id)  { cfg.op = id;  renderPickers(); }
 function setNum(id) { cfg.num = id; renderPickers(); }
 function setEst(id) { cfg.est = id; renderPickers(); }
+/* 換數字種類時，程度回到該種類的第一個 */
+function setEstCat(id) { if (cfg.estCat !== id) { cfg.estCat = id; cfg.est = EST_LEVELS[id][0].id; } renderPickers(); }
 
 function goHome() { round = null; showPage('home'); }
 
@@ -306,7 +372,8 @@ function startRound() {
   for (var i = 0; i < ROUND_SIZE; i++) qs.push(est ? makeEstQuestion() : makeQuestion());
   round = { qs: qs, idx: 0, correct: 0, answered: false };
   if (est) {
-    document.getElementById('hud-mode').textContent = '估一估・' + EST_LEVELS.find(function(l) { return l.id === cfg.est; }).name;
+    document.getElementById('hud-mode').textContent = '估一估・' +
+      EST_CATS.find(function(c) { return c.id === cfg.estCat; }).name + '・' + estLevel(cfg.estCat, cfg.est).name;
   } else {
     var opName  = OPS.find(function(o) { return o.id === cfg.op; }).name;
     var numName = NUMS.find(function(o) { return o.id === cfg.num; }).name;
@@ -320,7 +387,7 @@ function exprHtml(q, filled) {
   var box = '<span class="ans-box' + (filled ? ' filled' : '') + (q.kind === 'est' ? ' ans-box-wide' : '') + '" id="ans-box">' +
             (filled ? escHtml(filled) : '') + '</span>';
   if (q.kind === 'est') {
-    return '<span class="num">' + estFmt(q.v, q.s) + '</span>' +
+    return '<span class="num">' + estVal(q, q.v, q.s).html + '</span>' +
       '<span class="est-word">比較接近</span>' + box + '<span class="est-word">？</span>';
   }
   return '<span class="num">' + q.A.html + '</span>' +
@@ -336,7 +403,7 @@ function renderQuestion() {
   document.getElementById('hud-correct').textContent = round.correct;
   document.getElementById('q-expr').innerHTML = exprHtml(q, '');
   document.getElementById('explain').classList.add('hidden');
-  var opts = q.kind === 'est' ? [estFmt(q.lo, q.s), estFmt(q.hi, q.s)] : ['>', '=', '<'];
+  var opts = q.kind === 'est' ? [estText(q, q.lo), estText(q, q.hi)] : ['>', '=', '<'];
   document.getElementById('q-hint').textContent = q.kind === 'est'
     ? '不用精確計算，選出比較接近的數' : '不用計算，在□裡填入 >、= 或 <';
   document.getElementById('ans-row').innerHTML = opts.map(function(o) {
@@ -366,9 +433,9 @@ function answer(sym) {
   ex.classList.toggle('is-wrong', !ok);
   document.getElementById('explain-head').textContent = ok ? '⭕ 答對了！' : '再想一想：正確答案是「' + q.ans + '」';
   if (q.kind === 'est') {
-    document.getElementById('explain-rule').textContent = estExplain(q);
+    document.getElementById('explain-rule').innerHTML = estExplain(q);
     document.getElementById('explain-line').innerHTML = ok ? '' : estLineSvg(q);
-    document.getElementById('explain-final').textContent = ok ? '' : estFinal(q);
+    document.getElementById('explain-final').innerHTML = ok ? '' : estFinal(q);
   } else {
     document.getElementById('explain-rule').textContent = explain(q);
     document.getElementById('explain-line').innerHTML = ok ? '' : numberLineSvg(q);
@@ -402,7 +469,7 @@ var currentStudent = null;
 function saveProgress(correct, total) {
   if (!db || !currentStudent) return;
   var inc = firebase.firestore.FieldValue.increment;
-  var key = cfg.mode === 'est' ? 'est_' + cfg.est : cfg.op + '_' + cfg.num;
+  var key = cfg.mode === 'est' ? 'est_' + cfg.estCat + '_' + cfg.est : cfg.op + '_' + cfg.num;
   var data = { totalCorrect: inc(correct), totalAnswered: inc(total), totalRounds: inc(1), lastStudied: new Date().toISOString() };
   data['modeStats.' + key + '.correct']  = inc(correct);
   data['modeStats.' + key + '.answered'] = inc(total);
@@ -424,7 +491,7 @@ document.addEventListener('keydown', function(e) {
   if (!round || !document.getElementById('page-game').classList.contains('active')) return;
   var q = round.qs[round.idx];
   if (!round.answered && q.kind === 'est' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-    e.preventDefault(); answer(estFmt(e.key === 'ArrowLeft' ? q.lo : q.hi, q.s));
+    e.preventDefault(); answer(estText(q, e.key === 'ArrowLeft' ? q.lo : q.hi));
   }
   else if (!round.answered && q.kind !== 'est' && (e.key === '>' || e.key === '<' || e.key === '=')) { e.preventDefault(); answer(e.key); }
   else if (round.answered && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); nextQuestion(); }
