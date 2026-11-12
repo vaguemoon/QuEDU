@@ -23,12 +23,12 @@ var MODES = [
   { id: 'est', icon: '🎯', name: '估一估：比較接近誰', ex: '876 → 800 或 900？',
     sub: '不用精確算，看看這個數比較接近哪一個整十、整百、整千…' }
 ];
-/* digits：出題的位數，第一個占七成；多一位的（347 接近 340 還是 350）是四捨五入到某一位的準備 */
+/* digits：出題的位數，只出跟範圍對應的位數（接近幾百就只出三位數，不出 9606 這種） */
 var EST_LEVELS = [
-  { id: 'ten', icon: '🔟', name: '接近幾十', ex: '23 → 20 或 30', unit: 10,    digits: [2, 3] },
-  { id: 'hun', icon: '💯', name: '接近幾百', ex: '876 → 800 或 900', unit: 100,   digits: [3, 4] },
-  { id: 'tho', icon: '🧱', name: '接近幾千', ex: '3462 → 3000 或 4000', unit: 1000,  digits: [4, 5] },
-  { id: 'wan', icon: '🏙️', name: '接近幾萬', ex: '46800 → 40000 或 50000', unit: 10000, digits: [5, 6] },
+  { id: 'ten', icon: '🔟', name: '接近幾十', ex: '23 → 20 或 30', unit: 10,    digits: 2 },
+  { id: 'hun', icon: '💯', name: '接近幾百', ex: '876 → 800 或 900', unit: 100,   digits: 3 },
+  { id: 'tho', icon: '🧱', name: '接近幾千', ex: '3462 → 3000 或 4000', unit: 1000,  digits: 4 },
+  { id: 'wan', icon: '🏙️', name: '接近幾萬', ex: '46800 → 40000 或 50000', unit: 10000, digits: 5 },
   { id: 'one', icon: '🔸', name: '接近哪個整數', ex: '3.7 → 3 或 4', unit: 1, dec: true },
   { id: 'mix', icon: '🔀', name: '綜合', ex: '各種範圍混合' }
 ];
@@ -219,7 +219,7 @@ function makeEstQuestion() {
       if (s === 100 && v % 10 === 0) continue;          /* 不要 3.70 這種寫法 */
     } else {
       s = 1;
-      var d = Math.random() < 0.7 ? lv.digits[0] : lv.digits[1];
+      var d = lv.digits;
       v = ri(Math.pow(10, d - 1), Math.pow(10, d) - 1);
     }
     unitS = lv.unit * s;
