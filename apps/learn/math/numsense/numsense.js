@@ -6,6 +6,7 @@
  *   數的順序    一個一個往後數／倒著數／2 個 2 個數／5 個、10 個一數，數列填空
  *   百數表      看左右、看上下（多 10 少 10）、只看到一小塊的拼圖塊
  *   單數與雙數  20 以內看圓點兩兩配對、100 以內看個位
+ * 複習：每個項目的原始資料（10～99 國字對照、積木 ±1 ±10、數列標在百數表、百數表鄰居、單雙數表）
  * 練習：一定要自己答對才能下一題；第一次錯給方法提示（不講答案），之後再錯公布解法但答案要自己填。
  * 測驗：每題一次機會，錯的下一輪重考，第一輪答對 9 題以上該程度標「測驗通過」。
  * 進度存 students/{id}/progress/numsense（totalCorrect、status.{item_level}）。
@@ -585,6 +586,113 @@ function nextExamRound() {
   showPage('game');
   renderQuestion();
 }
+
+/* ══ 複習：每個項目的原始資料（完整百數表、數列、單雙數表…），可以點來看、聽 ══ */
+var RV = { item: null, sel: null, seq: 'by1', n: 23 };
+var RV_SEQS = [
+  { id: 'by1',   name: '1 個 1 個數', start: 1,  step: 1 },
+  { id: 'by2e',  name: '2 個 2 個數（從 2 開始）', start: 2, step: 2 },
+  { id: 'by2o',  name: '2 個 2 個數（從 1 開始）', start: 1, step: 2 },
+  { id: 'by5',   name: '5 個 5 個數', start: 5,  step: 5 },
+  { id: 'by10',  name: '10 個 10 個數', start: 10, step: 10 }
+];
+var RV_INFO = {
+  write:   { title: '📖 10～99 的寫法', sub: '點一個數可以聽讀法，上面會拆成十位和個位' },
+  place:   { title: '📖 幾個十、幾個一', sub: '按 +1、−1、+10、−10 改變積木，看看數字怎麼變' },
+  seq:     { title: '📖 數一數', sub: '選一種數法，百數表上會標出來，下面列出整串數' },
+  chart:   { title: '📖 百數表', sub: '點一個數，看看它的左右上下：往右多 1、往左少 1、往下多 10、往上少 10' },
+  oddeven: { title: '📖 單數與雙數', sub: '紅色是單數、藍色是雙數；看個位就知道' }
+};
+
+function openReview() {
+  RV.item = cfg.item; RV.sel = null;
+  /* 程度剛好是數列的哪一種，就先標那一種 */
+  RV.seq = cfg.item === 'seq' && cfg.level === 'by2' ? 'by2e' : cfg.item === 'seq' && cfg.level === 'by510' ? 'by5' : 'by1';
+  document.getElementById('rv-title').textContent = RV_INFO[RV.item].title;
+  document.getElementById('rv-sub').textContent = RV_INFO[RV.item].sub;
+  showPage('review');
+  renderReview();
+}
+
+/* 完整百數表，cls(n) 回傳每一格額外的 class，label(n) 可換掉格子裡的字 */
+function rvChart(cls, label) {
+  var h = '';
+  for (var n = 1; n <= 100; n++) {
+    h += '<div class="hc-c ' + (cls(n) || '') + '" data-n="' + n + '">' + (label ? label(n) : n) + '</div>';
+  }
+  return '<div class="hc hc-big">' + h + '</div>';
+}
+
+function renderReview() {
+  var el = document.getElementById('rv-body'), h = '', it = RV.item;
+  if (it === 'write') {
+    var s = RV.sel;
+    h += '<div class="rv-focus">' + (s ? '<span class="rv-cn">' + cnNum(s) + '</span>' + pvTable(s) +
+         '<span class="rv-eq"><span class="c-ten">' + Math.floor(s / 10) + ' 個十</span> 和 <span class="c-one">' + (s % 10) + ' 個一</span></span>'
+         : '<span class="rv-tip">點下面任何一個數</span>') + '</div>';
+    h += '<div class="rv-cn-grid">';
+    for (var n = 10; n <= 99; n++) {
+      h += '<div class="rv-cn-cell' + (n === s ? ' on' : '') + '" data-n="' + n + '"><span class="rv-cn-w">' + cnNum(n) + '</span>' +
+           '<span class="rv-cn-n"><span class="c-ten">' + Math.floor(n / 10) + '</span><span class="c-one">' + (n % 10) + '</span></span></div>';
+    }
+    h += '</div>';
+  } else if (it === 'place') {
+    var v = RV.n, t = Math.floor(v / 10), o = v % 10;
+    h += '<div class="rv-place">' +
+      '<div class="rv-btns">' + [['-10', '−10'], ['-1', '−1'], ['1', '+1'], ['10', '+10']].map(function(b) {
+        return '<button class="rv-btn" data-d="' + b[0] + '">' + b[1] + '</button>';
+      }).join('') + '</div>' +
+      '<div class="rv-focus"><span class="big-num">' + v + '</span>' + (v ? '<span class="rv-cn">' + cnNum(v) + '</span>' : '') +
+      '<button class="btn-say" data-say="' + v + '">🔊</button></div>' +
+      '<div class="rv-eq"><span class="c-ten">' + t + ' 個十</span> 和 <span class="c-one">' + o + ' 個一</span> 合起來是 ' + v + '</div>' +
+      pvTable(v) + blocksHtml(t, o) + '</div>';
+  } else if (it === 'seq') {
+    var sq = RV_SEQS.find(function(x) { return x.id === RV.seq; }), list = [];
+    for (var k = sq.start; k <= 100; k += sq.step) list.push(k);
+    h += '<div class="rv-tabs">' + RV_SEQS.map(function(x) {
+      return '<button class="rv-tab' + (x.id === RV.seq ? ' on' : '') + '" data-seq="' + x.id + '">' + x.name + '</button>';
+    }).join('') + '</div>';
+    h += '<div class="rv-row">' + rvChart(function(n) { return list.indexOf(n) >= 0 ? 'mark' : 'dim'; }) +
+         '<div class="rv-list"><div class="rv-list-h">每次多 ' + sq.step + '</div>' +
+         list.map(function(x) { return '<span class="rv-chip">' + x + '</span>'; }).join('') + '</div></div>';
+  } else if (it === 'chart') {
+    var c = RV.sel, nb = {};
+    if (c) {
+      if (hcCol(c) > 0) nb[c - 1] = '−1';
+      if (hcCol(c) < 9) nb[c + 1] = '+1';
+      if (c > 10) nb[c - 10] = '−10';
+      if (c <= 90) nb[c + 10] = '+10';
+    }
+    h += '<div class="rv-row">' + rvChart(function(n) { return n === c ? 'target' : nb[n] ? 'ref' : ''; }) +
+         '<div class="rv-list">' + (c ? '<div class="rv-list-h">' + c + ' 的鄰居</div>' +
+           [[c - 10, '上面', '少 10'], [c + 10, '下面', '多 10'], [c - 1, '左邊', '少 1'], [c + 1, '右邊', '多 1']].filter(function(x) { return nb[x[0]]; })
+             .map(function(x) { return '<div class="rv-nb">' + x[1] + '是 <b>' + x[0] + '</b>（' + x[2] + '）</div>'; }).join('')
+           : '<div class="rv-tip">點百數表上任何一個數</div>') + '</div></div>';
+  } else {
+    var odds = [], evens = [];
+    for (var m = 1; m <= 20; m++) (m % 2 ? odds : evens).push(m);
+    h += '<div class="rv-row">' + rvChart(function(n) { return n % 2 ? 'odd' : 'even'; }) +
+         '<div class="rv-list">' +
+         '<div class="rv-list-h"><span class="odd-t">單數</span>：個位是 1、3、5、7、9</div>' +
+         odds.map(function(x) { return '<span class="rv-chip odd">' + x + '</span>'; }).join('') + '<span class="rv-more">…</span>' +
+         '<div class="rv-list-h"><span class="even-t">雙數</span>：個位是 0、2、4、6、8</div>' +
+         evens.map(function(x) { return '<span class="rv-chip even">' + x + '</span>'; }).join('') + '<span class="rv-more">…</span>' +
+         '</div></div>';
+  }
+  el.innerHTML = h;
+}
+
+/* 複習頁的點擊（滑鼠、觸控共用 Pointer Events） */
+document.getElementById('rv-body').addEventListener('pointerdown', function(e) {
+  var t = e.target, x;
+  if ((x = t.closest('[data-seq]'))) { RV.seq = x.dataset.seq; renderReview(); return; }
+  if ((x = t.closest('[data-d]'))) { RV.n = Math.max(0, Math.min(99, RV.n + parseInt(x.dataset.d, 10))); renderReview(); return; }
+  if ((x = t.closest('[data-say]'))) { if (+x.dataset.say) sayCn(+x.dataset.say); return; }
+  if ((x = t.closest('[data-n]')) && (RV.item === 'write' || RV.item === 'chart')) {
+    RV.sel = +x.dataset.n; renderReview();
+    if (RV.item === 'write') sayCn(RV.sel);
+  }
+});
 
 /* ══ 紀錄：students/{id}/progress/numsense ══ */
 var currentStudent = null;

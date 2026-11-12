@@ -42,6 +42,7 @@
     <div class="pick-grid" id="level-grid"></div>
   </div>
   <div class="home-action-bar">
+    <button class="btn-action btn-review" onclick="openReview()">📖 複習</button>
     <button class="btn-action btn-practice" onclick="startRound('practice')">🎯 練習</button>
     <button class="btn-action btn-exam" onclick="startRound('exam')">📝 測驗</button>
   </div>
@@ -77,6 +78,15 @@
         <button class="key key-del" data-k="del">⌫</button><button class="key" data-k="0">0</button><button class="key key-ok" data-k="ok">✓</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: REVIEW（原始資料：完整百數表、數列、單雙數表…） ══════════════════ -->
+<div id="page-review" class="page">
+  <div class="game-wrap">
+    <div class="rv-title" id="rv-title"></div>
+    <div class="rv-sub" id="rv-sub"></div>
+    <div class="rv-body" id="rv-body"></div>
   </div>
 </div>
 

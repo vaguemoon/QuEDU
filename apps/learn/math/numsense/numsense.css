@@ -267,3 +267,56 @@ button { touch-action: manipulation; }
   .hc-c { font-size: .9rem; }
 }
 .q-text .slot { font-size: 2.6rem; }
+
+/* ══ 複習（原始資料） ══ */
+.btn-review { background: linear-gradient(135deg, var(--orange), #ca6f1e); }
+.rv-title { font-size: 1.6rem; font-weight: 900; color: var(--blue-dk); }
+.rv-sub { margin-top: 4px; font-size: 1.05rem; font-weight: 700; color: var(--muted); }
+.rv-body { margin-top: 16px; }
+.rv-row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.hc.hc-big { grid-template-columns: repeat(10, 54px); grid-auto-rows: 46px; }
+.hc-big .hc-c { font-size: 1.3rem; cursor: pointer; }
+.hc-big .hc-c.mark { background: var(--ns-one); color: var(--white); }
+.hc-big .hc-c.dim { color: #9aa8b6; }
+.hc-big .hc-c.odd { color: var(--ns-odd); background: #fff4f4; }
+.hc-big .hc-c.even { color: var(--ns-ten); background: var(--ns-ten-lt); }
+.rv-list { flex: 1; min-width: 260px; padding: 14px 16px; background: var(--white); border-radius: var(--radius-sm); box-shadow: var(--shadow); }
+.rv-list-h { font-size: 1.15rem; font-weight: 900; color: var(--text); margin: 6px 0 8px; }
+.rv-chip { display: inline-block; min-width: 2.4em; margin: 3px; padding: 4px 6px; border-radius: 8px; text-align: center;
+  font-family: var(--num-font); font-size: 1.25rem; font-weight: 700; background: var(--ns-one-lt); color: var(--ns-one); }
+.rv-chip.odd { background: #fff4f4; color: var(--ns-odd); }
+.rv-chip.even { background: var(--ns-ten-lt); color: var(--ns-ten); }
+.rv-more { font-weight: 900; color: var(--muted); margin-left: 4px; }
+.odd-t { color: var(--ns-odd); }
+.even-t { color: var(--ns-ten); }
+.rv-nb { font-size: 1.2rem; font-weight: 800; margin: 6px 0; }
+.rv-nb b { font-family: var(--num-font); font-size: 1.4rem; color: var(--blue-dk); }
+.rv-tip { font-size: 1.1rem; font-weight: 800; color: var(--muted); }
+.rv-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.rv-tab { padding: 10px 16px; border: 2px solid var(--border); border-radius: 12px; background: var(--white);
+  font-family: inherit; font-size: 1rem; font-weight: 800; color: var(--text); cursor: pointer; }
+.rv-tab.on { border-color: var(--blue); background: var(--blue-lt); color: var(--blue-dk); }
+.rv-focus { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; min-height: 110px;
+  padding: 10px 16px; margin-bottom: 14px; background: var(--white); border-radius: var(--radius-sm); box-shadow: var(--shadow); }
+.rv-cn { font-size: 2.6rem; font-weight: 900; color: var(--text); letter-spacing: 3px; }
+.rv-eq { font-size: 1.4rem; font-weight: 900; }
+.rv-cn-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+.rv-cn-cell { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border: 2px solid var(--border);
+  border-radius: 10px; background: var(--white); cursor: pointer; touch-action: manipulation; }
+.rv-cn-cell.on { border-color: var(--blue); background: var(--blue-lt); }
+.rv-cn-w { font-size: 1rem; font-weight: 900; color: var(--text); white-space: nowrap; }
+.rv-cn-n { font-family: var(--num-font); font-size: 1.5rem; font-weight: 700; }
+.rv-place { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px; background: var(--white);
+  border-radius: var(--radius); box-shadow: var(--shadow); }
+.rv-place .rv-focus { box-shadow: none; margin: 0; min-height: 0; }
+.rv-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.rv-btn { min-width: 90px; padding: 12px 18px; border: 2px solid var(--border); border-radius: 14px; background: var(--blue-lt);
+  font-family: var(--num-font); font-size: 1.6rem; font-weight: 700; color: var(--blue-dk); cursor: pointer; touch-action: manipulation; }
+.rv-btn:active { transform: scale(.95); }
+@media (max-width: 900px) {
+  .rv-cn-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .hc.hc-big { grid-template-columns: repeat(10, 34px); grid-auto-rows: 34px; }
+  .hc-big .hc-c { font-size: .95rem; }
+}
