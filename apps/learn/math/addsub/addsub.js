@@ -318,9 +318,12 @@ function submit() {
   if (v === q.answer) { onRight(q); return; }
   try { sfxWrong(); } catch (e) {}
   q.mark = 'wrong';
-  if (round.mode === 'practice' && q.tries === 1) {
+  /* 練習：一定要自己答對才能下一題，不給下一題按鈕。
+     第一次錯給方法提示（不講答案）；之後再錯就公布解法，但答案還是要學生自己填進去 */
+  if (round.mode === 'practice') {
     renderInput();
-    showFeedback('hint', '💡 再想一想', explainHtml(q, false));
+    if (q.tries === 1) showFeedback('hint', '💡 再想一想', explainHtml(q, false));
+    else showFeedback('bad', '看看解法，再把答案填進去', explainHtml(q, true));
     /* 紅色留一下讓學生看到哪裡錯，再清掉重寫 */
     setTimeout(function() {
       if (curQ() !== q || q.done) return;
@@ -328,7 +331,7 @@ function submit() {
     }, 900);
     return;
   }
-  /* 練習第二次錯、或測驗答錯：公布解法 */
+  /* 測驗答錯：公布解法 */
   q.done = true;
   if (round.idx < round.qs.length && round.mode === 'exam') round.failed.push(q);
   revealAnswer(q);
