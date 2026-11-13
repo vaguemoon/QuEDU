@@ -25,6 +25,13 @@
      麥克風整個留給語音辨識用，權限也由語音辨識自己去要。 */
   var isAndroid = /Android/i.test(navigator.userAgent);
 
+  /* iPad 把網站「加入主畫面」當 App 開（standalone）時，系統鍵盤叫不出來，
+     平常引導學生用的「鍵盤上的語音輸入鍵」這條路整個不通，要另外處理（見 injectHTML） */
+  var isStandalone = navigator.standalone === true
+    || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  /* iOS 一般情況：不走 JS 語音辨識，改用系統鍵盤的語音輸入 */
+  var useKeyboardDictation = isIOS && !isStandalone;
+
   var isOpen      = false;
   var listening   = false;
   var userStopped = true; // true = 使用者主動停止／尚未開始，不應自動重啟
@@ -74,6 +81,7 @@
           + '📱 這台裝置請直接點下方文字框，再點鍵盤上的 🎤 語音輸入鍵即可開始說話——'
           + 'iPad／iPhone 內建的語音輸入比較穩定，這裡就不用另外按「開始聽寫」了。'
         + '</div>'
+        + '<div class="vtt-banner" id="vtt-banner-ios-app" style="display:none"></div>'
         + '<div class="vtt-mic-row" id="vtt-mic-row">'
           + '<div class="vtt-pulse-wrap"><div class="vtt-pulse-dot" id="vtt-pulse-dot"></div></div>'
           + '<div class="vtt-mic-status-text" id="vtt-mic-status-text">尚未開始</div>'
@@ -111,7 +119,21 @@
     /* iOS 的 JS 語音辨識引擎經實測不可靠（常常整段卡死、完全沒有文字結果），
        但裝置本身內建的鍵盤語音輸入是可靠的——iOS 直接不走 JS 辨識這條路，
        改引導學生用鍵盤上的語音輸入鍵，把「開始聽寫」整組 UI 換成說明文字 */
-    if (isIOS) {
+    if (isIOS && isStandalone) {
+      /* App 模式：鍵盤出不來，只剩 JS 語音辨識可以試。這台裝置有提供就留著「開始聽寫」，
+         沒有就老實說這裡用不了、請改用 Safari */
+      var appBanner = document.getElementById('vtt-banner-ios-app');
+      appBanner.style.display = '';
+      if (SpeechRecognitionCtor) {
+        appBanner.textContent = '📱 用 App 方式開啟時，請按下面的「開始聽寫」再說話。'
+          + '如果按了沒有反應或一直沒有文字，請改用 Safari 開啟本網站，再使用語音轉文字。';
+      } else {
+        appBanner.textContent = '📱 用 App 方式開啟時，這台 iPad 沒辦法使用語音轉文字。'
+          + '請改用 Safari 開啟本網站，再使用這個功能。';
+        document.getElementById('vtt-mic-row').style.display = 'none';
+        document.getElementById('vtt-toggle-btn').style.display = 'none';
+      }
+    } else if (isIOS) {
       document.getElementById('vtt-banner-ios').style.display = '';
       document.getElementById('vtt-mic-row').style.display = 'none';
       document.getElementById('vtt-toggle-btn').style.display = 'none';
@@ -134,7 +156,7 @@
     /* iOS：直接把鍵盤叫出來，學生不用自己再點一次文字框找麥克風鍵。
        focus() 必須跟按鈕點擊同一輪同步呼叫，iOS 才認得這是使用者手勢觸發的，
        前一版用 setTimeout 延遲呼叫，反而讓 iOS 判定不是使用者手勢而不彈鍵盤 */
-    if (isIOS) {
+    if (useKeyboardDictation) {
       var ta = document.getElementById('vtt-transcript');
       if (ta) ta.focus();
     }
@@ -287,11 +309,14 @@
     /* 引擎開始收音就代表它活著，解除倒數。之後學生安靜多久都沒關係——
        瀏覽器自己會在一段時間沒聲音後結束這一輪，onend 會自動接下一輪。
        （原本是「8 秒內沒有辨識出文字」就當成卡死，結果學生按下去想一下、
-       或兩句話中間停久一點，就被強制中斷還跳出錯誤訊息） */
-    recognition.onaudiostart = clearWatchdog;
+       或兩句話中間停久一點，就被強制中斷還跳出錯誤訊息）
+       iOS 例外：它的卡死是「看起來在收音、但永遠沒有結果」，所以 iOS 維持
+       「一段時間沒有結果就中斷、請使用者重按」的舊做法。 */
+    if (!isIOS) recognition.onaudiostart = clearWatchdog;
 
     recognition.onresult = function (e) {
       clearWatchdog();
+      if (isIOS) armWatchdog();
       var interim = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var transcript = e.results[i][0].transcript;
