@@ -5,14 +5,7 @@
 (function () {
   'use strict';
 
-  var FB_CONFIG = {
-    apiKey: 'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
-    authDomain: 'tainping-hanzi-app.firebaseapp.com',
-    projectId: 'tainping-hanzi-app',
-    storageBucket: 'tainping-hanzi-app.firebasestorage.app',
-    messagingSenderId: '158917910126',
-    appId: '1:158917910126:web:e52a1d0456d1fd4fe6907f'
-  };
+  var FB_CONFIG = QU_FIREBASE_CONFIG; // shared/firebase-config.js
 
   var rConfig = null;
   var rDb = null;

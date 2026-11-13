@@ -8,6 +8,7 @@ var currentDetailId = null;
 
 /* ── 已知 App 定義（新增 app 只要加這裡）── */
 var _STUDENT_APPS = [
+  { id: 'summary',  label: '📊 學習總覽', panelId: 'student-panel-summary' },
   { id: 'chinese',  label: '📖 識字趣', panelId: 'student-panel-chinese' },
   { id: 'multiply', label: '✖️ 乘法趣', panelId: 'student-panel-multiply' }
 ];
@@ -63,12 +64,13 @@ function showStudentDetail(studentId) {
   var tabsEl = document.getElementById('student-app-tabs');
   if (tabsEl) tabsEl.innerHTML = '';
 
-  /* 隱藏所有 app 面板，清空為 loading */
+  /* 隱藏所有 app 面板，內容區重置為 loading
+     （只能清內容區，不能清整個面板——面板裡的卡片與內容區是寫在 index.html 的，清掉就再也畫不出來） */
   _STUDENT_APPS.forEach(function(a) {
     var panel = document.getElementById(a.panelId);
-    if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+    if (panel) panel.style.display = 'none';
   });
-  ['detail-course-progress', 'detail-activities', 'detail-multiply-progress'].forEach(function(id) {
+  ['detail-app-summary', 'detail-course-progress', 'detail-activities', 'detail-multiply-progress'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
   });
@@ -82,8 +84,9 @@ function showStudentDetail(studentId) {
     deleteBtn.onclick     = isSubject ? removeStudentFromClass : deleteStudent;
   }
 
-  var appData = {};
+  var appData = { summary: { hasData: true } }; // 學習總覽一律顯示，排第一個
   var pending = 2; // 漢字批次 + 乘法趣
+  renderAppSummary(studentId);
   function tryBuildTabs() {
     pending--;
     if (pending === 0) _buildStudentTabs(appData);
@@ -184,8 +187,43 @@ function saveStudentName() {
 }
 
 /* ────────────────────────────────────────
-   以下為各 App 進度渲染（內容不變）
+   以下為各 App 進度渲染
    ──────────────────────────────────────── */
+
+/* ── 學習總覽：所有 App 各一列，清單與摘要算法來自 shared/apps.js（QU_APPS） ── */
+function renderAppSummary(studentId) {
+  var wrap = document.getElementById('detail-app-summary');
+  if (!wrap) return;
+  Promise.all(QU_APPS.map(function(app) {
+    return quAppSummary(app, studentId, db)
+      .then(function(r) { return { app: app, r: r }; })
+      .catch(function() { return { app: app, r: null, failed: true }; });
+  })).then(function(rows) {
+    if (studentId !== currentDetailId) return; // 已經切到別的學生
+    function fmtTime(iso) {
+      var dt = iso ? new Date(iso) : null;
+      return (dt && !isNaN(dt)) ? dt.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+    }
+    /* 用過的排前面，其餘照 QU_APPS 原本的順序 */
+    rows.sort(function(a, b) { return (b.r ? 1 : 0) - (a.r ? 1 : 0); });
+    wrap.innerHTML =
+      '<table class="student-table">'
+      + '<thead><tr><th>App</th><th>學習狀況</th><th>最後練習</th></tr></thead><tbody>'
+      + rows.map(function(row) {
+          var app = row.app, r = row.r, status;
+          if (row.failed)                                status = '<span style="color:var(--red)">讀取失敗</span>';
+          else if (r)                                    status = '<span style="font-weight:800;color:var(--text)">' + (r.sub || '已使用') + '</span>';
+          else if (!app.progress && !app.activityApp)    status = '<span style="color:var(--muted)">此 App 不記錄進度</span>';
+          else                                           status = '<span style="color:var(--muted)">尚未使用</span>';
+          return '<tr style="cursor:default">'
+            + '<td style="font-weight:800;white-space:nowrap">' + app.icon + '　' + app.name + '</td>'
+            + '<td>' + status + '</td>'
+            + '<td style="color:var(--muted);white-space:nowrap">' + (r ? fmtTime(r.lastStudied) : '—') + '</td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table>';
+  });
+}
 
 function renderCourseProgress(currSnap, cs) {
   var wrap = document.getElementById('detail-course-progress');

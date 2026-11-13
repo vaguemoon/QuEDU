@@ -25,12 +25,7 @@ function toggleDarkMode() {
   }
 }
 
-/* ── 子 APP 登錄表（新增 APP 時只需在此加一筆）── */
-var APP_REGISTRY = [
-  { id: 'chinese',      label: '識字趣', icon: '📖', color: 'var(--blue)',   progress: 'hanzi'    },
-  { id: 'multiply',     label: '乘法趣', icon: '✖️',  color: 'var(--green)',  progress: 'multiply' },
-  { id: 'chinese-quiz', label: '語文測驗', icon: '📝', color: 'var(--orange)', progress: null       }
-];
+/* 子 App 清單在 shared/apps.js（QU_APPS），學生 Hub 與後台共用，新增 App 改那裡 */
 
 function onFirebaseReady() {
   loadClasses();

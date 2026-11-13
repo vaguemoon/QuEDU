@@ -12,14 +12,7 @@
 /* ════════════════════════════════════════
    Firebase 共用設定
    ════════════════════════════════════════ */
-var firebaseConfig = {
-  apiKey:            "AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0",
-  authDomain:        "tainping-hanzi-app.firebaseapp.com",
-  projectId:         "tainping-hanzi-app",
-  storageBucket:     "tainping-hanzi-app.firebasestorage.app",
-  messagingSenderId: "158917910126",
-  appId:             "1:158917910126:web:e52a1d0456d1fd4fe6907f"
-};
+var firebaseConfig = QU_FIREBASE_CONFIG; // shared/firebase-config.js
 
 var db   = null;
 var auth = null;
@@ -428,3 +421,103 @@ function clearQbErrors() {
   var el = document.getElementById('qb-errors');
   if (el) { el.innerHTML = ''; el.style.display = 'none'; }
 }
+
+/* ════════════════════════════════════════
+   子 App 共用外殼（quApp）
+   ════════════════════════════════════════
+   每個子 App 都要做的事集中在這裡：取得 Hub 傳來的學生、顯示頂欄的頭像與名字、
+   回 Hub、讀寫 students/{id}/progress/{progress}。子 App 只需要寫自己的題目邏輯。
+
+   用法（在子 App 的 load 事件裡）：
+     quApp.start({
+       id: 'addsub',            // 跟 shared/apps.js 的 id 一致
+       progress: 'addsub',      // 進度文件名，跟 shared/apps.js 的 progress 一致；不存進度可省略
+       onReady: function(student) { ... }   // 有登入學生、且 Firestore 就緒後呼叫一次
+     });
+     quApp.loadProgress().then(function(data) { ... });       // 沒有紀錄時 data 為 null
+     quApp.saveRound(correct, answered, { status: { ... } }); // 一回合結束時呼叫
+     quApp.backToHub();
+
+   頁面上如果有 id 為 topbar-name / topbar-avatar 的元素，會自動填入學生的名字與頭像。
+   訪客（isGuest）不讀寫 Firestore。
+   ════════════════════════════════════════ */
+var quApp = {
+  id: '',
+  progressKey: '',
+  backMsg: '',
+  student: null,   // { id, name }；沒有登入學生或訪客模式時為 null
+
+  start: function(opts) {
+    opts = opts || {};
+    quApp.id          = opts.id || '';
+    quApp.progressKey = opts.progress || '';
+    quApp.backMsg     = opts.backMsg || (quApp.id + '-back-to-hub');
+    try { initFirebase(); } catch (e) {}
+
+    var hub = null;
+    try { hub = JSON.parse(sessionStorage.getItem('hub_student') || 'null'); } catch (e) {}
+    if (!hub || !hub.id) return;
+
+    var nameEl   = document.getElementById('topbar-name');
+    var avatarEl = document.getElementById('topbar-avatar');
+    if (nameEl) nameEl.textContent = hub.nickname || hub.name || '—';
+    if (avatarEl && hub.avatar) avatarEl.textContent = hub.avatar;
+    if (hub.isGuest) return;
+
+    quApp.student = { id: hub.id, name: hub.name };
+    (function wait() {
+      if (!db) { setTimeout(wait, 200); return; }
+      if (typeof opts.onReady === 'function') {
+        try { opts.onReady(quApp.student); } catch (e) { console.error('quApp onReady error:', e); }
+      }
+      /* sessionStorage 裡的頭像與暱稱可能是舊的，以 Firestore 為準再更新一次 */
+      db.collection('students').doc(hub.id).get().then(function(doc) {
+        if (!doc.exists) return;
+        var d = doc.data();
+        if (avatarEl) avatarEl.textContent = d.avatar || '🐣';
+        if (nameEl && d.nickname) nameEl.textContent = d.nickname;
+      }).catch(function() {});
+    })();
+  },
+
+  backToHub: function() {
+    try { window.parent.postMessage({ type: quApp.backMsg }, '*'); } catch (e) {}
+  },
+
+  progressRef: function() {
+    if (!db || !quApp.student || !quApp.progressKey) return null;
+    return db.collection('students').doc(quApp.student.id).collection('progress').doc(quApp.progressKey);
+  },
+
+  /** @returns {Promise<object|null>} 進度文件的資料；沒有紀錄、未登入或讀取失敗都回傳 null */
+  loadProgress: function() {
+    var ref = quApp.progressRef();
+    if (!ref) return Promise.resolve(null);
+    return ref.get()
+      .then(function(doc) { return doc.exists ? doc.data() : null; })
+      .catch(function() { return null; });
+  },
+
+  /**
+   * 記錄一回合的成績。所有 App 共用的四個欄位由這裡累加：
+   *   totalCorrect、totalAnswered、totalRounds、lastStudied
+   * （Hub 的近期記錄與後台的學習總覽就是讀這幾個欄位，見 shared/apps.js）
+   * @param {number} correct   這回合答對題數
+   * @param {number} answered  這回合作答題數
+   * @param {object} [extra]   App 自己的欄位，會跟既有資料合併（巢狀物件也是合併，不是覆蓋）
+   */
+  saveRound: function(correct, answered, extra) {
+    var ref = quApp.progressRef();
+    if (!ref) return;
+    var inc = firebase.firestore.FieldValue.increment;
+    var data = {
+      totalCorrect:  inc(correct),
+      totalAnswered: inc(answered),
+      totalRounds:   inc(1),
+      lastStudied:   new Date().toISOString()
+    };
+    Object.keys(extra || {}).forEach(function(k) { data[k] = extra[k]; });
+    ref.set(data, { merge: true })
+      .catch(function(e) { console.warn('quApp.saveRound error:', e); });
+  }
+};

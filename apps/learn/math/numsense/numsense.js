@@ -694,30 +694,21 @@ document.getElementById('rv-body').addEventListener('pointerdown', function(e) {
   }
 });
 
-/* ══ 紀錄：students/{id}/progress/numsense ══ */
-var currentStudent = null;
+/* ══ 紀錄：students/{id}/progress/numsense（讀寫走 shared.js 的 quApp） ══ */
 function saveProgress(correct, answered, key, st) {
-  if (!db || !currentStudent) return;
-  var inc = firebase.firestore.FieldValue.increment;
-  var data = { totalCorrect: inc(correct), totalAnswered: inc(answered), totalRounds: inc(1),
-               lastStudied: new Date().toISOString(), status: {} };
-  if (st) data.status[key] = st;
-  db.collection('students').doc(currentStudent.id).collection('progress').doc('numsense')
-    .set(data, { merge: true })
-    .catch(function(e) { console.warn('saveProgress error:', e); });
+  /* 沒有狀態要記的時候不要送空的 status：set + merge 遇到空物件會把整個 status 蓋成空的 */
+  var extra = null;
+  if (st) { extra = { status: {} }; extra.status[key] = st; }
+  quApp.saveRound(correct, answered, extra);
 }
 
 function loadProgress() {
-  if (!db || !currentStudent) return;
-  db.collection('students').doc(currentStudent.id).collection('progress').doc('numsense').get()
-    .then(function(doc) {
-      if (doc.exists) { levelStatus = doc.data().status || {}; renderPickers(); }
-    }).catch(function() {});
+  quApp.loadProgress().then(function(data) {
+    if (data) { levelStatus = data.status || {}; renderPickers(); }
+  });
 }
 
-function backToHub() {
-  try { window.parent.postMessage({ type: 'numsense-back-to-hub' }, '*'); } catch (e) {}
-}
+function backToHub() { quApp.backToHub(); }
 
 /* ══ 鍵盤與觸控 ══ */
 document.getElementById('keypad').addEventListener('click', function(e) {
@@ -749,24 +740,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 window.addEventListener('load', function() {
-  try { initFirebase(); } catch (e) {}
   renderPickers();
   showPage('home');
-  try {
-    var hub = JSON.parse(sessionStorage.getItem('hub_student') || 'null');
-    if (hub && hub.id) {
-      currentStudent = { id: hub.id, name: hub.name };
-      document.getElementById('topbar-name').textContent = hub.nickname || hub.name || '—';
-      (function load() {
-        if (!db) { setTimeout(load, 200); return; }
-        loadProgress();
-        db.collection('students').doc(hub.id).get().then(function(doc) {
-          if (!doc.exists) return;
-          var d = doc.data();
-          document.getElementById('topbar-avatar').textContent = d.avatar || '🐣';
-          if (d.nickname) document.getElementById('topbar-name').textContent = d.nickname;
-        }).catch(function() {});
-      })();
-    }
-  } catch (e) {}
+  quApp.start({ id: 'numsense', progress: 'numsense', onReady: loadProgress });
 });

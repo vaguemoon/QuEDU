@@ -465,26 +465,16 @@ function finishRound() {
 }
 
 /* ══ 紀錄：students/{id}/progress/compare，Hub 卡片讀 totalCorrect ══ */
-var currentStudent = null;
 function saveProgress(correct, total) {
-  if (!db || !currentStudent) return;
   var inc = firebase.firestore.FieldValue.increment;
   var key = cfg.mode === 'est' ? 'est_' + cfg.estCat + '_' + cfg.est : cfg.op + '_' + cfg.num;
-  var data = { totalCorrect: inc(correct), totalAnswered: inc(total), totalRounds: inc(1), lastStudied: new Date().toISOString() };
-  data['modeStats.' + key + '.correct']  = inc(correct);
-  data['modeStats.' + key + '.answered'] = inc(total);
-  var ref = db.collection('students').doc(currentStudent.id).collection('progress').doc('compare');
-  /* update 的點號路徑才會寫進巢狀欄位；文件還不存在時 update 會失敗，改用 set 建立 */
-  ref.update(data).catch(function() {
-    var first = { totalCorrect: correct, totalAnswered: total, totalRounds: 1, lastStudied: data.lastStudied, modeStats: {} };
-    first.modeStats[key] = { correct: correct, answered: total };
-    return ref.set(first);
-  }).catch(function(e) { console.warn('saveProgress error:', e); });
+  /* 各模式的累計放在巢狀的 modeStats.{key}；quApp.saveRound 用 set + merge 寫入，巢狀物件會跟既有資料合併 */
+  var modeStats = {};
+  modeStats[key] = { correct: inc(correct), answered: inc(total) };
+  quApp.saveRound(correct, total, { modeStats: modeStats });
 }
 
-function backToHub() {
-  try { window.parent.postMessage({ type: 'compare-back-to-hub' }, '*'); } catch (e) {}
-}
+function backToHub() { quApp.backToHub(); }
 
 /* 鍵盤：> = < 直接作答（估一估用 ← → 選左右），Enter／空白鍵下一題 */
 document.addEventListener('keydown', function(e) {
@@ -498,23 +488,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 window.addEventListener('load', function() {
-  try { initFirebase(); } catch (e) {}
   renderPickers();
   showPage('home');
-  try {
-    var hub = JSON.parse(sessionStorage.getItem('hub_student') || 'null');
-    if (hub && hub.id) {
-      currentStudent = { id: hub.id, name: hub.name };
-      document.getElementById('topbar-name').textContent = hub.nickname || hub.name || '—';
-      (function load() {
-        if (!db) { setTimeout(load, 200); return; }
-        db.collection('students').doc(hub.id).get().then(function(doc) {
-          if (!doc.exists) return;
-          var d = doc.data();
-          document.getElementById('topbar-avatar').textContent = d.avatar || '🐣';
-          if (d.nickname) document.getElementById('topbar-name').textContent = d.nickname;
-        }).catch(function() {});
-      })();
-    }
-  } catch (e) {}
+  quApp.start({ id: 'compare', progress: 'compare' });
 });

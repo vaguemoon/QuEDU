@@ -125,13 +125,7 @@ var fbAuth = null;
 var fbDb   = null;
 var currentUser = null;
 
-var FB_CONFIG = {
-  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
-  authDomain:        'tainping-hanzi-app.firebaseapp.com',
-  projectId:         'tainping-hanzi-app',
-  messagingSenderId: '158917910126',
-  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
-};
+var FB_CONFIG = QU_FIREBASE_CONFIG; // shared/firebase-config.js
 
 (function initFB() {
   if (typeof firebase === 'undefined') { setTimeout(initFB, 150); return; }

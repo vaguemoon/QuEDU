@@ -79,11 +79,34 @@ if (saved) {
 `appId` 為子 App 的唯一識別字，例如 `hanzi`（練字趣）、`math`（乘法趣）。  
 Hub 端監聽 `window.message` 並依 `type` 做對應處理。
 
-> ⚠️ **關鍵：只在子 App 這端送出訊息還不夠。** `src/hub.js` 用兩份白名單陣列
-> `_HUB_BACK_TYPES` 與 `_HUB_LOGOUT_TYPES` 判斷收到的訊息要不要處理，
-> **新 App 的 `{appId}-back-to-hub` 與 `{appId}-logout` 必須手動加進這兩個陣列**，
-> 否則子 App 送出訊息、Hub 完全不認得，「← 主頁」「登出」按鈕會看起來像沒反應，
-> 但實際上沒有任何錯誤訊息可查。這一步在 Checklist（十二）中列為必查項目。
+> ⚠️ **新 App 一定要在 `shared/apps.js` 的 `QU_APPS` 登記一筆，`appId` 就是登記的 `id`。**
+> 這是全站唯一的 App 清單：Hub 的卡片、Hub 認得的返回／登出訊息、近期記錄、教師後台的「學習總覽」全部從這裡產生。
+> 沒登記的 App，Hub 不會顯示卡片，送出的 postMessage 也不會被處理（按鈕看似沒反應，且沒有錯誤訊息）。
+> Hub 認得的訊息固定是 `{id}-back-to-hub` 與 `{id}-logout`；舊 App 的例外用 `msg` / `backMsg` 欄位登記，新 App 不要再用例外。
+
+### 3-4 共用外殼 quApp（新 App 一律使用）
+
+`shared/shared.js` 的 `quApp` 已經包好每個子 App 都要做的事，新 App 不要再自己抄一份：
+
+```js
+window.addEventListener('load', function() {
+  showPage('home');
+  quApp.start({
+    id: 'addsub',          // 跟 shared/apps.js 的 id 一致
+    progress: 'addsub',    // 進度文件名，跟 shared/apps.js 的 progress 一致
+    onReady: function(student) { /* 有登入學生、Firestore 就緒後呼叫一次，例如讀進度 */ }
+  });
+});
+
+quApp.loadProgress().then(function(data) { /* 沒有紀錄時 data 為 null */ });
+quApp.saveRound(correct, answered, { status: { ... } });   // 一回合結束
+quApp.backToHub();
+```
+
+- `quApp.start` 會初始化 Firebase、讀 `hub_student`、把名字與頭像填進 `#topbar-name` / `#topbar-avatar`；訪客不讀寫 Firestore。
+- `quApp.saveRound` 固定累加 `totalCorrect`、`totalAnswered`、`totalRounds`、`lastStudied` 四個欄位，
+  Hub 與後台就是讀這四個欄位，所以新 App 不需要另外寫摘要算法；App 自己的資料放在第三個參數。
+- 參考實作：`apps/learn/math/addsub`、`numsense`、`compare`。較早的 App（練字趣等）仍是各自的 init.js／state.js 寫法，尚未搬過來。
 
 ---
 
@@ -411,7 +434,9 @@ students/{id}/progress/achievements
 - [ ] `init.js` 是最後載入的 JS
 - [ ] 登入資訊從 `sessionStorage('hub_student')` 取得，不自行實作登入
 - [ ] 登出 / 返回用 `postMessage` 通知 Hub
-- [ ] `{appId}-back-to-hub` 與 `{appId}-logout` 已加進 `src/hub.js` 的 `_HUB_BACK_TYPES` / `_HUB_LOGOUT_TYPES` 陣列（漏這步按鈕會看似沒反應）
+- [ ] 已在 `shared/apps.js` 的 `QU_APPS` 登記（漏這步 Hub 沒有卡片、返回按鈕看似沒反應、後台看不到進度）
+- [ ] `index.html` 在 Firebase SDK 後面有載入 `shared/firebase-config.js`（`shared.js` 的 `initFirebase()` 讀它，頁面不要自己寫一份設定）
+- [ ] 啟動、進度讀寫、返回 Hub 用 `quApp`（見 3-4），進度文件名已寫進 `docs/資料結構.md`
 - [ ] 所有顏色使用 CSS 變數，無寫死色碼
 - [ ] 若有中文語音朗讀：一律呼叫 `pickBestZhVoice()`，未自行寫「找第一個 zh 語音」邏輯（見七-5）
 - [ ] 新增 `檔案功能說明.md` 說明每個 JS 的職責
@@ -453,5 +478,7 @@ students/{id}/progress/achievements
 | init.js 排在其他模組之前 | init.js 必須最後載入 |
 | 各 App 進度存在同一個 Firestore doc | 每個 App 用自己的 `progress/{appId}` |
 | postMessage type 未加 appId 前綴 | 避免不同 App 訊息衝突 |
-| postMessage type 送出去了，但沒加進 `src/hub.js` 的 `_HUB_BACK_TYPES` / `_HUB_LOGOUT_TYPES` | Hub 用白名單比對訊息類型，兩邊都要登記，否則按鈕看似沒反應且無錯誤訊息 |
+| postMessage type 送出去了，但 App 沒有登記在 `shared/apps.js` | Hub 只認 `QU_APPS` 裡登記的 App 的訊息，沒登記按鈕看似沒反應且無錯誤訊息 |
+| 在頁面或 JS 裡自己寫一份 Firebase 設定（apiKey…） | 載入 `shared/firebase-config.js`，讀 `QU_FIREBASE_CONFIG` |
+| 用 `姓名 + '_' + PIN` 組學生文件 ID | 一律用 `hub_student.id`；文件 ID 是不透明的代號，學生改 PIN 後不會跟著變 |
 | TTS 用「陣列裡第一個語言代碼符合 zh 的語音」 | 改呼叫 `pickBestZhVoice()`，避免選到 iOS 的多語言角色語音（Eddy、Grandma 等）唸不準中文 |

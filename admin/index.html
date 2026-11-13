@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="../shared/firebase-config.js"></script>
 <link rel="stylesheet" href="admin.css">
 <style>
 /* ══ 列印工具 panel ══ */
@@ -1508,8 +1509,18 @@
       <!-- APP 頁籤列（由 JS 動態產生） -->
       <div class="app-tabs-mini" id="student-app-tabs" style="margin-bottom:16px"></div>
 
+      <!-- 學習總覽面板（所有 App，清單來自 shared/apps.js） -->
+      <div id="student-panel-summary" style="display:none">
+        <div class="card">
+          <div class="card-title">📊 各 App 學習狀況</div>
+          <div id="detail-app-summary">
+            <div class="loading-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
       <!-- 識字趣面板 -->
-      <div id="student-panel-chinese">
+      <div id="student-panel-chinese" style="display:none">
         <div class="card" style="margin-bottom:14px">
           <div class="card-title">📚 課程完成狀況</div>
           <div id="detail-course-progress">
@@ -2026,6 +2037,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="../shared/shared.js"></script>
 <script src="../assets/data/heteronym-readings.js"></script>
+<script src="../shared/apps.js"></script>
 <script src="init.js"></script>
 <script src="classes.js"></script>
 <script src="teacher-school.js"></script>
@@ -2047,6 +2059,12 @@
 <script src="math-bank.js"></script>
 <script src="audio-clips.js"></script>
 <script src="exam-compose.js"></script>
+<script src="exam-compose-select.js"></script>
+<script src="exam-compose-layout.js"></script>
+<script src="exam-compose-output.js"></script>
+<script src="exam-compose-match.js"></script>
+<script src="exam-compose-dictation.js"></script>
+<script src="exam-compose-qedit.js"></script>
 <script src="school-admin.js"></script>
 <script src="sa-bulk-import.js"></script>
 <script src="print-math.js"></script>

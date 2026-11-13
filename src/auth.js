@@ -148,7 +148,7 @@ function _loadSeats(classId) {
   if (!wrap) return;
   wrap.innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
 
-  db.collection('students').where('classId', '==', classId).get()
+  db.collection('students').where('classId', '==', classId).limit(100).get()
     .then(function(snap) {
       var seats = [];
       snap.forEach(function(doc) {
@@ -296,25 +296,51 @@ function doLogin() {
   document.getElementById('btn-login-ok').disabled = true;
   document.getElementById('login-error').classList.remove('show');
   if (!db) { setTimeout(doLogin, 300); return; }
-  db.collection('students').doc(name + '_' + loginPin).get().then(function(doc) {
-    if (!doc.exists) {
+  _findStudentByNamePin(name, loginPin).then(function(doc) {
+    if (!doc) {
       document.getElementById('login-error').classList.add('show');
       document.getElementById('btn-login-ok').disabled = false;
       loginPin = ''; updatePinDisplay('pd', ''); return;
     }
     var d = doc.data();
     if (d.classId && !d.classIds) {
-      db.collection('students').doc(name + '_' + loginPin)
+      db.collection('students').doc(doc.id)
         .update({ classIds: [d.classId] })
         .catch(function() {});
     }
-    onLoginSuccess({ id: name + '_' + loginPin, name: name, pin: loginPin,
+    onLoginSuccess({ id: doc.id, name: name, pin: loginPin,
                      nickname: d.nickname || '', avatar: d.avatar || '🐣',
                      classIds: d.classIds || (d.classId ? [d.classId] : []) });
   }).catch(function() {
     showToast('連線失敗，請重試');
     document.getElementById('btn-login-ok').disabled = false;
   });
+}
+/**
+ * 用姓名＋PIN 找學生文件（比對的是文件裡的 name / pin 欄位）。
+ * 不能直接用 doc(姓名_PIN) 去拿：舊制帳號的文件 ID 是註冊當下的「姓名_PIN」，
+ * 學生改過 PIN 之後 ID 不會跟著變，用新 PIN 組出來的 ID 會找不到人。
+ * 文件 ID 一律當成不透明的代號，登入成功後往下傳的是 doc.id。
+ * @returns {Promise<DocumentSnapshot|null>} 找不到、或同名同 PIN 有多筆無法分辨時回傳 null
+ */
+function _findStudentByNamePin(name, pin) {
+  var legacyId = name + '_' + pin;
+  return db.collection('students')
+    .where('name', '==', name).where('pin', '==', pin).limit(5).get()
+    .then(function(snap) {
+      if (snap.empty) {
+        /* 很舊的帳號可能沒有 name / pin 欄位，只剩文件 ID 可以對。
+           有 pin 欄位而且跟輸入的不一樣，代表 PIN 已經改過，舊 PIN 不能再登入 */
+        return db.collection('students').doc(legacyId).get().then(function(doc) {
+          if (!doc.exists) return null;
+          var p = doc.data().pin;
+          return (p === undefined || p === pin) ? doc : null;
+        });
+      }
+      var exact = snap.docs.filter(function(d) { return d.id === legacyId; })[0];
+      if (exact) return exact;
+      return snap.size === 1 ? snap.docs[0] : null;
+    });
 }
 function onLoginSuccess(student, isNew) {
   currentStudent = student;
@@ -402,8 +428,13 @@ function doRegister() {
   var id = name + '_' + regPin;
   var inviteCode = (document.getElementById('reg-invite-code').value || '').trim().toUpperCase();
 
-  db.collection('students').doc(id).get().then(function(doc) {
-    if (doc.exists) {
+  /* 文件 ID 維持固定的「姓名_PIN」：連點兩次只會寫到同一筆，不會建出兩個帳號。
+     另外查一次欄位，擋掉「別人改 PIN 之後剛好變成這組姓名＋PIN」的情況 */
+  Promise.all([
+    db.collection('students').doc(id).get(),
+    db.collection('students').where('name', '==', name).where('pin', '==', regPin).limit(1).get()
+  ]).then(function(res) {
+    if (res[0].exists || !res[1].empty) {
       errEl.textContent = '這個名字和 PIN 已被使用'; errEl.classList.add('show');
       document.getElementById('btn-reg-ok').disabled = false; return;
     }

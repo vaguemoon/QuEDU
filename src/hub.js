@@ -5,406 +5,94 @@
  */
 'use strict';
 
-/* 科目清單：新增科目只改這裡
- *
- * 設計準則：每個科目必須實作 getLevel(sid) → Promise<string>
- *   - 回傳顯示在卡片下方的等級標籤（例如「練字LV2」「乘法LV3」）
- *   - 若尚無進度，回傳預設等級字串（例如「乘法LV1」）
- *   - badgeClass 決定標籤顏色（'green' / 'orange' / 'blue' …）
+/* 科目清單：App 的基本資料與學習摘要算法在 shared/apps.js（QU_APPS），新增科目改那裡。
+ * 這裡只補 Hub 卡片專用的「等級標籤」：
+ *   _SUBJECT_LEVELS[id](sid) → Promise<string>，顯示在卡片下方（例如「練字LV2」「乘法LV3」）
+ *   沒有列在這裡的科目，卡片固定顯示 QU_APPS 裡的 badge
  */
-var SUBJECTS = [
-  {
-    id: 'chinese', file: 'apps/learn/lang/chinese/index.html',
-    icon: '國', name: '練字趣', desc: '國小國字筆順學習',
-    type: 'learn', category: 'chinese',
-    theme: 'theme-blue', badge: '練字LV1', badgeClass: 'green',
-    // 等級：讀自練字趣成就系統寫入的 stats/profile.title
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('stats').doc('profile').get()
-        .then(function(doc) {
-          return (doc.exists && doc.data().title) ? doc.data().title : '練字LV1';
-        });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('hanzi').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var cs = doc.data().charStatus || {};
-          var m  = Object.values(cs).filter(function(v) { return v === 'mastered'; }).length;
-          return m ? { sub: '通過測驗 ' + m + ' 字', score: m + ' 字' } : null;
-        });
-    }
-  },
-  {
-    id: 'numsense', file: 'apps/learn/math/numsense/index.html',
-    icon: '🔢', name: '基礎數感', desc: '數字寫法・位值・數的順序',
-    type: 'learn', category: 'math',
-    theme: 'theme-teal', badge: '基礎數感', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('基礎數感'); },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('numsense').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var c = doc.data().totalCorrect || 0;
-          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
-        });
-    }
-  },
-  {
-    id: 'convert', file: 'apps/learn/math/convert/index.html',
-    icon: '↔', name: '換算趣', desc: '各種單位換算',
-    type: 'learn', category: 'math',
-    theme: 'theme-green', badge: '換算LV1', badgeClass: 'green',
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('stats').doc('convertProfile').get()
-        .then(function(doc) {
-          return (doc.exists && doc.data().title) ? doc.data().title : '換算LV1';
-        }).catch(function() { return '換算LV1'; });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('convert').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var c = doc.data().totalCorrect || 0;
-          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
-        });
-    }
-  },
-  {
-    id: 'transpose', file: 'apps/learn/math/transpose/index.html',
-    icon: '↔', name: '移項趣', desc: '方程式移項練習',
-    type: 'learn', category: 'math',
-    theme: 'theme-green', badge: '移項趣', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('移項趣'); },
-    activity: function() { return Promise.resolve(null); }
-  },
-  {
-    id: 'fractions', file: 'apps/learn/math/Fractions/index.html',
-    icon: '➗', name: '分數趣', desc: '擴分、約分、通分與加減乘',
-    type: 'learn', category: 'math',
-    theme: 'theme-orange', badge: '分數趣', badgeClass: 'orange',
-    getLevel: function() { return Promise.resolve('分數趣'); },
-    activity: function() { return Promise.resolve(null); }
-  },
-  {
-    id: 'geometry', file: 'apps/learn/math/geometry/index.html',
-    icon: '📐', name: '幾何趣', desc: '面積・體積・表面積計算',
-    type: 'learn', category: 'math',
-    theme: 'theme-teal', badge: '幾何趣', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('幾何趣'); },
-    activity: function() { return Promise.resolve(null); }
-  },
-  {
-    id: 'multiply', file: 'apps/learn/math/multiply/index.html',
-    icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
-    type: 'learn', category: 'math',
-    theme: 'theme-orange', badge: '乘法LV1', badgeClass: 'green',
-    // 等級：讀自乘法趣成就系統寫入的 stats/multiplyProfile.title
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('stats').doc('multiplyProfile').get()
-        .then(function(doc) {
-          return (doc.exists && doc.data().title) ? doc.data().title : '乘法LV1';
-        });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('multiply').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var d = doc.data();
-          var c = d.totalCorrect || 0;
-          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
-        });
-    }
-  },
-  {
-    id: 'addsub', file: 'apps/learn/math/addsub/index.html',
-    icon: '➕', name: '加減趣', desc: '加法、減法計算練習',
-    type: 'learn', category: 'math',
-    theme: 'theme-orange', badge: '加減趣', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('加減趣'); },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('addsub').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var c = doc.data().totalCorrect || 0;
-          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
-        });
-    }
-  },
-  {
-    id: 'compare', file: 'apps/learn/math/compare/index.html',
-    icon: '⚖️', name: '比較趣', desc: '不用計算比大小・估一估',
-    type: 'learn', category: 'math',
-    theme: 'theme-blue', badge: '比較趣', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('比較趣'); },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('compare').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var c = doc.data().totalCorrect || 0;
-          return c ? { sub: '累計答對 ' + c + ' 題', score: c + ' 題' } : null;
-        });
-    }
-  },
-  {
-    id: 'exam-reader', file: 'apps/quiz/word-to-reader/index.html',
-    icon: '🎧', name: '考卷報讀', desc: '老師分享的有聲考卷',
-    type: 'quiz', studentMode: true,
-    theme: 'theme-teal', badge: '考卷報讀', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('考卷報讀'); },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('activities')
-        .where('app', '==', 'exam-reader')
-        .get()
-        .then(function(snap) {
-          if (snap.empty) return null;
-          return { sub: '已使用 ' + snap.size + ' 次', score: snap.size + ' 次' };
-        });
-    }
-  },
-  {
-    id: 'word-image', file: 'apps/learn/lang/word-image/index.html',
-    icon: '🖼️', name: '詞語趣', desc: '圖像化學習詞語',
-    type: 'learn', category: 'chinese',
-    theme: 'theme-purple', badge: '詞語趣', badgeClass: 'blue',
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('wordImage').get()
-        .then(function(doc) {
-          if (!doc.exists) return '詞語趣';
-          var words = doc.data().words || {};
-          var mastered = Object.keys(words).filter(function(k) {
-            var w = words[k];
-            return w.correct > 0 && w.correct >= w.wrong;
-          }).length;
-          if (mastered >= 50) return '詞語LV4';
-          if (mastered >= 20) return '詞語LV3';
-          if (mastered >= 5)  return '詞語LV2';
-          return '詞語LV1';
-        }).catch(function() { return '詞語趣'; });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('wordImage').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var words = doc.data().words || {};
-          var total = Object.keys(words).filter(function(k) {
-            return (words[k].correct || 0) + (words[k].wrong || 0) > 0;
-          }).length;
-          return total ? { sub: '已練習 ' + total + ' 個詞語', score: total + ' 詞' } : null;
-        }).catch(function() { return null; });
-    }
-  },
-  {
-    id: 'recognize', file: 'apps/learn/lang/recognize/index.html',
-    icon: '🔊', name: '認字趣', desc: '聽音辨字・選字選詞',
-    type: 'learn', category: 'chinese',
-    theme: 'theme-teal', badge: '認字LV1', badgeClass: 'green',
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('recognize').get()
-        .then(function(doc) {
-          if (!doc.exists) return '認字LV1';
-          var cs = doc.data().charStatus || {};
-          var ws = doc.data().wordStatus || {};
-          var m = Object.values(cs).concat(Object.values(ws)).filter(function(v){ return v === 'mastered'; }).length;
-          if (m >= 100) return '認字LV5';
-          if (m >= 50)  return '認字LV4';
-          if (m >= 20)  return '認字LV3';
-          if (m >= 5)   return '認字LV2';
-          return '認字LV1';
-        }).catch(function(){ return '認字LV1'; });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('recognize').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var cs = doc.data().charStatus || {};
-          var ws = doc.data().wordStatus || {};
-          var m = Object.values(cs).concat(Object.values(ws)).filter(function(v){ return v === 'mastered'; }).length;
-          return m ? { sub: '精熟 ' + m + ' 字詞', score: m + ' 字詞' } : null;
-        });
-    }
-  },
-  {
-    id: 'e-textbook', file: 'apps/learn/lang/e-textbook/index.html',
-    icon: '📖', name: '課文趣', desc: '電子課本・圈詞・朗讀跟讀',
-    type: 'learn', category: 'chinese', studentMode: true, // 需要 classIds 才能查班級分享的課文，比照考卷報讀
-    theme: 'theme-blue', badge: '課文趣', badgeClass: 'blue',
-    getLevel: function() { return Promise.resolve('課文趣'); },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('eTextbook').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var lessons = doc.data().lessons || {};
-          var totalFound = Object.keys(lessons).reduce(function(sum, k) {
-            return sum + Object.keys(lessons[k].foundWords || {}).length;
-          }, 0);
-          return totalFound ? { sub: '累計圈到 ' + totalFound + ' 個生字詞', score: totalFound + ' 個' } : null;
-        }).catch(function() { return null; });
-    }
-  },
-  {
-    id: 'radical', file: 'apps/learn/lang/radical/index.html',
-    icon: '🧩', name: '部件趣', desc: '部件・部首拆字練習',
-    type: 'learn', category: 'chinese',
-    theme: 'theme-orange', badge: '部件LV1', badgeClass: 'green',
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('radical').get()
-        .then(function(doc) {
-          if (!doc.exists) return '部件LV1';
-          var rs = doc.data().radicalStatus || {};
-          var m = Object.values(rs).filter(function(v) { return v === 'mastered'; }).length;
-          if (m >= 30) return '部件LV5';
-          if (m >= 15) return '部件LV4';
-          if (m >= 8)  return '部件LV3';
-          if (m >= 3)  return '部件LV2';
-          return '部件LV1';
-        }).catch(function() { return '部件LV1'; });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('radical').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var rs = doc.data().radicalStatus || {};
-          var m = Object.values(rs).filter(function(v) { return v === 'mastered'; }).length;
-          return m ? { sub: '精熟 ' + m + ' 個部件', score: m + ' 部件' } : null;
-        }).catch(function() { return null; });
-    }
-  },
-  {
-    id: 'zhuyin', file: 'apps/learn/lang/zhuyin/index.html',
-    icon: 'ㄅ', name: '注音趣', desc: '注音符號點選學習',
-    type: 'learn', category: 'chinese',
-    theme: 'theme-pink', badge: '注音趣', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('注音趣'); },
-    activity: function() { return Promise.resolve(null); }
-  },
-  {
-    id: 'english', file: 'apps/learn/lang/english/index.html',
-    icon: '🌐', name: '英文趣', desc: '英文發音・常用語・生字',
-    type: 'learn', category: 'english',
-    theme: 'theme-teal', badge: '英文趣', badgeClass: 'green',
-    getLevel: function() { return Promise.resolve('英文趣'); },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('progress').doc('english').get()
-        .then(function(doc) {
-          if (!doc.exists) return null;
-          var d = doc.data();
-          var total = 0;
-          Object.keys(d).forEach(function(k) {
-            var v = d[k];
-            if (v && typeof v.correct === 'number') total += v.correct;
-          });
-          return total ? { sub: '累計答對 ' + total + ' 題', score: total + ' 題' } : null;
-        }).catch(function() { return null; });
-    }
-  },
-  {
-    id: 'math-quiz', file: 'apps/quiz/math-quiz/index.html',
-    icon: '🔢', name: '數學測驗', desc: '四則運算練習測驗',
-    type: 'quiz', studentMode: true,
-    theme: 'theme-green', badge: '數學測驗', badgeClass: 'green',
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('activities')
-        .where('app', '==', 'math-quiz')
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .get()
-        .then(function(snap) {
-          if (snap.empty) return '數學測驗';
-          var d = snap.docs[0].data();
-          return '最近 ' + d.score + ' 分';
-        })
-        .catch(function() { return '數學測驗'; });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('activities')
-        .where('app', '==', 'math-quiz')
-        .get()
-        .then(function(snap) {
-          if (snap.empty) return null;
-          return { sub: '已完成 ' + snap.size + ' 次練習', score: snap.size + ' 次' };
-        });
-    }
-  },
-  {
-    id: 'chinese-quiz', file: 'apps/quiz/chinese-quiz/index.html',
-    icon: '📝', name: '語文測驗', desc: '詞語填空與選擇題練習',
-    type: 'quiz', studentMode: true,
-    theme: 'theme-purple', badge: '語文測驗', badgeClass: 'blue',
-    getLevel: function(sid) {
-      // 讀最近一次語文測驗的分數當作標籤
-      return db.collection('students').doc(sid).collection('activities')
-        .where('app', '==', 'chinese-quiz')
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .get()
-        .then(function(snap) {
-          if (snap.empty) return '語文測驗';
-          var d = snap.docs[0].data();
-          return '最近 ' + d.score + ' 分';
-        })
-        .catch(function() { return '語文測驗'; });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('activities')
-        .where('app', '==', 'chinese-quiz')
-        .get()
-        .then(function(snap) {
-          if (snap.empty) return null;
-          var total = snap.size;
-          return { sub: '已完成 ' + total + ' 次練習', score: total + ' 次' };
-        });
-    }
-  },
-  {
-    id: 'english-quiz', file: 'apps/quiz/english-quiz/index.html',
-    icon: '🔤', name: '英文測驗', desc: '看圖選字・聽音選字',
-    type: 'quiz', studentMode: true,
-    theme: 'theme-blue', badge: '英文測驗', badgeClass: 'blue',
-    getLevel: function(sid) {
-      return db.collection('students').doc(sid).collection('activities')
-        .where('app', '==', 'english-quiz')
-        .orderBy('timestamp', 'desc')
-        .limit(1)
-        .get()
-        .then(function(snap) {
-          if (snap.empty) return '英文測驗';
-          return '最近 ' + snap.docs[0].data().score + ' 分';
-        })
-        .catch(function() { return '英文測驗'; });
-    },
-    activity: function(sid) {
-      return db.collection('students').doc(sid).collection('activities')
-        .where('app', '==', 'english-quiz')
-        .get()
-        .then(function(snap) {
-          if (snap.empty) return null;
-          return { sub: '已完成 ' + snap.size + ' 次測驗', score: snap.size + ' 次' };
-        });
-    }
-  },
-  {
-    id: 'motor', file: 'apps/learn/special/motor/index.html',
-    icon: '🧩', name: '知動趣', desc: '連連看・線條練習',
-    type: 'learn', category: 'special',
-    theme: 'theme-orange', badge: '知動趣', badgeClass: 'orange',
-    // 無 LV 稱號，卡片只顯示固定科目名；進度存在裝置 localStorage，不讀 Firestore
-    getLevel: function() { return Promise.resolve('知動趣'); },
-    activity: function() { return Promise.resolve(null); }
-  }
-];
+function _levelFromStats(statsDoc, fallback) {
+  return function(sid) {
+    return db.collection('students').doc(sid).collection('stats').doc(statsDoc).get()
+      .then(function(doc) {
+        return (doc.exists && doc.data().title) ? doc.data().title : fallback;
+      }).catch(function() { return fallback; });
+  };
+}
+function _levelFromLastScore(appId, fallback) {
+  // 讀最近一次測驗的分數當作標籤
+  return function(sid) {
+    return db.collection('students').doc(sid).collection('activities')
+      .where('app', '==', appId)
+      .orderBy('timestamp', 'desc')
+      .limit(1)
+      .get()
+      .then(function(snap) {
+        if (snap.empty) return fallback;
+        return '最近 ' + snap.docs[0].data().score + ' 分';
+      })
+      .catch(function() { return fallback; });
+  };
+}
+function _levelFromProgress(progressDoc, fallback, toLevel) {
+  return function(sid) {
+    return db.collection('students').doc(sid).collection('progress').doc(progressDoc).get()
+      .then(function(doc) { return doc.exists ? toLevel(doc.data()) : fallback; })
+      .catch(function() { return fallback; });
+  };
+}
+
+var _SUBJECT_LEVELS = {
+  // 等級：讀自各 App 成就系統寫入的 stats/*.title
+  'chinese':  _levelFromStats('profile',         '練字LV1'),
+  'convert':  _levelFromStats('convertProfile',  '換算LV1'),
+  'multiply': _levelFromStats('multiplyProfile', '乘法LV1'),
+  'word-image': _levelFromProgress('wordImage', '詞語趣', function(d) {
+    var words = d.words || {};
+    var mastered = Object.keys(words).filter(function(k) {
+      var w = words[k];
+      return w.correct > 0 && w.correct >= w.wrong;
+    }).length;
+    if (mastered >= 50) return '詞語LV4';
+    if (mastered >= 20) return '詞語LV3';
+    if (mastered >= 5)  return '詞語LV2';
+    return '詞語LV1';
+  }),
+  'recognize': _levelFromProgress('recognize', '認字LV1', function(d) {
+    var m = _quCountMastered(d.charStatus) + _quCountMastered(d.wordStatus);
+    if (m >= 100) return '認字LV5';
+    if (m >= 50)  return '認字LV4';
+    if (m >= 20)  return '認字LV3';
+    if (m >= 5)   return '認字LV2';
+    return '認字LV1';
+  }),
+  'radical': _levelFromProgress('radical', '部件LV1', function(d) {
+    var m = _quCountMastered(d.radicalStatus);
+    if (m >= 30) return '部件LV5';
+    if (m >= 15) return '部件LV4';
+    if (m >= 8)  return '部件LV3';
+    if (m >= 3)  return '部件LV2';
+    return '部件LV1';
+  }),
+  'math-quiz':    _levelFromLastScore('math-quiz',    '數學測驗'),
+  'chinese-quiz': _levelFromLastScore('chinese-quiz', '語文測驗'),
+  'english-quiz': _levelFromLastScore('english-quiz', '英文測驗')
+};
+
+var SUBJECTS = QU_APPS.map(function(app) {
+  var s = Object.assign({}, app);
+  s.getLevel = _SUBJECT_LEVELS[app.id] || function() { return Promise.resolve(app.badge); };
+  // 近期記錄：沒有摘要文字的（只知道用過）不列出
+  s.activity = function(sid) {
+    return quAppSummary(app, sid, db).then(function(r) { return (r && r.sub) ? r : null; });
+  };
+  return s;
+});
 
 var selectedAvatar = '🐣';
 var AVATARS = ['🐣','🐱','🐶','🐻','🐼','🦊','🐸','🐧','🦁','🐯','🐨','🐮','🐷','🐙','🦋','🌟','🌈','🎈','🚀','🎯'];
 
-var _HUB_BACK_TYPES   = ['hanzi-back-to-hub','multiply-back-to-hub','chinese-quiz-back-to-hub',
-  'math-quiz-back-to-hub','exam-reader-back-to-hub','recognize-back-to-hub',
-  'convert-back-to-hub','word-image-back','transpose-back-to-hub','fractions-back-to-hub',
-  'geometry-back-to-hub','english-back','radical-back-to-hub','zhuyin-back-to-hub',
-  'e-textbook-back-to-hub','motor-back-to-hub','english-quiz-back-to-hub','compare-back-to-hub','addsub-back-to-hub',
-  'numsense-back-to-hub'];
-var _HUB_LOGOUT_TYPES = ['hanzi-logout','multiply-logout','recognize-logout','word-image-logout','transpose-logout',
-  'geometry-logout','english-logout','radical-logout','zhuyin-logout','e-textbook-logout','motor-logout'];
+var _HUB_BACK_TYPES   = quAppBackTypes();
+var _HUB_LOGOUT_TYPES = quAppLogoutTypes();
 
 // ── Hub 渲染 ──
 

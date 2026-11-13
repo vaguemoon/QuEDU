@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="../shared/firebase-config.js"></script>
 <link rel="stylesheet" href="../admin/admin.css">
 <style>
 :root {
@@ -102,13 +103,7 @@ h1 { font-size:1.25rem; font-weight:900; color:var(--text); margin:0 0 6px; }
 <script>
 'use strict';
 
-var FB_CONFIG = {
-  apiKey:            'AIzaSyBLhonzZkR1ORDPKgxmaVLFUwvPiEMpdj0',
-  authDomain:        'tainping-hanzi-app.firebaseapp.com',
-  projectId:         'tainping-hanzi-app',
-  messagingSenderId: '158917910126',
-  appId:             '1:158917910126:web:e52a1d0456d1fd4fe6907f'
-};
+var FB_CONFIG = QU_FIREBASE_CONFIG; // shared/firebase-config.js
 
 var db   = null;
 var auth = null;

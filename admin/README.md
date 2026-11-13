@@ -17,10 +17,10 @@
 
 | 檔案 | 作用 |
 |------|------|
-| `init.js` | 初始化與全域控制。處理 Firebase Auth 登入驗證、分頁切換（`switchTab`）、暗色模式開關，以及子 APP 登錄表（`APP_REGISTRY`）。 |
+| `init.js` | 初始化與全域控制。處理 Firebase Auth 登入驗證、分頁切換（`switchTab`）、暗色模式開關。子 App 清單不在這裡，統一讀 `shared/apps.js` 的 `QU_APPS`。 |
 | `classes.js` | 班級管理。建立班級、產生 6 碼邀請碼、啟用／停用班級。 |
 | `overview.js` | 班級學生名單。顯示選定班級的學生列表，並呈現各 APP（識字趣／乘法趣）的學習進度。 |
-| `students.js` | 學生詳細頁。點入個別學生後，顯示其課程完成狀況與最近測驗紀錄。 |
+| `students.js` | 學生詳細頁。第一個頁籤「學習總覽」列出所有 App 的學習狀況（清單與摘要算法來自 `shared/apps.js`），其後是識字趣、乘法趣的詳細頁籤。 |
 
 ---
 
@@ -30,7 +30,6 @@
 |------|------|
 | `curriculum-ui.js` | 課程版本 UI 渲染。手風琴列表、課次摺疊面板、課次內容展示。 |
 | `curriculum-data.js` | 課程版本 Firebase CRUD。新增／刪除版本、課次，以及 CSV 批次匯入。 |
-| `curriculum.js` | **空檔，保留相容性。** 原始課程模組已拆分為上述兩個檔案，此檔不含任何邏輯。 |
 | `quiz-bank.js` | 語文題庫管理。上傳 `.xlsx` 題庫、顯示各課次題數統計、刪除課次題目。依賴 SheetJS（XLSX）。 |
 | `math-bank.js` | 數學題組管理。上傳 `.xlsx`（欄位：年級、類別、題幹、答案），寫入 Firestore `mathQuestions`。 |
 | `word-image.js` | 詞語圖庫。為「詞語解釋」題型上傳對應圖片；圖片壓縮為 base64 直接存入 Firestore，不使用 Firebase Storage。 |
@@ -44,7 +43,13 @@
 |------|------|
 | `quiz-sessions.js` | 語文測驗代碼管理。建立測驗場次（產生 6 碼代碼）、顯示列表與學生作答統計、關閉測驗。 |
 | `math-quiz.js` | 四則運算測驗管理。建立／關閉四則運算測驗場次，功能結構與 `quiz-sessions.js` 相同。 |
-| `exam-compose.js` | 試卷編製精靈。分步驟流程：填基本資料 → 選題 → 大題分組排版 → 輸出試卷。 |
+| `exam-compose.js` | 試卷編製精靈的狀態變數、畫面切換與 Step 1（基本資料）。精靈其餘部分照步驟拆在下面六個檔，函式都是全域的、可互相呼叫。 |
+| `exam-compose-select.js` | Step 2：選題。 |
+| `exam-compose-layout.js` | Step 3：大題分組與排版（拖曳排序、配分、分頁點）。 |
+| `exam-compose-output.js` | Step 4：輸出（發布線上測驗、列印試卷與學生作答卷）。 |
+| `exam-compose-match.js` | 共用小工具與「詞圖配對」modal。 |
+| `exam-compose-dictation.js` | 「默寫生字」題目的新增／編輯／批次建立。 |
+| `exam-compose-qedit.js` | 一般題目（詞語解釋／詞語填空／選擇題／數學）編輯 modal。 |
 
 ---
 
