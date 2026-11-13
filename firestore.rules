@@ -3,22 +3,66 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 系統設定（維護模式、公告）—— index.html 不需登入就要讀，所以允許公開讀
-    match /siteSettings/{doc} {
-      allow read:  if true;
-      allow write: if request.auth != null;
+    // ── 共用判斷 ──
+    function signedIn() {
+      return request.auth != null;
+    }
+    // 管理者白名單的文件 ID 是 email 把 @ 和 . 換成 _（跟 super-admin/login.html 的 emailKey 同一套算法）。
+    // 要求 email_verified：管理者後台只開放 Google 登入（一定是已驗證），
+    // 這樣別人就不能用 email/密碼搶先註冊一個白名單上的信箱來冒充。
+    function isSuperAdmin() {
+      return signedIn()
+        && 'email' in request.auth.token
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/superAdmins/$(request.auth.token.email.lower().replace('[@.]', '_')))
+        && get(/databases/$(database)/documents/superAdmins/$(request.auth.token.email.lower().replace('[@.]', '_'))).data.get('enabled', true) != false;
+    }
+    // 呼叫者是不是 schoolId 這所學校的校管理者（role 只有 super-admin 能設定，見 /teachers 規則）
+    function isSchoolAdminOf(schoolId) {
+      return signedIn()
+        && schoolId != ''
+        && exists(/databases/$(database)/documents/teachers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.get('role', '') == 'school-admin'
+        && get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data.get('schoolId', '') == schoolId;
+    }
+    // 這次 update 動到哪些欄位
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+    // 教師自己的資料：擁有者本人或 super-admin 可改刪；沒有 teacherUid 的舊資料維持原本「已登入即可」
+    function ownsOrLegacy() {
+      return signedIn()
+        && (resource.data.get('teacherUid', '') in ['', request.auth.uid] || isSuperAdmin());
     }
 
-    // 管理者白名單 —— 登入流程需要讀取，任何已登入使用者可讀
+    // 系統設定（維護模式、公告）—— index.html 不需登入就要讀，所以允許公開讀；只有 super-admin 能改
+    match /siteSettings/{doc} {
+      allow read:  if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // 管理者白名單 —— 登入流程需要讀取自己那一筆，所以已登入者可 get；列出全部與寫入僅限 super-admin
+    // （原本任何已登入者都能寫，等於註冊一個帳號就能把自己加成管理者）
     match /superAdmins/{doc} {
-      allow read:  if request.auth != null;
-      allow write: if request.auth != null;
+      allow get:   if signedIn();
+      allow list:  if isSuperAdmin();
+      allow write: if isSuperAdmin();
     }
 
     // 教師帳號 —— 管理者後台需讀取全部，任何已登入使用者可讀
+    // 寫入：本人可建立/更新自己的資料，但不能碰 role、blocked（否則可以自己升成校管理者或自己解除封鎖）；
+    // 校管理者不能自己換學校（否則等於可以變成任何學校的校管理者）。
+    // 校管理者只能封鎖/解封同校教師；role、學校指派等其餘異動僅限 super-admin。
     match /teachers/{uid} {
-      allow read:  if request.auth != null;
-      allow write: if request.auth != null;
+      allow read:   if signedIn();
+      allow create: if signedIn() && request.auth.uid == uid
+                    && !request.resource.data.keys().hasAny(['role', 'blocked']);
+      allow update: if (signedIn() && request.auth.uid == uid
+                        && !changedKeys().hasAny(['role', 'blocked'])
+                        && (!changedKeys().hasAny(['schoolId']) || resource.data.get('role', 'teacher') != 'school-admin'))
+                    || (changedKeys().hasOnly(['blocked']) && isSchoolAdminOf(resource.data.get('schoolId', '')))
+                    || isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // 報讀庫（有聲教材）—— 只有本人可讀寫，確保各教師資料隔離
@@ -26,16 +70,32 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // 學校 —— 登入頁選學校需公開讀，建立/停用僅限已登入（Super-Admin 在 UI 層管控）
+    // 學校 —— 登入頁選學校需公開讀，建立/停用僅限 super-admin
     match /schools/{schoolId} {
       allow read:  if true;
-      allow write: if request.auth != null;
+      allow write: if isSuperAdmin();
     }
 
     // 班級 —— 學生 PIN 登入後需查詢班級，所以允許公開讀
+    // 改刪：負責教師本人、該校校管理者、super-admin。
+    // 另外放行一種情況：schoolId 還是空的舊班級，校管理者可以幫它補上自己學校的 schoolId
+    // （admin/school-admin.js 載入名單時會自動補，只准動 schoolId / schoolName 兩個欄位）。
     match /classes/{classId} {
-      allow read:  if true;
-      allow write: if request.auth != null;
+      allow read:   if true;
+      allow create: if signedIn();
+      allow update: if signedIn() && (
+                      resource.data.get('teacherUid', '') == request.auth.uid
+                      || isSchoolAdminOf(resource.data.get('schoolId', ''))
+                      || (resource.data.get('schoolId', '') == ''
+                          && changedKeys().hasOnly(['schoolId', 'schoolName'])
+                          && isSchoolAdminOf(request.resource.data.get('schoolId', '')))
+                      || isSuperAdmin()
+                    );
+      allow delete: if signedIn() && (
+                      resource.data.get('teacherUid', '') == request.auth.uid
+                      || isSchoolAdminOf(resource.data.get('schoolId', ''))
+                      || isSuperAdmin()
+                    );
     }
 
     // 班級分享的報讀文件 —— 學生（無 Auth）可讀，教師可寫
@@ -104,10 +164,11 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
-    // 語文練習測驗代碼 —— 學生（無 Auth）可讀，教師可寫
+    // 語文練習測驗代碼 —— 學生（無 Auth）可讀，教師可建立，只有出題教師本人能改刪
     match /quizSessions/{doc} {
-      allow read:  if true;
-      allow write: if request.auth != null;
+      allow read:   if true;
+      allow create: if signedIn();
+      allow update, delete: if ownsOrLegacy();
     }
 
     // 語文練習作答結果 —— 學生（無 Auth）可讀，create 需有基本欄位，禁止事後修改；擁有者教師可刪除
@@ -132,10 +193,11 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.teacherUid == request.auth.uid;
     }
 
-    // 四則運算測驗代碼 —— 學生（無 Auth）可讀，教師可寫
+    // 四則運算測驗代碼 —— 學生（無 Auth）可讀，教師可建立，只有出題教師本人能改刪
     match /mathQuizSessions/{doc} {
-      allow read:  if true;
-      allow write: if request.auth != null;
+      allow read:   if true;
+      allow create: if signedIn();
+      allow update, delete: if ownsOrLegacy();
     }
 
     // 四則運算作答結果 —— 教師可讀，學生（無 Auth）可 create，禁止修改/刪除
@@ -148,10 +210,11 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // 英文測驗 —— 學生（無 Auth）可讀，教師可寫
+    // 英文測驗 —— 學生（無 Auth）可讀，教師可建立，只有出題教師本人能改刪
     match /englishQuizSessions/{doc} {
-      allow read:  if true;
-      allow write: if request.auth != null;
+      allow read:   if true;
+      allow create: if signedIn();
+      allow update, delete: if ownsOrLegacy();
     }
 
     // 英文測驗作答結果 —— 學生（無 Auth）可讀（測驗清單要顯示自己考過的分數）、create 需有基本欄位，
@@ -238,10 +301,10 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // 用戶回報 —— 任何人可 create（含學生/訪客），已登入者可讀取與管理
+    // 用戶回報 —— 任何人可 create（含學生/訪客），只有 super-admin 可讀取與管理
     match /reports/{reportId} {
       allow create: if true;
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isSuperAdmin();
     }
   }
 }

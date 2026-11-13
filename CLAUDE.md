@@ -16,6 +16,10 @@ Primary: Desktop (1024px+) and Tablet (768px+)
 - Sub-apps in `/apps/`, admin panel in `/admin/`
 - Firebase compat SDK (`firebase-app-compat.js`, `firebase-firestore-compat.js`)
 
+## Data
+- `docs/資料結構.md` is the single source of truth for Firestore collections, fields, doc ID schemes and who reads/writes what
+- Before adding a collection, changing fields, or touching `firestore.rules`: read it, and update it in the same change
+
 ## Fonts & Style
 - Chinese font: Noto Sans TC
 - Monospace numbers: Courier New (math expressions, numeric inputs)

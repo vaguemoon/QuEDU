@@ -22,7 +22,7 @@ Hub 傳入登入資訊 → 子 App 透過 `sessionStorage` 取得 → 子 App �
 
 ## 二、目錄結構規範
 
-每個子 App 放在根目錄下一個**以功能命名的資料夾**：
+每個子 App 放在 `apps/learn/{類別}/`（`lang`、`math`、`special`）下一個**以功能命名的資料夾**（測驗類放 `apps/quiz/`）：
 
 ```
 {appName}/
@@ -50,8 +50,10 @@ Hub 在學生登入後，將身份寫入 `sessionStorage`，再顯示對應的 `
 
 ```js
 sessionStorage.setItem('hub_student', JSON.stringify({
+  id:   student.id,      // students 集合的文件 ID
   name: student.name,
   pin:  student.pin
+  // 另有 nickname、avatar、classIds 等，完整欄位見 docs/資料結構.md
 }));
 // 然後顯示 iframe（src 已設定好，不動態注入）
 ```
@@ -62,7 +64,8 @@ sessionStorage.setItem('hub_student', JSON.stringify({
 var saved = sessionStorage.getItem('hub_student');
 if (saved) {
   var hubStudent = JSON.parse(saved);
-  // 用 hubStudent.name + '_' + hubStudent.pin 查 Firestore
+  // 用 hubStudent.id 查 Firestore。
+  // 不要自己用 name + '_' + pin 組 ID：那是舊制帳號的格式，學校制帳號是自動 ID
 }
 ```
 
