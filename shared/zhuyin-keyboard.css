@@ -1,0 +1,103 @@
+/* shared/zhuyin-keyboard.css — 畫面上的注音鍵盤（shared/zhuyin-keyboard.js）
+   固定在畫面底部，打開時頁面底部多留一段空間，內容才不會被鍵盤蓋住。 */
+
+.zk-panel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 9400; /* 低於回報／草稿／語音三個懸浮 Widget（9497 起），它們的面板打開時要蓋得住鍵盤 */
+  display: none;
+  background: var(--bg, #eef5fc);
+  border-top: 2px solid var(--border, #d4e8f8);
+  box-shadow: 0 -6px 24px rgba(44,100,160,.16);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation; /* 連續快按不要被當成雙擊縮放 */
+}
+.zk-panel.open { display: block; }
+body.zk-open { padding-bottom: 340px; }
+
+.zk-inner { max-width: 900px; margin: 0 auto; }
+
+/* ── 候選字列 ── */
+.zk-bar {
+  display: flex; align-items: stretch; gap: 6px;
+  margin-bottom: 8px;
+}
+.zk-comp {
+  flex: 0 0 96px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--white, #ffffff);
+  border: 2px solid var(--blue, #4a90d9);
+  border-radius: 12px;
+  font-size: 1.35rem; font-weight: 800;
+  color: var(--blue-dk, #2d6fa8);
+  white-space: nowrap;
+}
+.zk-comp.zk-comp-empty { color: var(--muted, #7a99b5); border-color: var(--border, #d4e8f8); font-size: 1rem; }
+.zk-cands {
+  flex: 1; min-width: 0; min-height: 56px;
+  display: flex; align-items: center; gap: 6px;
+  background: var(--white, #ffffff);
+  border: 2px solid var(--border, #d4e8f8);
+  border-radius: 12px;
+  padding: 4px 6px;
+  overflow: hidden;
+}
+.zk-hint { color: var(--muted, #7a99b5); font-size: 1rem; font-weight: 700; padding-left: 8px; }
+.zk-cand {
+  flex: 1 1 0; min-width: 0; max-width: 64px; height: 48px;
+  border: none; border-radius: 10px;
+  background: var(--blue-lt, #e8f4fd);
+  color: var(--text, #1e2d3d);
+  font-family: 'LXGW WenKai TC', 'Noto Sans TC', sans-serif;
+  font-size: 1.7rem; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.zk-cand:active { background: var(--blue, #4a90d9); color: var(--white, #ffffff); }
+.zk-nav {
+  flex: 0 0 44px;
+  border: 2px solid var(--border, #d4e8f8); border-radius: 12px;
+  background: var(--white, #ffffff);
+  color: var(--blue-dk, #2d6fa8);
+  font-size: 1.6rem; font-weight: 800; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.zk-nav:disabled { opacity: .35; cursor: default; }
+
+/* ── 按鍵 ── */
+.zk-row { display: flex; gap: 5px; margin-bottom: 5px; }
+/* 大千式每一排往右錯開一點，跟實體鍵盤的排列一樣 */
+.zk-row-1 { padding-left: 2.2%; padding-right: 6.8%; }
+.zk-row-2 { padding-left: 4.4%; padding-right: 4.6%; }
+.zk-row-3 { padding-left: 6.6%; padding-right: 2.4%; }
+.zk-key {
+  flex: 1 1 0; min-width: 0; height: 50px;
+  border: none; border-radius: 10px;
+  background: var(--white, #ffffff);
+  box-shadow: 0 2px 0 var(--border, #d4e8f8);
+  color: var(--text, #1e2d3d);
+  font-family: 'Noto Sans TC', sans-serif;
+  font-size: 1.45rem; font-weight: 700; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.zk-key:active { background: var(--blue-lt, #e8f4fd); transform: translateY(1px); }
+/* 聲調符號的字形本身很小又偏上，放大並往下推，才看得清楚、位置也在鍵的中間 */
+.zk-key.zk-tone { color: var(--orange, #ff8c42); font-size: 2.6rem; padding-top: 16px; }
+.zk-key.zk-on { background: var(--blue, #4a90d9); color: var(--white, #ffffff); box-shadow: 0 2px 0 var(--blue-dk, #2d6fa8); }
+.zk-row-fn { margin-bottom: 0; }
+.zk-key.zk-fn { font-size: 1.05rem; font-weight: 800; color: var(--blue-dk, #2d6fa8); background: var(--blue-lt, #e8f4fd); }
+.zk-key.zk-fn.zk-on { background: var(--blue, #4a90d9); color: var(--white, #ffffff); }
+.zk-key.zk-space { flex: 2.2 1 0; color: var(--orange, #ff8c42); }
+
+/* 鍵盤打開時，回報／草稿／語音三個懸浮按鈕會壓在按鍵上（回報鈕還能拖到任何位置），先藏起來。
+   子 App 是放在 Hub 的 iframe 裡，Hub 那一層也有同樣三個按鈕——鍵盤開關時會通知 Hub
+   （postMessage type: 'zk-keyboard'），Hub 的 body 也會掛上 zk-open，同一條規則寫在 src/index.css */
+body.zk-open .report-btn,
+body.zk-open .scratch-btn,
+body.zk-open .vtt-btn { opacity: 0; pointer-events: none; }
+@media (max-width: 820px) {
+  .zk-key { height: 46px; font-size: 1.3rem; }
+  .zk-comp { flex-basis: 80px; font-size: 1.2rem; }
+  .zk-key.zk-fn { font-size: .95rem; }
+}

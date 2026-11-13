@@ -20,6 +20,11 @@
   var isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+  /* Android 的 Chrome 同一時間只讓一個來源用麥克風：我們自己用 getUserMedia 開了音量脈動，
+     語音辨識引擎就收不到聲音（一直「正在聆聽」卻沒有任何文字）。Android 上不開音量脈動，
+     麥克風整個留給語音辨識用，權限也由語音辨識自己去要。 */
+  var isAndroid = /Android/i.test(navigator.userAgent);
+
   var isOpen      = false;
   var listening   = false;
   var userStopped = true; // true = 使用者主動停止／尚未開始，不應自動重啟
@@ -197,16 +202,20 @@
     if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
     var toggleBtn = document.getElementById('vtt-toggle-btn');
     toggleBtn.disabled = true;
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-      micStream = stream;
-      setupVolumeMeter(stream);
+    function begin(stream) {
+      if (stream) { micStream = stream; setupVolumeMeter(stream); }
       startRecognition();
       listening = true;
       toggleBtn.disabled = false;
       toggleBtn.textContent = '⏹ 停止聽寫';
       toggleBtn.classList.add('listening');
       setStatus('正在聆聽…', 'listening');
-    }).catch(function (err) {
+    }
+    if (isAndroid) {
+      try { begin(null); } catch (err) { toggleBtn.disabled = false; handleMicError(err); }
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(begin).catch(function (err) {
       toggleBtn.disabled = false;
       handleMicError(err);
     });
@@ -275,8 +284,14 @@
 
     armWatchdog();
 
+    /* 引擎開始收音就代表它活著，解除倒數。之後學生安靜多久都沒關係——
+       瀏覽器自己會在一段時間沒聲音後結束這一輪，onend 會自動接下一輪。
+       （原本是「8 秒內沒有辨識出文字」就當成卡死，結果學生按下去想一下、
+       或兩句話中間停久一點，就被強制中斷還跳出錯誤訊息） */
+    recognition.onaudiostart = clearWatchdog;
+
     recognition.onresult = function (e) {
-      clearWatchdog(); armWatchdog(); // 有收到結果代表活著，重新倒數
+      clearWatchdog();
       var interim = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var transcript = e.results[i][0].transcript;
@@ -319,9 +334,9 @@
     recognition.start();
   }
 
-  /* iOS 已知會整段卡死：權限拿到、顯示「正在聆聽」，但 onresult／onerror／onend
-     全部不觸發。用一個計時器偵測這種情況，逾時就強制中斷並提示使用者手動重試
-     （iOS 上要重新取得使用者手勢才比較可能真的成功接上麥克風）。 */
+  /* 偵測「啟動後引擎完全沒反應」：start() 之後 8 秒內連開始收音（onaudiostart）、
+     結果、錯誤、結束都沒發生，才當成卡死，強制中斷並提示使用者手動重試。
+     只是沒講話不算卡死，見 startRecognition 裡的 onaudiostart。 */
   function armWatchdog() {
     clearWatchdog();
     watchdogTimer = setTimeout(function () {

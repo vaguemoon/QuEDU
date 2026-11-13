@@ -212,6 +212,7 @@ function openSubject(id) {
 function returnToHub() {
   var frame = document.getElementById('subject-frame');
   if (frame) frame.src = 'about:blank';
+  document.body.classList.remove('zk-open'); // 子 App 的注音鍵盤還開著就被關掉時，懸浮按鈕要恢復
   showPanel('hub'); loadActivity();
 }
 
@@ -537,6 +538,8 @@ function toggleHubTask(taskId) {
 
 window.addEventListener('message', function(e) {
   if (!e.data) return;
+  /* 子 App 的注音鍵盤（shared/zhuyin-keyboard.js）開關時，Hub 這層的懸浮按鈕跟著藏起來／恢復 */
+  if (e.data.type === 'zk-keyboard') { document.body.classList.toggle('zk-open', !!e.data.open); return; }
   if (_HUB_BACK_TYPES.indexOf(e.data.type) !== -1) returnToHub();
   else if (_HUB_LOGOUT_TYPES.indexOf(e.data.type) !== -1) doLogout();
 });

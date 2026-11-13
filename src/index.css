@@ -271,3 +271,6 @@ body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:v
   .subject-icon  { font-size: 1.7rem; }
   .subject-name  { font-size: .85rem; }
 }
+
+/* 子 App 的注音鍵盤打開時（shared/zhuyin-keyboard.js 會通知 Hub），把會壓到鍵盤的懸浮按鈕藏起來 */
+body.zk-open .report-btn,body.zk-open .scratch-btn,body.zk-open .vtt-btn{opacity:0;pointer-events:none}

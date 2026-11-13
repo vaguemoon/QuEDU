@@ -95,7 +95,7 @@
     <div class="custom-input-desc">輸入想練習的國字，重複的字只算一次，最多 20 字</div>
     <div class="custom-input-wrap">
       <textarea id="custom-chars-input" class="custom-chars-textarea"
-        placeholder="例如：山水木火土金" maxlength="60"
+        placeholder="例如：山水木火土金" maxlength="60" data-zhuyin-kb
         oninput="onCustomInputChange()"></textarea>
       <div class="custom-input-count" id="custom-input-count">0 / 20 字</div>
       <div class="assigned-preview-card custom-chars-preview" id="custom-chars-preview" style="min-height:64px">
@@ -301,5 +301,10 @@
 <link rel="stylesheet" href="../../../../shared/voice-to-text.css">
 <script src="../../../../shared/voice-to-text.js"></script>
 <script>initVoiceToTextWidget();</script>
+<!-- 畫面上的注音鍵盤：平板當 App 開時系統鍵盤叫不出來，給有 data-zhuyin-kb 的輸入框用 -->
+<link rel="stylesheet" href="../../../../shared/zhuyin-keyboard.css">
+<script src="../../../../assets/data/zhuyin-chars.js"></script>
+<script src="../../../../shared/zhuyin-keyboard.js"></script>
+<script>initZhuyinKeyboard();</script>
 </body>
 </html>
