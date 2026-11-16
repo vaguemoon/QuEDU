@@ -92,6 +92,13 @@ var QU_APPS = [
     progress: 'addsub', summarize: _quTotalCorrect
   },
   {
+    id: 'divide', file: 'apps/learn/math/divide/index.html',
+    icon: '÷', name: '除法趣', desc: '直式除法・試商練習',
+    type: 'learn', category: 'math',
+    theme: 'theme-purple', badge: '除法趣', badgeClass: 'blue',
+    progress: 'divide', summarize: _quTotalCorrect
+  },
+  {
     id: 'compare', file: 'apps/learn/math/compare/index.html',
     icon: '⚖️', name: '比較趣', desc: '不用計算比大小・估一估',
     type: 'learn', category: 'math',
