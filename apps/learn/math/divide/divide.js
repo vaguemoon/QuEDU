@@ -295,10 +295,7 @@ function stepLabel(q) {
   if (s.phase === 'h') return round.lv.rem ? '直式算完了！把答案寫成橫式：商 … 餘數' : '直式算完了！把答案寫成橫式';
   var it = q.L.seq[s.pos];
   if (it.k === 'est') return '先把除數 ' + q.L.d + ' 想成整十數（四捨五入），寫在 ' + q.L.d + ' 的上面';
-  if (visualTry(q)) {
-    return '<span class="mk-t mk-t-est">' + q.L.est / 10 + '</span> × ? 最接近 <span class="mk-t mk-t-p">' +
-           Math.floor(it.P / 10) + '</span> 又不超過';
-  }
+  if (visualTry(q)) return '寫上商';
   if (s.pos === q.L.qFirst) return '商要寫在哪一位？點那一格，寫上商';
   if (it.k === 'q') return '估一估，寫上商';
   if (it.k === 'prod') return q.L.est ? '乘乘看：用原本的除數 ' + q.L.d + ' × 商，從個位開始寫' : '乘乘看：除數 × 商，從個位開始寫';
@@ -337,10 +334,17 @@ function pressKey(k) {
   s.pos++;
   if (s.pos >= q.L.seq.length) s.phase = 'h';
   hideFeedback();
+  if (round.mode === 'practice' && visualTry(q)) showFeedback('hint', '💡 試試看', tryHtml(q));
   render();
 }
 
 function L_item(q) { return q.L.seq[q.st.pos]; }
+
+/* 試商提示：「9 × ? 最接近 71 又不超過」，數字的圈框跟直式上的標示一樣，放在黃色提示框 */
+function tryHtml(q) {
+  return '<span class="mk-t mk-t-est">' + q.L.est / 10 + '</span> × ? 最接近 <span class="mk-t mk-t-p">' +
+         Math.floor(L_item(q).P / 10) + '</span> 又不超過';
+}
 
 function wrongCell(q, v, kind) {
   var s = q.st, it = L_item(q);
@@ -349,7 +353,7 @@ function wrongCell(q, v, kind) {
   if (round.mode === 'exam') { failQuestion(q); return; }
   var n = kind === 'place' ? ++s.placeErr : (s.errs[s.pos] = (s.errs[s.pos] || 0) + 1);
   s.bad = { key: kind === 'place' ? 'q_' + s.qCol : it.key, v: v };
-  var hint = hintHtml(q, kind, v, n);
+  var hint = kind === 'q' && n === 1 && q.L.est ? tryHtml(q) : hintHtml(q, kind, v, n);
   if (kind === 'place' && n >= 2) s.qCol = q.L.c0;   // 公布位置後游標移過去，商還是要自己寫
   if (n === 1) showFeedback('hint', '💡 再想一想', hint);
   else showFeedback('bad', '看看算法，再自己寫進去', hint);
