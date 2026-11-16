@@ -1,6 +1,7 @@
 /* divide.css — 除法趣 app 專屬樣式（版面沿用加減趣） */
 :root {
   --dv-hl:     #fff1c2;   /* 目前這一步的被除數底色 */
+  --dv-est:    #e67e22;   /* 除數上方估成的整十數 */
   --dv-ok:     #27ae60;
   --dv-ok-lt:  #e9f9ef;
   --dv-bad:    #e84444;
@@ -133,6 +134,8 @@ button { touch-action: manipulation; }
 .dv-in.active { border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-lt); }
 .dv-in.bad { border-color: var(--dv-bad); background: var(--dv-bad-lt); color: var(--dv-bad); }
 .dv-in:not(.filled):not(.active):not(.bad) { border-style: dashed; border-color: var(--border); }
+.dv-in.dv-est { font-size: .8em; width: 1.2em; height: 1.3em; }
+.dv-in.dv-est.filled { color: var(--dv-est); }
 .dv-num.hl, .dv-in.hl { background: var(--dv-hl); border-radius: 8px; }
 
 /* 橫式答案 */

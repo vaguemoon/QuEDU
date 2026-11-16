@@ -31,6 +31,7 @@ function curLevel() { return LEVELS.find(function(l) { return l.id === cfg.level
 
 /* ══ 直式版面 ══
  * 把 N ÷ d 拆成學生要寫的格子，依書寫順序排成 seq：
+ *   est 除以二位數時，先在除數上方寫「把除數四捨五入成整十」的估計值（用來估商，乘的時候仍用原本的除數）
  *   q   商（寫在這一步被除數最後一位的上面）
  *   prod 除數 × 商（從個位往左寫）
  *   diff 相減的差（從個位往左寫；差是 0 而且後面還要移位時不寫 0，最後的餘數 0 要寫）
@@ -58,6 +59,12 @@ function buildLayout(N, d) {
     L.want[item.key] = item.want;
     L.seq.push(item);
   }
+
+  if (d >= 10) {
+    L.est = Math.round(d / 10) * 10;
+    String(L.est).split('').forEach(function(ch, i) { push({ k: 'est', key: 'e_' + i, col: i, want: +ch }, -1); });
+  }
+  L.qFirst = L.seq.length;   // 第一個商在 seq 的位置（學生要自己點商寫在哪一位）
 
   for (;;) {
     var qd = Math.floor(P / d), base = { P: P, qd: qd, pRow: cur, pStart: curStart, pEnd: c };
@@ -101,7 +108,8 @@ function makeQuestion(lv, used) {
   for (var t = 0; t < 3000; t++) {
     var d, nd;
     if (lv.div === 1) { d = ri(2, 9); nd = Math.random() < 0.35 ? 2 : 3; }
-    else { do { d = ri(11, 99); } while (d % 10 === 0); nd = Math.random() < 0.2 ? 2 : 3; }
+    /* 除數到 94 為止：95 以上估成 100，除數上方只有兩格寫不下 */
+    else { do { d = ri(11, 94); } while (d % 10 === 0); nd = Math.random() < 0.2 ? 2 : 3; }
     var lo = nd === 2 ? 10 : 100, hi = nd === 2 ? 99 : 999;
     var r = lv.rem ? ri(1, d - 1) : 0;
     var qMin = Math.max(2, Math.ceil((lo - r) / d)), qMax = Math.floor((hi - r) / d);
@@ -192,13 +200,13 @@ var BRK_SVG = '<svg viewBox="0 0 20 60" preserveAspectRatio="none"><path d="M3 0
 function activeKey(q) {
   var s = q.st;
   if (q.done || s.phase !== 'grid') return null;
-  return s.pos === 0 ? 'q_' + s.qCol : q.L.seq[s.pos].key;
+  return s.pos === q.L.qFirst ? 'q_' + s.qCol : q.L.seq[s.pos].key;
 }
 
 /* 目前這一步的被除數（或要移下來的那一位）用底色標出來；第一步不標，不然等於告訴學生商寫在哪 */
 function highlightSet(q) {
   var s = q.st, hl = {};
-  if (q.done || s.phase !== 'grid' || s.pos === 0) return hl;
+  if (q.done || s.phase !== 'grid' || s.pos <= q.L.qFirst) return hl;
   var it = q.L.seq[s.pos];
   if (it.k === 'bd') { hl['D_' + it.col] = true; return hl; }
   for (var j = it.pStart; j <= it.pEnd; j++) hl[it.pRow < 0 ? 'D_' + j : 'r' + it.pRow + '_' + j] = true;
@@ -224,9 +232,11 @@ function render() {
   }
   /* 第 1 列：商。還沒寫第一個商之前，每一位上面都有格子，讓學生自己決定從哪一位開始 */
   for (var j = 0; j < n; j++) {
-    if (j < L.c0 && (q.done || s.pos > 0)) continue;
-    h.push(cellHtml(q, 'q_' + j, 1, colOf(j), act, hl, !q.done && s.pos === 0 ? ' onclick="selectQ(' + j + ')"' : ''));
+    if (j < L.c0 && (q.done || s.pos > L.qFirst)) continue;
+    h.push(cellHtml(q, 'q_' + j, 1, colOf(j), act, hl, !q.done && s.pos === L.qFirst ? ' onclick="selectQ(' + j + ')"' : ''));
   }
+  /* 除數上方：估成的整十數 */
+  if (L.est) String(L.est).split('').forEach(function(ch, i) { h.push(cellHtml(q, 'e_' + i, 1, i + 1, act, hl).replace('dv-in', 'dv-in dv-est')); });
   /* 第 2 列：除號的橫線；第 3 列：除數 ) 被除數 */
   put(2, m + 1, n + 1, 'dv-line', '');
   String(L.d).split('').forEach(function(ch, i) { put(3, i + 1, 1, 'dv-num dv-divisor', ch); });
@@ -268,10 +278,11 @@ function stepLabel(q) {
   var s = q.st;
   if (q.done) return '';
   if (s.phase === 'h') return round.lv.rem ? '直式算完了！把答案寫成橫式：商 … 餘數' : '直式算完了！把答案寫成橫式';
-  if (s.pos === 0) return '商要從哪一位開始寫？點那一格，寫上商';
   var it = q.L.seq[s.pos];
-  if (it.k === 'q') return '估一估，寫上商';
-  if (it.k === 'prod') return '乘乘看：除數 × 商，從個位開始寫';
+  if (it.k === 'est') return '先把除數 ' + q.L.d + ' 想成整十數（四捨五入），寫在 ' + q.L.d + ' 的上面';
+  if (s.pos === q.L.qFirst) return '商要從哪一位開始寫？點那一格，寫上商';
+  if (it.k === 'q') return q.L.est ? '用 ' + q.L.est + ' 估一估，寫上商' : '估一估，寫上商';
+  if (it.k === 'prod') return q.L.est ? '乘乘看：用原本的除數 ' + q.L.d + ' × 商，從個位開始寫' : '乘乘看：除數 × 商，從個位開始寫';
   if (it.k === 'diff') return '減減看，從個位開始寫';
   return it.zeroBefore ? '減完剛好是 0（0 不用寫），把被除數的下一位移下來' : '把被除數的下一位移下來';
 }
@@ -280,7 +291,7 @@ function stepLabel(q) {
 function selectQ(col) {
   if (!round) return;
   var q = curQ();
-  if (q.done || q.st.pos !== 0) return;
+  if (q.done || q.st.pos !== q.L.qFirst) return;
   q.st.qCol = col; q.st.bad = null;
   render();
 }
@@ -301,7 +312,7 @@ function pressKey(k) {
   if (s.bad) { s.bad = null; if (k === 'del') { render(); return; } }
   if (k === 'del') return;
   var v = +k, it = L_item(q);
-  if (s.pos === 0 && s.qCol !== it.col) { wrongCell(q, v, 'place'); return; }
+  if (s.pos === q.L.qFirst && s.qCol !== it.col) { wrongCell(q, v, 'place'); return; }
   if (v !== it.want) { wrongCell(q, v, it.k); return; }
   s.vals[it.key] = v;
   s.pos++;
@@ -404,6 +415,11 @@ function answerText(L) { return L.N + ' ÷ ' + L.d + ' = ' + L.q + (round.lv.rem
 
 function hintHtml(q, kind, v, n) {
   var L = q.L, d = L.d, it = L_item(q);
+  if (kind === 'est') {
+    var ones = d % 10;
+    return n >= 2 ? numSpan(d) + ' 的個位是 ' + numSpan(ones) + '，' + (ones >= 5 ? '5 以上要進位' : '比 5 小要捨去') + '，所以想成 ' + numSpan(L.est)
+                  : '把 ' + numSpan(d) + ' 四捨五入到十位：個位 4 以下捨去、5 以上進位，想成最接近的整十數';
+  }
   if (kind === 'place') {
     var c0 = L.c0, P0 = it.P;
     if (n >= 2) return '被除數前面的 ' + numSpan(P0) + ' 才夠分給 ' + numSpan(d) + '，商要寫在 ' + numSpan(L.D[c0]) + ' 的上面';
@@ -425,15 +441,19 @@ function hintHtml(q, kind, v, n) {
     if (v * d > P) t = numSpan(d + ' × ' + v + ' = ' + v * d) + '，比 ' + numSpan(P) + ' 大，不夠減，商要小一點';
     else t = numSpan(d + ' × ' + v + ' = ' + v * d) + '，' + numSpan(P + ' − ' + v * d + ' = ' + (P - v * d)) +
              '，剩下的比 ' + numSpan(d) + ' 大，還可以再分，商要大一點';
-    if (d >= 10) {
-      var r10 = Math.round(d / 10) * 10;
-      t += '<br>小技巧：把 ' + numSpan(d) + ' 想成 ' + numSpan(r10) + '，想想 ' + numSpan(P) + ' 裡面大約有幾個 ' + numSpan(r10);
-    }
+    if (L.est) t += '<br>用估的 ' + numSpan(L.est) + ' 想想 ' + numSpan(P) + ' 裡面大約有幾個 ' + numSpan(L.est) + '，再用 ' + numSpan(d) + ' 乘乘看';
     return t;
   }
   if (kind === 'prod') {
-    return n >= 2 ? numSpan(d + ' × ' + it.qd + ' = ' + it.prod) + '，照位置寫在被除數下面'
-                  : '算算看 ' + numSpan(d + ' × ' + it.qd) + ' 是多少？從個位開始寫';
+    /* 常見錯誤：拿估的整十數去乘（62 估成 60，就算成 60 × 商） */
+    var usedEst = false;
+    if (L.est) {
+      var place = Math.pow(10, it.pEnd - it.col);
+      usedEst = v === Math.floor(L.est * it.qd / place) % 10;
+    }
+    var warn = usedEst ? '乘的時候要用原本的除數 ' + numSpan(d) + '，不是估的 ' + numSpan(L.est) + ' 喔！<br>' : '';
+    return warn + (n >= 2 ? numSpan(d + ' × ' + it.qd + ' = ' + it.prod) + '，照位置寫在被除數下面'
+                          : '算算看 ' + numSpan(d + ' × ' + it.qd) + ' 是多少？從個位開始寫');
   }
   if (kind === 'diff') {
     return n >= 2 ? numSpan(it.P + ' − ' + it.prod + ' = ' + it.diff)
@@ -445,6 +465,7 @@ function hintHtml(q, kind, v, n) {
 
 function solutionHtml(L) {
   var lines = [];
+  if (L.est) lines.push('把 ' + numSpan(L.d) + ' 想成 ' + numSpan(L.est) + ' 來估商，乘的時候用 ' + numSpan(L.d));
   if (L.c0 > 0) lines.push('被除數前面的 ' + numSpan(L.steps[0].P) + ' 才夠分，商從 ' + numSpan(L.D[L.c0]) + ' 的上面開始寫');
   L.steps.forEach(function(st) {
     var t = st.qd > 0
