@@ -204,11 +204,11 @@ function activeKey(q) {
 }
 
 /* 除以二位數的試商畫面：圈出估成整十的十位數（90 的 9）、框出被估的數、淡化個位。
-   第一個商要等學生點對位置、寫錯過一次才標，不然等於告訴學生商寫在哪一位 */
+   每一個商都先讓學生自己試，寫錯過一次才標（第一個商還要點對位置，不然等於告訴學生商寫在哪一位） */
 function visualTry(q) {
   var s = q.st, L = q.L;
   if (!L.est || q.done || s.phase !== 'grid' || L.seq[s.pos].k !== 'q') return false;
-  return s.pos > L.qFirst || (s.qCol === L.c0 && (s.errs[s.pos] || 0) >= 1);
+  return (s.errs[s.pos] || 0) >= 1 && (s.pos > L.qFirst || s.qCol === L.c0);
 }
 
 /* 目前這一步的被除數（或要移下來的那一位）用底色標出來；第一步不標，不然等於告訴學生商寫在哪
@@ -334,7 +334,6 @@ function pressKey(k) {
   s.pos++;
   if (s.pos >= q.L.seq.length) s.phase = 'h';
   hideFeedback();
-  if (round.mode === 'practice' && visualTry(q)) showFeedback('hint', '💡 試試看', tryHtml(q));
   render();
 }
 
