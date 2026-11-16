@@ -203,9 +203,24 @@ function activeKey(q) {
   return s.pos === q.L.qFirst ? 'q_' + s.qCol : q.L.seq[s.pos].key;
 }
 
-/* 目前這一步的被除數（或要移下來的那一位）用底色標出來；第一步不標，不然等於告訴學生商寫在哪 */
+/* 除以二位數的試商畫面：圈出估成整十的十位數（90 的 9）、框出被估的數、蓋掉個位。
+   第一個商要等學生點對位置、寫錯過一次才標，不然等於告訴學生商寫在哪一位 */
+function visualTry(q) {
+  var s = q.st, L = q.L;
+  if (!L.est || q.done || s.phase !== 'grid' || L.seq[s.pos].k !== 'q') return false;
+  return s.pos > L.qFirst || (s.qCol === L.c0 && (s.errs[s.pos] || 0) >= 1);
+}
+
+/* 目前這一步的被除數（或要移下來的那一位）用底色標出來；第一步不標，不然等於告訴學生商寫在哪
+   值是 true（一般底色）或試商標記的 class 名稱 */
 function highlightSet(q) {
   var s = q.st, hl = {};
+  if (visualTry(q)) {
+    var t = q.L.seq[s.pos];
+    hl.e_0 = 'mk-est'; hl.e_1 = 'mk-cover';
+    for (var i = t.pStart; i <= t.pEnd; i++) hl[t.pRow < 0 ? 'D_' + i : 'r' + t.pRow + '_' + i] = i === t.pEnd ? 'mk-cover' : 'mk-p';
+    return hl;
+  }
   if (q.done || s.phase !== 'grid' || s.pos <= q.L.qFirst) return hl;
   var it = q.L.seq[s.pos];
   if (it.k === 'bd') { hl['D_' + it.col] = true; return hl; }
@@ -219,7 +234,7 @@ function cellHtml(q, key, row, col, act, hl, click) {
   else if (s.vals[key] !== undefined) { txt = s.vals[key]; cls += ' filled'; }
   else if (q.revealed && q.L.want[key] !== undefined) { txt = q.L.want[key]; cls += ' filled shown'; }
   if (key === act) cls += ' active';
-  if (hl[key]) cls += ' hl';
+  if (hl[key]) cls += ' ' + (hl[key] === true ? 'hl' : hl[key]);
   return '<div class="' + cls + '" style="grid-row:' + row + ';grid-column:' + col + '"' + (click || '') + '>' + txt + '</div>';
 }
 
@@ -241,7 +256,7 @@ function render() {
   put(2, m + 1, n + 1, 'dv-line', '');
   String(L.d).split('').forEach(function(ch, i) { put(3, i + 1, 1, 'dv-num dv-divisor', ch); });
   put(3, m + 1, 1, 'dv-brk', BRK_SVG);
-  L.D.forEach(function(v, j) { put(3, colOf(j), 1, 'dv-num' + (hl['D_' + j] ? ' hl' : ''), v); });
+  L.D.forEach(function(v, j) { var c = hl['D_' + j]; put(3, colOf(j), 1, 'dv-num' + (c ? ' ' + (c === true ? 'hl' : c) : ''), v); });
   /* 下面的乘積列、差列：寫到哪裡才出現到哪裡 */
   var R = 4;
   for (var k = 0; k < L.rows.length; k++) {
@@ -271,7 +286,7 @@ function render() {
       '<span class="op">=</span>' + slot('q') + (needR ? '<span class="op">…</span>' + slot('r') : '') + '</div>';
   }
   document.getElementById('q-area').innerHTML = '<div class="dv-wrap">' + grid + hz + '</div>';
-  document.getElementById('q-hint').textContent = stepLabel(q);
+  document.getElementById('q-hint').innerHTML = stepLabel(q);
 }
 
 function stepLabel(q) {
@@ -280,9 +295,12 @@ function stepLabel(q) {
   if (s.phase === 'h') return round.lv.rem ? '直式算完了！把答案寫成橫式：商 … 餘數' : '直式算完了！把答案寫成橫式';
   var it = q.L.seq[s.pos];
   if (it.k === 'est') return '先把除數 ' + q.L.d + ' 想成整十數（四捨五入），寫在 ' + q.L.d + ' 的上面';
-  var e = q.L.est / 10;   // 估成的整十數去掉 0（90 → 9），用來試商
-  if (s.pos === q.L.qFirst) return '商要從哪一位開始寫？點那一格' + (q.L.est ? '，用 ' + e + ' 去試著寫商' : '，寫上商');
-  if (it.k === 'q') return q.L.est ? '用 ' + e + ' 去試：' + e + ' × 幾 最接近 ' + Math.floor(it.P / 10) + ' 又不超過？寫上商' : '估一估，寫上商';
+  if (visualTry(q)) {
+    return '<span class="mk-t mk-t-est">' + q.L.est / 10 + '</span> × ? 最接近 <span class="mk-t mk-t-p">' +
+           Math.floor(it.P / 10) + '</span> 又不超過';
+  }
+  if (s.pos === q.L.qFirst) return '商要寫在哪一位？點那一格，寫上商';
+  if (it.k === 'q') return '估一估，寫上商';
   if (it.k === 'prod') return q.L.est ? '乘乘看：用原本的除數 ' + q.L.d + ' × 商，從個位開始寫' : '乘乘看：除數 × 商，從個位開始寫';
   if (it.k === 'diff') return '減減看，從個位開始寫';
   return it.zeroBefore ? '減完剛好是 0（0 不用寫），把被除數的下一位移下來' : '把被除數的下一位移下來';
@@ -438,17 +456,9 @@ function hintHtml(q, kind, v, n) {
       return numSpan(d + ' × ' + qd + ' = ' + qd * d) + '，沒有超過 ' + numSpan(P) + '；' +
              numSpan(d + ' × ' + (qd + 1) + ' = ' + (qd + 1) * d) + '，超過了。所以商是 ' + numSpan(qd);
     }
-    var t;
-    if (v * d > P) t = numSpan(d + ' × ' + v + ' = ' + v * d) + '，比 ' + numSpan(P) + ' 大，不夠減，商要小一點';
-    else t = numSpan(d + ' × ' + v + ' = ' + v * d) + '，' + numSpan(P + ' − ' + v * d + ' = ' + (P - v * d)) +
-             '，剩下的比 ' + numSpan(d) + ' 大，還可以再分，商要大一點';
-    /* 試商：除數估成整十（85 → 90）後看成 9，被除數蓋掉個位（765 → 76），想 9 × 幾 最接近 76 */
-    if (L.est) {
-      var e = L.est / 10, p10 = Math.floor(P / 10);
-      t += '<br>用 ' + numSpan(e) + ' 去試：' + numSpan(P) + ' 蓋掉個位想成 ' + numSpan(p10) + '，' +
-           numSpan(e + ' × ?') + ' 最接近 ' + numSpan(p10) + ' 又不超過？試出來的商再用 ' + numSpan(d) + ' 乘乘看';
-    }
-    return t;
+    /* 字越少越好（學障學生）：一行算式＋一行方向；試商的方法交給題目上的圈選標示 */
+    if (v * d > P) return numSpan(d + ' × ' + v + ' = ' + v * d) + '　比 ' + numSpan(P) + ' 大<br><span class="fb-dir">商要小一點 ⬇</span>';
+    return numSpan(P + ' − ' + v * d + ' = ' + (P - v * d)) + '　還比 ' + numSpan(d) + ' 大<br><span class="fb-dir">商要大一點 ⬆</span>';
   }
   if (kind === 'prod') {
     /* 常見錯誤：拿估的整十數去乘（62 估成 60，就算成 60 × 商） */

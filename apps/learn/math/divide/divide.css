@@ -2,6 +2,10 @@
 :root {
   --dv-hl:     #fff1c2;   /* 目前這一步的被除數底色 */
   --dv-est:    #e67e22;   /* 除數上方估成的整十數 */
+  --dv-est-lt: #fdebd0;
+  --dv-mk:     #2e86de;   /* 試商時被估的數 */
+  --dv-mk-lt:  #e3f0ff;
+  --dv-cover:  #cfd8e3;   /* 試商時蓋掉的個位 */
   --dv-ok:     #27ae60;
   --dv-ok-lt:  #e9f9ef;
   --dv-bad:    #e84444;
@@ -136,6 +140,14 @@ button { touch-action: manipulation; }
 .dv-in:not(.filled):not(.active):not(.bad) { border-style: dashed; border-color: var(--border); }
 .dv-in.dv-est { font-size: .8em; width: 1.2em; height: 1.3em; }
 .dv-in.dv-est.filled { color: var(--dv-est); }
+/* 試商標示：圈出估的十位數、框出被估的數、蓋掉個位 */
+.dv-in.mk-est { border: 3px solid var(--dv-est); border-radius: 50%; background: var(--dv-est-lt); }
+.dv-num.mk-p, .dv-in.mk-p { background: var(--dv-mk-lt); box-shadow: inset 0 0 0 3px var(--dv-mk); border-radius: 8px; }
+.dv-num.mk-cover, .dv-in.mk-cover, .dv-in.dv-est.mk-cover { background: var(--dv-cover); color: var(--dv-cover); border-color: transparent; border-radius: 8px; }
+.mk-t { display: inline-block; min-width: 1.6em; padding: 0 .2em; border-radius: 8px; font-family: var(--num-font); font-size: 1.5rem; }
+.mk-t-est { color: var(--dv-est); border: 3px solid var(--dv-est); background: var(--dv-est-lt); border-radius: 999px; }
+.mk-t-p { color: var(--dv-mk); background: var(--dv-mk-lt); box-shadow: inset 0 0 0 3px var(--dv-mk); }
+.fb-dir { font-size: 1.4rem; font-weight: 900; }
 .dv-num.hl, .dv-in.hl { background: var(--dv-hl); border-radius: 8px; }
 
 /* 橫式答案 */
