@@ -280,8 +280,9 @@ function stepLabel(q) {
   if (s.phase === 'h') return round.lv.rem ? '直式算完了！把答案寫成橫式：商 … 餘數' : '直式算完了！把答案寫成橫式';
   var it = q.L.seq[s.pos];
   if (it.k === 'est') return '先把除數 ' + q.L.d + ' 想成整十數（四捨五入），寫在 ' + q.L.d + ' 的上面';
-  if (s.pos === q.L.qFirst) return '商要從哪一位開始寫？點那一格，寫上商';
-  if (it.k === 'q') return q.L.est ? '用 ' + q.L.est + ' 估一估，寫上商' : '估一估，寫上商';
+  var e = q.L.est / 10;   // 估成的整十數去掉 0（90 → 9），用來試商
+  if (s.pos === q.L.qFirst) return '商要從哪一位開始寫？點那一格' + (q.L.est ? '，用 ' + e + ' 去試著寫商' : '，寫上商');
+  if (it.k === 'q') return q.L.est ? '用 ' + e + ' 去試：' + e + ' × 幾 最接近 ' + Math.floor(it.P / 10) + ' 又不超過？寫上商' : '估一估，寫上商';
   if (it.k === 'prod') return q.L.est ? '乘乘看：用原本的除數 ' + q.L.d + ' × 商，從個位開始寫' : '乘乘看：除數 × 商，從個位開始寫';
   if (it.k === 'diff') return '減減看，從個位開始寫';
   return it.zeroBefore ? '減完剛好是 0（0 不用寫），把被除數的下一位移下來' : '把被除數的下一位移下來';
@@ -441,7 +442,12 @@ function hintHtml(q, kind, v, n) {
     if (v * d > P) t = numSpan(d + ' × ' + v + ' = ' + v * d) + '，比 ' + numSpan(P) + ' 大，不夠減，商要小一點';
     else t = numSpan(d + ' × ' + v + ' = ' + v * d) + '，' + numSpan(P + ' − ' + v * d + ' = ' + (P - v * d)) +
              '，剩下的比 ' + numSpan(d) + ' 大，還可以再分，商要大一點';
-    if (L.est) t += '<br>用估的 ' + numSpan(L.est) + ' 想想 ' + numSpan(P) + ' 裡面大約有幾個 ' + numSpan(L.est) + '，再用 ' + numSpan(d) + ' 乘乘看';
+    /* 試商：除數估成整十（85 → 90）後看成 9，被除數蓋掉個位（765 → 76），想 9 × 幾 最接近 76 */
+    if (L.est) {
+      var e = L.est / 10, p10 = Math.floor(P / 10);
+      t += '<br>用 ' + numSpan(e) + ' 去試：' + numSpan(P) + ' 蓋掉個位想成 ' + numSpan(p10) + '，' +
+           numSpan(e + ' × ?') + ' 最接近 ' + numSpan(p10) + ' 又不超過？試出來的商再用 ' + numSpan(d) + ' 乘乘看';
+    }
     return t;
   }
   if (kind === 'prod') {
@@ -465,7 +471,7 @@ function hintHtml(q, kind, v, n) {
 
 function solutionHtml(L) {
   var lines = [];
-  if (L.est) lines.push('把 ' + numSpan(L.d) + ' 想成 ' + numSpan(L.est) + ' 來估商，乘的時候用 ' + numSpan(L.d));
+  if (L.est) lines.push('把 ' + numSpan(L.d) + ' 想成 ' + numSpan(L.est) + '，用 ' + numSpan(L.est / 10) + ' 去試商，乘的時候用 ' + numSpan(L.d));
   if (L.c0 > 0) lines.push('被除數前面的 ' + numSpan(L.steps[0].P) + ' 才夠分，商從 ' + numSpan(L.D[L.c0]) + ' 的上面開始寫');
   L.steps.forEach(function(st) {
     var t = st.qd > 0
