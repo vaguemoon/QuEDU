@@ -203,7 +203,7 @@ function activeKey(q) {
   return s.pos === q.L.qFirst ? 'q_' + s.qCol : q.L.seq[s.pos].key;
 }
 
-/* 除以二位數的試商畫面：圈出估成整十的十位數（90 的 9）、框出被估的數、蓋掉個位。
+/* 除以二位數的試商畫面：圈出估成整十的十位數（90 的 9）、框出被估的數、淡化個位。
    第一個商要等學生點對位置、寫錯過一次才標，不然等於告訴學生商寫在哪一位 */
 function visualTry(q) {
   var s = q.st, L = q.L;
@@ -348,16 +348,13 @@ function wrongCell(q, v, kind) {
   try { sfxWrong(); } catch (e) {}
   if (round.mode === 'exam') { failQuestion(q); return; }
   var n = kind === 'place' ? ++s.placeErr : (s.errs[s.pos] = (s.errs[s.pos] || 0) + 1);
-  var bad = { key: kind === 'place' ? 'q_' + s.qCol : it.key, v: v };
-  s.bad = bad;
+  s.bad = { key: kind === 'place' ? 'q_' + s.qCol : it.key, v: v };
   var hint = hintHtml(q, kind, v, n);
   if (kind === 'place' && n >= 2) s.qCol = q.L.c0;   // 公布位置後游標移過去，商還是要自己寫
   if (n === 1) showFeedback('hint', '💡 再想一想', hint);
   else showFeedback('bad', '看看算法，再自己寫進去', hint);
+  /* 寫錯的數字用紅色留在格子裡對照提示，按下一個數字才換掉（不自動清空，不然看起來像格子不見了） */
   render();
-  setTimeout(function() {
-    if (round && curQ() === q && s.bad === bad) { s.bad = null; render(); }
-  }, 900);
 }
 
 function pressH(q, k) {
