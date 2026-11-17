@@ -5,14 +5,16 @@
  *       第一個商要寫在哪一位由學生自己點；直式寫完再寫橫式答案（商 … 餘數）。
  * 練習：每格寫完馬上檢查，第一次錯給提示（不講答案），再錯公布算法，但答案仍要自己填才能往下。
  * 測驗：像在紙上寫，不逐格檢查、不提示、不標底色，⌫ 往回擦一格；橫式寫完按 ✓ 交卷整題一起批改，
- *       任一格或橫式錯這題就算錯，錯的格子標紅並補上正確數字；錯的下一輪再考，第一輪答對 9 題以上標「測驗通過」。
+ *       任一格或橫式錯這題就算錯，錯的格子標紅並補上正確數字；錯的下一輪再考，第一輪答對九成以上標「測驗通過」。
+ * 一輪題數在首頁選 3／5／10 題，存在 localStorage divide-cfg。
  * 進度存 students/{id}/progress/divide。
  * 依賴：shared.js（quApp、sfxCorrect、sfxWrong、sfxCelebrate、showToast、escHtml）
  */
 'use strict';
 
-var ROUND_SIZE = 10;
-var MASTER_MIN = 9;   // 測驗第一輪答對幾題以上算通過
+var COUNTS = [3, 5, 10];   // 一輪幾題（首頁選）
+/* 測驗第一輪答對九成以上算通過：3 題要全對、5 題要全對、10 題要 9 題 */
+function masterMin(n) { return Math.ceil(n * 0.9); }
 
 var LEVELS = [
   { id: 'd1e', icon: '🍎', name: '除以一位數・整除',   ex: '84 ÷ 4、612 ÷ 6',  div: 1, rem: false },
@@ -23,7 +25,7 @@ var LEVELS = [
   { id: 'd3r', icon: '🌟', name: '除以三位數・有餘數', ex: '745 ÷ 123、1879 ÷ 312', div: 3, rem: true }
 ];
 
-var cfg = { level: 'd2e' };
+var cfg = { level: 'd2e', count: 10 };
 try { var _saved = JSON.parse(localStorage.getItem('divide-cfg') || 'null'); if (_saved) cfg = Object.assign(cfg, _saved); } catch (e) {}
 var levelStatus = {};   // { d2e: 'practiced' | 'mastered' }
 var round = null;
@@ -140,13 +142,15 @@ function renderPickers() {
       '<span class="pick-name">' + l.name + '</span>' +
       '<span class="pick-ex">' + escHtml(l.ex) + '</span></button>';
   }).join('');
+  if (COUNTS.indexOf(cfg.count) < 0) cfg.count = 10;
+  document.getElementById('count-seg').innerHTML = COUNTS.map(function(n) {
+    return '<button class="count-btn' + (n === cfg.count ? ' on' : '') + '" onclick="setCount(' + n + ')">' + n + '</button>';
+  }).join('');
 }
 
-function setLevel(id) {
-  cfg.level = id;
-  try { localStorage.setItem('divide-cfg', JSON.stringify(cfg)); } catch (e) {}
-  renderPickers();
-}
+function saveCfg() { try { localStorage.setItem('divide-cfg', JSON.stringify(cfg)); } catch (e) {} }
+function setLevel(id) { cfg.level = id; saveCfg(); renderPickers(); }
+function setCount(n) { cfg.count = n; saveCfg(); renderPickers(); }
 
 function showPage(name) {
   document.querySelectorAll('.page').forEach(function(el) { el.classList.remove('active'); });
@@ -161,7 +165,7 @@ function goHome() { round = null; renderPickers(); showPage('home'); }
 function startRound(mode) {
   lastMode = mode;
   var lv = curLevel(), used = {}, qs = [];
-  for (var i = 0; i < ROUND_SIZE; i++) qs.push(makeQuestion(lv, used));
+  for (var i = 0; i < cfg.count; i++) qs.push(makeQuestion(lv, used));
   round = { mode: mode, lv: lv, qs: qs, idx: 0, correct: 0, failed: [], roundNo: 1, firstRoundCorrect: 0,
             totalAnswered: 0, totalCorrect: 0 };
   document.getElementById('hud-mode').textContent = (mode === 'exam' ? '📝 測驗' : '🎯 練習') + '・' + lv.name;
@@ -579,7 +583,7 @@ function showFeedback(kind, head, body, withNext) {
 /* ══ 一輪結束 ══ */
 function finishRound() {
   var r = round, n = r.qs.length, c = r.correct;
-  if (r.roundNo === 1) r.firstRoundCorrect = c;
+  if (r.roundNo === 1) { r.firstRoundCorrect = c; r.firstRoundTotal = n; }
   var icon = document.getElementById('result-icon'), title = document.getElementById('result-title');
   var score = document.getElementById('result-score'), sub = document.getElementById('result-sub');
   var again = document.getElementById('btn-again');
@@ -597,14 +601,15 @@ function finishRound() {
 
   var key = r.lv.id, prev = levelStatus[key];
   if (r.mode === 'exam') {
-    var passed = r.firstRoundCorrect >= MASTER_MIN;
+    var total = r.firstRoundTotal, need = masterMin(total);
+    var passed = r.firstRoundCorrect >= need;
     if (passed) levelStatus[key] = 'mastered';
     else if (prev !== 'mastered') levelStatus[key] = 'practiced';
     icon.textContent = passed ? '🏆' : '💪';
     title.textContent = passed ? '測驗通過！' : '全部完成！';
-    score.innerHTML = '第一輪 <b>' + r.firstRoundCorrect + '</b> / ' + ROUND_SIZE + ' 題答對';
+    score.innerHTML = '第一輪 <b>' + r.firstRoundCorrect + '</b> / ' + total + ' 題答對';
     sub.textContent = passed ? '這個範圍標上 ✓ 測驗通過'
-      : '第一輪答對 ' + MASTER_MIN + ' 題以上才算通過，多練習再來測驗吧' + (r.roundNo > 1 ? '（共 ' + r.roundNo + ' 輪）' : '');
+      : '第一輪' + (need === total ? '要全部答對' : '答對 ' + need + ' 題以上') + '才算通過，多練習再來測驗吧' + (r.roundNo > 1 ? '（共 ' + r.roundNo + ' 輪）' : '');
     try { passed ? sfxCelebrate() : sfxCorrect(); } catch (e) {}
   } else {
     if (!prev) levelStatus[key] = 'practiced';
