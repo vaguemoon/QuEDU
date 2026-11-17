@@ -73,6 +73,8 @@ window.addEventListener('load', function() {
           totalAttempts      = pData.totalAttempts      || 0;
           maxStreak          = pData.maxStreak          || 0;
           examCompletedCount = pData.examCompletedCount || 0;
+          verticalStatus     = pData.verticalStatus     || {};
+          if (currentPage === 'vertical') vmRenderPickers();
           // 向後相容：舊 masteredMixed 資料視為 8 秒通過
           masteredMixed.forEach(function(t) {
             if (!masteredBest.hasOwnProperty(t)) masteredBest[t] = 8;

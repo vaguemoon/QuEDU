@@ -18,6 +18,7 @@
   ['--bg','--blue','--blue-dk','--blue-lt'].forEach(function(k,i){r.setProperty(k,v[i]);});}catch(e){}})();
 </script>
 <link rel="stylesheet" href="multiply.css">
+<link rel="stylesheet" href="vertical.css">
 </head>
 <body>
 
@@ -44,6 +45,26 @@
 <div id="page-home" class="page page-fill active">
   <div class="home-wrap">
     <div class="home-title">✖️ 乘法趣</div>
+    <div class="home-sub">選擇你想要練習的項目</div>
+    <div class="home-items">
+      <button class="mode-card" onclick="showPage('table-home')">
+        <div class="mode-card-icon">🔢</div>
+        <div class="mode-card-title">九九乘法</div>
+        <div class="mode-card-sub">乘法填空、積的拆解、倒數計時測驗</div>
+      </button>
+      <button class="mode-card" onclick="initVertical()">
+        <div class="mode-card-icon">🧮</div>
+        <div class="mode-card-title">直式乘法</div>
+        <div class="mode-card-sub">一步一步寫直式，練習與測驗</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: TABLE-HOME（九九乘法） ══════════════════ -->
+<div id="page-table-home" class="page page-fill">
+  <div class="home-wrap">
+    <div class="home-title">🔢 九九乘法</div>
     <div class="home-sub">選擇你想要的模式</div>
     <button class="mode-card" onclick="showPage('practice-select');initPracticeSelect();">
       <div class="mode-card-icon">✏️</div>
@@ -247,7 +268,66 @@
     <div id="exam-result-badges" class="result-badges"></div>
     <div class="result-btns">
       <button class="btn-result" onclick="showPage('exam-select');initExamSelect();">再測一次</button>
-      <button class="btn-result btn-result-home" onclick="showPage('home',false);PAGE_STACK=['home'];">回首頁</button>
+      <button class="btn-result btn-result-home" onclick="PAGE_STACK=['home','table-home'];showPage('table-home',false);">回九九乘法</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: VERTICAL（直式乘法：選範圍） ══════════════════ -->
+<div id="page-vertical" class="page">
+  <div class="vm-home">
+    <div class="vm-label">選範圍 <span class="vm-legend"><i class="vm-lg vm-lg-practiced"></i>練習過 <i class="vm-lg vm-lg-mastered"></i>測驗通過</span></div>
+    <div class="vm-pick-grid" id="vm-level-grid"></div>
+    <div class="vm-note">從個位開始一位一位乘，有進位就寫在上面的小格子；乘二位數時寫兩列再加起來。</div>
+  </div>
+  <div class="vm-action-bar">
+    <div class="vm-count"><span class="vm-count-label">題數</span><span id="vm-count-seg"></span></div>
+    <button class="vm-action vm-practice" onclick="vmStartRound('practice')">🎯 練習</button>
+    <button class="vm-action vm-exam" onclick="vmStartRound('exam')">📝 測驗</button>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: VGAME（直式乘法：作答） ══════════════════ -->
+<div id="page-vgame" class="page">
+  <div class="vm-game">
+    <div class="vm-hud">
+      <span id="vm-hud-mode" class="vm-hud-mode"></span>
+      <span id="vm-hud-round" class="vm-hud-round hidden"></span>
+      <span id="vm-hud-progress" class="vm-hud-progress"></span>
+      <span class="vm-hud-score">答對 <b id="vm-hud-correct">0</b></span>
+    </div>
+    <div class="vm-body">
+      <div class="vm-main">
+        <div class="vm-card">
+          <div class="vm-hint" id="vm-hint"></div>
+          <div class="vm-area" id="vm-area"></div>
+        </div>
+        <div class="vm-feedback hidden" id="vm-feedback">
+          <div class="vm-fb-head" id="vm-fb-head"></div>
+          <div class="vm-fb-body" id="vm-fb-body"></div>
+          <button class="vm-btn-next hidden" id="vm-btn-next" onclick="vmNextQuestion()">下一題 ▶</button>
+        </div>
+      </div>
+      <div class="vm-keypad" id="vm-keypad">
+        <button class="vm-key" data-k="7">7</button><button class="vm-key" data-k="8">8</button><button class="vm-key" data-k="9">9</button>
+        <button class="vm-key" data-k="4">4</button><button class="vm-key" data-k="5">5</button><button class="vm-key" data-k="6">6</button>
+        <button class="vm-key" data-k="1">1</button><button class="vm-key" data-k="2">2</button><button class="vm-key" data-k="3">3</button>
+        <button class="vm-key vm-key-del" data-k="del">⌫</button><button class="vm-key" data-k="0">0</button><button class="vm-key vm-key-ok" data-k="ok">✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: VRESULT（直式乘法：結果） ══════════════════ -->
+<div id="page-vresult" class="page">
+  <div class="result-wrap">
+    <div class="result-icon" id="vm-result-icon">🎉</div>
+    <div class="result-title" id="vm-result-title">完成！</div>
+    <div class="vm-result-score" id="vm-result-score"></div>
+    <div class="result-sub" id="vm-result-sub"></div>
+    <div class="result-btns">
+      <button class="btn-result" id="vm-btn-again">再一次</button>
+      <button class="btn-result btn-result-home" onclick="vmGoPicker()">換範圍</button>
     </div>
   </div>
 </div>
@@ -281,6 +361,7 @@
 <script src="js/state.js"></script>
 <script src="js/game.js"></script>
 <script src="js/achievement.js"></script>
+<script src="js/vertical.js"></script>
 <script src="js/init.js"></script>
 <link rel="stylesheet" href="../../../../shared/report.css">
 <script src="../../../../shared/report.js"></script>

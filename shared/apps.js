@@ -79,7 +79,7 @@ var QU_APPS = [
   },
   {
     id: 'multiply', file: 'apps/learn/math/multiply/index.html',
-    icon: '✖️', name: '乘法趣', desc: '0 到 10 的乘法練習',
+    icon: '✖️', name: '乘法趣', desc: '九九乘法・直式乘法',
     type: 'learn', category: 'math',
     theme: 'theme-orange', badge: '乘法LV1', badgeClass: 'green',
     progress: 'multiply', summarize: _quTotalCorrect

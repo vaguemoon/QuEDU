@@ -7,6 +7,10 @@
 var PAGE_STACK = [];
 var PAGE_CONFIG = {
   'home':            { title: '✖️ <span>乘法趣</span>',   back: false },
+  'table-home':      { title: '🔢 <span>九九乘法</span>', back: true  },
+  'vertical':        { title: '🧮 <span>直式乘法</span>', back: true  },
+  'vgame':           { title: '🧮 <span>直式乘法</span>', back: true  },
+  'vresult':         { title: '🧮 <span>直式乘法</span>', back: true  },
   'practice-select': { title: '📝 <span>練習設定</span>', back: true  },
   'practice':        { title: '✏️ <span>練習中</span>',   back: true  },
   'exam-select':     { title: '📋 <span>測驗設定</span>', back: true  },
