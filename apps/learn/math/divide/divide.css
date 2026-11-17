@@ -114,15 +114,6 @@ button { touch-action: manipulation; }
 }
 .q-top { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
 .q-hint { font-size: 1.1rem; font-weight: 800; color: var(--blue-dk); min-height: 1.5em; }
-.btn-mult {
-  padding: 6px 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--white);
-  font-size: .95rem; font-weight: 800; color: var(--text); cursor: pointer; font-family: inherit;
-}
-.mult-box {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px;
-  margin: 12px auto 0; max-width: 640px; padding: 10px 16px;
-  background: var(--blue-lt); border-radius: var(--radius-sm); font-size: 1.15rem; text-align: left;
-}
 .q-area { margin-top: 14px; display: flex; justify-content: center; }
 .dv-wrap { display: flex; flex-direction: column; align-items: center; }
 

@@ -185,24 +185,10 @@ function renderQuestion() {
   hudR.textContent = 'Round ' + round.roundNo;
   document.getElementById('hud-progress').textContent = '第 ' + (round.idx + 1) + ' / ' + round.qs.length + ' 題';
   document.getElementById('hud-correct').textContent = round.correct;
-  /* 除數的倍數表：只在練習、除以多位數時提供，預設收起來 */
-  var showMult = round.mode === 'practice' && round.lv.div >= 2;
-  var mb = document.getElementById('btn-mult');
-  mb.classList.toggle('hidden', !showMult);
-  mb.textContent = '📋 ' + q.L.d + ' 的倍數';
-  document.getElementById('mult-box').classList.add('hidden');
-  document.getElementById('mult-box').innerHTML = multTable(q.L.d);
   hideFeedback();
   setKeypad(true);
   render();
 }
-
-function multTable(d) {
-  var h = '';
-  for (var i = 1; i <= 9; i++) h += '<div><span class="fb-num">' + d + ' × ' + i + ' = ' + d * i + '</span></div>';
-  return h;
-}
-function toggleMult() { document.getElementById('mult-box').classList.toggle('hidden'); }
 
 /* ── 畫面 ── */
 var BRK_SVG = '<svg viewBox="0 0 20 60" preserveAspectRatio="none"><path d="M3 0 Q20 30 3 60" fill="none" stroke="currentColor" stroke-width="4" vector-effect="non-scaling-stroke"/></svg>';
