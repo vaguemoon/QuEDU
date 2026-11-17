@@ -137,8 +137,14 @@ button { touch-action: manipulation; }
 .dv-in.active { border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-lt); }
 .dv-in.bad { border-color: var(--dv-bad); background: var(--dv-bad-lt); color: var(--dv-bad); }
 .dv-in:not(.filled):not(.active):not(.bad) { border-style: dashed; border-color: var(--border); }
+.dv-in.filled.fix { position: relative; border: 3px solid var(--dv-bad); background: var(--dv-bad-lt); color: var(--dv-ok); }
+.dv-was {
+  position: absolute; top: -.4em; right: -.45em; padding: 0 .12em; border-radius: 6px;
+  font-size: .45em; color: var(--dv-bad); background: var(--white); border: 2px solid var(--dv-bad);
+}
 .dv-in.dv-est { font-size: .8em; width: 1.2em; height: 1.3em; }
 .dv-in.dv-est.filled { color: var(--dv-est); }
+.dv-in.dv-est.filled.fix { color: var(--dv-ok); }
 /* 試商標示：圈出估的十位數、框出被估的數、淡化個位 */
 .dv-in.mk-est { border: 3px solid var(--dv-est); border-radius: 50%; background: var(--dv-est-lt); }
 .dv-num.mk-p, .dv-in.mk-p { background: var(--dv-mk-lt); box-shadow: inset 0 0 0 3px var(--dv-mk); border-radius: 8px; }
@@ -166,6 +172,9 @@ button { touch-action: manipulation; }
 .slot.active::after { content: ''; width: 3px; height: .9em; margin-left: 2px; background: var(--blue); animation: dv-blink 1s steps(1) infinite; }
 .slot.right { border-color: var(--dv-ok); background: var(--dv-ok-lt); color: var(--dv-ok); }
 .slot.wrong { border-color: var(--dv-bad); background: var(--dv-bad-lt); color: var(--dv-bad); }
+/* 測驗批改：錯的地方紅框、補上正確數字（綠），學生寫的劃掉 */
+.slot.fix { border-color: var(--dv-bad); background: var(--dv-bad-lt); color: var(--dv-ok); }
+.slot-was { font-size: .55em; color: var(--dv-bad); margin-right: .25em; }
 @keyframes dv-blink { 50% { opacity: 0; } }
 
 /* 數字鍵盤 */

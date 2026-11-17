@@ -1,10 +1,11 @@
 /* divide.js — 除法趣：直式除法（數字鍵盤逐格作答）
  *
- * 範圍（LEVELS）：除以一位數／二位數 × 整除／有餘數。重點在除以二位數的「試商」。
+ * 範圍（LEVELS）：除以一位數／二位數／三位數 × 整除／有餘數。重點在除以多位數的「試商」。
  * 作答：直式的每一格都由學生自己寫（商、乘積、相減的差、移下來的數），系統依序亮起下一格；
  *       第一個商要寫在哪一位由學生自己點；直式寫完再寫橫式答案（商 … 餘數）。
  * 練習：每格寫完馬上檢查，第一次錯給提示（不講答案），再錯公布算法，但答案仍要自己填才能往下。
- * 測驗：直式任一格寫錯或橫式答錯，這題就算錯並公布解法；錯的下一輪再考，第一輪答對 9 題以上標「測驗通過」。
+ * 測驗：像在紙上寫，不逐格檢查、不提示、不標底色，⌫ 往回擦一格；橫式寫完按 ✓ 交卷整題一起批改，
+ *       任一格或橫式錯這題就算錯，錯的格子標紅並補上正確數字；錯的下一輪再考，第一輪答對 9 題以上標「測驗通過」。
  * 進度存 students/{id}/progress/divide。
  * 依賴：shared.js（quApp、sfxCorrect、sfxWrong、sfxCelebrate、showToast、escHtml）
  */
@@ -17,7 +18,9 @@ var LEVELS = [
   { id: 'd1e', icon: '🍎', name: '除以一位數・整除',   ex: '84 ÷ 4、612 ÷ 6',  div: 1, rem: false },
   { id: 'd1r', icon: '🍊', name: '除以一位數・有餘數', ex: '95 ÷ 4、743 ÷ 6',  div: 1, rem: true },
   { id: 'd2e', icon: '🧱', name: '除以二位數・整除',   ex: '672 ÷ 21、96 ÷ 24', div: 2, rem: false },
-  { id: 'd2r', icon: '🏰', name: '除以二位數・有餘數', ex: '589 ÷ 23、87 ÷ 19', div: 2, rem: true }
+  { id: 'd2r', icon: '🏰', name: '除以二位數・有餘數', ex: '589 ÷ 23、87 ÷ 19', div: 2, rem: true },
+  { id: 'd3e', icon: '🚀', name: '除以三位數・整除',   ex: '936 ÷ 312、2568 ÷ 214', div: 3, rem: false },
+  { id: 'd3r', icon: '🌟', name: '除以三位數・有餘數', ex: '745 ÷ 123、1879 ÷ 312', div: 3, rem: true }
 ];
 
 var cfg = { level: 'd2e' };
@@ -31,7 +34,8 @@ function curLevel() { return LEVELS.find(function(l) { return l.id === cfg.level
 
 /* ══ 直式版面 ══
  * 把 N ÷ d 拆成學生要寫的格子，依書寫順序排成 seq：
- *   est 除以二位數時，先在除數上方寫「把除數四捨五入成整十」的估計值（用來估商，乘的時候仍用原本的除數）
+ *   est 除以多位數時，先在除數上方寫「把除數四捨五入到最高位」的估計值（二位數成整十、三位數成整百；
+ *       用它的最高位估商，乘的時候仍用原本的除數）
  *   q   商（寫在這一步被除數最後一位的上面）
  *   prod 除數 × 商（從個位往左寫）
  *   diff 相減的差（從個位往左寫；差是 0 而且後面還要移位時不寫 0，最後的餘數 0 要寫）
@@ -61,7 +65,8 @@ function buildLayout(N, d) {
   }
 
   if (d >= 10) {
-    L.est = Math.round(d / 10) * 10;
+    L.unit = Math.pow(10, String(d).length - 1);   // 估到哪一位：10 或 100
+    L.est = Math.round(d / L.unit) * L.unit;
     String(L.est).split('').forEach(function(ch, i) { push({ k: 'est', key: 'e_' + i, col: i, want: +ch }, -1); });
   }
   L.qFirst = L.seq.length;   // 第一個商在 seq 的位置（學生要自己點商寫在哪一位）
@@ -108,9 +113,10 @@ function makeQuestion(lv, used) {
   for (var t = 0; t < 3000; t++) {
     var d, nd;
     if (lv.div === 1) { d = ri(2, 9); nd = Math.random() < 0.35 ? 2 : 3; }
-    /* 除數到 94 為止：95 以上估成 100，除數上方只有兩格寫不下 */
-    else { do { d = ri(11, 94); } while (d % 10 === 0); nd = Math.random() < 0.2 ? 2 : 3; }
-    var lo = nd === 2 ? 10 : 100, hi = nd === 2 ? 99 : 999;
+    /* 除數到 94／949 為止：再大會估成 100／1000，除數上方的格子寫不下 */
+    else if (lv.div === 2) { do { d = ri(11, 94); } while (d % 10 === 0); nd = Math.random() < 0.2 ? 2 : 3; }
+    else { do { d = ri(101, 949); } while (d % 100 === 0); nd = Math.random() < 0.3 ? 3 : 4; }
+    var lo = Math.pow(10, nd - 1), hi = lo * 10 - 1;
     var r = lv.rem ? ri(1, d - 1) : 0;
     var qMin = Math.max(2, Math.ceil((lo - r) / d)), qMax = Math.floor((hi - r) / d);
     if (qMin > qMax) continue;
@@ -121,7 +127,7 @@ function makeQuestion(lv, used) {
     used[N + '/' + d] = true;
     return { L: L };
   }
-  return { L: buildLayout(lv.div === 1 ? 84 : 672, lv.div === 1 ? 4 : 21) };
+  return { L: [null, buildLayout(84, 4), buildLayout(672, 21), buildLayout(2568, 214)][lv.div] };
 }
 
 /* ══ 首頁 ══ */
@@ -175,8 +181,8 @@ function renderQuestion() {
   hudR.textContent = 'Round ' + round.roundNo;
   document.getElementById('hud-progress').textContent = '第 ' + (round.idx + 1) + ' / ' + round.qs.length + ' 題';
   document.getElementById('hud-correct').textContent = round.correct;
-  /* 除數的倍數表：只在練習、除以二位數時提供，預設收起來 */
-  var showMult = round.mode === 'practice' && round.lv.div === 2;
+  /* 除數的倍數表：只在練習、除以多位數時提供，預設收起來 */
+  var showMult = round.mode === 'practice' && round.lv.div >= 2;
   var mb = document.getElementById('btn-mult');
   mb.classList.toggle('hidden', !showMult);
   mb.textContent = '📋 ' + q.L.d + ' 的倍數';
@@ -203,7 +209,7 @@ function activeKey(q) {
   return s.pos === q.L.qFirst ? 'q_' + s.qCol : q.L.seq[s.pos].key;
 }
 
-/* 除以二位數的試商畫面：圈出估成整十的十位數（90 的 9）、框出被估的數、淡化個位。
+/* 除以多位數的試商畫面：圈出估計值的最高位（90 的 9、300 的 3）、框出被估的數、淡化後面的位數。
    每一個商都先讓學生自己試，寫錯過一次才標（第一個商還要點對位置，不然等於告訴學生商寫在哪一位） */
 function visualTry(q) {
   var s = q.st, L = q.L;
@@ -215,10 +221,12 @@ function visualTry(q) {
    值是 true（一般底色）或試商標記的 class 名稱 */
 function highlightSet(q) {
   var s = q.st, hl = {};
+  if (round.mode === 'exam') return hl;
   if (visualTry(q)) {
-    var t = q.L.seq[s.pos];
-    hl.e_0 = 'mk-est'; hl.e_1 = 'mk-cover';
-    for (var i = t.pStart; i <= t.pEnd; i++) hl[t.pRow < 0 ? 'D_' + i : 'r' + t.pRow + '_' + i] = i === t.pEnd ? 'mk-cover' : 'mk-p';
+    var t = q.L.seq[s.pos], low = String(q.L.d).length - 1;   // 淡化幾位
+    hl.e_0 = 'mk-est';
+    for (var e = 1; e <= low; e++) hl['e_' + e] = 'mk-cover';
+    for (var i = t.pStart; i <= t.pEnd; i++) hl[t.pRow < 0 ? 'D_' + i : 'r' + t.pRow + '_' + i] = i > t.pEnd - low ? 'mk-cover' : 'mk-p';
     return hl;
   }
   if (q.done || s.phase !== 'grid' || s.pos <= q.L.qFirst) return hl;
@@ -231,6 +239,13 @@ function highlightSet(q) {
 function cellHtml(q, key, row, col, act, hl, click) {
   var s = q.st, txt = '', cls = 'dv-in';
   if (s.bad && s.bad.key === key) { txt = s.bad.v; cls += ' bad'; }
+  else if (s.wrong && s.wrong[key]) {
+    /* 測驗批改：寫錯的格子補上正確數字，學生寫的劃掉放在角落（寫在不夠分位置的商沒有正確數字） */
+    var want = q.L.want[key], was = s.vals[key];
+    txt = (want !== undefined ? want : '') +
+          (was !== undefined ? '<s class="dv-was">' + was + '</s>' : '');
+    cls += ' filled fix';
+  }
   else if (s.vals[key] !== undefined) { txt = s.vals[key]; cls += ' filled'; }
   else if (q.revealed && q.L.want[key] !== undefined) { txt = q.L.want[key]; cls += ' filled shown'; }
   if (key === act) cls += ' active';
@@ -247,7 +262,7 @@ function render() {
   }
   /* 第 1 列：商。還沒寫第一個商之前，每一位上面都有格子，讓學生自己決定從哪一位開始 */
   for (var j = 0; j < n; j++) {
-    if (j < L.c0 && (q.done || s.pos > L.qFirst)) continue;
+    if (j < L.c0 && (q.done || s.pos > L.qFirst) && s.vals['q_' + j] === undefined) continue;
     h.push(cellHtml(q, 'q_' + j, 1, colOf(j), act, hl, !q.done && s.pos === L.qFirst ? ' onclick="selectQ(' + j + ')"' : ''));
   }
   /* 除數上方：估成的整十數 */
@@ -278,9 +293,12 @@ function render() {
     var needR = round.lv.rem;
     var slot = function(name) {
       var cls = 'slot' + (!q.done && s.h.act === name ? ' active' : '') + (s.h.mark && s.h.mark.slot === name ? ' ' + s.h.mark.cls : '');
-      var v = s.h[name];
-      if (q.revealed) { v = String(name === 'q' ? L.q : L.r); cls += ' right'; }
-      return '<span class="' + cls + '"' + (q.done ? '' : ' onclick="selectSlot(\'' + name + '\')"') + '>' + escHtml(v) + '</span>';
+      var v = escHtml(s.h[name]);
+      if (q.revealed) {
+        var was = s.hWrong && s.hWrong[name] && s.h[name] !== '' ? '<s class="slot-was">' + escHtml(s.h[name]) + '</s>' : '';
+        v = was + (name === 'q' ? L.q : L.r); cls += was ? ' fix' : ' right';
+      }
+      return '<span class="' + cls + '"' + (q.done ? '' : ' onclick="selectSlot(\'' + name + '\')"') + '>' + v + '</span>';
     };
     hz = '<div class="dv-h"><span class="num">' + L.N + '</span><span class="op">÷</span><span class="num">' + L.d + '</span>' +
       '<span class="op">=</span>' + slot('q') + (needR ? '<span class="op">…</span>' + slot('r') : '') + '</div>';
@@ -292,9 +310,11 @@ function render() {
 function stepLabel(q) {
   var s = q.st;
   if (q.done) return '';
-  if (s.phase === 'h') return round.lv.rem ? '直式算完了！把答案寫成橫式：商 … 餘數' : '直式算完了！把答案寫成橫式';
+  var exam = round.mode === 'exam';
+  if (s.phase === 'h') return (round.lv.rem ? '直式算完了！把答案寫成橫式：商 … 餘數' : '直式算完了！把答案寫成橫式') + (exam ? '，寫好按 ✓ 交卷' : '');
   var it = q.L.seq[s.pos];
-  if (it.k === 'est') return '先把除數 ' + q.L.d + ' 想成整十數（四捨五入），寫在 ' + q.L.d + ' 的上面';
+  if (it.k === 'est') return '先把除數 ' + q.L.d + ' 想成整' + unitName(q.L) + '數（四捨五入），寫在 ' + q.L.d + ' 的上面';
+  if (exam) return s.pos === q.L.qFirst ? '商要寫在哪一位？點那一格，寫上商' : '一格一格寫下去，寫錯可以按 ⌫ 擦掉';
   if (visualTry(q)) return '寫上商';
   if (s.pos === q.L.qFirst) return '商要寫在哪一位？點那一格，寫上商';
   if (it.k === 'q') return '估一估，寫上商';
@@ -323,7 +343,12 @@ function selectSlot(name) {
 function pressKey(k) {
   if (!round || curQ().done) return;
   var q = curQ(), s = q.st;
-  if (s.phase === 'h') { pressH(q, k); return; }
+  if (s.phase === 'h') {
+    /* 測驗：橫式還沒寫任何東西時按 ⌫，回到直式最後一格繼續擦 */
+    if (round.mode === 'exam' && k === 'del' && s.h.q === '' && s.h.r === '') { s.phase = 'grid'; examErase(q); return; }
+    pressH(q, k); return;
+  }
+  if (round.mode === 'exam') { pressExam(q, k); return; }
   if (k === 'ok') { showToast('寫完一格會自動跳到下一格'); return; }
   if (s.bad) { s.bad = null; if (k === 'del') { render(); return; } }
   if (k === 'del') return;
@@ -339,10 +364,45 @@ function pressKey(k) {
 
 function L_item(q) { return q.L.seq[q.st.pos]; }
 
+/* 測驗：寫什麼都收下，照順序跳下一格（第一個商寫在學生點的那一位），交卷時才批改 */
+function pressExam(q, k) {
+  var s = q.st, L = q.L;
+  if (k === 'ok') { showToast('直式還沒寫完'); return; }
+  if (k === 'del') { examErase(q); return; }
+  if (s.pos === L.qFirst) s.placeCol = s.qCol;
+  s.vals[s.pos === L.qFirst ? 'q_' + s.qCol : L.seq[s.pos].key] = +k;
+  s.pos++;
+  if (s.pos >= L.seq.length) s.phase = 'h';
+  render();
+}
+
+function examErase(q) {
+  var s = q.st;
+  if (s.pos === 0) { render(); return; }
+  s.pos--;
+  delete s.vals[s.pos === q.L.qFirst ? 'q_' + s.placeCol : q.L.seq[s.pos].key];
+  render();
+}
+
+/* 測驗交卷：每一格跟橫式都對才算對 */
+function gradeExam(q) {
+  var s = q.st, L = q.L, wrong = {};
+  L.seq.forEach(function(it) { if (s.vals[it.key] !== it.want) wrong[it.key] = true; });
+  if (s.placeCol < L.c0) wrong['q_' + s.placeCol] = true;   // 商寫在不夠分的位置
+  var hq = +s.h.q === L.q, hr = !round.lv.rem || +s.h.r === L.r;
+  if (!Object.keys(wrong).length && hq && hr) { onRight(q); return; }
+  q.errors++;
+  s.wrong = wrong; s.hWrong = { q: !hq, r: !hr };
+  try { sfxWrong(); } catch (e) {}
+  failQuestion(q);
+}
+
+function unitName(L) { return L.unit === 10 ? '十' : '百'; }
+
 /* 試商提示：「9 × ? 最接近 71 又不超過」，數字的圈框跟直式上的標示一樣，放在黃色提示框 */
 function tryHtml(q) {
-  return '<span class="mk-t mk-t-est">' + q.L.est / 10 + '</span> × ? 最接近 <span class="mk-t mk-t-p">' +
-         Math.floor(L_item(q).P / 10) + '</span> 又不超過';
+  return '<span class="mk-t mk-t-est">' + q.L.est / q.L.unit + '</span> × ? 最接近 <span class="mk-t mk-t-p">' +
+         Math.floor(L_item(q).P / q.L.unit) + '</span> 又不超過';
 }
 
 function wrongCell(q, v, kind) {
@@ -378,11 +438,11 @@ function submitH(q) {
   var s = q.st, h = s.h, L = q.L, needR = round.lv.rem;
   if (h.q === '') { showToast('先寫商'); return; }
   if (needR && h.r === '') { showToast('還要寫餘數'); h.act = 'r'; render(); return; }
+  if (round.mode === 'exam') { gradeExam(q); return; }
   var qOk = +h.q === L.q, rOk = !needR || +h.r === L.r;
   if (qOk && rOk) { onRight(q); return; }
   q.errors++;
   try { sfxWrong(); } catch (e) {}
-  if (round.mode === 'exam') { failQuestion(q); return; }
   s.hErr++;
   var slot = qOk ? 'r' : 'q';
   h.mark = { slot: slot, cls: 'wrong' };
@@ -411,7 +471,7 @@ function onRight(q) {
   setTimeout(function() { if (round && curQ() === q) nextQuestion(); }, 1100);
 }
 
-/* 測驗寫錯：這題算錯，把整個直式與答案補上 */
+/* 測驗批改有錯：這題算錯，錯的格子補上正確數字、公布解法 */
 function failQuestion(q) {
   q.done = true; q.revealed = true; q.st.bad = null; q.st.h.mark = null;
   round.failed.push(q);
@@ -435,9 +495,9 @@ function answerText(L) { return L.N + ' ÷ ' + L.d + ' = ' + L.q + (round.lv.rem
 function hintHtml(q, kind, v, n) {
   var L = q.L, d = L.d, it = L_item(q);
   if (kind === 'est') {
-    var ones = d % 10;
-    return n >= 2 ? numSpan(d) + ' 的個位是 ' + numSpan(ones) + '，' + (ones >= 5 ? '5 以上要進位' : '比 5 小要捨去') + '，所以想成 ' + numSpan(L.est)
-                  : '把 ' + numSpan(d) + ' 四捨五入到十位：個位 4 以下捨去、5 以上進位，想成最接近的整十數';
+    var low = Math.floor(d / (L.unit / 10)) % 10, lowName = L.unit === 10 ? '個' : '十', un = unitName(L);
+    return n >= 2 ? numSpan(d) + ' 的' + lowName + '位是 ' + numSpan(low) + '，' + (low >= 5 ? '5 以上要進位' : '比 5 小要捨去') + '，所以想成 ' + numSpan(L.est)
+                  : '把 ' + numSpan(d) + ' 四捨五入到' + un + '位：' + lowName + '位 4 以下捨去、5 以上進位，想成最接近的整' + un + '數';
   }
   if (kind === 'place') {
     var c0 = L.c0, P0 = it.P;
@@ -481,7 +541,7 @@ function hintHtml(q, kind, v, n) {
 
 function solutionHtml(L) {
   var lines = [];
-  if (L.est) lines.push('把 ' + numSpan(L.d) + ' 想成 ' + numSpan(L.est) + '，用 ' + numSpan(L.est / 10) + ' 去試商，乘的時候用 ' + numSpan(L.d));
+  if (L.est) lines.push('把 ' + numSpan(L.d) + ' 想成 ' + numSpan(L.est) + '，用 ' + numSpan(L.est / L.unit) + ' 去試商，乘的時候用 ' + numSpan(L.d));
   if (L.c0 > 0) lines.push('被除數前面的 ' + numSpan(L.steps[0].P) + ' 才夠分，商從 ' + numSpan(L.D[L.c0]) + ' 的上面開始寫');
   L.steps.forEach(function(st) {
     var t = st.qd > 0
