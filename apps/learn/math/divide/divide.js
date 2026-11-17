@@ -384,10 +384,10 @@ function examErase(q) {
   render();
 }
 
-/* 測驗交卷：每一格跟橫式都對才算對 */
+/* 測驗交卷：每一格跟橫式都對才算對（除數上方的估計值只是輔助，不批改） */
 function gradeExam(q) {
   var s = q.st, L = q.L, wrong = {};
-  L.seq.forEach(function(it) { if (s.vals[it.key] !== it.want) wrong[it.key] = true; });
+  L.seq.forEach(function(it) { if (it.k !== 'est' && s.vals[it.key] !== it.want) wrong[it.key] = true; });
   if (s.placeCol < L.c0) wrong['q_' + s.placeCol] = true;   // 商寫在不夠分的位置
   var hq = +s.h.q === L.q, hr = !round.lv.rem || +s.h.r === L.r;
   if (!Object.keys(wrong).length && hq && hr) { onRight(q); return; }
@@ -399,10 +399,12 @@ function gradeExam(q) {
 
 function unitName(L) { return L.unit === 10 ? '十' : '百'; }
 
-/* 試商提示：「9 × ? 最接近 71 又不超過」，數字的圈框跟直式上的標示一樣，放在黃色提示框 */
+/* 試商提示：「9 × ? 最接近 71 又不超過」，數字的圈框跟直式上的標示一樣，放在黃色提示框。
+   除數最高位是 1（12 估成 10）時照字面會想到 10 以上，補一行「商最多寫 9」 */
 function tryHtml(q) {
-  return '<span class="mk-t mk-t-est">' + q.L.est / q.L.unit + '</span> × ? 最接近 <span class="mk-t mk-t-p">' +
-         Math.floor(L_item(q).P / q.L.unit) + '</span> 又不超過';
+  var e = q.L.est / q.L.unit, p = Math.floor(L_item(q).P / q.L.unit);
+  return '<span class="mk-t mk-t-est">' + e + '</span> × ? 最接近 <span class="mk-t mk-t-p">' + p + '</span> 又不超過' +
+         (Math.floor(p / e) >= 10 ? '<br><span class="fb-dir">商最多寫 9</span>' : '');
 }
 
 function wrongCell(q, v, kind) {
