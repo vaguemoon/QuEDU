@@ -155,6 +155,8 @@ button { touch-action: manipulation; }
 .mk-t-est { color: var(--dv-est); border: 3px solid var(--dv-est); background: var(--dv-est-lt); border-radius: 999px; }
 .mk-t-p { color: var(--dv-mk); background: var(--dv-mk-lt); box-shadow: inset 0 0 0 3px var(--dv-mk); }
 .fb-dir { font-size: 1.4rem; font-weight: 900; }
+/* 調商時，剛剛試算的乘積、差淡淡留著對照，按下一個鍵才消失 */
+.trial-old { opacity: .35; }
 .dv-num.hl, .dv-in.hl { background: var(--dv-hl); border-radius: 8px; }
 
 /* 橫式答案 */
@@ -202,6 +204,9 @@ button { touch-action: manipulation; }
 .feedback.is-ok  { background: var(--dv-ok-lt); border-color: var(--dv-ok); }
 .feedback.is-bad { background: var(--dv-bad-lt); border-color: var(--dv-bad); }
 .fb-head { font-size: 1.3rem; font-weight: 900; color: var(--text); }
+/* 試商後調商：正常流程，不是寫錯，用藍色 */
+.feedback.is-try { background: var(--dv-mk-lt); border-color: var(--dv-mk); }
+.feedback.is-try .fb-head { color: var(--dv-mk); }
 .feedback.is-ok .fb-head  { color: var(--dv-ok); }
 .feedback.is-bad .fb-head { color: var(--dv-bad); }
 .fb-body { margin-top: 8px; font-size: 1.2rem; font-weight: 800; color: var(--text); line-height: 1.7; }

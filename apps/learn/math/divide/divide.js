@@ -196,6 +196,7 @@ var BRK_SVG = '<svg viewBox="0 0 20 60" preserveAspectRatio="none"><path d="M3 0
 function activeKey(q) {
   var s = q.st;
   if (q.done || s.phase !== 'grid') return null;
+  if (s.trial) return s.trial.cells[s.trial.idx].key;
   return s.pos === q.L.qFirst ? 'q_' + s.qCol : q.L.seq[s.pos].key;
 }
 
@@ -203,7 +204,7 @@ function activeKey(q) {
    每一個商都先讓學生自己試，寫錯過一次才標（第一個商還要點對位置，不然等於告訴學生商寫在哪一位） */
 function visualTry(q) {
   var s = q.st, L = q.L;
-  if (!L.est || q.done || s.phase !== 'grid' || L.seq[s.pos].k !== 'q') return false;
+  if (!L.est || q.done || s.trial || s.phase !== 'grid' || L.seq[s.pos].k !== 'q') return false;
   return (s.errs[s.pos] || 0) >= 1 && (s.pos > L.qFirst || s.qCol === L.c0);
 }
 
@@ -238,6 +239,7 @@ function cellHtml(q, key, row, col, act, hl, click) {
   }
   else if (s.vals[key] !== undefined) { txt = s.vals[key]; cls += ' filled'; }
   else if (q.revealed && q.L.want[key] !== undefined) { txt = q.L.want[key]; cls += ' filled shown'; }
+  else if (s.trialShown && s.trialShown.qKey === key) txt = '<span class="trial-old">' + s.trialShown.v + '</span>';   // 剛剛試的商，淡淡留著
   if (key === act) cls += ' active';
   if (hl[key]) cls += ' ' + (hl[key] === true ? 'hl' : hl[key]);
   return '<div class="' + cls + '" style="grid-row:' + row + ';grid-column:' + col + '"' + (click || '') + '>' + txt + '</div>';
@@ -275,6 +277,17 @@ function render() {
       R += 2;
     } else R += 1;
   }
+  /* 試商：學生照試的商乘乘看（商太小時還要減減看），寫在這一步的下面；做完淡淡留著對照 */
+  var tr = s.trial || s.trialShown;
+  if (tr && !q.done) {
+    var old = !s.trial, it = L.seq[s.pos], prodDone = old || s.trial.idx >= tr.nProd;
+    tr.cells.forEach(function(c, i) {
+      var r = c.k === 'prod' ? R : R + 2;
+      if (old) put(r, colOf(c.col), 1, 'dv-num trial-old', c.want);
+      else if (i <= s.trial.idx) h.push(cellHtml(q, c.key, r, colOf(c.col), act, hl));
+    });
+    if (!tr.big && prodDone) put(R + 1, colOf(it.pStart), it.pEnd - it.pStart + 1, 'dv-line' + (old ? ' trial-old' : ''), '');
+  }
   var grid = '<div class="dv" style="grid-template-columns:repeat(' + m + ',1.3em) .6em repeat(' + n + ',1.3em)">' + h.join('') + '</div>';
 
   /* 橫式答案 */
@@ -305,6 +318,8 @@ function stepLabel(q) {
   var it = q.L.seq[s.pos];
   if (it.k === 'est') return '先把除數 ' + q.L.d + ' 想成整' + unitName(q.L) + '數（四捨五入），寫在 ' + q.L.d + ' 的上面';
   if (exam) return s.pos === q.L.qFirst ? '商要寫在哪一位？點那一格，寫上商' : '一格一格寫下去，寫錯可以按 ⌫ 擦掉';
+  if (s.trial) return s.trial.cells[s.trial.idx].k === 'prod' ? '乘乘看：用原本的除數 ' + q.L.d + ' × ' + s.trial.v + '，從個位開始寫' : '減減看，從個位開始寫';
+  if (s.trialShown) return '把商改一改，重新寫上';
   if (visualTry(q)) return '寫上商';
   if (s.pos === q.L.qFirst) return '商要寫在哪一位？點那一格，寫上商';
   if (it.k === 'q') return '估一估，寫上商';
@@ -317,7 +332,7 @@ function stepLabel(q) {
 function selectQ(col) {
   if (!round) return;
   var q = curQ();
-  if (q.done || q.st.pos !== q.L.qFirst) return;
+  if (q.done || q.st.pos !== q.L.qFirst || q.st.trial) return;
   q.st.qCol = col; q.st.bad = null;
   render();
 }
@@ -340,10 +355,13 @@ function pressKey(k) {
   }
   if (round.mode === 'exam') { pressExam(q, k); return; }
   if (k === 'ok') { showToast('寫完一格會自動跳到下一格'); return; }
+  if (s.trial) { pressTrial(q, k); return; }
+  if (s.trialShown) { s.trialShown = null; if (k === 'del') { hideFeedback(); render(); return; } }
   if (s.bad) { s.bad = null; if (k === 'del') { render(); return; } }
   if (k === 'del') return;
   var v = +k, it = L_item(q);
   if (s.pos === q.L.qFirst && s.qCol !== it.col) { wrongCell(q, v, 'place'); return; }
+  if (v !== it.want && it.k === 'q' && isTrialDigit(q, it, v)) { startTrial(q, it, v); return; }
   if (v !== it.want) { wrongCell(q, v, it.k); return; }
   s.vals[it.key] = v;
   s.pos++;
@@ -353,6 +371,79 @@ function pressKey(k) {
 }
 
 function L_item(q) { return q.L.seq[q.st.pos]; }
+
+/* ══ 試商與調商（練習） ══
+ * 把除數估成整十／整百去試商，本來就可能差一點：試出來的商落在「估出來的商」和正確的商之間，
+ * 不算寫錯（不響錯誤音效、不算一次答對的扣分），讓學生照紙上的做法自己乘乘看（商太小還要減減看），
+ * 發現不夠減或剩下的還比除數大，再自己調商。其他數字才是真正寫錯，照一般的提示。 */
+function trialQuot(q, it) {
+  var L = q.L;
+  return L.est ? Math.min(9, Math.floor(Math.floor(it.P / L.unit) / (L.est / L.unit))) : null;
+}
+
+function isTrialDigit(q, it, v) {
+  var t = trialQuot(q, it);
+  if (t === null || t === it.qd) return false;
+  return t > it.qd ? v > it.qd && v <= t : v < it.qd && v >= t;
+}
+
+function startTrial(q, it, v) {
+  var s = q.st, L = q.L, prod = L.d * v, ps = String(prod), c = it.pEnd, cells = [], i;
+  s.bad = null; s.trialShown = null;
+  var dirBig = '<br><span class="fb-dir">商要小一點 ⬇</span>';
+  /* 乘積比被除數還多一位，直式寫不下：直接告訴學生（例如 12 估成 10，95 試 9 → 108） */
+  if (ps.length > it.pEnd - it.pStart + 1) {
+    showFeedback('try', '🔍 試商調整', numSpan(L.d + ' × ' + v + ' = ' + prod) + '　比 ' + numSpan(it.P) + ' 大' + dirBig);
+    render(); return;
+  }
+  for (i = ps.length - 1; i >= 0; i--) cells.push({ k: 'prod', key: 'tp_' + (c - ps.length + 1 + i), col: c - ps.length + 1 + i, want: +ps[i] });
+  var nProd = cells.length;
+  if (prod <= it.P) {
+    var ds = String(it.P - prod);
+    for (i = ds.length - 1; i >= 0; i--) cells.push({ k: 'diff', key: 'td_' + (c - ds.length + 1 + i), col: c - ds.length + 1 + i, want: +ds[i] });
+  }
+  s.trial = { v: v, qKey: 'q_' + it.col, P: it.P, prod: prod, diff: it.P - prod, big: prod > it.P,
+              cells: cells, nProd: nProd, idx: 0, errs: {} };
+  s.vals[s.trial.qKey] = v;
+  hideFeedback();
+  render();
+}
+
+function pressTrial(q, k) {
+  var s = q.st, t = s.trial, L = q.L;
+  if (s.bad) { s.bad = null; if (k === 'del') { render(); return; } }
+  if (k === 'del') return;
+  var cell = t.cells[t.idx], v = +k;
+  if (v !== cell.want) {
+    /* 試算的乘法、減法算錯，才是真正寫錯 */
+    q.errors++;
+    try { sfxWrong(); } catch (e) {}
+    var n = t.errs[t.idx] = (t.errs[t.idx] || 0) + 1, body;
+    s.bad = { key: cell.key, v: v };
+    if (cell.k === 'prod') {
+      var usedEst = v === Math.floor(L.est * t.v / Math.pow(10, L.seq[s.pos].pEnd - cell.col)) % 10;
+      body = (usedEst ? '乘的時候要用原本的除數 ' + numSpan(L.d) + '，不是估的 ' + numSpan(L.est) + ' 喔！<br>' : '') +
+             (n >= 2 ? numSpan(L.d + ' × ' + t.v + ' = ' + t.prod) : '算算看 ' + numSpan(L.d + ' × ' + t.v) + ' 是多少？從個位開始寫');
+    } else {
+      body = n >= 2 ? numSpan(t.P + ' − ' + t.prod + ' = ' + t.diff) : '算算看 ' + numSpan(t.P + ' − ' + t.prod) + '，從個位開始減，不夠減要借位';
+    }
+    showFeedback(n === 1 ? 'hint' : 'bad', n === 1 ? '💡 再想一想' : '看看算法，再自己寫進去', body);
+    render(); return;
+  }
+  s.vals[cell.key] = v;
+  t.idx++;
+  hideFeedback();
+  if (t.idx >= t.cells.length) {
+    /* 試算完：擦掉試的商，乘積和差淡淡留著對照，學生自己調商 */
+    delete s.vals[t.qKey];
+    t.cells.forEach(function(c) { delete s.vals[c.key]; });
+    s.trial = null; s.trialShown = t;
+    showFeedback('try', '🔍 試商調整', t.big
+      ? numSpan(t.prod) + ' 比 ' + numSpan(t.P) + ' 大，不夠減<br><span class="fb-dir">商要小一點 ⬇</span>'
+      : '剩下的 ' + numSpan(t.diff) + (t.diff === L.d ? ' 跟除數一樣大' : ' 比除數 ' + numSpan(L.d) + ' 大') + '，還可以再分<br><span class="fb-dir">商要大一點 ⬆</span>');
+  }
+  render();
+}
 
 /* 測驗：寫什麼都收下，照順序跳下一格（第一個商寫在學生點的那一位），交卷時才批改 */
 function pressExam(q, k) {
@@ -555,9 +646,8 @@ function hideFeedback() {
 }
 function showFeedback(kind, head, body, withNext) {
   var fb = document.getElementById('feedback');
-  fb.classList.remove('hidden', 'is-ok', 'is-bad');
-  if (kind === 'ok') fb.classList.add('is-ok');
-  if (kind === 'bad') fb.classList.add('is-bad');
+  fb.classList.remove('hidden', 'is-ok', 'is-bad', 'is-try');
+  if (kind === 'ok' || kind === 'bad' || kind === 'try') fb.classList.add('is-' + kind);
   document.getElementById('fb-head').textContent = head;
   document.getElementById('fb-body').innerHTML = body || '';
   var nb = document.getElementById('btn-next');
