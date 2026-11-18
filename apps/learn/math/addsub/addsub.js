@@ -201,6 +201,10 @@ function renderQuestion() {
   document.getElementById('hud-correct').textContent = round.correct;
   document.getElementById('q-hint').textContent =
     q.fmt === 'v' ? '用直式算，從個位開始填' : q.fmt === 'fill' || cfg.level === 'ten' ? '□ 裡應該填多少？' : '算算看，答案是多少？';
+  /* 湊十練習：題目下面一直放十格框實物提示（對數量還沒有概念的學生要看得到、點得到）；測驗不放 */
+  var aid = document.getElementById('q-aid'), showAid = cfg.level === 'ten' && round.mode === 'practice';
+  aid.classList.toggle('hidden', !showAid);
+  aid.innerHTML = showAid ? tenAidHtml(q) : '';
   resetInput(q);
   hideFeedback();
   setKeypad(true);
@@ -459,8 +463,11 @@ function explainHtml(q, reveal) {
   var core = coreOf(q), lines = [];
   if (cfg.level === 'ten' && q.ops[0] === '+') {
     var known = q.terms[q.unknown === 0 ? 1 : 0];
-    lines.push(numSpan(known) + ' 和多少合起來是 ' + numSpan(10) + '？點一點空格，數一數有幾個。');
-    lines.push(tenFrames(known, reveal ? 10 - known : 0, 0, false));
+    /* 練習時題目下面已經有十格框，提示就叫學生去點那一個，不再畫一個 */
+    var aidShown = round.mode === 'practice';
+    lines.push(numSpan(known) + ' 和多少合起來是 ' + numSpan(10) + '？' +
+               (aidShown ? '把下面彎著的手指一根一根點起來，數一數伸出幾根。' : '點一點空格，數一數有幾個。'));
+    if (reveal || !aidShown) lines.push(tenFrames(known, reveal ? 10 - known : 0, 0, false));
     return lines.join('<br>');
   }
   if (q.unknown !== 'r') lines.push('可以想成：' + eq(core.x, core.op, core.y, core.z, reveal));
@@ -499,6 +506,46 @@ function smallHint(c, reveal) {
   return h + tenFrames(x, 0, y, cross);
 }
 
+/* 湊十的實物提示：兩隻手、10 根手指，引導學生用手指算（使用者指定）。
+ * 加法：已知的數先伸出來（藍色），彎著的手指點一下伸出來（橘色），數伸出來的橘色手指；
+ * 減法：10 根都伸出來，點一下彎下去（拿走），數剩下的。
+ * 手指由左到右數：左手小指 → 拇指，右手拇指 → 小指。 */
+function tenAidHtml(q) {
+  var add = q.ops[0] === '+';
+  return handsHtml(add ? q.terms[q.unknown === 0 ? 1 : 0] : 10, add ? 'add' : 'sub');
+}
+
+var FINGER_UP = [   // 依畫的順序：小指、無名指、中指、食指、拇指（左手；右手左右翻過來）
+  '<rect x="8" y="34" width="18" height="52" rx="9"/>',
+  '<rect x="29" y="20" width="18" height="66" rx="9"/>',
+  '<rect x="50" y="14" width="18" height="72" rx="9"/>',
+  '<rect x="71" y="22" width="18" height="64" rx="9"/>',
+  '<rect x="88" y="78" width="18" height="50" rx="9" transform="rotate(32 97 128)"/>'
+];
+var FINGER_DOWN = [
+  '<rect x="8" y="62" width="18" height="24" rx="9"/>',
+  '<rect x="29" y="60" width="18" height="26" rx="9"/>',
+  '<rect x="50" y="60" width="18" height="26" rx="9"/>',
+  '<rect x="71" y="60" width="18" height="26" rx="9"/>',
+  '<rect x="52" y="100" width="44" height="18" rx="9"/>'
+];
+
+function handsHtml(given, mode) {
+  var h = '<div class="hands" data-mode="' + mode + '">';
+  for (var hand = 0; hand < 2; hand++) {
+    h += '<svg class="hand' + (hand ? ' hand-r' : '') + '" viewBox="0 0 120 160">';
+    /* 四指畫在手掌後面（彎下去只露出指節），拇指畫在手掌上面 */
+    for (var d = 0; d < 5; d++) {
+      var n = hand ? 10 - d : d + 1;   // 第幾根（由左到右）
+      if (d === 4) h += '<rect class="palm" x="4" y="74" width="92" height="80" rx="26"/>';
+      h += '<g class="fg ' + (n <= given ? 'up given' : 'down') + '">' +
+           '<g class="f-up">' + FINGER_UP[d] + '</g><g class="f-down">' + FINGER_DOWN[d] + '</g></g>';
+    }
+    h += '</svg>';
+  }
+  return h + '</div>';
+}
+
 /* 十格框：a 個藍點、b 個橘點；minus 個打叉（拆十法時從第一個整十框打叉） */
 function tenFrames(a, b, minus, crossFromTen) {
   var total = a + b, frames = Math.max(1, Math.ceil(total / 10)), cells = [];
@@ -521,6 +568,15 @@ function tenFrames(a, b, minus, crossFromTen) {
 
 /* 點數空格：點一下空格出現另一種顏色的圓，再點一下拿掉（滑鼠、觸控都用 Pointer Events） */
 document.addEventListener('pointerdown', function(e) {
+  /* 湊十的手指：加法點彎著的手指伸出來（題目給的不能動），減法點伸出來的手指彎下去 */
+  var fg = e.target.closest && e.target.closest('.hands .fg');
+  if (fg) {
+    e.preventDefault();
+    var add = fg.closest('.hands').dataset.mode === 'add';
+    if (add && !fg.classList.contains('given')) { fg.classList.toggle('up'); fg.classList.toggle('down'); fg.classList.toggle('tap'); }
+    if (!add) { fg.classList.toggle('up'); fg.classList.toggle('down'); }
+    return;
+  }
   var cell = e.target.closest && e.target.closest('.tf-empty');
   if (!cell) return;
   e.preventDefault();

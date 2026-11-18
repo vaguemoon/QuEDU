@@ -6,6 +6,9 @@
   --as-tap:    #ff8c42;   /* 學生點空格補上的圓點（跟公布答案時補上的橘點同色） */
   --as-tap-lt: #fff1e6;
   --as-carry:  #e84444;   /* 進位／借位標記 */
+  --as-palm:   #f6d5b8;   /* 湊十手指圖：手掌 */
+  --as-fold:   #e3c2a6;   /* 彎下去的手指 */
+  --as-hand-line: #8a5a3c;
   --as-ok:     #27ae60;
   --as-ok-lt:  #e9f9ef;
   --as-bad:    #e84444;
@@ -195,6 +198,19 @@ button { touch-action: manipulation; }
 .tf-b { background: var(--as-b); }
 .tf-x { background: var(--as-cross); }
 .tf-x::after { content: '✕'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--as-bad); font-weight: 900; font-size: 20px; }
+/* 湊十練習：題目下面常駐的手指圖（題目給的手指藍色、學生點起來的橘色、彎著的只露指節） */
+.q-aid { margin-top: 16px; padding: 14px 20px; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); }
+.hands { display: flex; justify-content: center; gap: 36px; }
+.hand { width: 190px; height: auto; overflow: visible; touch-action: manipulation; }
+.hand-r { transform: scaleX(-1); }
+.hand rect { stroke: var(--as-hand-line); stroke-width: 2.5; }
+.hand .palm { fill: var(--as-palm); }
+.fg { cursor: pointer; }
+.fg.up .f-down, .fg.down .f-up { display: none; }
+.fg.down rect { fill: var(--as-fold); }
+.fg.up rect { fill: var(--as-palm); }
+.fg.up.given rect { fill: var(--as-a); }
+.fg.up.tap rect { fill: var(--as-tap); }
 
 /* 解題直式（小） */
 .mini-vt { display: inline-grid; gap: 0 4px; font-family: var(--num-font); font-weight: 700; margin: 6px 0; }
