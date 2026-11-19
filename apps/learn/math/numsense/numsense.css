@@ -154,6 +154,7 @@ button { touch-action: manipulation; }
 .fb-body { margin-top: 8px; font-size: 1.2rem; font-weight: 800; color: var(--text); line-height: 1.7; }
 .fb-body:empty { display: none; }
 .fb-steps { display: inline-block; text-align: left; }
+.fb-said { font-size: 1.35rem; font-weight: 900; color: var(--text); letter-spacing: .05em; }
 .fb-num { font-family: var(--num-font); font-weight: 700; }
 .btn-next {
   margin-top: 12px; padding: 12px 40px; border: none; border-radius: 14px;

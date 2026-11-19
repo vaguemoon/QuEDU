@@ -64,6 +64,7 @@ function levelOf(item, id) { return itemOf(item).levels.find(function(l) { retur
 var CN_D = '零一二三四五六七八九';
 /* 1～99 的國字讀法：十二、二十、五十三（開頭的一十讀成十） */
 function cnNum(n) {
+  if (n === 100) return '一百';   /* 數列題會數到 100 */
   if (n < 10) return CN_D[n];
   var t = Math.floor(n / 10), o = n % 10;
   return (t === 1 ? '' : CN_D[t]) + '十' + (o ? CN_D[o] : '');
@@ -318,16 +319,30 @@ function renderArea() {
 
 /* 國字唸給學生聽（不會唸國字也能作答） */
 var _zhVoice = null;
-function sayCn(n) {
+function sayCn(n) { sayText(cnNum(n)); }
+
+/* onEnd：唸完（或不能唸）時呼叫，答對後等唸完才換下一題 */
+function sayText(text, onEnd) {
   try {
-    if (!window.speechSynthesis) return;
+    if (!window.speechSynthesis) throw 0;
     if (!_zhVoice) _zhVoice = pickBestZhVoice(speechSynthesis.getVoices());
     speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(cnNum(n));
+    var u = new SpeechSynthesisUtterance(text);
     u.lang = 'zh-TW'; u.rate = 0.85;
     if (_zhVoice) u.voice = _zhVoice;
+    if (onEnd) u.onend = u.onerror = onEnd;
     speechSynthesis.speak(u);
-  } catch (e) {}
+  } catch (e) { if (onEnd) onEnd(); }
+}
+
+/* 答對時唸的話：把正確答案用國字唸一遍，讓學生把數字和讀法連起來 */
+function cnCount(d) { return d === 2 ? '兩' : CN_D[d]; }
+function answerSpeech(q) {
+  if (q.choices) return cnNum(q.n) + '是' + q.choices[q.answerIdx];
+  if (q.item === 'seq' || q.item === 'chart') return cnNum(+q.slots[0].ans);
+  var t = Math.floor(q.n / 10), o = q.n % 10;
+  if (q.item === 'place') return cnNum(q.n) + '是' + cnCount(t) + '個十' + (o ? '和' + cnCount(o) + '個一' : '');
+  return cnNum(q.n);
 }
 try { if (window.speechSynthesis) speechSynthesis.onvoiceschanged = function() { _zhVoice = pickBestZhVoice(speechSynthesis.getVoices()); }; } catch (e) {}
 
@@ -430,8 +445,15 @@ function onRight(q) {
   try { sfxCorrect(); } catch (e) {}
   renderArea();
   setKeypad(false);
-  showFeedback('ok', first ? '⭕ 答對了！' : '⭕ 這次對了！', '');
-  setTimeout(function() { if (round && curQ() === q) nextQuestion(); }, 900);
+  var said = answerSpeech(q);
+  showFeedback('ok', first ? '⭕ 答對了！' : '⭕ 這次對了！', '<span class="fb-said">🔊 ' + escHtml(said) + '</span>');
+  /* 唸完答案才換題（至少停 900ms）；有些平板 onend 不會觸發，最多等 5 秒 */
+  var spoke = false, waited = false, gone = false;
+  function go() { if (gone || !spoke || !waited) return; gone = true; if (round && curQ() === q) nextQuestion(); }
+  setTimeout(function() { waited = true; go(); }, 900);
+  setTimeout(function() { spoke = waited = true; go(); }, 5000);
+  /* 等答對音效響完再唸，兩個聲音才不會疊在一起 */
+  setTimeout(function() { sayText(said, function() { spoke = true; go(); }); }, 350);
 }
 
 function revealAnswer(q) {
