@@ -7,7 +7,7 @@
  *   百數表      看左右、看上下（多 10 少 10）、只看到一小塊的拼圖塊
  *   單數與雙數  20 以內看圓點兩兩配對、100 以內看個位
  * 複習：每個項目的原始資料（10～99 國字對照、積木 ±1 ±10、數列標在百數表、百數表鄰居、單雙數表）
- * 練習：一定要自己答對才能下一題；第一次錯給方法提示（不講答案），之後再錯公布解法但答案要自己填。
+ * 練習：不限題數、不顯示答對數；一定要自己答對才能下一題；第一次錯給方法提示（不講答案），之後再錯公布解法但答案要自己填。
  * 測驗：每題一次機會，錯的下一輪重考，第一輪答對 9 題以上該程度標「測驗通過」。
  * 進度存 students/{id}/progress/numsense（totalCorrect、status.{item_level}）。
  * 依賴：shared.js（db、initFirebase、sfxCorrect、sfxWrong、sfxCelebrate、showToast、escHtml、pickBestZhVoice）
@@ -195,19 +195,34 @@ function showPage(name) {
   document.getElementById('topbar-back').classList.toggle('hidden', name === 'home');
   window.scrollTo(0, 0);
 }
-function goHome() { round = null; renderPickers(); showPage('home'); }
+function goHome() { flushPractice(); round = null; renderPickers(); showPage('home'); }
 
-/* ══ 一輪 ══ */
+/* ══ 一輪 ══
+   練習：不限題數、不顯示題號和答對數，一直出新題，按「換題目」離開；
+   測驗：固定 ROUND_SIZE 題，有結算 */
 function startRound(mode) {
   lastMode = mode;
-  var qs = [];
-  for (var i = 0; i < ROUND_SIZE; i++) qs.push(makeQuestion());
+  var qs = [], practice = mode === 'practice';
+  for (var i = 0; i < (practice ? 1 : ROUND_SIZE); i++) qs.push(makeQuestion());
   round = { mode: mode, qs: qs, idx: 0, correct: 0, failed: [], roundNo: 1, firstRoundCorrect: 0,
-            totalAnswered: 0, totalCorrect: 0 };
+            totalAnswered: 0, totalCorrect: 0, savedAnswered: 0, savedCorrect: 0 };
   document.getElementById('hud-mode').textContent = (mode === 'exam' ? '📝 測驗' : '🎯 練習') + '・' +
     itemOf(cfg.item).name + '・' + levelOf(cfg.item, cfg.level).name;
+  document.getElementById('hud-progress').classList.toggle('hidden', practice);
+  document.querySelector('.hud-score').classList.toggle('hidden', practice);
   showPage('game');
   renderQuestion();
+}
+
+/* 練習沒有結算頁：每答 10 題、還有離開時，把還沒存的答題數和「練習過」寫進紀錄 */
+var PRACTICE_SAVE_EVERY = 10;
+function flushPractice() {
+  var r = round;
+  if (!r || r.mode !== 'practice' || r.totalAnswered === r.savedAnswered) return;
+  var key = statusKey(cfg.item, cfg.level), st = null;
+  if (!levelStatus[key]) st = levelStatus[key] = 'practiced';
+  saveProgress(r.totalCorrect - r.savedCorrect, r.totalAnswered - r.savedAnswered, key, st);
+  r.savedAnswered = r.totalAnswered; r.savedCorrect = r.totalCorrect;
 }
 
 function curQ() { return round.qs[round.idx]; }
@@ -463,6 +478,13 @@ function revealAnswer(q) {
 
 function nextQuestion() {
   if (!round || !curQ().done) return;
+  if (round.mode === 'practice') {
+    if (round.totalAnswered - round.savedAnswered >= PRACTICE_SAVE_EVERY) flushPractice();
+    /* 只留目前這題，題目不會一直累積 */
+    round.qs = [makeQuestion()]; round.idx = 0;
+    renderQuestion();
+    return;
+  }
   round.idx++;
   if (round.idx >= round.qs.length) { finishRound(); return; }
   renderQuestion();
@@ -728,7 +750,8 @@ function loadProgress() {
   });
 }
 
-function backToHub() { quApp.backToHub(); }
+function backToHub() { flushPractice(); quApp.backToHub(); }
+window.addEventListener('pagehide', flushPractice);   // 直接關掉分頁也盡量存
 
 /* ══ 鍵盤與觸控 ══ */
 document.getElementById('keypad').addEventListener('click', function(e) {
