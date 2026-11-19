@@ -223,13 +223,15 @@ button { touch-action: manipulation; }
 .hc-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
 /* 積木（十條＋單個） */
-.blocks { display: flex; align-items: flex-end; justify-content: center; gap: 28px; flex-wrap: wrap; }
-.blk-tens { display: flex; gap: 6px; align-items: flex-end; }
-.blk-rod { display: grid; grid-template-rows: repeat(10, 13px); width: 18px; border: 2px solid var(--blue-dk); background: var(--ns-ten); }
-.blk-rod i { border-bottom: 1px solid rgba(255,255,255,.55); }
+/* 低年級要一條一條、一個一個點著數：格子放大、彼此拉開，每 5 條多空一點方便 5 個一數 */
+.blocks { display: flex; align-items: flex-end; justify-content: center; gap: 44px; flex-wrap: wrap; }
+.blk-tens { display: flex; gap: 14px; align-items: flex-end; }
+.blk-rod { display: grid; grid-template-rows: repeat(10, 24px); width: 28px; border: 2.5px solid var(--blue-dk); border-radius: 4px; background: var(--ns-ten); }
+.blk-rod:nth-child(5n):not(:last-child) { margin-right: 14px; }
+.blk-rod i { border-bottom: 1.5px solid rgba(255,255,255,.6); }
 .blk-rod i:last-child { border-bottom: none; }
-.blk-ones { display: grid; grid-template-columns: repeat(2, 18px); gap: 4px; align-content: end; }
-.blk-one { width: 18px; height: 18px; border: 2px solid #c0602a; background: var(--ns-one); }
+.blk-ones { display: grid; grid-template-columns: repeat(2, 28px); gap: 12px 14px; align-content: end; }
+.blk-one { width: 28px; height: 28px; border: 2.5px solid #c0602a; border-radius: 4px; background: var(--ns-one); }
 .blk-cap { font-size: .95rem; font-weight: 800; color: var(--muted); text-align: center; margin-top: 4px; }
 
 /* 數位表（提示用） */
