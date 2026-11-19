@@ -28,6 +28,7 @@ var LEVELS = [
 var cfg = { level: 'd2e', count: 10 };
 try { var _saved = JSON.parse(localStorage.getItem('divide-cfg') || 'null'); if (_saved) cfg = Object.assign(cfg, _saved); } catch (e) {}
 var levelStatus = {};   // { d2e: 'practiced' | 'mastered' }
+var levelBest = {};     // { d2e: 3 | 5 | 10 }  測驗通過時最多的題數，決定首頁外框顏色
 var round = null;
 var lastMode = 'practice';
 
@@ -136,7 +137,9 @@ function makeQuestion(lv, used) {
 function renderPickers() {
   document.getElementById('level-grid').innerHTML = LEVELS.map(function(l) {
     var st = levelStatus[l.id];
-    return '<button class="pick-card' + (l.id === cfg.level ? ' on' : '') + (st ? ' st-' + st : '') +
+    /* 加上題數選擇之前的測驗都是 10 題 */
+    var best = st === 'mastered' ? (levelBest[l.id] || 10) : 0;
+    return '<button class="pick-card' + (l.id === cfg.level ? ' on' : '') + (st ? ' st-' + st : '') + (best ? ' pass-' + best : '') +
       '" onclick="setLevel(\'' + l.id + '\')">' +
       '<span class="pick-icon">' + l.icon + '</span>' +
       '<span class="pick-name">' + l.name + '</span>' +
@@ -679,12 +682,17 @@ function finishRound() {
   if (r.mode === 'exam') {
     var total = r.firstRoundTotal, need = masterMin(total);
     var passed = r.firstRoundCorrect >= need;
-    if (passed) levelStatus[key] = 'mastered';
-    else if (prev !== 'mastered') levelStatus[key] = 'practiced';
+    var newBest = 0;
+    if (passed) {
+      var oldBest = prev === 'mastered' ? (levelBest[key] || 10) : 0;
+      if (total > oldBest) newBest = levelBest[key] = total;
+      levelStatus[key] = 'mastered';
+    } else if (prev !== 'mastered') levelStatus[key] = 'practiced';
     icon.textContent = passed ? '🏆' : '💪';
     title.textContent = passed ? '測驗通過！' : '全部完成！';
     score.innerHTML = '第一輪 <b>' + r.firstRoundCorrect + '</b> / ' + total + ' 題答對';
-    sub.textContent = passed ? '這個範圍標上 ✓ 測驗通過'
+    sub.textContent = passed ? (newBest ? '這個範圍換上 ' + total + ' 題通過的' + { 3: '綠', 5: '金', 10: '彩虹' }[total] + '色外框'
+        : '這個範圍已經有 ' + levelBest[key] + ' 題通過的外框了')
       : '第一輪' + (need === total ? '要全部答對' : '答對 ' + need + ' 題以上') + '才算通過，多練習再來測驗吧' + (r.roundNo > 1 ? '（共 ' + r.roundNo + ' 輪）' : '');
     try { passed ? sfxCelebrate() : sfxCorrect(); } catch (e) {}
   } else {
@@ -696,7 +704,7 @@ function finishRound() {
   }
   again.textContent = '再一次';
   again.onclick = function() { startRound(lastMode); };
-  saveProgress(r.totalCorrect, r.totalAnswered, key, levelStatus[key]);
+  saveProgress(r.totalCorrect, r.totalAnswered, key, levelStatus[key], r.mode === 'exam' && newBest);
   showPage('result');
 }
 
@@ -709,16 +717,17 @@ function nextExamRound() {
 }
 
 /* ══ 紀錄：students/{id}/progress/divide（讀寫走 shared.js 的 quApp） ══ */
-function saveProgress(correct, answered, key, st) {
+function saveProgress(correct, answered, key, st, best) {
   /* 沒有狀態要記的時候不要送空的 status：set + merge 遇到空物件會把整個 status 蓋成空的 */
   var extra = null;
   if (st) { extra = { status: {} }; extra.status[key] = st; }
+  if (best) { extra.best = {}; extra.best[key] = best; }
   quApp.saveRound(correct, answered, extra);
 }
 
 function loadProgress() {
   quApp.loadProgress().then(function(data) {
-    if (data) { levelStatus = data.status || {}; renderPickers(); }
+    if (data) { levelStatus = data.status || {}; levelBest = data.best || {}; renderPickers(); }
   });
 }
 

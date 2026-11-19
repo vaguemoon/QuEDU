@@ -11,6 +11,10 @@
   --dv-bad-lt: #fff1f1;
   --dv-hint:   #fff8e6;
   --dv-hint-bd:#f0c040;
+  --dv-gold:   #e6b800;   /* 測驗 5 題通過的外框 */
+  --dv-gold-glow: rgba(230,184,0,.2);
+  --rb-1: #e74c3c; --rb-2: #e67e22; --rb-3: #f1c40f;   /* 測驗 10 題通過的彩虹外框 */
+  --rb-4: #27ae60; --rb-5: #3498db; --rb-6: #9b59b6;
   --num-font: 'Courier New', Courier, monospace;
 }
 
@@ -52,8 +56,16 @@ button { touch-action: manipulation; }
 .pick-label { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 1.15rem; font-weight: 900; color: var(--text); margin: 22px 0 12px; }
 .pick-legend { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .lg { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-left: 8px; }
+.lg-sep { margin-left: 18px; }
+.lg-sep + .lg { margin-left: 0; }
 .lg-practiced { background: var(--blue-lt); border: 2px solid var(--blue); }
 .lg-mastered  { background: var(--dv-ok-lt); border: 2px solid var(--dv-ok); }
+.lg-pass-5    { background: var(--dv-ok-lt); border: 2px solid var(--dv-gold); }
+.lg-pass-10   { background: var(--dv-ok-lt); border: 2px solid var(--rb-1); animation: dv-rainbow-bd 1.8s linear infinite; }
+@keyframes dv-rainbow-bd {
+  0%, 100% { border-color: var(--rb-1); } 17% { border-color: var(--rb-2); } 33% { border-color: var(--rb-3); }
+  50% { border-color: var(--rb-4); } 67% { border-color: var(--rb-5); } 83% { border-color: var(--rb-6); }
+}
 .pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .pick-card {
   position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
@@ -63,7 +75,20 @@ button { touch-action: manipulation; }
 .pick-card.on { border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-lt), var(--shadow); }
 .pick-card.st-practiced { background: var(--blue-lt); }
 .pick-card.st-mastered  { background: var(--dv-ok-lt); }
-.pick-card.st-mastered::after { content: '✓'; position: absolute; top: 8px; right: 12px; font-weight: 900; color: var(--dv-ok); font-size: 1.1rem; }
+/* 測驗通過的題數越多外框越亮（比照乘法趣九九的秒數外框）：3 題綠、5 題金、10 題彩虹 + ⚡ */
+.pick-card.pass-3  { outline: 3px solid var(--dv-ok); outline-offset: 3px; }
+.pick-card.pass-5  { outline: 3px solid var(--dv-gold); outline-offset: 3px; box-shadow: 0 0 0 7px var(--dv-gold-glow), var(--shadow); }
+@keyframes dv-rainbow {
+  0%   { outline-color: var(--rb-1); }
+  17%  { outline-color: var(--rb-2); }
+  33%  { outline-color: var(--rb-3); }
+  50%  { outline-color: var(--rb-4); }
+  67%  { outline-color: var(--rb-5); }
+  83%  { outline-color: var(--rb-6); }
+  100% { outline-color: var(--rb-1); }
+}
+.pick-card.pass-10 { outline: 3.5px solid var(--rb-1); outline-offset: 3px; animation: dv-rainbow 1.8s linear infinite; }
+.pick-card.pass-10::after { content: '⚡'; position: absolute; top: 6px; right: 10px; font-size: 1.1rem; line-height: 1; pointer-events: none; }
 .pick-icon { font-size: 1.6rem; line-height: 1; }
 .pick-name { font-size: 1.15rem; font-weight: 900; color: var(--text); }
 .pick-ex { font-size: .9rem; font-weight: 700; color: var(--muted); font-family: var(--num-font); }
