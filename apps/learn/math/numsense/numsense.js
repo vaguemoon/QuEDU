@@ -621,7 +621,7 @@ var RV_SEQS = [
 var RV_INFO = {
   write:   { title: '📖 10～99 的寫法', sub: '點一個數可以聽讀法，上面會拆成十位和個位' },
   place:   { title: '📖 幾個十、幾個一', sub: '按 +1、−1、+10、−10 改變積木，看看數字怎麼變' },
-  seq:     { title: '📖 數一數', sub: '選一種數法，百數表上會標出來，下面列出整串數' },
+  seq:     { title: '📖 數一數', sub: '選一種數法，百數表上會標出來' },
   chart:   { title: '📖 百數表', sub: '點一個數，看看它的左右上下：往右多 1、往左少 1、往下多 10、往上少 10' },
   oddeven: { title: '📖 單數與雙數', sub: '紅色是單數、藍色是雙數；看個位就知道' }
 };
@@ -674,9 +674,7 @@ function renderReview() {
     h += '<div class="rv-tabs">' + RV_SEQS.map(function(x) {
       return '<button class="rv-tab' + (x.id === RV.seq ? ' on' : '') + '" data-seq="' + x.id + '">' + x.name + '</button>';
     }).join('') + '</div>';
-    h += '<div class="rv-row">' + rvChart(function(n) { return list.indexOf(n) >= 0 ? 'mark' : 'dim'; }) +
-         '<div class="rv-list"><div class="rv-list-h">每次多 ' + sq.step + '</div>' +
-         list.map(function(x) { return '<span class="rv-chip">' + x + '</span>'; }).join('') + '</div></div>';
+    h += '<div class="rv-row">' + rvChart(function(n) { return list.indexOf(n) >= 0 ? 'mark' : 'dim'; }) + '</div>';
   } else if (it === 'chart') {
     var c = RV.sel, nb = {};
     if (c) {
