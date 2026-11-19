@@ -8,6 +8,10 @@
   --vm-hint:   #fff8e6;
   --vm-hint-bd:#f0c040;
   --vm-carry:  #e67e22;   /* 進位的小數字 */
+  --vm-gold:   #e6b800;   /* 測驗 5 題通過的外框 */
+  --vm-gold-glow: rgba(230,184,0,.2);
+  --rb-1: #e74c3c; --rb-2: #e67e22; --rb-3: #f1c40f;   /* 測驗 10 題通過的彩虹外框 */
+  --rb-4: #27ae60; --rb-5: #3498db; --rb-6: #9b59b6;
   --num-font: 'Courier New', Courier, monospace;
 }
 
@@ -23,6 +27,14 @@
 .vm-lg { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-left: 8px; }
 .vm-lg-practiced { background: var(--blue-lt); border: 2px solid var(--blue); }
 .vm-lg-mastered  { background: var(--vm-ok-lt); border: 2px solid var(--vm-ok); }
+.vm-lg-sep { margin-left: 18px; }
+.vm-lg-sep + .vm-lg { margin-left: 0; }
+.vm-lg-pass-5    { background: var(--vm-ok-lt); border: 2px solid var(--vm-gold); }
+.vm-lg-pass-10   { background: var(--vm-ok-lt); border: 2px solid var(--rb-1); animation: vm-rainbow-bd 1.8s linear infinite; }
+@keyframes vm-rainbow-bd {
+  0%, 100% { border-color: var(--rb-1); } 17% { border-color: var(--rb-2); } 33% { border-color: var(--rb-3); }
+  50% { border-color: var(--rb-4); } 67% { border-color: var(--rb-5); } 83% { border-color: var(--rb-6); }
+}
 .vm-pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .vm-pick {
   position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
@@ -32,7 +44,15 @@
 .vm-pick.on { border-color: var(--blue); box-shadow: 0 0 0 4px var(--blue-lt), var(--shadow); }
 .vm-pick.st-practiced { background: var(--blue-lt); }
 .vm-pick.st-mastered  { background: var(--vm-ok-lt); }
-.vm-pick.st-mastered::after { content: '✓'; position: absolute; top: 8px; right: 12px; font-weight: 900; color: var(--vm-ok); font-size: 1.1rem; }
+/* 測驗通過的題數越多外框越亮（比照九九的秒數外框）：3 題綠、5 題金、10 題彩虹 + ⚡ */
+.vm-pick.pass-3  { outline: 3px solid var(--vm-ok); outline-offset: 3px; }
+.vm-pick.pass-5  { outline: 3px solid var(--vm-gold); outline-offset: 3px; box-shadow: 0 0 0 7px var(--vm-gold-glow), var(--shadow); }
+@keyframes vm-rainbow {
+  0%, 100% { outline-color: var(--rb-1); } 17% { outline-color: var(--rb-2); } 33% { outline-color: var(--rb-3); }
+  50% { outline-color: var(--rb-4); } 67% { outline-color: var(--rb-5); } 83% { outline-color: var(--rb-6); }
+}
+.vm-pick.pass-10 { outline: 3.5px solid var(--rb-1); outline-offset: 3px; animation: vm-rainbow 1.8s linear infinite; }
+.vm-pick.pass-10::after { content: '⚡'; position: absolute; top: 6px; right: 10px; font-size: 1.1rem; line-height: 1; pointer-events: none; }
 .vm-pick-icon { font-size: 1.6rem; line-height: 1; }
 .vm-pick-name { font-size: 1.15rem; font-weight: 900; color: var(--text); }
 .vm-pick-ex { font-size: .9rem; font-weight: 700; color: var(--muted); font-family: var(--num-font); }

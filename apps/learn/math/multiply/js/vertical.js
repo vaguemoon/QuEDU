@@ -25,6 +25,10 @@ var VM_LEVELS = [
 var vmCfg = { level: 'v21', count: 10 };
 try { var _vmSaved = JSON.parse(localStorage.getItem('multiply-vertical-cfg') || 'null'); if (_vmSaved) vmCfg = Object.assign(vmCfg, _vmSaved); } catch (e) {}
 var verticalStatus = {};   // { v21: 'practiced' | 'mastered' }（init.js 從 progress/multiply 載入）
+var verticalBest = {};     // { v21: 3 | 5 | 10 }  測驗通過時最多的題數，決定外框顏色（init.js 載入）
+
+/* 加上外框之前通過的沒有記題數，當作最少的 3 題 */
+function vmBest(key) { return verticalStatus[key] === 'mastered' ? (verticalBest[key] || 3) : 0; }
 var vmRound = null;
 var vmLastMode = 'practice';
 
@@ -99,8 +103,8 @@ function initVertical() {
 
 function vmRenderPickers() {
   document.getElementById('vm-level-grid').innerHTML = VM_LEVELS.map(function(l) {
-    var st = verticalStatus[l.id];
-    return '<button class="vm-pick' + (l.id === vmCfg.level ? ' on' : '') + (st ? ' st-' + st : '') +
+    var st = verticalStatus[l.id], best = vmBest(l.id);
+    return '<button class="vm-pick' + (l.id === vmCfg.level ? ' on' : '') + (st ? ' st-' + st : '') + (best ? ' pass-' + best : '') +
       '" onclick="vmSetLevel(\'' + l.id + '\')">' +
       '<span class="vm-pick-icon">' + l.icon + '</span>' +
       '<span class="vm-pick-name">' + l.name + '</span>' +
@@ -396,12 +400,16 @@ function vmFinishRound() {
   var key = r.lv.id, prev = verticalStatus[key];
   if (r.mode === 'exam') {
     var total = r.firstRoundTotal, need = vmMasterMin(total), passed = r.firstRoundCorrect >= need;
-    if (passed) verticalStatus[key] = 'mastered';
-    else if (prev !== 'mastered') verticalStatus[key] = 'practiced';
+    var newBest = 0;
+    if (passed) {
+      if (total > vmBest(key)) newBest = verticalBest[key] = total;
+      verticalStatus[key] = 'mastered';
+    } else if (prev !== 'mastered') verticalStatus[key] = 'practiced';
     icon.textContent = passed ? '🏆' : '💪';
     title.textContent = passed ? '測驗通過！' : '全部完成！';
     score.innerHTML = '第一輪 <b>' + r.firstRoundCorrect + '</b> / ' + total + ' 題答對';
-    sub.textContent = passed ? '這個範圍標上 ✓ 測驗通過'
+    sub.textContent = passed ? (newBest ? '這個範圍換上 ' + total + ' 題通過的' + { 3: '綠', 5: '金', 10: '彩虹' }[total] + '色外框'
+        : '這個範圍已經有 ' + vmBest(key) + ' 題通過的外框了')
       : '第一輪' + (need === total ? '要全部答對' : '答對 ' + need + ' 題以上') + '才算通過，多練習再來測驗吧' + (r.roundNo > 1 ? '（共 ' + r.roundNo + ' 輪）' : '');
     try { passed ? sfxCelebrate() : sfxCorrect(); } catch (e) {}
   } else {
@@ -413,7 +421,7 @@ function vmFinishRound() {
   }
   again.textContent = '再一次';
   again.onclick = function() { vmStartRound(vmLastMode); };
-  vmSaveProgress(r.totalCorrect, r.totalAnswered, key, verticalStatus[key]);
+  vmSaveProgress(r.totalCorrect, r.totalAnswered, key, verticalStatus[key], r.mode === 'exam' && newBest);
   vmRenderPickers();   // 按返回回到選範圍頁時要看到新的狀態
   showPage('vresult', false);
 }
@@ -427,12 +435,13 @@ function vmNextExamRound() {
 }
 
 /* ══ 紀錄：students/{id}/progress/multiply（verticalStatus 是 map，set + merge 會逐欄合併） ══ */
-function vmSaveProgress(correct, answered, key, st) {
+function vmSaveProgress(correct, answered, key, st, best) {
   totalCorrect += correct;
   totalAttempts += answered;
   if (!db || !currentStudent) return;
   var data = { totalCorrect: totalCorrect, totalAttempts: totalAttempts, lastStudied: new Date().toISOString() };
   if (st) { data.verticalStatus = {}; data.verticalStatus[key] = st; }
+  if (best) { data.verticalBest = {}; data.verticalBest[key] = best; }
   db.collection('students').doc(currentStudent.id).collection('progress').doc('multiply')
     .set(data, { merge: true })
     .catch(function(e) { console.warn('vmSaveProgress error:', e); });

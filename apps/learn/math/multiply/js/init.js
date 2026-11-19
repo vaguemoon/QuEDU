@@ -74,6 +74,7 @@ window.addEventListener('load', function() {
           maxStreak          = pData.maxStreak          || 0;
           examCompletedCount = pData.examCompletedCount || 0;
           verticalStatus     = pData.verticalStatus     || {};
+          verticalBest       = pData.verticalBest       || {};
           if (currentPage === 'vertical') vmRenderPickers();
           // 向後相容：舊 masteredMixed 資料視為 8 秒通過
           masteredMixed.forEach(function(t) {
