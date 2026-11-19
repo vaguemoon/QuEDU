@@ -81,6 +81,8 @@
   font-family: 'Noto Sans TC', 'Nunito', sans-serif;
 }
 
+.scratch-header .scratch-mode-seg { margin: 0 auto 0 16px; }
+
 .scratch-close {
   background: none;
   border: none;
@@ -217,6 +219,53 @@
   color: var(--red, #ef4444);
 }
 
+/* ── 模式切換（白紙／畫在畫面上） ── */
+.scratch-mode-seg {
+  display: inline-flex;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.scratch-mode-btn {
+  padding: 7px 14px;
+  border: none;
+  background: white;
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 800;
+  color: var(--muted, #64748b);
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+  white-space: nowrap;
+}
+
+.scratch-mode-btn + .scratch-mode-btn { border-left: 1.5px solid var(--border, #e2e8f0); }
+
+.scratch-mode-btn.active {
+  background: var(--blue, #4a90d9);
+  color: white;
+}
+
+/* 「點畫面作答」只有畫在畫面上時才需要 */
+.scratch-pause-btn {
+  display: none;
+  padding: 7px 14px;
+  border: 1.5px solid var(--blue, #4a90d9);
+  border-radius: 8px;
+  background: var(--blue-lt, #e8f4fd);
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 800;
+  color: var(--blue-dk, #2d6fa8);
+  font-family: 'Noto Sans TC', 'Nunito', sans-serif;
+  white-space: nowrap;
+}
+
+.scratch-pause-btn.active {
+  background: var(--blue, #4a90d9);
+  color: white;
+}
+
 /* ── 畫布 ── */
 .scratch-canvas {
   flex: 1;
@@ -227,3 +276,52 @@
   touch-action: none;
   background: white;
 }
+
+/* 疊在畫面上的透明畫布，白紙模式時不顯示 */
+.scratch-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+  background: transparent;
+}
+
+/* ── 畫在畫面上模式：面板變透明，標題列＋工具列縮成浮在上方的一條 ── */
+.scratch-panel.mode-screen { background: transparent; }
+.scratch-panel.mode-screen.open { pointer-events: none; }
+.scratch-panel.mode-screen .scratch-canvas { display: none; }
+.scratch-panel.mode-screen .scratch-overlay { display: block; }
+.scratch-panel.mode-screen.open .scratch-overlay,
+.scratch-panel.mode-screen.open .scratch-top { pointer-events: auto; }
+/* 暫停畫筆：筆跡留著，但手指點得到底下的畫面 */
+.scratch-panel.mode-screen.open.paused .scratch-overlay { pointer-events: none; }
+
+.scratch-panel.mode-screen .scratch-top {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100vw - 32px);
+  background: white;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.16);
+}
+
+.scratch-panel.mode-screen .scratch-header,
+.scratch-panel.mode-screen .scratch-toolbar { border-bottom: none; padding: 6px 10px; gap: 10px; }
+.scratch-panel.mode-screen .scratch-title { display: none; }
+.scratch-panel.mode-screen .scratch-sep { flex: 0 0 4px; }
+.scratch-panel.mode-screen .scratch-pause-btn { display: inline-block; }
+/* 浮動條裡關閉鈕放在最右邊 */
+.scratch-panel.mode-screen .scratch-header { order: 2; }
+.scratch-panel.mode-screen .scratch-toolbar { order: 1; }
+.scratch-panel.mode-screen .scratch-header .scratch-mode-seg { margin: 0; }

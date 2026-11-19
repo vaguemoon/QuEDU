@@ -9,7 +9,9 @@
   var isOpen  = false;
   var tool    = 'pen';
   var drawing = false;
-  var canvas, ctx;
+  var mode    = 'paper';
+  var paused  = false;
+  var canvas, ctx;   // 目前模式的畫布
 
   /* 筆跟橡皮擦各自記自己的粗細，切換工具時滑桿會跟著換範圍／換值 */
   var penWidth     = 2.5;
@@ -59,8 +61,13 @@
     panel.id        = 'scratch-panel';
     panel.className = 'scratch-panel';
     panel.innerHTML =
-      '<div class="scratch-header">'
+      '<div class="scratch-top">'
+      + '<div class="scratch-header">'
         + '<span class="scratch-title">✏️ 手寫草稿</span>'
+        + '<div class="scratch-mode-seg">'
+          + '<button class="scratch-mode-btn" id="scratch-mode-paper">📄 白紙</button>'
+          + '<button class="scratch-mode-btn" id="scratch-mode-screen">🖍️ 畫在畫面上</button>'
+        + '</div>'
         + '<button class="scratch-close" id="scratch-close" aria-label="關閉">✕</button>'
       + '</div>'
       + '<div class="scratch-toolbar">'
@@ -73,9 +80,12 @@
           + '<button class="scratch-size-btn" id="scratch-size-plus" aria-label="放大">＋</button>'
         + '</div>'
         + '<span class="scratch-sep"></span>'
+        + '<button class="scratch-pause-btn" id="scratch-pause">👆 點畫面作答</button>'
         + '<button class="scratch-clear-btn" id="scratch-clear">清除全部</button>'
       + '</div>'
-      + '<canvas id="scratch-canvas" class="scratch-canvas"></canvas>';
+      + '</div>'
+      + '<canvas id="scratch-canvas" class="scratch-canvas"></canvas>'
+      + '<canvas id="scratch-overlay" class="scratch-overlay"></canvas>';
     document.body.appendChild(panel);
 
     var eraserCursor = document.createElement('div');
@@ -88,14 +98,47 @@
     document.getElementById('scratch-pen').addEventListener('click', function () { setTool('pen'); });
     document.getElementById('scratch-eraser').addEventListener('click', function () { setTool('eraser'); });
     document.getElementById('scratch-clear').addEventListener('click', clearCanvas);
+    document.getElementById('scratch-mode-paper').addEventListener('click', function () { setMode('paper'); });
+    document.getElementById('scratch-mode-screen').addEventListener('click', function () { setMode('screen'); });
+    document.getElementById('scratch-pause').addEventListener('click', function () { setPaused(!paused); });
     bindHoldStep(document.getElementById('scratch-size-minus'), -1);
     bindHoldStep(document.getElementById('scratch-size-plus'), 1);
 
-    canvas = document.getElementById('scratch-canvas');
-    ctx    = canvas.getContext('2d');
-    setupDrawing();
+    /* 兩種模式各一張畫布，切換模式時另一張的筆跡留著 */
+    [document.getElementById('scratch-canvas'), document.getElementById('scratch-overlay')].forEach(function (c) {
+      c.getContext('2d');
+      setupDrawing(c);
+    });
+    var saved = 'paper';
+    try { saved = localStorage.getItem('scratch-mode') || 'paper'; } catch (e) {}
+    setMode(saved === 'screen' ? 'screen' : 'paper');
     updateSizeDisplay();
+    /* 畫面尺寸一變（平板轉向），畫上去的位置就對不上了，直接清掉 */
     window.addEventListener('resize', function () { if (isOpen) { clearCanvas(); sizeCanvas(); } });
+  }
+
+  /* ── 模式：paper = 全畫面白紙；screen = 透明畫布疊在目前畫面上（劃掉數字、寫借位） ── */
+  function setMode(m) {
+    mode = m;
+    try { localStorage.setItem('scratch-mode', m); } catch (e) {}
+    canvas = document.getElementById(m === 'screen' ? 'scratch-overlay' : 'scratch-canvas');
+    ctx    = canvas.getContext('2d');
+    document.getElementById('scratch-panel').classList.toggle('mode-screen', m === 'screen');
+    document.getElementById('scratch-mode-paper').classList.toggle('active', m === 'paper');
+    document.getElementById('scratch-mode-screen').classList.toggle('active', m === 'screen');
+    setPaused(false);
+    setTool(tool);
+    if (isOpen) requestAnimationFrame(sizeCanvas);
+  }
+
+  /* 畫在畫面上時，筆會擋住底下的按鈕；暫停畫筆讓手指點得到畫面，筆跡保留 */
+  function setPaused(p) {
+    paused = p;
+    document.getElementById('scratch-panel').classList.toggle('paused', p);
+    var b = document.getElementById('scratch-pause');
+    b.classList.toggle('active', p);
+    b.textContent = p ? '✏️ 繼續畫' : '👆 點畫面作答';
+    if (p) hideEraserCursor();
   }
 
   /* ── 面板開關 ── */
@@ -108,10 +151,16 @@
     requestAnimationFrame(sizeCanvas);
   }
 
+  /* 關掉就清空兩張畫布（草稿是暫存的；畫在畫面上的筆跡也不該留到下一題） */
   function closePanel() {
     document.getElementById('scratch-panel').classList.remove('open');
     document.getElementById('scratch-widget-btn').classList.remove('s-active', 's-hidden');
     isOpen = false;
+    ['scratch-canvas', 'scratch-overlay'].forEach(function (id) {
+      var c = document.getElementById(id);
+      c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    });
+    setPaused(false);
   }
 
   /* ── 工具切換 ── */
@@ -183,16 +232,19 @@
     var w   = canvas.offsetWidth;
     var h   = canvas.offsetHeight;
     if (!w || !h) return;
+    /* 尺寸沒變就不要重設——重設寬高會把畫布清空，切換模式回來筆跡要還在 */
+    if (canvas.width === Math.round(w * dpr) && canvas.height === Math.round(h * dpr)) return;
     canvas.width  = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.lineCap  = 'round';
     ctx.lineJoin = 'round';
   }
 
   /* ── 繪圖（Pointer Events，同時支援滑鼠與觸控） ── */
-  function setupDrawing() {
-    canvas.addEventListener('pointerdown', function (e) {
+  /* 兩張畫布都綁，但只有目前模式那張看得到（canvas／ctx 指向它） */
+  function setupDrawing(c) {
+    c.addEventListener('pointerdown', function (e) {
       drawing = true;
       canvas.setPointerCapture(e.pointerId);
       var p = canvasPos(e);
@@ -203,7 +255,7 @@
       e.preventDefault();
     });
 
-    canvas.addEventListener('pointermove', function (e) {
+    c.addEventListener('pointermove', function (e) {
       moveEraserCursor(e);
       if (!drawing) return;
       var p = canvasPos(e);
@@ -212,15 +264,15 @@
       e.preventDefault();
     });
 
-    canvas.addEventListener('pointerup', function (e) {
+    c.addEventListener('pointerup', function (e) {
       drawing = false;
       ctx.closePath();
       e.preventDefault();
     });
 
-    canvas.addEventListener('pointercancel', function () { drawing = false; });
-    canvas.addEventListener('pointerenter', function (e) { moveEraserCursor(e); });
-    canvas.addEventListener('pointerleave', hideEraserCursor);
+    c.addEventListener('pointercancel', function () { drawing = false; });
+    c.addEventListener('pointerenter', function (e) { moveEraserCursor(e); });
+    c.addEventListener('pointerleave', hideEraserCursor);
   }
 
   /* ── 橡皮擦範圍游標：畫一個跟目前粗細一樣大的圓圈跟著游標／手指走，
@@ -248,7 +300,7 @@
       ctx.strokeStyle = '#000';
       ctx.lineWidth   = penWidth;
     } else {
-      /* destination-out 讓畫素透明，顯示 CSS background（白色） */
+      /* destination-out 讓畫素透明，顯示 CSS background（白紙）或底下的畫面 */
       ctx.globalCompositeOperation = 'destination-out';
       ctx.strokeStyle = 'rgba(0,0,0,1)';
       ctx.lineWidth   = eraserWidth;
