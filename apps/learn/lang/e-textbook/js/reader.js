@@ -332,13 +332,12 @@ function etFinalizeSelection() {
   etHandleCircledText(text, { line: etDragLineIdx, ci: lo });
 }
 
-/* ── 圈到／點到文字後：一律先發音＋查詢，符合本課生字詞的話額外標記＋算進度 ──
+/* ── 圈到／點到文字後：只發音（不跳解釋視窗，會擋住課文），符合本課生字詞的話額外標記＋算進度 ──
    posCtx（{line, ci}）是這段文字在課文裡的起始位置，用來精準套用該位置的破音字讀音調整；
-   從「已找到」清單複習點進來時沒有 posCtx（不知道原本在課文哪個位置），就不套用調整 */
+   解釋視窗只留給「已找到」清單複習用 */
 function etHandleCircledText(text, posCtx) {
   etSpeak(text, posCtx);
   var matched = etMatchOfficial(text);
-  showEtLookupPopup(text, matched, posCtx);
   if (matched && !etFoundWords[text]) {
     etFoundWords[text] = true;
     sfxCorrect();

@@ -20,7 +20,7 @@ if (window.speechSynthesis) {
 function etSpeak(text, posCtx) {
   if (!window.speechSynthesis || !text) return;
   if (window.speechSynthesis.speaking || window.speechSynthesis.pending) window.speechSynthesis.cancel();
-  var utt = new SpeechSynthesisUtterance(etApplyPronFixes(text, posCtx));
+  var utt = new SpeechSynthesisUtterance(etTtsText(text, posCtx));
   utt.lang  = 'zh-TW';
   utt.rate  = etRate;
   if (etZhVoice) utt.voice = etZhVoice;
@@ -40,6 +40,39 @@ function etSpeakWithCallback(text, onEnd, posCtx) {
   utt.onend   = finish;
   utt.onerror = finish;
   window.speechSynthesis.speak(utt);
+}
+
+/* 只點一個破音字時，語音引擎沒有上下文可判斷，常唸成別的讀音（例：行 → ㄏㄤˊ）。
+   老師沒填「朗讀同音字」的話，自動找一個跟畫面注音同音、本身不是破音字的字來唸
+   （老師選的讀音，沒選就是預設讀音 readings[0]），唸出來就會跟畫面上的注音一致。
+   詞語、整句有上下文，語音引擎自己會判斷，不換 */
+function etTtsText(text, posCtx) {
+  var out = etApplyPronFixes(text, posCtx);
+  if (text.length !== 1 || out !== text) return out;
+  var readings = window.HETERONYM_READINGS && HETERONYM_READINGS[text];
+  if (!readings || readings.length < 2) return out;
+  var fix = posCtx ? _etReadingFixAt(posCtx.line, posCtx.ci) : null;
+  return _etSameSoundChar(readings[(fix && fix.readingIndex) || 0]) || out;
+}
+
+/* 注音 → 一個同音、而且只有這一種讀音的常用字（ZHUYIN_CHARS 依常用程度排序）。
+   要在注音選字表裡只出現在一個音節、也不在破音字表裡，語音引擎才不會唸成別的音。
+   輕聲單獨唸本來就不自然，不換 */
+var _etCharSyllables = null;   // { 字: 出現在幾個音節 }
+function _etSameSoundChar(reading) {
+  if (!reading || reading.indexOf('˙') >= 0 || !window.ZHUYIN_CHARS) return null;
+  if (!_etCharSyllables) {
+    _etCharSyllables = {};
+    Object.keys(ZHUYIN_CHARS).forEach(function(k) {
+      Array.from(ZHUYIN_CHARS[k]).forEach(function(c) { _etCharSyllables[c] = (_etCharSyllables[c] || 0) + 1; });
+    });
+  }
+  var chars = Array.from(ZHUYIN_CHARS[reading] || '');
+  for (var i = 0; i < chars.length; i++) {
+    var r = HETERONYM_READINGS[chars[i]];
+    if (_etCharSyllables[chars[i]] === 1 && (!r || r.length < 2)) return chars[i];
+  }
+  return null;
 }
 
 function etCancelSpeak() {
