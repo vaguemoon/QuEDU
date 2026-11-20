@@ -152,8 +152,8 @@ function _zwSetMsg(text, cls) {
 }
 
 /* ══ 仿寫測驗 ══
-   聽讀音、不給範例和淺色字；注音筆畫少，整題一筆都不能錯才算通過（錯了還是要寫完，
-   同一筆連錯 3 次才露出淺色字提示）。沒通過的下一輪再考，直到全部通過；
+   聽讀音、不給範例和淺色字；注音筆畫少，整題一筆都不能錯才算通過。錯了這題就不算了，
+   所以一錯就露出淺色字讓他照著寫完。沒通過的下一輪再考，直到全部通過；
    輪次結算／最終結果頁與聽音選字共用（exam.js 的 ze* 狀態）。 */
 var zweWriters  = [];
 var zweMistakes = 0;
@@ -201,18 +201,17 @@ function renderZwExamQuestion() {
 }
 
 function _zweQuiz(i, token) {
-  var streak = 0;
   document.querySelectorAll('#zwe-boxes .zw-quiz-box').forEach(function(el, k) {
     el.classList.toggle('zw-active', k === i && zweWriters.length > 1);
   });
   zweWriters[i].quiz({
     onMistake: function() {
-      zweMistakes++; streak++;
+      zweMistakes++;
       flashBox('zwe-box-' + i, 'red'); sfxWrong();
-      if (zweMistakes === 1) _zweSetMsg('寫錯了一筆，這題下一輪再考，先把它寫完', 'bad');
-      if (streak === 3) zweWriters[i].showOutline();
+      if (zweMistakes === 1) _zweSetMsg('寫錯了一筆，這題下一輪再考，先照淺色字把它寫完', 'bad');
+      zweWriters[i].showOutline();
     },
-    onCorrectStroke: function() { streak = 0; flashBox('zwe-box-' + i, 'green'); sfxCorrect(); },
+    onCorrectStroke: function() { flashBox('zwe-box-' + i, 'green'); sfxCorrect(); },
     onComplete: function() {
       if (token !== zweToken) return;
       if (i + 1 < zweWriters.length) { _zweQuiz(i + 1, token); return; }
