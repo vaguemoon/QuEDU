@@ -91,22 +91,19 @@
       <button class="zw-symbol" id="zw-symbol" onclick="zySpeakSymbol(this.textContent)" title="再聽一次"></button>
       <button class="zw-nav" id="zw-next" onclick="zwStep(1)">下一個 ▶</button>
     </div>
-    <div class="zw-cols">
+    <div class="zw-main">
       <div class="zw-col">
-        <div class="zw-col-title">👀 看筆順</div>
-        <div class="zw-boxes" id="zw-ref"></div>
-        <div class="zw-ctrl"><button class="zw-btn" onclick="zwPlayRef()">▶ 再播一次</button></div>
-      </div>
-      <div class="zw-col">
-        <div class="zw-col-title">✍️ 跟著寫</div>
-        <div class="zw-boxes" id="zw-quiz"></div>
-        <div class="zw-ctrl">
-          <button class="zw-btn zw-btn-light" id="zw-outline-btn" onclick="zwToggleOutline()"></button>
-          <button class="zw-btn zw-btn-light" onclick="zwRestart()">🔄 重寫</button>
+        <div class="zw-tab-bar">
+          <button class="zw-tab" id="zw-tab-ref"   onclick="zwSetStep('ref')">👁 看筆順</button>
+          <button class="zw-tab" id="zw-tab-trace" onclick="zwSetStep('trace')">✍️ 跟著寫</button>
+          <button class="zw-tab" id="zw-tab-dict"  onclick="zwSetStep('dict')">📝 自己默寫</button>
         </div>
+        <div class="zw-boxes" id="zw-boxes"></div>
+        <div class="zw-msg" id="zw-msg"></div>
+        <div class="zw-ctrl" id="zw-ctrl"></div>
       </div>
+      <div class="zw-side" id="zw-side"></div>
     </div>
-    <div class="zw-msg" id="zw-msg"></div>
   </div>
 </div>
 

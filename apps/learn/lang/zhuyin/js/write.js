@@ -1,19 +1,18 @@
 /**
- * write.js — 仿寫練習（單音／結合韻共用）
- * 左邊播範例筆順、右邊跟著描寫；結合韻兩個符號由上往下各一格，寫完第一格接著寫第二格。
+ * write.js — 仿寫練習＋仿寫測驗（單音／結合韻共用）
+ * 練習比照練字趣：同一格依步驟切換「看筆順 → 跟著寫（有淺色字）→ 自己默寫（沒有淺色字）」，
+ * 右邊放圖片與口訣；結合韻兩個符號由上往下各一格，寫完第一格接著寫第二格。
  * 筆畫資料來自 strokes.js（HanziWriter charDataLoader）。
  */
 'use strict';
 
 var zwList      = [];    // 目前這區可仿寫的項目（單音＝符號，結合韻＝兩個符號的字串）
 var zwIdx       = 0;
-var zwRefW      = [];    // 範例 HanziWriter（每個符號一個）
-var zwQuizW     = [];    // 練習格 HanziWriter
-var zwQuizPos   = 0;     // 目前正在寫第幾格
-var zwOutline   = true;  // 練習格是否顯示淺色字（描紅）
-var zwRunToken  = 0;     // 換題後讓舊的動畫／測驗回呼失效
-
-try { zwOutline = localStorage.getItem('zw-outline') !== 'off'; } catch (e) {}
+var zwStepName  = 'ref'; // 'ref' 看筆順｜'trace' 跟著寫｜'dict' 自己默寫
+var zwTraced    = false; // 這個符號跟著寫完過一次，才開放默寫（比照練字趣寫完才出現「開始默寫」）
+var zwWriters   = [];    // 目前格子裡的 HanziWriter（每個符號一個）
+var zwMistakes  = 0;     // 默寫寫錯幾筆
+var zwRunToken  = 0;     // 換題／換步驟後讓舊的動畫／測驗回呼失效
 
 function _zwWriterOpts(sz, extra) {
   return Object.assign({
@@ -34,7 +33,6 @@ function startZwPractice(selectedItems, startAt) {
   zwIdx = Math.max(0, zwList.indexOf(startAt));
   showPage('zy-write');
   renderZyWrite();
-  zySpeakSymbol(zwList[zwIdx]);
 }
 
 function zwStep(d) {
@@ -42,81 +40,128 @@ function zwStep(d) {
   if (n < 0 || n >= zwList.length) return;
   zwIdx = n;
   renderZyWrite();
-  zySpeakSymbol(zwList[zwIdx]);
+}
+
+/* 換一個符號：回到第一步看筆順 */
+function renderZyWrite() {
+  var item = zwList[zwIdx];
+  document.getElementById('zw-symbol').textContent = item;
+  document.getElementById('zw-prev').disabled = zwIdx === 0;
+  document.getElementById('zw-next').disabled = zwIdx === zwList.length - 1;
+  zwTraced = false;
+  _zwRenderSide(item);
+  zySpeakSymbol(item);
+  zwSetStep('ref');
+}
+
+/* 右邊：老師建的圖片＋口訣（點了唸口訣），沒有圖片就放大符號 */
+function _zwRenderSide(item) {
+  var d = zyActiveData()[item] || {};
+  document.getElementById('zw-side').innerHTML =
+    (d.imageUrl
+      ? '<img class="zw-side-img" src="' + escHtml(d.imageUrl) + '" alt="" onclick="zySpeakPhrase(zwList[zwIdx])">'
+      : '<div class="zw-side-sym" onclick="zySpeakSymbol(zwList[zwIdx])">' + escHtml(item) + '</div>') +
+    (d.phrase ? '<div class="zw-side-phrase" onclick="zySpeakPhrase(zwList[zwIdx])">' + escHtml(d.phrase) + '</div>' : '') +
+    '<div class="zw-side-hint">🔊 點一下可以再聽一次</div>';
 }
 
 /* 依視窗高度決定格子大小：結合韻上下兩格，要一起塞進一個畫面不用捲動 */
 function _zwBoxSize(count) {
-  var col  = document.querySelector('#page-zy-write .zw-col');
-  var colW = col ? col.getBoundingClientRect().width - 8 : 360;
-  var avail = window.innerHeight - 300;
+  var avail = window.innerHeight - 340;
   var sz = count > 1 ? (avail - 12) / count : avail;
-  return Math.round(Math.max(150, Math.min(sz, colW, 400)));
+  return Math.round(Math.max(150, Math.min(sz, 400)));
 }
 
-function renderZyWrite() {
+function zwSetStep(step) {
+  if (step === 'dict' && !zwTraced) return;
   var token = ++zwRunToken;
-  var item = zwList[zwIdx];
-  var syms = Array.from(item);
+  zwStepName = step;
+  zwMistakes = 0;
+  ['ref', 'trace', 'dict'].forEach(function(s) {
+    document.getElementById('zw-tab-' + s).classList.toggle('active', s === step);
+  });
+  document.getElementById('zw-tab-dict').disabled = !zwTraced;
+  _zwSetMsg(step === 'ref' ? '' : step === 'trace' ? '照著淺色字寫寫看' : '不看淺色字，自己寫出來', '');
 
-  document.getElementById('zw-symbol').textContent = item;
-  document.getElementById('zw-prev').disabled = zwIdx === 0;
-  document.getElementById('zw-next').disabled = zwIdx === zwList.length - 1;
-  _zwSetMsg('', '');
-  _zwSyncOutlineBtn();
-
-  var refWrap  = document.getElementById('zw-ref');
-  var quizWrap = document.getElementById('zw-quiz');
-  refWrap.innerHTML = ''; quizWrap.innerHTML = '';
+  var syms = Array.from(zwList[zwIdx]);
+  var wrap = document.getElementById('zw-boxes');
+  wrap.innerHTML = '';
   var sz = _zwBoxSize(syms.length);
-
-  zwRefW = []; zwQuizW = []; zwQuizPos = 0;
-  syms.forEach(function(s, i) {
-    refWrap.insertAdjacentHTML('beforeend',
-      '<div class="zw-box" id="zw-ref-' + i + '" style="width:' + sz + 'px;height:' + sz + 'px"></div>');
-    quizWrap.insertAdjacentHTML('beforeend',
-      '<div class="zw-box zw-quiz-box" id="zw-quiz-' + i + '" style="width:' + sz + 'px;height:' + sz + 'px"></div>');
-    zwRefW.push(HanziWriter.create('zw-ref-' + i, s, _zwWriterOpts(sz, {
-      strokeColor: '#ff8c42', strokeAnimationSpeed: .8, delayBetweenStrokes: 450
-    })));
-    zwQuizW.push(HanziWriter.create('zw-quiz-' + i, s, _zwWriterOpts(sz, { showOutline: zwOutline })));
+  zwWriters = syms.map(function(s, i) {
+    wrap.insertAdjacentHTML('beforeend',
+      '<div class="zw-box' + (step === 'ref' ? '' : ' zw-quiz-box') + '" id="zw-box-' + i + '" style="width:' + sz + 'px;height:' + sz + 'px"></div>');
+    return HanziWriter.create('zw-box-' + i, s, _zwWriterOpts(sz, step === 'ref'
+      ? { strokeColor: '#ff8c42', strokeAnimationSpeed: .8, delayBetweenStrokes: 450 }
+      : { showOutline: step === 'trace' }));
   });
 
-  setTimeout(function() { if (token === zwRunToken) zwPlayRef(); }, 300);
-  _zwStartQuiz(0, token);
+  if (step === 'ref') {
+    _zwSetCtrl('<button class="zw-btn zw-btn-light" onclick="zwPlayRef()">▶ 再播一次</button>' +
+               '<button class="zw-btn" onclick="zwSetStep(\'trace\')">✍️ 換我跟著寫 →</button>');
+    setTimeout(function() { if (token === zwRunToken) zwPlayRef(); }, 300);
+  } else {
+    _zwSetCtrl('<button class="zw-btn zw-btn-light" onclick="zwSetStep(zwStepName)">🔄 重寫</button>');
+    _zwQuiz(0, token);
+  }
 }
 
 /* 範例動畫：結合韻依序播完第一個再播第二個 */
 function zwPlayRef() {
+  if (zwStepName !== 'ref') return;
   var token = zwRunToken;
-  zwRefW.forEach(function(w) { w.hideCharacter(); });
+  zwWriters.forEach(function(w) { w.hideCharacter(); });
   (function play(i) {
-    if (token !== zwRunToken || i >= zwRefW.length) return;
-    zwRefW[i].animateCharacter({ onComplete: function() { setTimeout(function() { play(i + 1); }, 300); } });
+    if (token !== zwRunToken || i >= zwWriters.length) return;
+    zwWriters[i].animateCharacter({ onComplete: function() { setTimeout(function() { play(i + 1); }, 300); } });
   })(0);
 }
 
-function _zwStartQuiz(i, token) {
-  zwQuizPos = i;
-  document.querySelectorAll('#zw-quiz .zw-quiz-box').forEach(function(el, k) {
-    el.classList.toggle('zw-active', k === i && zwQuizW.length > 1);
+function _zwQuiz(i, token) {
+  var step = zwStepName;
+  document.querySelectorAll('#zw-boxes .zw-quiz-box').forEach(function(el, k) {
+    el.classList.toggle('zw-active', k === i && zwWriters.length > 1);
   });
-  zwQuizW[i].quiz({
-    onMistake: function() { flashBox('zw-quiz-' + i, 'red'); sfxWrong(); },
+  zwWriters[i].quiz({
+    onMistake: function() {
+      flashBox('zw-box-' + i, 'red'); sfxWrong();
+      if (step !== 'dict') return;
+      zwMistakes++;
+      zwWriters[i].showOutline(); // 默寫寫錯就露出淺色字，讓他照著寫完
+      if (zwMistakes === 1) _zwSetMsg('寫錯了，先照淺色字寫完，再默寫一次', 'bad');
+    },
     onCorrectStroke: function() { sfxCorrect(); },
     onComplete: function() {
       if (token !== zwRunToken) return;
-      flashBox('zw-quiz-' + i, 'green');
-      if (i + 1 < zwQuizW.length) {
-        _zwStartQuiz(i + 1, token);
-      } else {
-        document.querySelectorAll('#zw-quiz .zw-quiz-box').forEach(function(el) { el.classList.remove('zw-active'); });
-        sfxPass();
-        _zwMarkPracticed(zwList[zwIdx]);
-        _zwSetMsg('🎉 寫得好！' + (zwIdx < zwList.length - 1 ? '按「下一個」繼續' : '都練完了，可以去測驗囉'), 'ok');
-      }
+      flashBox('zw-box-' + i, 'green');
+      if (i + 1 < zwWriters.length) { _zwQuiz(i + 1, token); return; }
+      document.querySelectorAll('#zw-boxes .zw-quiz-box').forEach(function(el) { el.classList.remove('zw-active'); });
+      if (step === 'trace') _zwTraceDone(); else _zwDictDone();
     }
   });
+}
+
+function _zwTraceDone() {
+  sfxPass();
+  zwTraced = true;
+  document.getElementById('zw-tab-dict').disabled = false;
+  _zwMarkPracticed(zwList[zwIdx]);
+  _zwSetMsg('🎉 寫得好！接著不看淺色字，自己默寫一次', 'ok');
+  _zwSetCtrl('<button class="zw-btn zw-btn-light" onclick="zwSetStep(\'trace\')">🔄 再跟著寫一次</button>' +
+             '<button class="zw-btn" onclick="zwSetStep(\'dict\')">📝 開始默寫 →</button>');
+}
+
+function _zwDictDone() {
+  var last = zwIdx === zwList.length - 1;
+  if (zwMistakes === 0) {
+    sfxCelebrate();
+    _zwSetMsg('🏆 默寫成功！' + (last ? '都練完了，可以去測驗囉' : ''), 'ok');
+    _zwSetCtrl('<button class="zw-btn zw-btn-light" onclick="zwSetStep(\'dict\')">🔄 再默寫一次</button>' +
+               (last ? '' : '<button class="zw-btn" onclick="zwStep(1)">下一個 ▶</button>'));
+  } else {
+    _zwSetMsg('寫完了，有 ' + zwMistakes + ' 筆寫錯，再默寫一次看看', 'bad');
+    _zwSetCtrl('<button class="zw-btn zw-btn-light" onclick="zwSetStep(\'ref\')">👁 再看一次筆順</button>' +
+               '<button class="zw-btn" onclick="zwSetStep(\'dict\')">🔄 再默寫一次</button>');
+  }
 }
 
 /* 練習寫完一次：還沒學過的標成「已練習」（精熟只能靠測驗取得） */
@@ -125,23 +170,8 @@ function _zwMarkPracticed(item) {
   if (!map[item] || map[item] === 'new') { map[item] = 'practiced'; saveZySymbolStatus(); }
 }
 
-function zwRestart() {
-  var token = ++zwRunToken;
-  _zwSetMsg('', '');
-  zwQuizW.forEach(function(w) { w.cancelQuiz(); w.hideCharacter(); });
-  _zwStartQuiz(0, token);
-}
-
-function zwToggleOutline() {
-  zwOutline = !zwOutline;
-  try { localStorage.setItem('zw-outline', zwOutline ? 'on' : 'off'); } catch (e) {}
-  zwQuizW.forEach(function(w) { if (zwOutline) w.showOutline(); else w.hideOutline(); });
-  _zwSyncOutlineBtn();
-}
-
-function _zwSyncOutlineBtn() {
-  var b = document.getElementById('zw-outline-btn');
-  if (b) b.textContent = zwOutline ? '👻 隱藏淺色字' : '👁 顯示淺色字';
+function _zwSetCtrl(html) {
+  document.getElementById('zw-ctrl').innerHTML = html;
 }
 
 function _zwSetMsg(text, cls) {
@@ -257,5 +287,5 @@ var _zwResizeTimer = null;
 window.addEventListener('resize', function() {
   if (currentPage !== 'zy-write') return;
   clearTimeout(_zwResizeTimer);
-  _zwResizeTimer = setTimeout(renderZyWrite, 250);
+  _zwResizeTimer = setTimeout(function() { zwSetStep(zwStepName); }, 250);
 });
