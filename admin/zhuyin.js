@@ -99,6 +99,7 @@ function _zyRenderRoot() {
         '學生端點符號本身：有錄音就播錄音，沒有就退回自動朗讀；點圖片：唸完整口訣。' +
       '</p>' +
       groupsHtml;
+    _zyConvertLegacyWebm(_zyCollectionName(), freshData);
   }).catch(function(e) {
     wrap.innerHTML = '<p style="color:var(--red)">載入失敗：' + e.message + '</p>';
   });
@@ -313,6 +314,40 @@ function _zyTranscodeToWav(blob, callback) {
     });
   };
   reader.readAsArrayBuffer(blob);
+}
+
+/* 加入 WAV 轉檔之前錄的音檔還是 WebM（iPad 完全放不出來，學生端會退回自動朗讀）。
+   老師打開這個分頁時自動在背景轉成 WAV 寫回去，不用一個一個重錄；
+   桌機 Chrome/Edge 才解得開 WebM，解不開的就保持原樣，下次換台電腦開再轉 */
+var _zyConverting = {}; // { collection: true }，同一份資料轉檔中不要重複觸發
+function _zyConvertLegacyWebm(collection, data) {
+  if (_zyConverting[collection]) return;
+  var targets = Object.keys(data).filter(function(s) { return /^data:audio\/webm/.test(data[s].audioData); });
+  if (!targets.length) return;
+  _zyConverting[collection] = true;
+  var done = 0;
+  (function next(i) {
+    if (i >= targets.length) {
+      _zyConverting[collection] = false;
+      if (done) showToast('🔄 已把 ' + done + ' 個舊格式錄音轉成平板可播放的格式');
+      return;
+    }
+    var s = targets[i];
+    fetch(data[s].audioData).then(function(r) { return r.blob(); }).then(function(blob) {
+      _zyTranscodeToWav(blob, function(wav) {
+        if (wav === blob) { next(i + 1); return; } // 這台瀏覽器解不開，略過
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var url = e.target.result;
+          if (url.length / 1024 > 900) { next(i + 1); return; }
+          db.collection(collection).doc(s).update({ audioData: url }).then(function() {
+            data[s].audioData = url; done++; next(i + 1);
+          }).catch(function() { next(i + 1); });
+        };
+        reader.readAsDataURL(wav);
+      });
+    }).catch(function() { next(i + 1); });
+  })(0);
 }
 
 function _zyOnAudioStopped() {
