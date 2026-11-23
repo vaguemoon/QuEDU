@@ -309,7 +309,7 @@
 
 /* ── 課程選擇：覆寫 shared/curriculum.css（chinese 內部捲動版型） ── */
 #page-curriculum { display: none; flex-direction: column; }
-#page-curriculum.active { display: flex; height: 100vh; overflow: hidden; box-sizing: border-box; }
+#page-curriculum.active { display: flex; height: 100vh; height: 100dvh; overflow: hidden; box-sizing: border-box; }
 /* chinese 專屬步驟列（shared 無此元件） */
 .curr-stepbar {
   display: flex; align-items: center; justify-content: center; gap: 6px;

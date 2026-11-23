@@ -144,7 +144,7 @@
    ══════════════════════════════════════ */
 #page-game.active {
   display: flex; flex-direction: column;
-  height: 100vh; overflow: hidden;
+  height: 100vh; height: 100dvh; overflow: hidden;
 }
 
 .game-layout {

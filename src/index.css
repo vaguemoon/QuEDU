@@ -1,6 +1,8 @@
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
-.app{width:100vw;height:100vh;display:flex;flex-direction:column}
+/* 100dvh：用網頁瀏覽器（掃 QR code）開時，Safari 的 100vh 是「網址列收起時」的高度，比看得到的範圍高，
+   下方會被工具列蓋住又不能捲動；dvh 是實際可見高度，舊瀏覽器不認得就退回上一行的 100vh */
+body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);height:100vh;height:100dvh;overflow:hidden}
+.app{width:100vw;height:100vh;height:100dvh;display:flex;flex-direction:column}
 
 /* === PANELS === */
 #main-content{flex:1;position:relative;overflow:hidden}
@@ -71,7 +73,7 @@ body{font-family:'Nunito','Noto Sans TC',sans-serif;background:var(--bg);color:v
 .hub-screen{display:flex;min-height:100vh;background:var(--bg)}
 
 /* Sidebar（桌面版） */
-.hub-sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;background:var(--white);border-right:1px solid var(--border);padding:20px 14px;z-index:100;overflow-y:auto}
+.hub-sidebar{width:220px;flex-shrink:0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;height:100dvh;background:var(--white);border-right:1px solid var(--border);padding:20px 14px;z-index:100;overflow-y:auto}
 .hub-sidebar-brand{display:flex;align-items:center;gap:10px;margin-bottom:28px;padding:0 6px}
 .hub-sidebar-avatar{font-size:2rem;line-height:1;flex-shrink:0}
 .hub-sidebar-name{font-size:1rem;font-weight:900;color:var(--blue-dk);word-break:break-all}
