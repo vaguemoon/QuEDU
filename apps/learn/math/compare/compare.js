@@ -1,4 +1,8 @@
-/* compare.js — 比較趣：不用計算，判斷「A 運算 B」跟 A 誰大
+/* compare.js — 比較趣
+ *
+ * 最基本的項目「比大小」：兩個整數直接比（10 以內～一萬以內），規則與出題見「比大小」那段。
+ *
+ * 「不用算比大小」：不用計算，判斷「A 運算 B」跟 A 誰大
  *
  * 判斷的關鍵都在 B（另一個數）：
  *   加：B > 0 → 和變大；B = 0 → 不變
@@ -18,6 +22,8 @@
 var ROUND_SIZE = 10;
 
 var MODES = [
+  { id: 'num', icon: '🔢', name: '比大小', ex: '47 □ 74',
+    sub: '比較兩個數誰比較大、誰比較小，在□裡填 >、= 或 <' },
   { id: 'op',  icon: '⚖️', name: '不用算比大小', ex: '0.72 × 1.5 □ 0.72',
     sub: '不用計算，判斷算出來的答案比原來的數大、小，還是一樣' },
   { id: 'est', icon: '🎯', name: '估一估：比較接近誰', ex: '876 → 800 或 900？',
@@ -66,7 +72,17 @@ var NUMS = [
 ];
 var OP_SIGN = { add: '+', sub: '−', mul: '×', div: '÷' };
 
-var cfg = { mode: 'op', op: 'div', num: 'dec', estCat: 'int', est: 'hun' };
+/* 比大小：兩個整數直接比，依數的範圍分程度 */
+var NUM_LEVELS = [
+  { id: 'n10',    icon: '🖐️', name: '10 以內',   ex: '7 □ 4',       max: 10 },
+  { id: 'n20',    icon: '🔟', name: '20 以內',   ex: '15 □ 18',     max: 20 },
+  { id: 'n100',   icon: '💯', name: '100 以內',  ex: '47 □ 74',     max: 100 },
+  { id: 'n1000',  icon: '🧱', name: '1000 以內', ex: '352 □ 325',   max: 1000 },
+  { id: 'n10000', icon: '🏙️', name: '一萬以內',  ex: '4087 □ 4870', max: 10000 },
+  { id: 'mix',    icon: '🔀', name: '綜合',      ex: '上面幾種混合' }
+];
+
+var cfg = { mode: 'num', numLv: 'n10', op: 'div', num: 'dec', estCat: 'int', est: 'hun' };
 var round = null; // { qs:[], idx, correct, answered }
 
 /* ══ 數字 ══ */
@@ -220,6 +236,106 @@ function numberLineSvg(q) {
   return s + '</svg>';
 }
 
+/* ══ 比大小 ══ */
+/* 隨便抽兩個數，大部分題目位數不同、一眼就看得出來，練不到「同位數要從最高位比」。
+   所以兩位數以上會刻意出：數字對調（47／74，十位個位寫反的孩子最會錯）、
+   最高位相同只差在後面某一位（352／358），另外約 15% 出一樣的數練「=」 */
+var PLACE_NAME = ['個', '十', '百', '千', '萬'];
+
+function numLevel(id) { return NUM_LEVELS.find(function(l) { return l.id === id; }); }
+
+function makeNumQuestion() {
+  var lvId = cfg.numLv === 'mix'
+    ? pick(NUM_LEVELS.filter(function(l) { return l.id !== 'mix'; })).id : cfg.numLv;
+  var max = numLevel(lvId).max, lo = max === 10 ? 0 : 1;
+  var a = ri(lo, max), b, r = Math.random();
+  if (r < 0.15) b = a;
+  else {
+    for (var t = 0; t < 100; t++) {
+      if (max >= 100 && r < 0.45) b = swapDigits(a);
+      else if (max >= 20 && r < 0.75) b = changeLowDigit(a, max);
+      else if (max >= 100 && r < 0.88) b = ri(lo, Math.pow(10, String(a).length - 1) - 1); /* 位數比較少的數 */
+      else b = ri(lo, max);
+      if (b !== null && b !== a && b >= lo && b <= max) break;
+      a = ri(lo, max); b = null;
+    }
+    if (b === null || b === a) b = a === max ? a - 1 : a + 1;
+    if (Math.random() < 0.5) { var tmp = a; a = b; b = tmp; }                            /* 大的不要老是在左邊 */
+  }
+  return { kind: 'num', lv: lvId, a: a, b: b, ans: a > b ? '>' : a < b ? '<' : '=' };
+}
+
+/* 數字重新排列（不能變成 0 開頭）：47 → 74、352 → 325／532… */
+function swapDigits(n) {
+  var d = String(n).split('');
+  if (d.length < 2) return null;
+  for (var t = 0; t < 20; t++) {
+    var s = d.slice().sort(function() { return Math.random() - 0.5; });
+    if (s[0] !== '0' && s.join('') !== d.join('')) return parseInt(s.join(''), 10);
+  }
+  return null;
+}
+/* 最高位不變，換掉後面某一位的數字 */
+function changeLowDigit(n, max) {
+  var d = String(n).split('');
+  if (d.length < 2) return ri(Math.max(0, n - 3), Math.min(max, n + 3));
+  var i = ri(1, d.length - 1);
+  d[i] = String(ri(0, 9));
+  return parseInt(d.join(''), 10);
+}
+
+/* 規則：位數不同 → 位數多的大；同位數 → 從最高位往下找第一個不一樣的位；10 以內／20 以內看數線 */
+function numFirstDiff(q) {
+  var sa = String(q.a), sb = String(q.b);
+  for (var i = 0; i < sa.length; i++) if (sa[i] !== sb[i]) return i;
+  return -1;
+}
+function numExplain(q) {
+  var big = Math.max(q.a, q.b), small = Math.min(q.a, q.b);
+  if (q.a === q.b) return '兩個數一樣，所以填「=」。';
+  var la = String(q.a).length, lb = String(q.b).length;
+  if (numLevel(q.lv).max <= 20) return '在數線上，' + big + ' 在 ' + small + ' 的右邊，越右邊的數越大，所以 ' + big + ' 比較大。';
+  if (la !== lb) return q.a + ' 是' + cnDigits(la) + '位數，' + q.b + ' 是' + cnDigits(lb) + '位數，位數多的比較大，所以 ' + big + ' 比較大。';
+  var sa = String(q.a), sb = String(q.b), i = numFirstDiff(q), out = '從最高位開始比：';
+  for (var k = 0; k < i; k++) out += PLACE_NAME[la - 1 - k] + '位都是 ' + sa[k] + '，';
+  var da = +sa[i], db = +sb[i];
+  return out + PLACE_NAME[la - 1 - i] + '位 ' + Math.max(da, db) + ' 比 ' + Math.min(da, db) + ' 大，所以 ' + big + ' 比較大。';
+}
+function cnDigits(n) { return ['', '一', '二', '三', '四', '五'][n]; }
+
+/* 答錯時的圖：20 以內畫數線，其他畫位值表、標出決定大小的那一位 */
+function numVisual(q) {
+  if (numLevel(q.lv).max <= 20) return numLineSvg(q);
+  var la = String(q.a).length, lb = String(q.b).length, n = Math.max(la, lb);
+  var diff = (la === lb && q.a !== q.b) ? n - 1 - numFirstDiff(q) : -1; /* 決定大小的位（0＝個位） */
+  function row(v) {
+    var s = String(v), cells = '';
+    for (var p = n - 1; p >= 0; p--) {
+      var ch = p < s.length ? s[s.length - 1 - p] : '';
+      cells += '<td class="' + (p === diff ? 'pv-key' : '') + '">' + ch + '</td>';
+    }
+    return '<tr>' + cells + '</tr>';
+  }
+  var head = '';
+  for (var p = n - 1; p >= 0; p--) head += '<th class="' + (p === diff ? 'pv-key' : '') + '">' + PLACE_NAME[p] + '位</th>';
+  return '<table class="pv-table"><tr>' + head + '</tr>' + row(q.a) + row(q.b) + '</table>';
+}
+function numLineSvg(q) {
+  var max = numLevel(q.lv).max, W = 600, L = 30, R = 570, Y = 50;
+  function x(v) { return L + (R - L) * v / max; }
+  var s = '<svg viewBox="0 0 ' + W + ' 96" class="nl-svg" role="img" aria-label="數線">' +
+    '<line x1="' + L + '" y1="' + Y + '" x2="' + R + '" y2="' + Y + '" stroke="var(--text)" stroke-width="2.5"/>';
+  for (var v = 0; v <= max; v++) {
+    s += '<line x1="' + x(v) + '" y1="' + (Y - 7) + '" x2="' + x(v) + '" y2="' + (Y + 7) + '" stroke="var(--text)" stroke-width="2"/>';
+    if (max <= 10 || v % 5 === 0) s += '<text x="' + x(v) + '" y="' + (Y + 30) + '" text-anchor="middle" class="nl-num">' + v + '</text>';
+  }
+  [[q.a, 'var(--cmp-gt)'], [q.b, 'var(--cmp-lt)']].forEach(function(p) {
+    s += '<circle cx="' + x(p[0]) + '" cy="' + Y + '" r="9" fill="' + p[1] + '"/>' +
+         '<text x="' + x(p[0]) + '" y="' + (Y - 16) + '" text-anchor="middle" class="nl-num nl-b" fill="' + p[1] + '">' + p[0] + '</text>';
+  });
+  return s + '</svg>';
+}
+
 /* ══ 估一估 ══ */
 /* 題目裡的數一律存成「分子 v ／ 分母 s」整數：整數 s=1、小數 s=10/100、分數 s=分母。
    lo/hi 是兩個選項（同樣以 s 為分母），所以三種數字共用同一套出題／說明／數線。
@@ -350,7 +466,9 @@ function renderPickers() {
   }
   document.getElementById('mode-grid').innerHTML = MODES.map(function(o) { return card(o, cfg.mode, 'setMode'); }).join('');
   document.getElementById('home-sub').textContent = MODES.find(function(m) { return m.id === cfg.mode; }).sub;
+  document.getElementById('home-num').classList.toggle('hidden', cfg.mode !== 'num');
   document.getElementById('home-op').classList.toggle('hidden', cfg.mode !== 'op');
+  document.getElementById('numlv-grid').innerHTML = NUM_LEVELS.map(function(o) { return card(o, cfg.numLv, 'setNumLv'); }).join('');
   document.getElementById('home-est').classList.toggle('hidden', cfg.mode !== 'est');
   document.getElementById('op-grid').innerHTML  = OPS.map(function(o) { return card(o, cfg.op, 'setOp'); }).join('');
   document.getElementById('num-grid').innerHTML = NUMS.map(function(o) { return card(o, cfg.num, 'setNum'); }).join('');
@@ -358,6 +476,7 @@ function renderPickers() {
   document.getElementById('est-grid').innerHTML = EST_LEVELS[cfg.estCat].map(function(o) { return card(o, cfg.est, 'setEst'); }).join('');
 }
 function setMode(id) { cfg.mode = id; renderPickers(); }
+function setNumLv(id) { cfg.numLv = id; renderPickers(); }
 function setOp(id)  { cfg.op = id;  renderPickers(); }
 function setNum(id) { cfg.num = id; renderPickers(); }
 function setEst(id) { cfg.est = id; renderPickers(); }
@@ -369,9 +488,12 @@ function goHome() { round = null; showPage('home'); }
 function startRound() {
   var qs = [];
   var est = cfg.mode === 'est';
-  for (var i = 0; i < ROUND_SIZE; i++) qs.push(est ? makeEstQuestion() : makeQuestion());
+  var gen = est ? makeEstQuestion : cfg.mode === 'num' ? makeNumQuestion : makeQuestion;
+  for (var i = 0; i < ROUND_SIZE; i++) qs.push(gen());
   round = { qs: qs, idx: 0, correct: 0, answered: false };
-  if (est) {
+  if (cfg.mode === 'num') {
+    document.getElementById('hud-mode').textContent = '比大小・' + numLevel(cfg.numLv).name;
+  } else if (est) {
     document.getElementById('hud-mode').textContent = '估一估・' +
       EST_CATS.find(function(c) { return c.id === cfg.estCat; }).name + '・' + estLevel(cfg.estCat, cfg.est).name;
   } else {
@@ -390,6 +512,7 @@ function exprHtml(q, filled) {
     return '<span class="num">' + estVal(q, q.v, q.s).html + '</span>' +
       '<span class="est-word">比較接近</span>' + box + '<span class="est-word">？</span>';
   }
+  if (q.kind === 'num') return '<span class="num">' + q.a + '</span>' + box + '<span class="num">' + q.b + '</span>';
   return '<span class="num">' + q.A.html + '</span>' +
     '<span class="op">' + OP_SIGN[q.op] + '</span>' +
     '<span class="num">' + q.B.html + '</span>' + box +
@@ -404,8 +527,8 @@ function renderQuestion() {
   document.getElementById('q-expr').innerHTML = exprHtml(q, '');
   document.getElementById('explain').classList.add('hidden');
   var opts = q.kind === 'est' ? [estText(q, q.lo), estText(q, q.hi)] : ['>', '=', '<'];
-  document.getElementById('q-hint').textContent = q.kind === 'est'
-    ? '不用精確計算，選出比較接近的數' : '不用計算，在□裡填入 >、= 或 <';
+  document.getElementById('q-hint').textContent = q.kind === 'est' ? '不用精確計算，選出比較接近的數'
+    : q.kind === 'num' ? '哪個數比較大？在□裡填入 >、= 或 <' : '不用計算，在□裡填入 >、= 或 <';
   document.getElementById('ans-row').innerHTML = opts.map(function(o) {
     return '<button class="ans-btn' + (q.kind === 'est' ? ' ans-btn-num' : '') + '" data-v="' + escHtml(o) + '" onclick="answer(this.dataset.v)">' +
       escHtml(o) + '</button>';
@@ -432,7 +555,12 @@ function answer(sym) {
   ex.classList.remove('hidden');
   ex.classList.toggle('is-wrong', !ok);
   document.getElementById('explain-head').textContent = ok ? '⭕ 答對了！' : '再想一想：正確答案是「' + q.ans + '」';
-  if (q.kind === 'est') {
+  if (q.kind === 'num') {
+    document.getElementById('explain-rule').textContent = numExplain(q);
+    document.getElementById('explain-line').innerHTML = ok ? '' : numVisual(q);
+    document.getElementById('explain-final').innerHTML = ok ? '' :
+      '所以 <span class="final-expr">' + exprHtml(q, q.ans).replace(' id="ans-box"', '') + '</span>';
+  } else if (q.kind === 'est') {
     document.getElementById('explain-rule').innerHTML = estExplain(q);
     document.getElementById('explain-line').innerHTML = ok ? '' : estLineSvg(q);
     document.getElementById('explain-final').innerHTML = ok ? '' : estFinal(q);
@@ -467,7 +595,8 @@ function finishRound() {
 /* ══ 紀錄：students/{id}/progress/compare，Hub 卡片讀 totalCorrect ══ */
 function saveProgress(correct, total) {
   var inc = firebase.firestore.FieldValue.increment;
-  var key = cfg.mode === 'est' ? 'est_' + cfg.estCat + '_' + cfg.est : cfg.op + '_' + cfg.num;
+  var key = cfg.mode === 'est' ? 'est_' + cfg.estCat + '_' + cfg.est
+          : cfg.mode === 'num' ? 'num_' + cfg.numLv : cfg.op + '_' + cfg.num;
   /* 各模式的累計放在巢狀的 modeStats.{key}；quApp.saveRound 用 set + merge 寫入，巢狀物件會跟既有資料合併 */
   var modeStats = {};
   modeStats[key] = { correct: inc(correct), answered: inc(total) };

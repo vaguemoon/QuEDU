@@ -8,6 +8,7 @@
   --cmp-ok-lt: #e9f9ef;
   --cmp-bad: #e84444;
   --cmp-bad-lt: #fff1f1;
+  --cmp-key-lt: #fff3e6;  /* 位值表裡決定大小的那一位 */
   --num-font: 'Courier New', Courier, monospace;
 }
 
@@ -148,8 +149,8 @@ button { touch-action: manipulation; }
 }
 .btn-result-home { background: var(--grad-btn); color: var(--white); border: none; }
 
-/* ── 項目（不用算比大小／估一估） ── */
-.mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 18px 0 10px; }
+/* ── 項目（比大小／不用算比大小／估一估） ── */
+.mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 18px 0 10px; }
 .mode-grid .pick-card { padding: 18px 22px; }
 .mode-grid .pick-icon { font-size: 2.2rem; }
 .mode-grid .pick-name { font-size: 1.4rem; }
@@ -164,6 +165,14 @@ button { touch-action: manipulation; }
 .explain .frac { font-size: .85em; }
 .q-expr .est-word + .ans-box { font-size: 1em; }
 
+/* ── 比大小：位值表（答錯時標出決定大小的那一位） ── */
+.pv-table { margin: 10px auto 0; border-collapse: collapse; font-family: var(--num-font); }
+.pv-table th, .pv-table td { border: 2px solid var(--border); background: var(--white); }
+.pv-table th { padding: 6px 16px; white-space: nowrap; font-family: 'Noto Sans TC', sans-serif; font-size: 1rem; font-weight: 900; color: var(--muted); }
+.pv-table td { width: 64px; height: 58px; text-align: center; font-size: 2.2rem; font-weight: 700; color: var(--text); }
+.pv-table .pv-key { background: var(--cmp-key-lt); color: var(--cmp-gt); border-color: var(--cmp-gt); }
+
+@media (max-width: 1000px) { .mode-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 767px) {
   .mode-grid { grid-template-columns: 1fr; }
   .ans-btn.ans-btn-num { min-width: 130px; font-size: 2rem; }
