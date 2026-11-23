@@ -38,11 +38,16 @@ var charInfoCache  = {};      // 萌典 API 快取 { '字': { zhuyin, radical, s
 
 // ── Firebase 存取 ──
 
+/* 訪客、教師預覽（班級管理→學生視角）都沒有真的學生資料，不讀寫 Firestore 的學生紀錄 */
+function canSaveStudentData() {
+  return !!(db && currentStudent && !currentStudent.isGuest && !currentStudent.isPreview);
+}
+
 /**
  * 將 charStatus 寫入 Firestore（students/{id}/progress/hanzi）
  */
 function saveProgress() {
-  if (!db || !currentStudent || currentStudent.isGuest) return;
+  if (!canSaveStudentData()) return;
   db.collection('students').doc(currentStudent.id)
     .collection('progress').doc('hanzi')
     .set({ charStatus: charStatus, lastStudied: new Date().toISOString() }, { merge: true })
@@ -55,7 +60,7 @@ function saveProgress() {
  * @param {Array}  strokes 正規化後的筆畫座標陣列
  */
 function saveStroke(char, strokes) {
-  if (!db || !currentStudent || currentStudent.isGuest) return;
+  if (!canSaveStudentData()) return;
   charStrokes[char] = strokes;
   db.collection('students').doc(currentStudent.id)
     .collection('strokes').doc(char)

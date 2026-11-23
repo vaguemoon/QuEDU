@@ -48,6 +48,22 @@ window.addEventListener('load', function() {
           return;
         }
 
+        /* 教師預覽模式（班級管理→學生視角）：沒有學生文件，下面查 students/{id} 會查不到而整個停住，
+           課程選單就不會出來——直接進課程，不讀寫學生紀錄 */
+        if (hubStudent.isPreview) {
+          currentStudent = {
+            name: hubStudent.name || '老師', pin: '', id: hubStudent.id,
+            nickname: hubStudent.nickname || hubStudent.name || '老師', avatar: hubStudent.avatar || '👨‍🏫',
+            isPreview: true
+          };
+          var avEl1 = document.getElementById('topbar-avatar');
+          var nmEl1 = document.getElementById('topbar-name');
+          if (avEl1) avEl1.textContent = currentStudent.avatar;
+          if (nmEl1) nmEl1.textContent = '[預覽] ' + currentStudent.nickname;
+          setTimeout(loadCurriculumVersions, 300);
+          return;
+        }
+
         var id = hubStudent.id;
         Promise.all([
           db.collection('students').doc(id).get(),
@@ -129,7 +145,7 @@ function selectSettingsAvatar(av) {
   currentStudent.avatar = av;
   var avEl = document.getElementById('topbar-avatar');
   if (avEl) avEl.textContent = av;
-  if (db && currentStudent.id) {
+  if (canSaveStudentData()) {
     db.collection('students').doc(currentStudent.id).update({ avatar: av }).catch(function(){});
   }
   renderSettingsAvatarGrid();

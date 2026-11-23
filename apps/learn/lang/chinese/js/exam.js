@@ -339,7 +339,7 @@ function exitExam() {
  * 將本次測驗結果寫入 Firestore activities 子集合
  */
 function saveActivity() {
-  if (!db || !currentStudent) return;
+  if (!canSaveStudentData()) return;
   var allChars = Object.keys(examResults);
   var passed   = allChars.filter(function(c){ return examResults[c].passed; });
   var failed   = allChars.filter(function(c){ return !examResults[c].passed && !examResults[c].skipped; });
