@@ -106,6 +106,13 @@ var QU_APPS = [
     progress: 'compare', summarize: _quTotalCorrect
   },
   {
+    id: 'clock', file: 'apps/learn/math/clock/index.html',
+    icon: '🕐', name: '時間趣', desc: '看時鐘・撥時鐘',
+    type: 'learn', category: 'math',
+    theme: 'theme-pink', badge: '時間趣', badgeClass: 'green',
+    progress: 'clock', summarize: _quTotalCorrect
+  },
+  {
     id: 'exam-reader', file: 'apps/quiz/word-to-reader/index.html',
     icon: '🎧', name: '考卷報讀', desc: '老師分享的有聲考卷',
     type: 'quiz', studentMode: true,
