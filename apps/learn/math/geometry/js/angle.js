@@ -15,7 +15,7 @@ var _SVG_NS_ANG = 'http://www.w3.org/2000/svg';
 var angAnswered = false;
 var _angTimer = null;
 
-function isAngleModule(mod) { return mod === 'angle' || mod === 'triangle' || mod === 'side'; }
+function isAngleModule(mod) { return mod === 'angle' || mod === 'triangle' || mod === 'side' || mod === 'congruent'; }
 
 function _angKind(deg) { return deg < 90 ? 'acute' : deg === 90 ? 'right' : 'obtuse'; }
 function _dir(deg) { var r = deg * Math.PI / 180; return { x: Math.cos(r), y: Math.sin(r) }; }  /* 數學座標（y 向上） */
@@ -80,12 +80,14 @@ function generateAnglePool(mod) {
 /* ── 遊戲流程 ── */
 
 function angStart() {
-  gamePool    = currentModule === 'side' ? generateSidePool(currentShape) : generateAnglePool(currentModule);
+  gamePool    = currentModule === 'side' ? generateSidePool(currentShape)
+    : currentModule === 'congruent' ? generateCongPool(currentShape) : generateAnglePool(currentModule);
   gamePoolIdx = 0;
   gameCorrect = 0;
   gameTotal   = 0;
   PAGE_CONFIG.angle.title = currentModule === 'angle' ? '∠ <span>角的分類</span>'
-    : currentModule === 'side' ? '△ <span>' + SIDE_ASK[currentShape] + '</span>' : '△ <span>三角形的分類</span>';
+    : currentModule === 'side' ? '△ <span>' + SIDE_ASK[currentShape] + '</span>'
+    : currentModule === 'congruent' ? '⧉ <span>全等圖形・' + CONG_MODE_NAME[currentShape] + '</span>' : '△ <span>三角形的分類</span>';
   showPage('angle');
   angLoad();
 }
@@ -97,10 +99,14 @@ function angLoad() {
   gameQ = gamePool[gamePoolIdx];
   angAnswered = false;
   _hintUsed = false;
-  var isSide = gameQ.module === 'side';
-  document.getElementById('ang-svg').classList.toggle('hidden', isSide);
+  var isSide = gameQ.module === 'side', isCong = gameQ.module === 'congruent';
+  var svg = document.getElementById('ang-svg');
+  svg.classList.toggle('hidden', isSide);
+  svg.setAttribute('viewBox', isCong ? '0 0 ' + CONG_W + ' ' + CONG_H : '0 0 ' + ANG_W + ' ' + ANG_H);
   document.getElementById('side-grid').classList.toggle('hidden', !isSide);
   if (isSide) { sideLoad(); return; }
+  if (isCong) { congLoad(); return; }
+  document.getElementById('ang-hint').textContent = '📐 用三角板比比看';
   var isTri = gameQ.module === 'triangle';
   document.getElementById('ang-prompt').textContent = isTri
     ? '這是什麼三角形？' : '這個角是銳角、直角，還是鈍角？';
@@ -129,6 +135,7 @@ function _angMsg(html, cls) {
 
 function angHint() {
   if (!gameQ || angAnswered) return;
+  if (gameQ.module === 'congruent') { congHint(); return; }
   sfxTap();
   _hintUsed = true;
   angDraw(true, false);

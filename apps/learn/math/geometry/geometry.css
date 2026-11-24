@@ -16,6 +16,9 @@
   --ok-lt:        #f0fff4;
   --bad-lt:       #fff0f0;
   --num-font:     'Courier New', monospace;
+  --cong-a:       #e8578a;   /* 全等圖形的甲（課本粉紅） */
+  --cong-a-lt:    #fdeef3;
+  --cong-b-lt:    #eafaf0;
 }
 
 /* ══════════════════════════════════════
@@ -187,6 +190,23 @@
 .ang-check { background: linear-gradient(135deg, var(--blue), var(--blue-dk)); color: var(--white); border: none; }
 .ang-check:disabled { opacity: .45; }
 .module-card--side { border-left: 5px solid var(--ang-right); }
+.module-card--congruent { border-left: 5px solid var(--cong-a); }
+
+/* 全等圖形：甲粉紅、乙綠（比照課本），問的點邊角用橘色標 */
+.cong-tri { stroke-width: 3.5; stroke-linejoin: round; }
+.cong-tri--a { fill: var(--cong-a-lt); stroke: var(--cong-a); }
+.cong-tri--b { fill: var(--cong-b-lt); stroke: var(--geo-line); }
+.cong-title { font-size: 22px; font-weight: 900; text-anchor: middle; font-family: 'Noto Sans TC', sans-serif; }
+.cong-title--a { fill: var(--cong-a); }
+.cong-title--b { fill: var(--geo-line); }
+.cong-name { font-size: 19px; font-weight: 900; text-anchor: middle; fill: var(--text); font-family: 'Courier New', monospace; }
+.cong-num  { font-size: 14px; font-weight: 800; text-anchor: middle; fill: var(--blue-dk); font-family: 'Courier New', monospace; }
+.cong-hi-dot  { fill: var(--geo-arc); }
+.cong-hi-line { stroke: var(--geo-arc); stroke-width: 7; stroke-linecap: round; opacity: .85; }
+.cong-hi-arc  { fill: none; stroke: var(--geo-arc); stroke-width: 4; }
+.cong-ghost { fill: var(--cong-a-lt); fill-opacity: .6; stroke: var(--cong-a); stroke-width: 3; stroke-dasharray: 8 5; }
+.cong-ghost-name { font-size: 16px; font-weight: 900; text-anchor: middle; fill: var(--cong-a); font-family: 'Courier New', monospace; }
+.ovl { text-decoration: overline; font-family: 'Courier New', monospace; font-weight: 900; }
 
 .ang-line { fill: none; stroke: var(--geo-line); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .ang-tri  { fill: none; stroke: var(--geo-line); stroke-width: 3.5; stroke-linejoin: round; }
@@ -234,6 +254,9 @@
 .shape-btn-icon svg polygon,
 .shape-btn-icon svg polyline { fill: var(--blue-lt); stroke: var(--blue); stroke-width: 2.5; stroke-linejoin: round; }
 .shape-btn-icon svg polyline { fill: none; stroke-width: 2; }
+.shape-btn-icon svg circle { fill: var(--geo-arc); }
+.shape-btn-icon svg line,
+.shape-btn-icon svg path { fill: none; stroke: var(--geo-arc); stroke-width: 3.5; stroke-linecap: round; }
 /* 題數（比照除法趣的分段按鈕） */
 .count-pick { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
 .count-label { font-size: 1.05rem; font-weight: 900; color: var(--text); }
