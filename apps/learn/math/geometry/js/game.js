@@ -34,7 +34,7 @@ var CATEGORIES = {
     items: [
       { id: 'angle',    icon: '∠', title: '角的分類',     sub: '銳角・直角・鈍角' },
       { id: 'triangle', icon: '△', title: '三角形的分類', sub: '銳角・直角・鈍角三角形' },
-      { id: 'side',     icon: '⟁', title: '等腰與正三角形', sub: '量邊長・等腰直角三角形' }
+      { id: 'side',     icon: '⟁', title: '等腰與正三角形', sub: '等腰・正・等腰直角三角形' }
     ]
   },
   measure: {
@@ -66,41 +66,59 @@ function openCategory(cat) {
   showPage('cat');
 }
 
-function openItem(id) {
-  if (isAngleModule(id)) { currentModule = id; startGame(); }
-  else openModule(id);
-}
+/* 每個項目都先到選擇頁：選形狀／三角形種類（角的分類、三角形的分類沒有）＋題數 */
+function openItem(id) { openModule(id); }
 
-/* 結果頁的「換項目／換形狀」：重設返回路徑，免得按返回又回到結果頁 */
+/* 結果頁的「換項目／換形狀／換種類」：重設返回路徑，免得按返回又回到結果頁 */
 function resultSwitch() {
-  PAGE_STACK = isAngleModule(currentModule) ? ['home', 'cat'] : ['home', 'cat', 'select'];
+  PAGE_STACK = _hasShapes(currentModule) ? ['home', 'cat', 'select'] : ['home', 'cat'];
   showPage(PAGE_STACK[PAGE_STACK.length - 1], false);
 }
+
+/* 選擇頁上要選的東西：面積/體積/表面積選形狀，等腰與正三角形選種類 */
+var SIDE_ICON = {
+  iso:      '<svg viewBox="0 0 40 36"><polygon points="20,3 33,33 7,33"/></svg>',
+  equi:     '<svg viewBox="0 0 40 36"><polygon points="20,4 37,33 3,33"/></svg>',
+  isoright: '<svg viewBox="0 0 40 36"><polygon points="6,4 6,33 35,33"/><polyline points="6,26 13,26 13,33"/></svg>'
+};
+
+function _hasShapes(mod) { return !!MODULE_CONFIG[mod] || mod === 'side'; }
 
 function openModule(mod) {
   sfxTap();
   currentModule = mod;
-  currentShape  = MODULE_CONFIG[mod].shapes[0];
+  currentShape  = MODULE_CONFIG[mod] ? MODULE_CONFIG[mod].shapes[0] : mod === 'side' ? SIDE_KINDS[0] : '';
+  PAGE_CONFIG.select.title = MODULE_CONFIG[mod] ? '📋 <span>選擇形狀</span>'
+    : mod === 'side' ? '📋 <span>選擇種類</span>' : '📋 <span>選擇題數</span>';
   renderSelectPage();
   showPage('select');
 }
 
 function renderSelectPage() {
-  var cfg = MODULE_CONFIG[currentModule];
-  var el  = document.getElementById('select-body');
+  var el = document.getElementById('select-body');
   if (!el) return;
+  var cfg = MODULE_CONFIG[currentModule];
+  var item = CATEGORIES.angle.items.filter(function(it) { return it.id === currentModule; })[0];
+  var isSide = currentModule === 'side';
 
-  var html = '<div class="select-title">' + cfg.label + '</div>';
-  html += '<div class="select-hint">選擇要練習的形狀，開始 10 題練習</div>';
-  html += '<div class="shape-grid">';
-  cfg.shapes.forEach(function(sh) {
-    var sel = sh === currentShape ? ' selected' : '';
-    html += '<button class="shape-btn' + sel + '" onclick="selectShape(\'' + sh + '\')">' +
-      '<span class="shape-btn-icon">' + _shapeIcon(currentModule, sh) + '</span>' +
-      '<span class="shape-btn-label">' + _shapeLabel(currentModule, sh) + '</span>' +
-      '</button>';
-  });
-  html += '</div>';
+  var html = '<div class="select-title">' + (cfg ? cfg.label : item.title) + '</div>';
+  html += '<div class="select-hint">' + (cfg ? '選擇要練習的形狀和題數' : isSide ? '選擇要練習哪一種三角形，還有題數' : '選擇要練習的題數') + '</div>';
+  if (cfg || isSide) {
+    var shapes = cfg ? cfg.shapes : SIDE_KINDS;
+    html += '<div class="shape-grid">';
+    shapes.forEach(function(sh) {
+      var sel = sh === currentShape ? ' selected' : '';
+      html += '<button class="shape-btn' + sel + '" onclick="selectShape(\'' + sh + '\')">' +
+        '<span class="shape-btn-icon">' + (cfg ? _shapeIcon(currentModule, sh) : SIDE_ICON[sh]) + '</span>' +
+        '<span class="shape-btn-label">' + (cfg ? _shapeLabel(currentModule, sh) : SIDE_ASK[sh]) + '</span>' +
+        '</button>';
+    });
+    html += '</div>';
+  }
+  html += '<div class="count-pick"><span class="count-label">題數</span><span class="count-seg">' +
+    ROUND_COUNTS.map(function(n) {
+      return '<button class="count-btn' + (n === ROUND_SIZE ? ' on' : '') + '" onclick="setRoundSize(' + n + ')">' + n + '</button>';
+    }).join('') + '</span></div>';
   html += '<button class="btn-start-big" onclick="startGame()">開始練習 →</button>';
   el.innerHTML = html;
 }
@@ -108,6 +126,13 @@ function renderSelectPage() {
 function selectShape(sh) {
   sfxTap();
   currentShape = sh;
+  renderSelectPage();
+}
+
+function setRoundSize(n) {
+  sfxTap();
+  ROUND_SIZE = n;
+  try { localStorage.setItem('geometry-cfg', JSON.stringify({ count: n })); } catch (e) {}
   renderSelectPage();
 }
 
@@ -346,9 +371,8 @@ function showResult() {
   if (iconEl)  iconEl.textContent  = pct >= 0.9 ? '🎉' : pct >= 0.6 ? '👏' : '💪';
   if (titleEl) titleEl.textContent = pct >= 0.9 ? '太厲害了！' : pct >= 0.6 ? '表現不錯！' : '繼續加油！';
   if (subEl)   subEl.textContent   = '答對 ' + gameCorrect + ' / ' + gameTotal + ' 題';
-  var ang = isAngleModule(currentModule);
   var sw = document.getElementById('result-switch');
-  if (sw) sw.textContent = ang ? '換項目' : '換形狀';
+  if (sw) sw.textContent = MODULE_CONFIG[currentModule] ? '換形狀' : currentModule === 'side' ? '換種類' : '換項目';
   showPage('result', false);
-  PAGE_STACK = ang ? ['home', 'cat', 'result'] : ['home', 'cat', 'select', 'result'];
+  PAGE_STACK = ['home', 'cat', 'select', 'result'];
 }

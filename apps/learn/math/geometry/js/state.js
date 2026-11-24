@@ -2,9 +2,16 @@
 
 var currentStudent = null;
 var currentCategory = '';  // 'angle' | 'measure'
-var currentModule  = '';   // 'area' | 'volume' | 'surface' | 'angle' | 'triangle'
-var currentShape   = '';   // e.g. 'rectangle', 'triangle', 'cube', ...
+var currentModule  = '';   // 'area' | 'volume' | 'surface' | 'angle' | 'triangle' | 'side'
+var currentShape   = '';   // e.g. 'rectangle', 'triangle', 'cube', ...；side 用 'iso' | 'equi' | 'isoright'
+
+/* 一輪題數：選擇頁選 5／10／15／20，存在 localStorage geometry-cfg */
+var ROUND_COUNTS = [5, 10, 15, 20];
 var ROUND_SIZE = 10;
+try {
+  var _geoCfg = JSON.parse(localStorage.getItem('geometry-cfg') || 'null');
+  if (_geoCfg && ROUND_COUNTS.indexOf(_geoCfg.count) >= 0) ROUND_SIZE = _geoCfg.count;
+} catch (e) {}
 
 var gamePool    = [];
 var gamePoolIdx = 0;

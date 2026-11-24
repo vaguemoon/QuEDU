@@ -15,6 +15,7 @@
   --cat-surface:  #8e44ad;
   --ok-lt:        #f0fff4;
   --bad-lt:       #fff0f0;
+  --num-font:     'Courier New', monospace;
 }
 
 /* ══════════════════════════════════════
@@ -229,6 +230,20 @@
 .shape-btn:active { transform: scale(.96); }
 .shape-btn-icon { font-size: 1.8rem; line-height: 1; color: var(--blue); }
 .shape-btn-label { font-size: .88rem; font-weight: 800; color: var(--text); }
+.shape-btn-icon svg { width: 44px; height: 40px; display: block; }
+.shape-btn-icon svg polygon,
+.shape-btn-icon svg polyline { fill: var(--blue-lt); stroke: var(--blue); stroke-width: 2.5; stroke-linejoin: round; }
+.shape-btn-icon svg polyline { fill: none; stroke-width: 2; }
+/* 題數（比照除法趣的分段按鈕） */
+.count-pick { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.count-label { font-size: 1.05rem; font-weight: 900; color: var(--text); }
+.count-seg { display: inline-flex; border: 2px solid var(--blue); border-radius: 12px; overflow: hidden; }
+.count-btn {
+  min-width: 3.4em; padding: 12px 10px; border: none; border-left: 2px solid var(--blue);
+  background: var(--white); color: var(--blue-dk); font-family: var(--num-font); font-size: 1.2rem; font-weight: 900; cursor: pointer;
+}
+.count-btn:first-child { border-left: none; }
+.count-btn.on { background: var(--blue); color: var(--white); }
 .btn-start-big {
   width: 100%; padding: 16px; font-size: 1.1rem; font-weight: 900;
   background: linear-gradient(135deg, var(--blue), var(--blue-dk));

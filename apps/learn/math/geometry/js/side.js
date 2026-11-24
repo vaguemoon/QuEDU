@@ -3,11 +3,11 @@
 /* ════════════════════════════════════════
    等腰與正三角形（side）：看邊長分類
    比照課本「量一量，再回答問題」：一次給 甲乙丙丁 四個三角形，
-   問「哪些是等腰三角形／正三角形／等腰直角三角形？」，點選所有符合的再按檢查；
+   問「哪些是等腰三角形／正三角形／等腰直角三角形？」（選擇頁選一種，整輪只問這種），點選所有符合的再按檢查；
    提示是「用直尺量一量」——在每條邊標上長度（公分）
    ════════════════════════════════════════ */
 
-var SIDE_ROUND = 6;
+var SIDE_KINDS = ['iso', 'equi', 'isoright'];   /* 選擇頁一次選一種練，不混合 */
 var SIDE_LABELS = ['甲', '乙', '丙', '丁'];
 var SIDE_W = 200, SIDE_H = 160, SIDE_PAD = 30;
 var SIDE_ASK = { iso: '等腰三角形', equi: '正三角形', isoright: '等腰直角三角形' };
@@ -79,10 +79,10 @@ function _makeSideQ(kind) {
            answer: tris.map(function(t) { return _sideIs(t, kind); }) };
 }
 
-function generateSidePool() {
-  var kinds = [];
-  while (kinds.length < SIDE_ROUND) kinds = kinds.concat(shuffle(['iso', 'equi', 'isoright']));
-  return kinds.slice(0, SIDE_ROUND).map(_makeSideQ);
+function generateSidePool(kind) {
+  var pool = [];
+  for (var i = 0; i < ROUND_SIZE; i++) pool.push(_makeSideQ(kind));
+  return pool;
 }
 
 /* ── 流程 ── */

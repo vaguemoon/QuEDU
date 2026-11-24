@@ -80,12 +80,12 @@ function generateAnglePool(mod) {
 /* ── 遊戲流程 ── */
 
 function angStart() {
-  gamePool    = currentModule === 'side' ? generateSidePool() : generateAnglePool(currentModule);
+  gamePool    = currentModule === 'side' ? generateSidePool(currentShape) : generateAnglePool(currentModule);
   gamePoolIdx = 0;
   gameCorrect = 0;
   gameTotal   = 0;
   PAGE_CONFIG.angle.title = currentModule === 'angle' ? '∠ <span>角的分類</span>'
-    : currentModule === 'side' ? '△ <span>等腰與正三角形</span>' : '△ <span>三角形的分類</span>';
+    : currentModule === 'side' ? '△ <span>' + SIDE_ASK[currentShape] + '</span>' : '△ <span>三角形的分類</span>';
   showPage('angle');
   angLoad();
 }
