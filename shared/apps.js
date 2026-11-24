@@ -72,7 +72,7 @@ var QU_APPS = [
   },
   {
     id: 'geometry', file: 'apps/learn/math/geometry/index.html',
-    icon: '📐', name: '幾何趣', desc: '面積・體積・表面積計算',
+    icon: '📐', name: '幾何趣', desc: '角與三角形・面積與體積',
     type: 'learn', category: 'math',
     theme: 'theme-teal', badge: '幾何趣', badgeClass: 'green',
     progress: null

@@ -3,7 +3,9 @@
 var PAGE_STACK = [];
 var PAGE_CONFIG = {
   'home':     { title: '📐 <span>幾何趣</span>',   back: false },
+  'cat':      { title: '📐 <span>幾何趣</span>',   back: true  },
   'select':   { title: '📋 <span>選擇形狀</span>', back: true  },
+  'angle':    { title: '✏️ <span>練習中</span>',   back: true  },
   'game':     { title: '✏️ <span>練習中</span>',   back: true  },
   'result':   { title: '📊 <span>本輪結果</span>', back: true  },
   'settings': { title: '⚙️ <span>設定</span>',     back: true  },

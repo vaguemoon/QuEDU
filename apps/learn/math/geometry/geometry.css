@@ -1,5 +1,22 @@
 /* geometry.css — 幾何趣 app 專屬樣式 */
 
+:root {
+  --ang-acute:    #2e86de;   /* 銳角記號（藍） */
+  --ang-acute-lt: #e3f0fc;
+  --ang-right:    #d4a017;   /* 直角記號（黃） */
+  --ang-right-lt: #fdf3d0;
+  --ang-obtuse:   #c2417a;   /* 鈍角記號（粉紅） */
+  --ang-obtuse-lt:#fce4ef;
+  --ruler-fill:   rgba(245, 215, 90, .45);  /* 三角板 */
+  --ruler-line:   #c9a227;
+  --geo-line:     #27ae60;   /* 題目圖形的線 */
+  --geo-arc:      #e67e22;
+  --cat-measure:  #27ae60;
+  --cat-surface:  #8e44ad;
+  --ok-lt:        #f0fff4;
+  --bad-lt:       #fff0f0;
+}
+
 /* ══════════════════════════════════════
    頁面骨架
    ══════════════════════════════════════ */
@@ -91,8 +108,75 @@
 .module-card-title { font-size: 1.2rem; font-weight: 900; color: var(--text); }
 .module-card-sub { font-size: .82rem; font-weight: 700; color: var(--muted); }
 .module-card--area   { border-left: 5px solid var(--blue); }
-.module-card--volume { border-left: 5px solid #27ae60; }
-.module-card--surface{ border-left: 5px solid #8e44ad; }
+.module-card--volume { border-left: 5px solid var(--cat-measure); }
+.module-card--surface{ border-left: 5px solid var(--cat-surface); }
+.module-card--angle    { border-left: 5px solid var(--ang-acute); }
+.module-card--triangle { border-left: 5px solid var(--ang-obtuse); }
+
+/* 首頁大項：平板橫放兩張並排 */
+.cat-cards {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px; width: 100%; max-width: 760px;
+}
+.cat-card {
+  padding: 32px 20px 28px; border: 2.5px solid var(--border); border-radius: var(--radius);
+  background: var(--white); cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  box-shadow: var(--shadow); transition: all .18s;
+}
+.cat-card:active { transform: scale(.97); box-shadow: none; }
+.cat-card-icon  { font-size: 3.2rem; line-height: 1.1; color: var(--blue); }
+.cat-card-title { font-size: 1.45rem; font-weight: 900; color: var(--text); }
+.cat-card-sub   { font-size: .95rem; font-weight: 700; color: var(--muted); }
+.cat-card--angle   { border-top: 6px solid var(--ang-acute); }
+.cat-card--measure { border-top: 6px solid var(--cat-measure); }
+.cat-card--angle .cat-card-icon   { color: var(--ang-acute); }
+.cat-card--measure .cat-card-icon { color: var(--cat-measure); }
+
+/* ══════════════════════════════════════
+   角與三角形（左圖右作答）
+   ══════════════════════════════════════ */
+.ang-layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px;
+  padding: 16px; align-items: start;
+}
+.ang-fig {
+  background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 8px;
+}
+#ang-svg { width: 100%; height: auto; max-height: calc(100dvh - 56px - 52px); display: block; }
+.ang-side { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.ang-side .btn-end-practice { align-self: center; }
+.ang-prompt { font-size: 1.3rem; font-weight: 900; color: var(--text); text-align: center; }
+.ang-choices { display: flex; flex-direction: column; gap: 10px; }
+.ang-choice {
+  padding: 16px 12px; border: 2.5px solid var(--border); border-radius: 16px;
+  background: var(--white); color: var(--text); font-family: inherit;
+  font-size: 1.35rem; font-weight: 900; cursor: pointer; transition: all .15s;
+  box-shadow: var(--shadow);
+}
+.ang-choice:active:not(:disabled) { transform: scale(.96); }
+.ang-choice:disabled { cursor: default; opacity: .55; transition: none; }
+.ang-choice.is-correct { opacity: 1; border-color: var(--green); background: var(--ok-lt); color: var(--green-dk); }
+.ang-choice.is-wrong   { opacity: 1; border-color: var(--red); background: var(--bad-lt); color: var(--red); }
+.ang-msg { min-height: 1.4em; font-size: 1.05rem; font-weight: 700; line-height: 1.6; color: var(--text); text-align: center; }
+.ang-msg:empty { display: none; }
+.ang-msg--ok    { color: var(--green-dk); }
+.ang-msg--wrong { color: var(--red); }
+.ang-msg--hint  { color: var(--ruler-line); }
+.ang-msg b { font-weight: 900; }
+
+.ang-line { fill: none; stroke: var(--geo-line); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.ang-tri  { fill: none; stroke: var(--geo-line); stroke-width: 3.5; stroke-linejoin: round; }
+.ang-arc  { fill: none; stroke: var(--geo-arc); stroke-width: 3; }
+.ang-dot  { fill: var(--geo-line); }
+.ang-ruler { fill: var(--ruler-fill); stroke: var(--ruler-line); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.ang-rmark { fill: none; stroke: var(--text); stroke-width: 2; }
+.ang-tag { stroke-width: 2; }
+.ang-tag--acute  { fill: var(--ang-acute-lt);  stroke: var(--ang-acute); }
+.ang-tag--right  { fill: var(--ang-right-lt);  stroke: var(--ang-right); }
+.ang-tag--obtuse { fill: var(--ang-obtuse-lt); stroke: var(--ang-obtuse); }
+.ang-tag-txt { font-size: 15px; font-weight: 900; text-anchor: middle; fill: var(--text); font-family: 'Noto Sans TC', sans-serif; }
 
 /* ══════════════════════════════════════
    選擇頁
@@ -303,4 +387,9 @@
   #page-game.active { height: auto; overflow: visible; }
   .game-right { height: 50vh; }
   #geo-sandbox { height: 100%; }
+  .ang-layout { grid-template-columns: 1fr; gap: 12px; padding: 12px 16px; }
+  #ang-svg { max-height: 42dvh; }
+  .ang-choices { flex-direction: row; }
+  .ang-choice { flex: 1; padding: 14px 6px; font-size: 1.15rem; }
+  .cat-cards { grid-template-columns: 1fr; max-width: 400px; }
 }

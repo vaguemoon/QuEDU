@@ -43,28 +43,48 @@
   <div class="home-wrap">
     <div class="home-title">📐 幾何趣</div>
     <div class="home-sub">選擇練習項目</div>
-    <div class="module-cards">
-      <button class="module-card module-card--area" onclick="openModule('area')">
-        <div class="module-card-icon">▭</div>
-        <div class="module-card-info">
-          <div class="module-card-title">面積計算</div>
-          <div class="module-card-sub">長方形・三角形・圓形⋯</div>
-        </div>
+    <div class="cat-cards">
+      <button class="cat-card cat-card--angle" onclick="openCategory('angle')">
+        <div class="cat-card-icon">∠</div>
+        <div class="cat-card-title">角與三角形</div>
+        <div class="cat-card-sub">角的分類・三角形的分類</div>
       </button>
-      <button class="module-card module-card--volume" onclick="openModule('volume')">
-        <div class="module-card-icon">▣</div>
-        <div class="module-card-info">
-          <div class="module-card-title">體積計算</div>
-          <div class="module-card-sub">正方體・長方體・圓柱⋯</div>
-        </div>
+      <button class="cat-card cat-card--measure" onclick="openCategory('measure')">
+        <div class="cat-card-icon">▣</div>
+        <div class="cat-card-title">面積與體積</div>
+        <div class="cat-card-sub">面積・體積・表面積計算</div>
       </button>
-      <button class="module-card module-card--surface" onclick="openModule('surface')">
-        <div class="module-card-icon">⬡</div>
-        <div class="module-card-info">
-          <div class="module-card-title">表面積計算</div>
-          <div class="module-card-sub">展開圖・各面加總</div>
-        </div>
-      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: CATEGORY（大項裡的練習項目）══════════════════ -->
+<div id="page-cat" class="page page-fill">
+  <div class="home-wrap">
+    <div class="home-title" id="cat-title"></div>
+    <div class="home-sub">選擇練習項目</div>
+    <div class="module-cards" id="cat-items"></div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE: ANGLE（角的分類／三角形的分類）══════════════════ -->
+<div id="page-angle" class="page">
+  <div class="ang-layout">
+    <div class="ang-fig">
+      <svg id="ang-svg" viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="ang-side">
+      <div class="stats-row">
+        <div class="stat-item"><span class="stat-label">題號</span><span class="stat-val" id="ang-qnum">1</span></div>
+        <div class="stat-item"><span class="stat-label">答對</span><span class="stat-val" id="ang-correct">0</span></div>
+        <div class="stat-item"><span class="stat-label">剩餘</span><span class="stat-val" id="ang-remain">10</span></div>
+      </div>
+      <div class="ang-prompt" id="ang-prompt"></div>
+      <div class="ang-choices" id="ang-choices"></div>
+      <div class="ang-msg" id="ang-msg"></div>
+      <button class="btn-hint" id="ang-hint" onclick="angHint()">📐 用三角板比比看</button>
+      <button class="btn-start-big hidden" id="ang-next" onclick="angNext()">下一題 →</button>
+      <button class="btn-end-practice" onclick="goBack()">結束練習</button>
     </div>
   </div>
 </div>
@@ -145,7 +165,7 @@
     <div class="result-sub" id="result-sub">答對 10 / 10 題</div>
     <div class="result-btns">
       <button class="btn-result" onclick="startGame()">再練一次</button>
-      <button class="btn-result" onclick="showPage('select')">換形狀</button>
+      <button class="btn-result" id="result-switch" onclick="resultSwitch()">換形狀</button>
       <button class="btn-result btn-result-home"
               onclick="showPage('home',false);PAGE_STACK=['home'];">回首頁</button>
     </div>
@@ -179,6 +199,7 @@
 <script src="js/vol-sandbox.js"></script>
 <script src="js/surf-sandbox.js"></script>
 <script src="js/game.js"></script>
+<script src="js/angle.js"></script>
 <script src="js/init.js"></script>
 <link rel="stylesheet" href="../../../../shared/report.css">
 <script src="../../../../shared/report.js"></script>

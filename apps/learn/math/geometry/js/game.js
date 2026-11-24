@@ -27,9 +27,54 @@ function _shapeIcon(module, shape) {
   return (getShapeMap(module)[shape] || {}).icon || '■';
 }
 
+/* 首頁的大項；面積/體積/表面積進「選形狀」頁，角與三角形直接開始 */
+var CATEGORIES = {
+  angle: {
+    label: '角與三角形',
+    items: [
+      { id: 'angle',    icon: '∠', title: '角的分類',     sub: '銳角・直角・鈍角' },
+      { id: 'triangle', icon: '△', title: '三角形的分類', sub: '銳角・直角・鈍角三角形' }
+    ]
+  },
+  measure: {
+    label: '面積與體積',
+    items: [
+      { id: 'area',    icon: '▭', title: '面積計算',   sub: '長方形・三角形・圓形⋯' },
+      { id: 'volume',  icon: '▣', title: '體積計算',   sub: '正方體・長方體・圓柱⋯' },
+      { id: 'surface', icon: '⬡', title: '表面積計算', sub: '展開圖・各面加總' }
+    ]
+  }
+};
+
 /* ════════════════════════════════════════
-   首頁 → 選擇頁
+   首頁 → 大項 → 選擇頁
    ════════════════════════════════════════ */
+
+function openCategory(cat) {
+  sfxTap();
+  currentCategory = cat;
+  var c = CATEGORIES[cat];
+  PAGE_CONFIG.cat.title = '📐 <span>' + c.label + '</span>';
+  document.getElementById('cat-title').textContent = c.label;
+  document.getElementById('cat-items').innerHTML = c.items.map(function(it) {
+    return '<button class="module-card module-card--' + it.id + '" onclick="openItem(\'' + it.id + '\')">' +
+      '<div class="module-card-icon">' + it.icon + '</div>' +
+      '<div class="module-card-info"><div class="module-card-title">' + it.title + '</div>' +
+      '<div class="module-card-sub">' + it.sub + '</div></div></button>';
+  }).join('');
+  showPage('cat');
+}
+
+function openItem(id) {
+  if (isAngleModule(id)) { currentModule = id; startGame(); }
+  else openModule(id);
+}
+
+/* 結果頁的「換項目／換形狀」：重設返回路徑，免得按返回又回到結果頁 */
+function resultSwitch() {
+  PAGE_STACK = isAngleModule(currentModule) ? ['home', 'cat'] : ['home', 'cat', 'select'];
+  showPage(PAGE_STACK[PAGE_STACK.length - 1], false);
+}
 
 function openModule(mod) {
   sfxTap();
@@ -71,7 +116,8 @@ function selectShape(sh) {
 
 function startGame() {
   sfxTap();
-  gamePool    = generateQuestionPool(currentModule, currentShape);
+  if (isAngleModule(currentModule)) { angStart(); return; }
+  gamePool   = generateQuestionPool(currentModule, currentShape);
   gamePoolIdx = 0;
   gameCorrect = 0;
   gameTotal   = 0;
@@ -299,6 +345,9 @@ function showResult() {
   if (iconEl)  iconEl.textContent  = pct >= 0.9 ? '🎉' : pct >= 0.6 ? '👏' : '💪';
   if (titleEl) titleEl.textContent = pct >= 0.9 ? '太厲害了！' : pct >= 0.6 ? '表現不錯！' : '繼續加油！';
   if (subEl)   subEl.textContent   = '答對 ' + gameCorrect + ' / ' + gameTotal + ' 題';
+  var ang = isAngleModule(currentModule);
+  var sw = document.getElementById('result-switch');
+  if (sw) sw.textContent = ang ? '換項目' : '換形狀';
   showPage('result', false);
-  PAGE_STACK = ['home', 'select', 'result'];
+  PAGE_STACK = ang ? ['home', 'cat', 'result'] : ['home', 'cat', 'select', 'result'];
 }

@@ -1,7 +1,8 @@
 'use strict';
 
 var currentStudent = null;
-var currentModule  = '';   // 'area' | 'volume' | 'surface'
+var currentCategory = '';  // 'angle' | 'measure'
+var currentModule  = '';   // 'area' | 'volume' | 'surface' | 'angle' | 'triangle'
 var currentShape   = '';   // e.g. 'rectangle', 'triangle', 'cube', ...
 var ROUND_SIZE = 10;
 
