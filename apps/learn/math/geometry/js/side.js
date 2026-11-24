@@ -4,7 +4,7 @@
    等腰與正三角形（side）：看邊長分類
    比照課本「量一量，再回答問題」：一次給 甲乙丙丁 四個三角形，
    問「哪些是等腰三角形／正三角形／等腰直角三角形？」（選擇頁選一種，整輪只問這種），點選所有符合的再按檢查；
-   提示是「用直尺量一量」——在每條邊標上長度（公分）
+   邊長用眼睛判斷不出來，每條邊一開始就標好長度（公分），沒有提示按鈕
    ════════════════════════════════════════ */
 
 var SIDE_KINDS = ['iso', 'equi', 'isoright'];   /* 選擇頁一次選一種練，不混合 */
@@ -18,7 +18,6 @@ var SIDE_RULE = {
 };
 
 var sidePicked = [];
-var sideShowLen = false;
 
 /* ── 各種三角形的三個角（度） ── */
 
@@ -89,13 +88,13 @@ function generateSidePool(kind) {
 
 function sideLoad() {
   sidePicked = [false, false, false, false];
-  sideShowLen = false;
   document.getElementById('ang-prompt').textContent = '下面哪些圖形是' + SIDE_ASK[gameQ.kind] + '？';
   document.getElementById('ang-choices').innerHTML =
-    '<div class="side-tip">點選所有符合的圖形，再按檢查</div>' +
+    '<div class="side-tip">邊長單位是公分。點選所有符合的圖形，再按檢查</div>' +
     '<button class="ang-choice ang-check" id="side-check" onclick="sideCheck()" disabled>檢查答案</button>';
   _angMsg('', '');
-  document.getElementById('ang-hint').classList.remove('hidden');
+  /* 邊長用看的分不出來，一開始就標好長度，沒有提示按鈕 */
+  document.getElementById('ang-hint').classList.add('hidden');
   document.getElementById('ang-next').classList.add('hidden');
   _angStats();
   sideDraw(false);
@@ -109,14 +108,6 @@ function sideToggle(i) {
   sideDraw(false);
 }
 
-function sideHint() {
-  sfxTap();
-  _hintUsed = true;
-  sideShowLen = true;
-  sideDraw(false);
-  _angMsg('量好了（單位：公分）。' + SIDE_RULE[gameQ.kind], 'ang-msg--hint');
-}
-
 function sideCheck() {
   if (angAnswered || sidePicked.indexOf(true) < 0) return;
   angAnswered = true;
@@ -124,17 +115,13 @@ function sideCheck() {
   var q = gameQ;
   var ok = q.answer.every(function(a, i) { return a === sidePicked[i]; });
   document.getElementById('side-check').disabled = true;
-  document.getElementById('ang-hint').classList.add('hidden');
-  sideShowLen = true;
   sideDraw(true);
   var names = q.answer.map(function(a, i) { return a ? SIDE_LABELS[i] : null; }).filter(Boolean).join('、');
   var why = '<br>' + SIDE_RULE[q.kind];
-  if (ok && !_hintUsed) {
+  if (ok) {
     gameCorrect++;
     sfxCorrect();
     _angMsg('答對了！' + why, 'ang-msg--ok');
-  } else if (ok) {
-    _angMsg('答案正確，但已看提示，不計分。' + why, 'ang-msg--ok');
   } else {
     sfxWrong();
     _angMsg('答案是<b>' + names + '</b>。' + why, 'ang-msg--wrong');
@@ -189,10 +176,8 @@ function sideDraw(reveal) {
         var d = _norm({ x: B.x - A.x, y: B.y - A.y });
         _el('line', { x1: M.x - d.y * 7, y1: M.y + d.x * 7, x2: M.x + d.y * 7, y2: M.y - d.x * 7, 'class': 'side-tick' }, svg);
       }
-      if (sideShowLen) {
-        var tx = _el('text', { x: M.x + out.x * 21, y: M.y + out.y * 19 + 5, 'class': 'side-len' + (reveal && same ? ' side-len--same' : '') }, svg);
-        tx.textContent = t.lens[j];
-      }
+      var tx = _el('text', { x: M.x + out.x * 21, y: M.y + out.y * 19 + 5, 'class': 'side-len' + (reveal && same ? ' side-len--same' : '') }, svg);
+      tx.textContent = t.lens[j];
     });
     if (reveal && t.angs.indexOf(90) >= 0) {
       var r = t.angs.indexOf(90);

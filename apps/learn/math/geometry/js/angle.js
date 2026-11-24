@@ -100,7 +100,6 @@ function angLoad() {
   var isSide = gameQ.module === 'side';
   document.getElementById('ang-svg').classList.toggle('hidden', isSide);
   document.getElementById('side-grid').classList.toggle('hidden', !isSide);
-  document.getElementById('ang-hint').textContent = isSide ? '📏 用直尺量一量' : '📐 用三角板比比看';
   if (isSide) { sideLoad(); return; }
   var isTri = gameQ.module === 'triangle';
   document.getElementById('ang-prompt').textContent = isTri
@@ -130,7 +129,6 @@ function _angMsg(html, cls) {
 
 function angHint() {
   if (!gameQ || angAnswered) return;
-  if (gameQ.module === 'side') { sideHint(); return; }
   sfxTap();
   _hintUsed = true;
   angDraw(true, false);
