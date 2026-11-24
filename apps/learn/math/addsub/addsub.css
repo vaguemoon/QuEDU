@@ -211,6 +211,12 @@ button { touch-action: manipulation; }
 .fg.up rect { fill: var(--as-palm); }
 .fg.up.given rect { fill: var(--as-a); }
 .fg.up.tap rect { fill: var(--as-tap); }
+/* 提示的靜態手指圖：加上去的橘色、拿走（彎下去）的打叉色 */
+.hands[data-mode="show"] { margin: 8px 0 4px; }
+.hands[data-mode="show"] .fg { cursor: default; }
+.hands[data-mode="show"] .hand { width: 150px; }
+.fg.up.more rect { fill: var(--as-b); }
+.fg.down.cut rect { fill: var(--as-cross); stroke: var(--as-bad); }
 
 /* 解題直式（小） */
 .mini-vt { display: inline-grid; gap: 0 4px; font-family: var(--num-font); font-weight: 700; margin: 6px 0; }

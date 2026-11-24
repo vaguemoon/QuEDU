@@ -466,8 +466,9 @@ function explainHtml(q, reveal) {
     /* 練習時題目下面已經有十格框，提示就叫學生去點那一個，不再畫一個 */
     var aidShown = round.mode === 'practice';
     lines.push(numSpan(known) + ' 和多少合起來是 ' + numSpan(10) + '？' +
-               (aidShown ? '把下面彎著的手指一根一根點起來，數一數伸出幾根。' : '點一點空格，數一數有幾個。'));
-    if (reveal || !aidShown) lines.push(tenFrames(known, reveal ? 10 - known : 0, 0, false));
+               '把' + (aidShown ? '下面' : '') + '彎著的手指一根一根點起來，數一數伸出幾根。');
+    if (reveal) lines.push(handsHtml(known, 'show', 10 - known));
+    else if (!aidShown) lines.push(handsHtml(known, 'add'));
     return lines.join('<br>');
   }
   if (q.unknown !== 'r') lines.push('可以想成：' + eq(core.x, core.op, core.y, core.z, reveal));
@@ -489,6 +490,10 @@ function smallHint(c, reveal) {
     } else if (x >= 10 || y >= 10) {
       var ten = x >= 10 ? x : y, one = x >= 10 ? y : x;
       h = '十位的 1 不變，個位 ' + eq(ten % 10, '+', one, ten % 10 + one, reveal) + (reveal ? '，所以是 ' + numSpan(x + y) : '');
+    } else if (x + y <= 10) {
+      /* 10 以內用手指（10 根手指剛好放得下）；超過 10 手指不夠，才用十格框 */
+      h = reveal ? eq(x, '+', y, x + y, true) : '先伸出 ' + numSpan(x) + ' 根手指，再伸出 ' + numSpan(y) + ' 根，一共伸出幾根？';
+      return h + handsHtml(x, 'show', y);
     } else {
       h = reveal ? eq(x, '+', y, x + y, true) : numSpan(x) + ' 個再加 ' + numSpan(y) + ' 個，一共有幾個？';
     }
@@ -500,6 +505,9 @@ function smallHint(c, reveal) {
         eq(10, '-', y, 10 - y, true) + '，' + eq(10 - y, '+', x % 10, x - y, reveal);
   } else if (x > 10) {
     h = '十位的 1 不變，個位 ' + eq(x % 10, '-', y, x % 10 - y, reveal) + (reveal ? '，所以是 ' + numSpan(x - y) : '');
+  } else if (x <= 10) {
+    h = reveal ? eq(x, '-', y, x - y, true) : '先伸出 ' + numSpan(x) + ' 根手指，彎下 ' + numSpan(y) + ' 根，還剩幾根？';
+    return h + handsHtml(x - y, 'show', 0, y);
   } else {
     h = reveal ? eq(x, '-', y, x - y, true) : numSpan(x) + ' 個拿走 ' + numSpan(y) + ' 個，還剩幾個？';
   }
@@ -530,7 +538,10 @@ var FINGER_DOWN = [
   '<rect x="52" y="100" width="44" height="18" rx="9"/>'
 ];
 
-function handsHtml(given, mode) {
+/* mode 'add'／'sub' 可以點；'show' 是提示用的靜態圖：given 根藍色、接著 more 根橘色（加上去的），
+ * 再接著 cut 根彎下去並標成拿走的顏色（減法拿走的） */
+function handsHtml(given, mode, more, cut) {
+  more = more || 0; cut = cut || 0;
   var h = '<div class="hands" data-mode="' + mode + '">';
   for (var hand = 0; hand < 2; hand++) {
     h += '<svg class="hand' + (hand ? ' hand-r' : '') + '" viewBox="0 0 120 160">';
@@ -538,7 +549,8 @@ function handsHtml(given, mode) {
     for (var d = 0; d < 5; d++) {
       var n = hand ? 10 - d : d + 1;   // 第幾根（由左到右）
       if (d === 4) h += '<rect class="palm" x="4" y="74" width="92" height="80" rx="26"/>';
-      h += '<g class="fg ' + (n <= given ? 'up given' : 'down') + '">' +
+      var st = n <= given ? 'up given' : n <= given + more ? 'up more' : n <= given + cut ? 'down cut' : 'down';
+      h += '<g class="fg ' + st + '">' +
            '<g class="f-up">' + FINGER_UP[d] + '</g><g class="f-down">' + FINGER_DOWN[d] + '</g></g>';
     }
     h += '</svg>';
@@ -572,7 +584,9 @@ document.addEventListener('pointerdown', function(e) {
   var fg = e.target.closest && e.target.closest('.hands .fg');
   if (fg) {
     e.preventDefault();
-    var add = fg.closest('.hands').dataset.mode === 'add';
+    var mode = fg.closest('.hands').dataset.mode;
+    if (mode === 'show') return;
+    var add = mode === 'add';
     if (add && !fg.classList.contains('given')) { fg.classList.toggle('up'); fg.classList.toggle('down'); fg.classList.toggle('tap'); }
     if (!add) { fg.classList.toggle('up'); fg.classList.toggle('down'); }
     return;
