@@ -49,30 +49,11 @@ function etSpeakWithCallback(text, onEnd, posCtx) {
 function etTtsText(text, posCtx) {
   var out = etApplyPronFixes(text, posCtx);
   if (text.length !== 1 || out !== text) return out;
+  if (ZH_TTS_MISREAD[text]) return ZH_TTS_MISREAD[text];   /* 引擎單唸會唸錯的字（zh-tts.js） */
   var readings = window.HETERONYM_READINGS && HETERONYM_READINGS[text];
   if (!readings || readings.length < 2) return out;
   var fix = posCtx ? _etReadingFixAt(posCtx.line, posCtx.ci) : null;
-  return _etSameSoundChar(readings[(fix && fix.readingIndex) || 0]) || out;
-}
-
-/* 注音 → 一個同音、而且只有這一種讀音的常用字（ZHUYIN_CHARS 依常用程度排序）。
-   要在注音選字表裡只出現在一個音節、也不在破音字表裡，語音引擎才不會唸成別的音。
-   輕聲單獨唸本來就不自然，不換 */
-var _etCharSyllables = null;   // { 字: 出現在幾個音節 }
-function _etSameSoundChar(reading) {
-  if (!reading || reading.indexOf('˙') >= 0 || !window.ZHUYIN_CHARS) return null;
-  if (!_etCharSyllables) {
-    _etCharSyllables = {};
-    Object.keys(ZHUYIN_CHARS).forEach(function(k) {
-      Array.from(ZHUYIN_CHARS[k]).forEach(function(c) { _etCharSyllables[c] = (_etCharSyllables[c] || 0) + 1; });
-    });
-  }
-  var chars = Array.from(ZHUYIN_CHARS[reading] || '');
-  for (var i = 0; i < chars.length; i++) {
-    var r = HETERONYM_READINGS[chars[i]];
-    if (_etCharSyllables[chars[i]] === 1 && (!r || r.length < 2)) return chars[i];
-  }
-  return null;
+  return zhSameSoundChar(readings[(fix && fix.readingIndex) || 0]) || out;
 }
 
 function etCancelSpeak() {

@@ -284,14 +284,19 @@ function startCurriculumLesson() {
 
   currentLessonLabel = verName + '　' + currSelectedBook + '・第 ' + (lesson.lessonNum || '') + ' 課　' + (lesson.name || '');
 
-  // 集中套用管理員 TTS 覆寫，讓所有 app 的 getCurriculumCharOverride() 即時生效
+  // 單獨唸生字時要唸的文字，讓所有 app 的 getCurriculumCharOverride() 即時生效：
+  // 管理員選的讀音（charOverrides.zhuyin），或語音引擎已知會唸錯的字（zh-tts.js 的 ZH_TTS_MISREAD），
+  // 換成同音字來唸（例：划 單唸會被唸成 ㄏㄨㄚˋ，改唸「滑」）。
+  // ttsText 是 2026-10 以前後台可以直接填的朗讀文字，舊資料還有就照用
   _currCharOverrides = {};
-  var _ovs = lesson.charOverrides;
-  if (_ovs) {
-    Object.keys(_ovs).forEach(function(c) {
-      if (_ovs[c] && _ovs[c].ttsText) _currCharOverrides[c] = _ovs[c].ttsText;
-    });
-  }
+  var _ovs = lesson.charOverrides || {};
+  (lesson.chars || []).concat(Object.keys(_ovs)).forEach(function(c) {
+    var ov = _ovs[c] || {};
+    if (ov.ttsText) { _currCharOverrides[c] = ov.ttsText; return; }
+    if (typeof zhSameSoundChar !== 'function') return;
+    var sub = ov.zhuyin ? zhSameSoundChar(ov.zhuyin) : ZH_TTS_MISREAD[c];
+    if (sub && sub !== c) _currCharOverrides[c] = sub;
+  });
 
   // App 自訂 Hook：初始化各 app 的學習狀態
   if (typeof onCurriculumLessonSelected === 'function') {
