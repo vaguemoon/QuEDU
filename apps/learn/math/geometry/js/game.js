@@ -33,7 +33,8 @@ var CATEGORIES = {
     label: '角與三角形',
     items: [
       { id: 'angle',    icon: '∠', title: '角的分類',     sub: '銳角・直角・鈍角' },
-      { id: 'triangle', icon: '△', title: '三角形的分類', sub: '銳角・直角・鈍角三角形' }
+      { id: 'triangle', icon: '△', title: '三角形的分類', sub: '銳角・直角・鈍角三角形' },
+      { id: 'side',     icon: '⟁', title: '等腰與正三角形', sub: '量邊長・等腰直角三角形' }
     ]
   },
   measure: {

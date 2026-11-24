@@ -15,7 +15,7 @@ var _SVG_NS_ANG = 'http://www.w3.org/2000/svg';
 var angAnswered = false;
 var _angTimer = null;
 
-function isAngleModule(mod) { return mod === 'angle' || mod === 'triangle'; }
+function isAngleModule(mod) { return mod === 'angle' || mod === 'triangle' || mod === 'side'; }
 
 function _angKind(deg) { return deg < 90 ? 'acute' : deg === 90 ? 'right' : 'obtuse'; }
 function _dir(deg) { var r = deg * Math.PI / 180; return { x: Math.cos(r), y: Math.sin(r) }; }  /* 數學座標（y 向上） */
@@ -80,11 +80,12 @@ function generateAnglePool(mod) {
 /* ── 遊戲流程 ── */
 
 function angStart() {
-  gamePool    = generateAnglePool(currentModule);
+  gamePool    = currentModule === 'side' ? generateSidePool() : generateAnglePool(currentModule);
   gamePoolIdx = 0;
   gameCorrect = 0;
   gameTotal   = 0;
-  PAGE_CONFIG.angle.title = currentModule === 'angle' ? '∠ <span>角的分類</span>' : '△ <span>三角形的分類</span>';
+  PAGE_CONFIG.angle.title = currentModule === 'angle' ? '∠ <span>角的分類</span>'
+    : currentModule === 'side' ? '△ <span>等腰與正三角形</span>' : '△ <span>三角形的分類</span>';
   showPage('angle');
   angLoad();
 }
@@ -96,6 +97,11 @@ function angLoad() {
   gameQ = gamePool[gamePoolIdx];
   angAnswered = false;
   _hintUsed = false;
+  var isSide = gameQ.module === 'side';
+  document.getElementById('ang-svg').classList.toggle('hidden', isSide);
+  document.getElementById('side-grid').classList.toggle('hidden', !isSide);
+  document.getElementById('ang-hint').textContent = isSide ? '📏 用直尺量一量' : '📐 用三角板比比看';
+  if (isSide) { sideLoad(); return; }
   var isTri = gameQ.module === 'triangle';
   document.getElementById('ang-prompt').textContent = isTri
     ? '這是什麼三角形？' : '這個角是銳角、直角，還是鈍角？';
@@ -124,6 +130,7 @@ function _angMsg(html, cls) {
 
 function angHint() {
   if (!gameQ || angAnswered) return;
+  if (gameQ.module === 'side') { sideHint(); return; }
   sfxTap();
   _hintUsed = true;
   angDraw(true, false);

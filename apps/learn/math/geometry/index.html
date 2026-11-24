@@ -47,7 +47,7 @@
       <button class="cat-card cat-card--angle" onclick="openCategory('angle')">
         <div class="cat-card-icon">∠</div>
         <div class="cat-card-title">角與三角形</div>
-        <div class="cat-card-sub">角的分類・三角形的分類</div>
+        <div class="cat-card-sub">角的分類・三角形的分類・等腰與正三角形</div>
       </button>
       <button class="cat-card cat-card--measure" onclick="openCategory('measure')">
         <div class="cat-card-icon">▣</div>
@@ -72,6 +72,7 @@
   <div class="ang-layout">
     <div class="ang-fig">
       <svg id="ang-svg" viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="side-grid" class="side-grid hidden"></div>
     </div>
     <div class="ang-side">
       <div class="stats-row">
@@ -200,6 +201,7 @@
 <script src="js/surf-sandbox.js"></script>
 <script src="js/game.js"></script>
 <script src="js/angle.js"></script>
+<script src="js/side.js"></script>
 <script src="js/init.js"></script>
 <link rel="stylesheet" href="../../../../shared/report.css">
 <script src="../../../../shared/report.js"></script>
