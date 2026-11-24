@@ -66,7 +66,8 @@ function _makeSideQ(kind) {
     bad = shuffle(['iso', 'iso', 'scalene', 'isoright', 'right']);
   } else if (kind === 'isoright') {
     good = ['isoright'].concat(Math.random() < 0.25 ? ['isoright'] : []);
-    bad = shuffle(['iso', 'right', 'right', 'equi', 'scalene']);
+    /* 一定放一個普通等腰三角形當誘答：只看「兩邊一樣長」會選錯，要再看有沒有直角 */
+    bad = ['iso'].concat(shuffle(['right', 'right', 'equi', 'scalene']));
   } else {
     /* 問等腰時不放正三角形：正三角形也算等腰，但先不考這一層 */
     good = shuffle(['iso', 'iso', 'isoright']).slice(0, _ri(1, 2));
