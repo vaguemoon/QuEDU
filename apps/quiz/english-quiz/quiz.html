@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="../../../shared/firebase-config.js"></script>
+<script src="../../../shared/scroll-top.js"></script>
 </head>
 <body>
 
@@ -213,6 +214,7 @@ function submitQuiz() {
 function showResultScreen(data) {
   document.getElementById('quiz-screen').style.display = 'none';
   document.getElementById('result-screen').classList.add('show');
+  quScrollTop();   /* 交卷時捲在作答畫面下方，不歸零會停在成績頁中間（shared/scroll-top.js） */
   document.getElementById('result-score-num').textContent = data.score;
   document.getElementById('result-title').textContent     = data.score >= 60 ? '🎉 測驗完成！' : '📝 測驗完成！';
   document.getElementById('result-sub').textContent       = '答對 ' + data.correct + ' / ' + data.total + ' 題';

@@ -12,6 +12,7 @@
 <!-- 默寫生字用——跟 apps/learn/lang/chinese（練字趣）同一個版本，筆順資料走它內建的預設遠端來源 -->
 <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 <script src="../../../shared/stroke-data.js"></script>
+<script src="../../../shared/scroll-top.js"></script>
 </head>
 <body>
 
@@ -1594,7 +1595,7 @@ function showResult(correct, total, wrongIndices, matchCorrect, matchTotal, wron
   });
   if (wrongMatchSections && wrongMatchSections.length) reviewHtml += buildMatchReviewHtml(wrongMatchSections);
   document.getElementById('review-container').innerHTML = reviewHtml;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  quScrollTop();   /* 不用平滑捲動：iPad 上手指一碰就中斷，會停在半路（shared/scroll-top.js） */
 }
 
 function buildDictReviewHtml(wrongDictQuestions) {
@@ -1779,7 +1780,7 @@ function retryQuiz() {
   window.speechSynthesis && window.speechSynthesis.cancel();
   matchConnections = {};
   loadQuestions(); /* re-reads quiz_settings → fresh random sample from same lesson */
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  quScrollTop();
 }
 </script>
 </body>

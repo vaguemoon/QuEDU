@@ -22,6 +22,7 @@ function showPage(name, pushHistory) {
   var backBtn = document.getElementById('topbar-back');
   if (titleEl) titleEl.innerHTML = cfg.title;
   if (backBtn) backBtn.classList.toggle('hidden', !cfg.back);
+  quScrollTop();   // 換頁（含測驗結果）從最上面開始，不然會停在前一頁捲到的位置（shared/scroll-top.js）
 }
 
 function goBack() {

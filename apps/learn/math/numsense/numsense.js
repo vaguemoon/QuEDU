@@ -193,7 +193,7 @@ function showPage(name) {
   document.querySelectorAll('.page').forEach(function(el) { el.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('topbar-back').classList.toggle('hidden', name === 'home');
-  window.scrollTo(0, 0);
+  quScrollTop();   // shared/scroll-top.js：iPad 上連主頁外層一起捲回最上面
 }
 function goHome() { flushPractice(); round = null; renderPickers(); showPage('home'); }
 

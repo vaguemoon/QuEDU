@@ -98,6 +98,7 @@
   </div>
 </div>
 
+<script src="../../../../shared/scroll-top.js"></script>
 <script>
 'use strict';
 
@@ -614,6 +615,7 @@ function showPage(id) {
   if (el) el.classList.add('active');
   var backBtn = document.getElementById('topbar-back');
   if (backBtn) backBtn.classList.toggle('hidden', id === 'home');
+  quScrollTop();   // 換頁（含測驗結果）從最上面開始，不然會停在前一頁捲到的位置（shared/scroll-top.js）
 }
 
 function goHome() { showPage('home'); }

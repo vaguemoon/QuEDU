@@ -455,6 +455,7 @@ function showPage(name) {
   document.querySelectorAll('.page').forEach(function(el) { el.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('topbar-back').classList.toggle('hidden', name === 'home');
+  quScrollTop();   // 換頁（含測驗結果）從最上面開始，不然會停在前一頁捲到的位置（shared/scroll-top.js）
 }
 
 function renderPickers() {

@@ -32,6 +32,7 @@ function showPage(name, pushHistory) {
   if (name === 'achievement' && typeof renderAchievementPage === 'function') {
     renderAchievementPage();
   }
+  quScrollTop();   // 換頁（含測驗結果）從最上面開始，不然會停在前一頁捲到的位置（shared/scroll-top.js）
 }
 
 function goBack() {
