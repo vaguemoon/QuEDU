@@ -235,8 +235,7 @@ function _ecOpenDictModalForEdit(docId) {
    （注音/字義都還在），不需要重新開 modal，純粹是把它加回 _ecSelected 再重畫 */
 function _ecToggleDictCharSelect(docId) {
   _ecSelected[docId] = true;
-  var el = document.getElementById('ec-selected-count');
-  if (el) el.textContent = Object.keys(_ecSelected).length;
+  _ecRefreshSelectedCount();
   _ecFilterAndRender();
 }
 

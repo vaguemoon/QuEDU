@@ -299,9 +299,9 @@ function _ecRenderLayout() {
   var matchHtml = _ecMatchSections.map(function(msec, i) {
     var secNum    = _EC_CN[_ecSections.length + i] || String(_ecSections.length + i + 1);
     var fullTitle = secNum + '、' + _ecEsc(msec.title);
-    var srcDesc   = msec.source === 'curriculum'
+    var srcDesc   = msec.source === 'curriculum' && msec.gradeLesson
       ? _ecEsc(msec.gradeLesson.replace('_', ' 第') + ' 課')
-      : '自訂類別';
+      : msec.source === 'custom' ? '自訂類別' : '多個來源';
     return '<div id="match-sec-card-' + i + '" data-sec-kind="match" data-sec-idx="' + i + '" style="margin-bottom:10px">' +
       '<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;' +
       'background:var(--orange-lt,#fff7ed);border-radius:10px;border:1.5px solid var(--orange,#f97316)">' +

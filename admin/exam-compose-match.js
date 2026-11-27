@@ -1,5 +1,5 @@
 /**
- * admin/exam-compose-match.js — 試卷編製精靈：共用小工具與「詞圖配對」modal
+ * admin/exam-compose-match.js — 試卷編製精靈：共用小工具與「詞圖配對」選圖區（第二步）
  * 原本是 exam-compose.js 的一部分，照章節拆成獨立檔案，內容沒有改。
  * 共用的狀態變數（_ec*、_qe*、_dct*）宣告在 exam-compose.js；各檔的函式都是全域的，可以互相呼叫。
  * 依賴：shared.js（db、showToast）、init.js（currentTeacher）、exam-compose.js
@@ -63,26 +63,187 @@ function _ecBtn(color) {
 }
 
 /* ════════════════════════════════
-   詞圖配對 modal
+   詞圖配對（連連看）
+   原本是第三步「排版」另外按「＋新增詞圖配對大題」開視窗、重選一次版本年級冊次課次；
+   現在跟句子重組／默寫生字一樣併進第二步：題型篩選選「詞圖配對」才出現選圖區，
+   版本冊次用第一步選的、課次用上面的課次篩選，點圖片選進／取消。
+   選的圖片不管來自哪一課或哪個自訂類別，全部放進同一個「連連看」大題（使用者 2026-11 決定）；
+   改版前存的試卷可能有好幾個連連看大題，照原樣保留，取消勾選時從它所在的大題移除。
+   存檔格式（matchSections）不變，學生端／列印只用 wordIds、words、title。
    ════════════════════════════════ */
-function _ecOpenMatchModal() {
-  var modal  = document.getElementById('ec-match-modal');
-  if (!modal) return;
-  var listEl = document.getElementById('ec-match-word-list');
-  if (listEl) listEl.innerHTML = '<span style="color:var(--muted)">請先選擇來源</span>';
-  var pubSel    = document.getElementById('ec-match-publisher');
-  var lessonSel = document.getElementById('ec-match-lesson');
-  if (pubSel)    pubSel.value    = '';
-  if (lessonSel) lessonSel.innerHTML = '<option value="">課次</option>';
-  var radCurr = document.querySelector('input[name="ec-match-source"][value="curriculum"]');
-  if (radCurr) { radCurr.checked = true; _ecMatchSourceChange('curriculum'); }
-  _ecMatchLoadCustomCategories();
-  modal.style.display = 'flex';
+var _EC_MATCH_TYPE = '詞圖配對';
+var _ecMatchSrc = 'curriculum';   // 選圖區目前的來源：curriculum（課本圖庫）／custom（自訂類別）
+var _ecMatchCatId = '';           // 自訂類別來源選的類別
+var _ecMatchCustomCats = null;    // [{id, name}]，查一次就留著
+var _ecMatchImgCache = {};        // 來源 key → [{id, word, imageUrl}]
+var _ecMatchShown = [];           // 選圖區目前列出的圖片
+var _ecMatchShownSrc = null;      // 目前列出的圖片的來源 {source, gradeLesson, categoryId}
+var _ecMatchSeq = 0;              // 切換來源時丟掉晚到的舊查詢結果
+
+/* 「已選 N 題」把連連看的組數也算進去 */
+function _ecRefreshSelectedCount() {
+  var pairs = 0;
+  _ecMatchSections.forEach(function(m) { pairs += m.pairCount || 0; });
+  var cntEl = document.getElementById('ec-selected-count');
+  if (cntEl) cntEl.textContent = Object.keys(_ecSelected).length + pairs;
+  var mEl = document.getElementById('ec-selected-match');
+  if (mEl) mEl.textContent = pairs ? '（含連連看 ' + pairs + ' 組）' : '';
 }
 
-function _ecCloseMatchModal() {
-  var modal = document.getElementById('ec-match-modal');
-  if (modal) modal.style.display = 'none';
+function _ecMatchRerender() {
+  _ecRenderMatchCreateRow(_ecGrade || ((document.getElementById('ec-filter-grade') || {}).value || ''),
+                         ((document.getElementById('ec-filter-cat') || {}).value || ''));
+}
+
+function _ecMatchSetSource(src) { _ecMatchSrc = src; _ecMatchRerender(); }
+function _ecMatchSetCategory(id) { _ecMatchCatId = id; _ecMatchRerender(); }
+
+function _ecRenderMatchCreateRow(grade, lesson) {
+  var row = document.getElementById('ec-match-create-row');
+  if (!row) return;
+  var seq = ++_ecMatchSeq;
+  _ecMatchShown = []; _ecMatchShownSrc = null;
+
+  function tab(src, label) {
+    var on = _ecMatchSrc === src;
+    return '<button type="button" onclick="_ecMatchSetSource(\'' + src + '\')" style="padding:5px 14px;border:1.5px solid var(--blue);' +
+      'border-radius:8px;background:' + (on ? 'var(--blue)' : 'white') + ';color:' + (on ? 'white' : 'var(--blue)') + ';' +
+      'font-size:.85rem;font-weight:800;cursor:pointer;font-family:inherit">' + label + '</button>';
+  }
+  var head = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+    tab('curriculum', '課本圖庫') + tab('custom', '自訂類別') + '<span id="ec-match-src-extra"></span></div>';
+  function body(html) {
+    if (seq !== _ecMatchSeq) return;
+    row.innerHTML = head + html;
+    if (_ecMatchSrc === 'custom') _ecMatchRenderCatSelect();
+  }
+  function msg(t) { return '<div style="font-size:.85rem;color:var(--muted)">' + t + '</div>'; }
+
+  var src, query, key;
+  if (_ecMatchSrc === 'curriculum') {
+    if (!grade || !lesson) { body(msg('請先在上方選擇特定課次（圖片跟著課次走）')); return; }
+    var gl = grade + '_' + lesson;   // 詞語圖庫的 gradeLesson 是「版本冊次_課次」，例：康軒三上_9
+    src = { source: 'curriculum', gradeLesson: gl, categoryId: '' };
+    key = 'c|' + gl;
+    query = function() { return db.collection('wordImages').where('gradeLesson', '==', gl).get(); };
+  } else {
+    if (!_ecMatchCustomCats) {
+      body(msg('讀取自訂類別中…'));
+      db.collection('customCategories').where('teacherUid', '==', currentTeacher.uid).get().then(function(snap) {
+        _ecMatchCustomCats = snap.docs.map(function(d) { return { id: d.id, name: d.data().name || d.id }; });
+      }).catch(function() { _ecMatchCustomCats = []; }).then(function() { if (seq === _ecMatchSeq) _ecMatchRerender(); });
+      return;
+    }
+    if (!_ecMatchCustomCats.length) { body(msg('還沒有自訂類別，請先到「資料庫 › 詞語圖庫」建立')); return; }
+    if (!_ecMatchCatId) { body(msg('請先選擇自訂類別')); return; }
+    src = { source: 'custom', gradeLesson: '', categoryId: _ecMatchCatId };
+    key = 'u|' + _ecMatchCatId;
+    query = function() {
+      return db.collection('wordImages').where('teacherUid', '==', currentTeacher.uid)
+        .where('customCategoryId', '==', _ecMatchCatId).get();
+    };
+  }
+
+  function show(list) {
+    if (seq !== _ecMatchSeq) return;
+    if (!list.length) {
+      body(msg(src.source === 'curriculum'
+        ? '詞語圖庫裡還沒有「' + _ecEsc(grade) + ' 第' + _ecEsc(lesson) + '課」的圖片，請先到「資料庫 › 詞語圖庫」上傳'
+        : '這個類別還沒有圖片，請先到「資料庫 › 詞語圖庫」上傳'));
+      return;
+    }
+    _ecMatchShown = list; _ecMatchShownSrc = src;
+    body('<div style="font-size:.78rem;color:var(--muted);font-weight:700;margin-bottom:6px">點圖片選進連連看（右下角全選／全不選也會套用在這裡）：</div>' +
+      '<div id="ec-match-chips" style="display:flex;flex-wrap:wrap;gap:8px"></div>');
+    _ecRenderMatchChips();
+  }
+
+  if (_ecMatchImgCache[key]) { show(_ecMatchImgCache[key]); return; }
+  body(msg('讀取圖片中…'));
+  query().then(function(snap) {
+    var list = [];
+    snap.forEach(function(doc) { var d = doc.data(); list.push({ id: doc.id, word: d.word || '', imageUrl: d.imageUrl || '' }); });
+    _ecMatchImgCache[key] = list;
+    show(list);
+  }).catch(function() { body(msg('圖片載入失敗，請稍後再試')); });
+}
+
+function _ecMatchRenderCatSelect() {
+  var el = document.getElementById('ec-match-src-extra');
+  if (!el || !_ecMatchCustomCats || !_ecMatchCustomCats.length) return;
+  el.innerHTML = '<select onchange="_ecMatchSetCategory(this.value)" style="padding:5px 8px;border:1.5px solid var(--border);' +
+    'border-radius:8px;font-size:.85rem;font-family:inherit;background:white">' +
+    '<option value="">選擇類別…</option>' +
+    _ecMatchCustomCats.map(function(c) {
+      return '<option value="' + _ecEscA(c.id) + '"' + (c.id === _ecMatchCatId ? ' selected' : '') + '>' + _ecEsc(c.name) + '</option>';
+    }).join('') + '</select>';
+}
+
+/* 已經選進任何一個連連看大題的圖片 id → {si, wi} */
+function _ecMatchFind(wordId) {
+  for (var si = 0; si < _ecMatchSections.length; si++) {
+    var wi = (_ecMatchSections[si].wordIds || []).indexOf(wordId);
+    if (wi >= 0) return { si: si, wi: wi };
+  }
+  return null;
+}
+
+function _ecRenderMatchChips() {
+  var wrap = document.getElementById('ec-match-chips');
+  if (!wrap) return;
+  wrap.innerHTML = _ecMatchShown.map(function(w, i) {
+    var on = !!_ecMatchFind(w.id);
+    var color = on ? 'var(--green,#2e7d32)' : 'var(--border)';
+    return '<button type="button" onclick="_ecToggleMatchWord(' + i + ')" title="' + (on ? '點一下取消' : '點一下選進連連看') + '" ' +
+      'style="display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border:2px solid ' + color + ';border-radius:10px;' +
+      'background:' + (on ? '#eaf6ec' : 'white') + ';cursor:pointer;font-family:inherit">' +
+      '<img src="' + _ecEscA(w.imageUrl) + '" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:7px;flex-shrink:0">' +
+      '<span style="font-size:.95rem;font-weight:800;color:' + (on ? 'var(--green,#2e7d32)' : 'var(--text)') + '">' +
+        _ecEsc(w.word) + (on ? ' ✓' : '') + '</span>' +
+    '</button>';
+  }).join('');
+}
+
+function _ecMatchSet(w, on) {
+  var at = _ecMatchFind(w.id);
+  if (!on) {
+    if (!at) return;
+    var m = _ecMatchSections[at.si];
+    m.wordIds.splice(at.wi, 1); (m.words || []).splice(at.wi, 1);
+    m.pairCount = m.wordIds.length;
+    if (!m.pairCount) _ecMatchSections.splice(at.si, 1);
+    return;
+  }
+  if (at) return;
+  var src = _ecMatchShownSrc;
+  var sec = _ecMatchSections[0];
+  if (!sec) {
+    sec = { title: '連連看', source: src.source, gradeLesson: src.gradeLesson, categoryId: src.categoryId,
+            pairCount: 0, wordIds: [], words: [] };
+    _ecMatchSections.push(sec);
+  } else if (sec.source !== src.source || sec.gradeLesson !== src.gradeLesson || sec.categoryId !== src.categoryId) {
+    /* 跨課／跨類別混在同一個大題：來源欄位只是排版畫面顯示用，標成 mixed */
+    sec.source = 'mixed'; sec.gradeLesson = ''; sec.categoryId = '';
+  }
+  sec.wordIds = sec.wordIds || []; sec.words = sec.words || [];
+  sec.wordIds.push(w.id); sec.words.push(w.word);
+  sec.pairCount = sec.wordIds.length;
+}
+
+function _ecToggleMatchWord(i) {
+  var w = _ecMatchShown[i];
+  if (!w) return;
+  _ecMatchSet(w, !_ecMatchFind(w.id));
+  _ecRenderMatchChips();
+  _ecRefreshSelectedCount();
+  var err = document.getElementById('ec-step2-err');
+  if (err) err.textContent = '';   // 「至少要 2 組」的提示補完就收掉，下一步會再檢查一次
+}
+
+/* 全選／全不選篩到詞圖配對時：套用在選圖區目前列出的圖片 */
+function _ecMatchSelectShown(on) {
+  _ecMatchShown.forEach(function(w) { _ecMatchSet(w, on); });
+  _ecRefreshSelectedCount();
 }
 
 /* 句子重組：開窗用 Step 1 已經選好的年級/課次預填，存檔完（_srOnSaved hook，定義在

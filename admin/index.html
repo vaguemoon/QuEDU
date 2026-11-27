@@ -646,7 +646,7 @@
         <div id="ec-panel-2" class="card" style="display:none">
           <div class="card-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             📚 選題
-            <span style="margin-left:auto;font-size:.82rem;font-weight:700;color:var(--blue)">已選 <span id="ec-selected-count">0</span> 題</span>
+            <span style="margin-left:auto;font-size:.82rem;font-weight:700;color:var(--blue)">已選 <span id="ec-selected-count">0</span> 題<span id="ec-selected-match"></span></span>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px 0;border-bottom:1.5px solid var(--border);margin-bottom:12px">
             <select id="ec-filter-grade" onchange="_ecOnGradeChange()"
@@ -672,6 +672,7 @@
             <button onclick="_ecOpenSrModal()" class="btn btn-secondary" style="font-size:.8rem;padding:6px 14px">🧩 新增一題句子重組題</button>
           </div>
           <div id="ec-dict-create-row" style="display:none;margin-bottom:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--gray-lt)"></div>
+          <div id="ec-match-create-row" style="display:none;margin-bottom:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--gray-lt)"></div>
           <div id="ec-q-list"
             style="max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px 12px;min-height:80px">
             <div class="loading-wrap"><div class="spinner"></div></div>
@@ -694,89 +695,12 @@
           <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             🗂 排版
             <span style="font-size:.82rem;font-weight:700;color:var(--muted)">共 <span id="ec-layout-count">0</span> 題</span>
-            <button onclick="_ecOpenMatchModal()" class="btn btn-secondary"
-              style="margin-left:auto;font-size:.78rem;padding:4px 10px">＋ 新增詞圖配對大題</button>
           </div>
           <div id="ec-layout-points-summary" style="display:none;font-size:.8rem;font-weight:800;margin:4px 0 8px"></div>
           <div id="ec-layout-list" style="min-height:80px;margin-top:4px"></div>
           <div style="display:flex;justify-content:space-between;margin-top:16px">
             <button class="btn btn-secondary" onclick="_ecGoStep(2)">← 上一步</button>
             <button class="btn btn-primary"   onclick="_ecGoStep(4)">下一步 →</button>
-          </div>
-        </div>
-
-        <!-- 連連看 modal -->
-        <div id="ec-match-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:center;justify-content:center">
-          <div style="background:var(--card-bg,#fff);border-radius:14px;padding:24px;max-width:540px;width:92%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.22)">
-            <div style="font-size:1rem;font-weight:800;margin-bottom:16px">連連看　新增大題</div>
-
-            <!-- 來源 -->
-            <div style="margin-bottom:12px">
-              <label style="font-size:.82rem;font-weight:700;color:var(--muted);display:block;margin-bottom:6px">圖片來源</label>
-              <div style="display:flex;gap:10px">
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.88rem">
-                  <input type="radio" name="ec-match-source" value="curriculum" checked onchange="_ecMatchSourceChange(this.value)"> 課程單元
-                </label>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.88rem">
-                  <input type="radio" name="ec-match-source" value="custom" onchange="_ecMatchSourceChange(this.value)"> 自訂類別
-                </label>
-              </div>
-            </div>
-
-            <!-- 課程單元選擇 -->
-            <div id="ec-match-curriculum-row" style="margin-bottom:12px">
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <select id="ec-match-publisher" onchange="_ecMatchUpdateGrade()"
-                  style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:inherit">
-                  <option value="">版本</option>
-                  <option value="康軒">康軒</option>
-                  <option value="翰林">翰林</option>
-                  <option value="南一">南一</option>
-                </select>
-                <select id="ec-match-grade-num" onchange="_ecMatchUpdateGrade()"
-                  style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:inherit">
-                  <option value="">年級</option>
-                  <option value="一">一年級</option>
-                  <option value="二">二年級</option>
-                  <option value="三">三年級</option>
-                  <option value="四">四年級</option>
-                  <option value="五">五年級</option>
-                  <option value="六">六年級</option>
-                </select>
-                <select id="ec-match-version" onchange="_ecMatchUpdateGrade()"
-                  style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:inherit">
-                  <option value="">冊次</option>
-                  <option value="上">上學期</option>
-                  <option value="下">下學期</option>
-                </select>
-                <select id="ec-match-lesson" onchange="_ecMatchLoadWordList()"
-                  style="padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:inherit">
-                  <option value="">課次</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- 自訂類別選擇 -->
-            <div id="ec-match-custom-row" style="display:none;margin-bottom:12px">
-              <select id="ec-match-category"
-                style="width:100%;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:inherit"
-                onchange="_ecMatchLoadWordList()">
-                <option value="">選擇類別…</option>
-              </select>
-            </div>
-
-            <!-- 詞語勾選清單 -->
-            <div style="margin-bottom:4px;font-size:.82rem;font-weight:700;color:var(--muted)">勾選要加入連連看的詞語（至少 2 個）</div>
-            <div id="ec-match-word-list"
-              style="border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;min-height:60px;max-height:260px;overflow-y:auto;font-size:.82rem;color:var(--muted);margin-bottom:14px">
-              請先選擇來源
-            </div>
-
-            <!-- 按鈕 -->
-            <div style="display:flex;justify-content:flex-end;gap:10px">
-              <button class="btn btn-secondary" onclick="_ecCloseMatchModal()">取消</button>
-              <button class="btn btn-primary" id="ec-match-confirm-btn" onclick="_ecConfirmMatchSection()">加入</button>
-            </div>
           </div>
         </div>
 

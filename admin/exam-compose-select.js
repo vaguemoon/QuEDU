@@ -89,7 +89,10 @@ function _ecBuildFilters() {
           return ia - ib;
         }).map(function(t) {
           return '<option value="' + _ecEscA(t) + '">' + _ecEsc(t) + '</option>';
-        }).join('');
+        }).join('') +
+        /* 詞圖配對不是 questions 裡的題目（存在試卷的 matchSections），不放進 _EC_TYPE_ORDER，
+           只是借題型篩選當入口，選到它才出現選圖區（exam-compose-match.js） */
+        '<option value="' + _EC_MATCH_TYPE + '">' + _EC_MATCH_TYPE + '</option>';
       typeEl.value = prevType;
       typeEl.style.display = '';
     } else {
@@ -164,8 +167,7 @@ function _ecFilterAndRender() {
     return true;
   });
 
-  var cntEl = document.getElementById('ec-selected-count');
-  if (cntEl) cntEl.textContent = Object.keys(_ecSelected).length;
+  _ecRefreshSelectedCount();
 
   /* 句子重組這個題型沒有 Excel 批次匯入（需要照本課語詞即時拆解，沒辦法用表格打），篩到這個
      題型時在清單上方放一個「+ 新增」入口——只在選到這個題型才出現，不是額外獨立的區塊。
@@ -184,8 +186,21 @@ function _ecFilterAndRender() {
     else { dictRow.style.display = 'none'; }
   }
 
+  /* 詞圖配對：同樣只在篩到這個題型才出現選圖區，選的圖不是題庫題目，下面清單只放說明 */
+  var matchRow = document.getElementById('ec-match-create-row');
+  if (matchRow) {
+    if (type === _EC_MATCH_TYPE) { matchRow.style.display = ''; _ecRenderMatchCreateRow(grade, cat); }
+    else { matchRow.style.display = 'none'; }
+  }
+
   var wrap = document.getElementById('ec-q-list');
   if (!wrap) return;
+
+  if (type === _EC_MATCH_TYPE) {
+    wrap.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:12px;line-height:1.7">在上面點圖片選進這份測驗，' +
+      '選好的圖片（可以跨課、跨類別）在排版時會合成一個「連連看」大題，至少要 2 組。</p>';
+    return;
+  }
 
   if (!filtered.length) {
     wrap.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:12px">找不到符合條件的題目</p>';
@@ -226,8 +241,7 @@ function _ecFilterAndRender() {
 function _ecToggleQ(id, checked) {
   if (checked) _ecSelected[id] = true;
   else         delete _ecSelected[id];
-  var el = document.getElementById('ec-selected-count');
-  if (el) el.textContent = Object.keys(_ecSelected).length;
+  _ecRefreshSelectedCount();
 
   /* 默寫生字取消勾選要讓這一題整個從清單消失、選字區的 chip 退回「可以再點回來」的狀態
      （見 _ecFilterAndRender／_ecRenderDictCreateRow），跟其他題型「取消勾選但題目還留在
@@ -284,6 +298,7 @@ function _ecSelectAll() {
   /* 默寫生字的字不是「既有題目」，大部分根本還沒出題，單純勾選不夠——「全選」對這個題型
      來說真正該做的是把這一課還沒出題的生字一次全部建好（逐字查注音、借字義）再勾起來 */
   if (type === '默寫生字' && cat) _ecBulkCreateMissingDictChars(grade, cat);
+  if (type === _EC_MATCH_TYPE) _ecMatchSelectShown(true);
 
   _ecFilterAndRender();
 }
@@ -305,6 +320,7 @@ function _ecDeselectAll() {
     }
     return true;
   }).forEach(function(q) { delete _ecSelected[q.id]; });
+  if (type === _EC_MATCH_TYPE) _ecMatchSelectShown(false);
 
   _ecFilterAndRender();
 }
@@ -313,6 +329,10 @@ function _ecValidateStep2() {
   var cnt = Object.keys(_ecSelected).length;
   var err = document.getElementById('ec-step2-err');
   if (!cnt && !_ecMatchSections.length) { if (err) err.textContent = '請至少選擇一道題目'; return false; }
+  if (_ecMatchSections.some(function(m) { return m.pairCount < 2; })) {
+    if (err) err.textContent = '連連看至少要選 2 組圖片（題型篩選「' + _EC_MATCH_TYPE + '」）';
+    return false;
+  }
   if (err) err.textContent = '';
   _ecBuildSections();
   return true;
