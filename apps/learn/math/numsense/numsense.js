@@ -705,11 +705,8 @@ function renderReview() {
       if (c > 10) nb[c - 10] = '−10';
       if (c <= 90) nb[c + 10] = '+10';
     }
-    h += '<div class="rv-row">' + rvChart(function(n) { return n === c ? 'target' : nb[n] ? 'ref' : ''; }) +
-         '<div class="rv-list">' + (c ? '<div class="rv-list-h">' + c + ' 的鄰居</div>' +
-           [[c - 10, '上面', '少 10'], [c + 10, '下面', '多 10'], [c - 1, '左邊', '少 1'], [c + 1, '右邊', '多 1']].filter(function(x) { return nb[x[0]]; })
-             .map(function(x) { return '<div class="rv-nb">' + x[1] + '是 <b>' + x[0] + '</b>（' + x[2] + '）</div>'; }).join('')
-           : '<div class="rv-tip">點百數表上任何一個數</div>') + '</div></div>';
+    /* 百數表佔滿畫面（保持正方形，大小在 rvFitChart 算），右邊不放說明欄，點到的數會唸出來 */
+    h += '<div class="rv-full">' + rvChart(function(n) { return n === c ? 'target' : nb[n] ? 'ref' : ''; }).replace('hc hc-big', 'hc hc-big hc-full') + '</div>';
   } else {
     var odds = [], evens = [];
     for (var m = 1; m <= 20; m++) (m % 2 ? odds : evens).push(m);
@@ -722,7 +719,19 @@ function renderReview() {
          '</div></div>';
   }
   el.innerHTML = h;
+  rvFitChart();
 }
+
+/* 全畫面百數表：邊長取「可用寬度」和「從表格頂端到視窗底部的高度」較小的那個，格子字跟著縮放 */
+function rvFitChart() {
+  var g = document.querySelector('#rv-body .hc-full');
+  if (!g) return;
+  var r = g.parentElement.getBoundingClientRect();
+  var size = Math.floor(Math.max(300, Math.min(r.width, window.innerHeight - r.top - 16)));
+  g.style.width = g.style.height = size + 'px';
+  g.style.fontSize = Math.round(size / 10 * 0.36) + 'px';
+}
+window.addEventListener('resize', rvFitChart);
 
 /* 複習頁的點擊（滑鼠、觸控共用 Pointer Events） */
 document.getElementById('rv-body').addEventListener('pointerdown', function(e) {
@@ -732,7 +741,7 @@ document.getElementById('rv-body').addEventListener('pointerdown', function(e) {
   if ((x = t.closest('[data-say]'))) { if (+x.dataset.say) sayCn(+x.dataset.say); return; }
   if ((x = t.closest('[data-n]')) && (RV.item === 'write' || RV.item === 'chart')) {
     RV.sel = +x.dataset.n; renderReview();
-    if (RV.item === 'write') sayCn(RV.sel);
+    sayCn(RV.sel);
   }
 });
 

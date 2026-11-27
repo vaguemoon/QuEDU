@@ -283,6 +283,10 @@ button { touch-action: manipulation; }
 .hc-big .hc-c.dim { color: #9aa8b6; }
 .hc-big .hc-c.odd { color: var(--ns-odd); background: #fff4f4; }
 .hc-big .hc-c.even { color: var(--ns-ten); background: var(--ns-ten-lt); }
+/* 複習的百數表：佔滿畫面的正方形，寬高由 numsense.js rvFitChart 設定 */
+.rv-full { display: flex; justify-content: center; }
+.hc.hc-big.hc-full { grid-template-columns: repeat(10, 1fr); grid-auto-rows: 1fr; }
+.hc-big.hc-full .hc-c { font-size: inherit; }
 .rv-list { flex: 1; min-width: 260px; padding: 14px 16px; background: var(--white); border-radius: var(--radius-sm); box-shadow: var(--shadow); }
 .rv-list-h { font-size: 1.15rem; font-weight: 900; color: var(--text); margin: 6px 0 8px; }
 .rv-chip { display: inline-block; min-width: 2.4em; margin: 3px; padding: 4px 6px; border-radius: 8px; text-align: center;
